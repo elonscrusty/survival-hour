@@ -25,10 +25,11 @@ from mathutils import Vector  # noqa: E402
 from sh import kit, pipeline as P, reference, textures as tx  # noqa: E402
 
 ASSET_MODULES = ["reference_assets", "world", "stream", "camp", "crafting", "pickups", "loot",
-                 "firearms", "armor", "lobby", "wildlife", "scenes"]
+                 "firearms", "armor", "lobby", "wildlife", "scenes", "survival_wars"]
 
 CATEGORY_ORDER = ["Reference", "Forest", "Stream", "Camp", "Crafting_L1", "Crafting_L2",
-                  "Crafting_L3", "Armor", "Pickups", "Loot", "Firearms", "Wildlife", "Lobby"]
+                  "Crafting_L3", "Armor", "Pickups", "Loot", "Firearms", "Wildlife", "Lobby",
+                  "SW_Landscape", "SW_POI", "SW_Loot", "SW_Tools", "SW_Base"]
 
 
 def parse():

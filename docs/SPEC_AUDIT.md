@@ -90,8 +90,8 @@ Studio yet**.
 ## Caves / houses / POIs / loot
 | Requirement | Status | Current build | Phase |
 |---|---|---|---|
-| Randomised caves, cabins, ranger structures, campsites, ruins, mines… with rarity | 🟡 | LayoutGen has modules (ruins, glade, pond…); OVERHAUL plans cabins/caves; `Landmarks.luau` missing | 5 |
-| Chest tiers Common → Very Rare, best one-time per match | 🟡 | Forest crates + care packages; tiered chests planned | 5 |
+| Randomised caves, cabins, ranger structures, campsites, ruins, mines… with rarity | ✅ | Phase 5: 14 POIs in 3 rarity pools + small/medium/large caves | 5 |
+| Chest tiers Common → Very Rare, best one-time per match | ✅ | Phase 5 | 5 |
 
 ## Meta: XP, coins, diamonds, classes, power-ups, Robux
 | Requirement | Status | Current build | Phase |
@@ -109,11 +109,11 @@ Studio yet**.
 | Aesthetic forest-refuge lobby with integrated play/shop/cosmetics/loadout/leaderboards | 🟡 | Functional lobby; pack has lobby props not yet placed | 7 |
 | Cohesive custom UI, cinematic menu | 🟡 | Complete functional UI (primitive icons) | 7 |
 | Blender assets for important props | ✅ | 146-asset pack integrated via mesh skins | – |
-| **Blender modular forest ground/landscape** (rivers, cliffs, cave mouths, clearings) | ❌ | Roblox terrain generated at runtime | 5 |
-| Lush varied forest (many variants) | 🟡 | Flora has many procedural variants + mesh skins | 5 |
+| **Blender modular forest ground/landscape** (rivers, cliffs, cave mouths, clearings) | 🟡 | Phase 5: Blender landscape kit (cliffs, cave kit, riverbanks, modular ground/clearing sections, trails) over per-match voxel terrain (D49) | 5 |
+| Lush varied forest (many variants) | ✅ | Phase 5: all layout layers built, mesh-first | 5 |
 | Lighting: day / sunset / moonlit night / fog | 🟡 | Day + night presets | 7 |
 | Audio (ambience, surfaces, …) | 🟡 | Engine sounds + empty slots | 7 |
-| Optimisation (streaming, LOD, collisions) | 🟡 | StreamingEnabled, atomic models; LOD meshes exported but unused | 5 |
+| Optimisation (streaming, LOD, collisions) | 🟡 | Atomic streaming, single-mesh decor, box colliders; LOD1 exported (Roblox auto-LOD at runtime); needs a mobile perf pass in Studio | 5 |
 
 ## Conflicts that change existing behaviour
 1. **Paid revives, paid care packages, paid bandages and Robux powerup unlocks** are pay-to-win under the

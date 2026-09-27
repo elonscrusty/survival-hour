@@ -11,13 +11,18 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CAT = os.path.join(ROOT, "Roblox", "catalog.json")
 
 ORDER = ["Reference", "Forest", "Stream", "Camp", "Crafting_L1", "Crafting_L2", "Crafting_L3", "Armor",
-         "Pickups", "Loot", "Firearms", "Wildlife", "Lobby"]
+         "Pickups", "Loot", "Firearms", "Wildlife", "Lobby",
+         "SW_Landscape", "SW_POI", "SW_Loot", "SW_Tools", "SW_Base"]
 TITLES = {
     "Reference": "Reference", "Forest": "Forest kit", "Stream": "Stream kit", "Camp": "Starting camp",
     "Crafting_L1": "Workbench level 1 craftables", "Crafting_L2": "Workbench level 2 craftables",
     "Crafting_L3": "Workbench level 3 craftables", "Armor": "Level 3 armour (rigid R15 accessories)",
     "Pickups": "Resource pickups", "Loot": "Loot and special equipment", "Firearms": "Firearms",
     "Wildlife": "Wildlife (rigged)", "Lobby": "Lobby kit",
+    "SW_Landscape": "Survival Wars: landscape, cave and forest-variety kit",
+    "SW_POI": "Survival Wars: points of interest", "SW_Loot": "Survival Wars: POI chests",
+    "SW_Tools": "Survival Wars: tiered and breaching tools, bows",
+    "SW_Base": "Survival Wars: storage tiers, walls, floor, traps, Workbench IV/V",
 }
 
 

@@ -547,11 +547,44 @@ function WorldService.BuildMatch(seed: number): MapInfo
 			task.wait()
 		end
 	end
-	-- Cliff rim faces
+	-- Cliff rim faces (Blender cliff kit when loaded, procedural otherwise)
+	local Skins = require(Models:WaitForChild("Skins"))
 	for i, c in layout.Cliffs do
 		local cf = ground(c.X, c.Z) * CFrame.Angles(0, math.rad(c.Rot), 0)
-		atomic(Flora.CliffRock(cf, drng, Vector3.new(c.W, c.H, 8), decor))
+		if Skins.Has("SM_Cliff_Face01") then
+			Decor.Place("Cliff", cf, drng, c.H / 26, decor)
+		else
+			atomic(Flora.CliffRock(cf, drng, Vector3.new(c.W, c.H, 8), decor))
+		end
 		if i % 20 == 0 then
+			task.wait()
+		end
+	end
+	-- Riverbank strips along both sides of every stream (grass -> mud -> rocks -> water).
+	if Skins.Has("SM_Riverbank_Straight") then
+		for _, st in layout.Streams do
+			local pts = st.Points
+			for i = 1, #pts - 1 do
+				local a, b = pts[i], pts[i + 1]
+				local dx, dz = b.X - a.X, b.Z - a.Z
+				local len = math.sqrt(dx * dx + dz * dz)
+				if len > 1 then
+					local nx, nz = -dz / len, dx / len
+					local steps = math.max(1, math.floor(len / 16 + 0.5))
+					for k = 0, steps - 1 do
+						local t = (k + 0.5) / steps
+						local cx, cz = a.X + dx * t, a.Z + dz * t
+						for _, side in { -1, 1 } do
+							local off = st.Width / 2 + 5
+							local px, pz = cx + nx * side * off, cz + nz * side * off
+							local g = ground(px, pz)
+							-- local -Z (the water edge) faces the stream centre line
+							local cf = CFrame.lookAt(g.Position, Vector3.new(cx + O.X, g.Position.Y, cz + O.Z))
+							Decor.Place("Riverbank", cf, drng, 1, decor)
+						end
+					end
+				end
+			end
 			task.wait()
 		end
 	end

@@ -107,3 +107,29 @@ Also: the pre-existing `LayoutGen fair_resources` failure is fixed (the test use
 | No downed state for solo | Unchanged (none exists) | – |
 
 **Tests:** `WildlifeRules.spec` (4), `CombatRules.spec` (4), armour-slot case in `InventoryModel.spec`, skins suite builds the new animals and ranged weapons (30 checks).
+
+## Phase 5: POIs, caves, chests, forest, Blender world kit (done, not yet playtested)
+
+| Spec rule | Change | Where |
+|---|---|---|
+| Randomised/semi-random caves, cabins, ranger structures, shelters, campsites, ruins, supply areas, hidden spots | Each match rolls a **common** POI near every camp (Campsite / Shed / Hunting Blind / Broken Vehicle / Small Cabin), an **uncommon** one mid-way (Cabin / Ranger Station / Logging Camp / Abandoned House / Mine Entrance) and a far one that is **rare** 30% of the time (Bunker / Outpost / Industrial Site / Large Mine). One cave per sector in the cliff rim: Small 55%, Medium 35%, Large 10%. All four sectors get the same set (rotated) for fairness. | `LayoutGen` (`PoiPools`, `CaveSizes`), `Models/Landmarks` (14 POIs + cave + chests) |
+| Placement respects terrain, water, spawn distance, spacing, trails, rarity | Existing LayoutGen spot checks (bounds, core/camp clearance, rim, paths, streams, occupancy) + rarity by distance band; POIs and caves add `NoBuild` zones | `LayoutGen`, `WorldService`, `BuildService` |
+| Caves: small 0–1 chest Stone/Coal; medium 1–2 Iron/Coal + predators; large rare, multiple chambers, 2–4 chests, rare deposits | Tunnels (22/34/42 long) carved into the cliff terrain with slate floors, end chamber, 2 side chambers for large; lanterns → blue crystals deeper in. Coal/iron seams, large-stone in small caves, **Rich Iron Vein** (15% Rare Component) in large ones. Wolf den (medium) / bear (large) spawns at night. Ground height inside caves uses the cave floor. | `WorldService._carveCaves`, `LayoutGen.CaveNodes`, `WildlifeService._denSpawns` |
+| Chest tiers Common / Uncommon / Rare / Very Rare; best chests one-time per match | Chest tier list rolled per POI by rarity; chests spawn at the POI's `ChestMount`s, take 2/3/4.5/6 s to search, open **once per match**. New tables: basic supplies → materials/stone tools/hide armour → iron/scrap/Hunting Bow/Medkit/Crowbar/Rare Component → 2 Rare Components/Crossbow/Iron armour/Steel Axe/Breaching Charge. Forest crates and the free care package use the new items too. | `Loot`, `LootService`, `Landmarks.Chest` |
+| Scrap / Iron / Coal / Rare Component sources | Scrap Piles (Crude Pickaxe+) at vehicles/industrial/bunker/outpost/logging camp; Coal Seams + Iron Deposits (Stone Pickaxe+) at mines and caves; Rich Iron (Iron Pickaxe+) | `Resources`, `Flora` |
+| Lush, layered forest; many variants; not one tree duplicated | The layout's middle/low/ground layers (logs, boulders, stumps, roots, snags / ferns, bushes, grass, saplings / litter, moss, flowers, mushrooms, pebbles, twigs) and extra tree species (spruce, aspen, dead snag, giant oak) are now actually built. **Mesh-first**: one MeshPart per decoration with a simple box collider only on solid kinds. | `Models/Decor`, `WorldService.BuildMatch` |
+| Forest floor variety; river transitions; cliffs; waterfall | Noise-driven terrain materials (moss/LeafyGrass, leaf-litter Ground, damp Mud hollows, rock/slate rim), mud + rock banks along streams, tuned forest palette; cliff faces on the rim; waterfall rocks; riverbank strips along streams | `WorldService.writeTerrain` |
+| Blender for important assets; landscape in Blender (modular, streaming-friendly, simplified collision) | **57 new Blender assets** (`blender/assets/survival_wars.py`): cliff faces, cave arch + modular tunnel segment + chamber cap, riverbank straight/bend, modular 32×32 forest-floor and clearing ground sections, trail strip, roots, flowers, sapling, 2 spruces, aspen, scrap pile, coal/iron ore, 4 chests, 14 POI buildings, 7 tools, 3 storage tiers, scrap/metal walls, floor, 3 traps, Workbench IV/V. POI meshes match the procedural collider layouts; everything falls back to procedural until imported (`Docs/IMPORT.md`). | Blender pipeline, `Export/Meshes/SW_*`, `Renders/ContactSheet_SW_*` |
+| Optimise: streaming, LOD, efficient collision | All new models `Atomic` streaming; decorations are single MeshParts; LOD1 FBX exported for the large assets; colliders are single boxes; nodes/POIs use part budgets | `Decor`, `Landmarks`, Blender LOD |
+
+**Decision D49 (landscape):** the match map stays **voxel terrain generated from the layout** (seamless collision,
+StreamingEnabled chunking, per-match randomisation), dressed with Blender landscape pieces (cliff faces, riverbanks,
+cave kit, trail strips). A fixed Blender terrain mesh can't follow a map that changes every match. The modular Blender
+ground sections (`SM_Ground_Forest01`, `SM_Ground_Clearing01`) are for hand-built areas such as the lobby (Phase 7).
+
+**Decision D50:** fixed a latent bug: rotated landmarks faced the wrong way in two sectors (`rotateList` now turns
+yaws with the same handedness as positions; covered by `LayoutGen.spec landmark_yaw_follows_rotation`).
+
+**Tests:** `LayoutGen.spec` (POI fairness per sector, rarity mix, yaw); `Loot.spec` (new tiers, rare components only
+Rare+); skins suite builds all 14 POIs, the cave, all chests, decor, ore nodes and checks every new mesh is applied
+(32 checks, library data regenerated from the catalog by `tests/skins/make_library_data.py`).

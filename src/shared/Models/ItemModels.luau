@@ -15,13 +15,22 @@ local UP_TO_FORWARD = CFrame.Angles(0, 0, math.pi) * CFrame.Angles(-math.pi / 2,
 local HELD_SKINS: { [string]: { string | CFrame } } = {
 	Spear = { "Spear", CFrame.new() },
 	Bow = { "Bow", CFrame.new() },
-	HuntingBow = { "Bow", CFrame.new() },
+	HuntingBow = { "HuntingBow", CFrame.new() },
 	Sword = { "Sword", UP_TO_FORWARD },
 	Shield = { "Shield", CFrame.Angles(0, math.pi / 2, 0) },
 	Pistol = { "Pistol", CFrame.new() },
 	Rifle = { "Rifle", CFrame.new() },
 	StoneAxe = { "StoneAxe", UP_TO_FORWARD },
 	CrudeAxe = { "StoneAxe", UP_TO_FORWARD },
+	IronAxe = { "Axe_Iron", UP_TO_FORWARD },
+	SteelAxe = { "Axe_Iron", UP_TO_FORWARD },
+	CrudePickaxe = { "Pickaxe_Stone", UP_TO_FORWARD },
+	StonePickaxe = { "Pickaxe_Stone", UP_TO_FORWARD },
+	IronPickaxe = { "Pickaxe_Iron", UP_TO_FORWARD },
+	SteelPickaxe = { "Pickaxe_Iron", UP_TO_FORWARD },
+	Crowbar = { "Crowbar", UP_TO_FORWARD },
+	Sledgehammer = { "Sledgehammer", UP_TO_FORWARD },
+	Crossbow = { "Crossbow", CFrame.new() },
 	CrudeSpear = { "Spear", CFrame.new() },
 	RepairHammer = { "RepairHammer", UP_TO_FORWARD },
 	Canteen = { "Canteen", CFrame.new() },
@@ -163,6 +172,16 @@ builders.Crossbow = function(m)
 	piece(m, { Name = "Stock", Size = Vector3.new(0.4, 0.4, 3), CFrame = CFrame.new(0, 0.35, -0.9), Color = WOOD, Material = Enum.Material.Wood })
 	piece(m, { Name = "Prod", Size = Vector3.new(3.2, 0.25, 0.3), CFrame = CFrame.new(0, 0.45, -2.3), Color = Color3.fromRGB(110, 110, 116), Material = Enum.Material.Metal })
 	piece(m, { Name = "String", Size = Vector3.new(3, 0.05, 0.05), CFrame = CFrame.new(0, 0.5, -1.7), Color = Color3.fromRGB(230, 226, 210), Material = Enum.Material.SmoothPlastic })
+end
+builders.Crowbar = function(m)
+	handle(m, Vector3.new(0.3, 0.3, 1), Color3.fromRGB(150, 60, 50), Enum.Material.Metal)
+	piece(m, { Name = "Bar", Size = Vector3.new(0.22, 0.22, 3), CFrame = CFrame.new(0, 0, -1.4), Color = Color3.fromRGB(150, 60, 50), Material = Enum.Material.Metal })
+	piece(m, { Name = "Claw", Size = Vector3.new(0.2, 0.6, 0.2), CFrame = CFrame.new(0, 0.25, -2.9), Color = Color3.fromRGB(80, 80, 86), Material = Enum.Material.Metal })
+end
+builders.Sledgehammer = function(m)
+	handle(m, Vector3.new(0.35, 0.35, 1), WOOD_DARK, Enum.Material.Wood)
+	piece(m, { Name = "Haft", Size = Vector3.new(0.32, 0.32, 3.8), CFrame = CFrame.new(0, 0, -1.6), Color = WOOD, Material = Enum.Material.Wood })
+	piece(m, { Name = "Head", Size = Vector3.new(0.7, 1.6, 0.7), CFrame = CFrame.new(0, 0, -3.5), Color = Color3.fromRGB(70, 72, 78), Material = Enum.Material.Metal })
 end
 builders.Bolt = function(m)
 	handle(m, Vector3.new(0.14, 0.14, 1.8), Color3.fromRGB(110, 110, 116), Enum.Material.Metal)

@@ -1,7 +1,7 @@
 # Survival Hour: model catalog
 
 Generated from `Roblox/catalog.json` by `blender/make_docs.py`. Sizes are Roblox studs (X width × Y height × Z depth), measured on the exported mesh. Every mesh uses **1 material** (the shared atlas). *Tris* is after triangulation; *LOD1* is the lower-detail file where one exists.
-**146 assets** (+ 14 separate moving parts), 79,572 triangles in total.
+**203 assets** (+ 14 separate moving parts), 105,454 triangles in total.
 
 
 Kinds: **Accessory**: Rigid R15 accessory (armor piece).; **Debris**: Lightweight destruction debris: unanchored, short lifetime, CanCollide on, CanTouch off.; **Effect**: Effect mesh (flames, water surface, target ring): no collision.; **Equippable**: Held item: put in a Tool, rename to Handle.; **Harvestable**: Static world prop players harvest; pair with its Depleted variant.; **Lobby**: Lobby prop.; **MovingPart**: Separate moving piece of another asset (door, lid, slide, bolt).; **Pickup**: Small dropped/world pickup and inventory icon model.; **Projectile**: Projectile mesh fired by a weapon (no collision; use raycasts).; **Reference**: Scale reference; not for gameplay.; **Rig**: Skinned, rigged character mesh with animations.; **Structure**: Player-placed building piece (anchored, collidable).; **WorldProp**: Static world prop (anchor it).
@@ -340,4 +340,93 @@ Kinds: **Accessory**: Rigid R15 accessory (armor piece).; **Debris**: Lightweigh
 - `SM_Emblem_Sharpshooter`: No text. Can double as a 3D icon for the powerup UI.
 
 </details>
+
+## Survival Wars: landscape, cave and forest-variety kit
+
+| Name | Kind | Size (studs) | Tris | LOD1 | Team | Use |
+|---|---|---|---|---|---|---|
+| `SM_Cliff_Face01` | WorldProp | 24.8 × 26.4 × 9.7 | 1040 | 320 |  | Modular cliff face for the map rim (20 wide x 26 tall). Tile along X; rotate/flip for variety. |
+| `SM_Cliff_Face02` | WorldProp | 24.6 × 23.6 × 9.7 | 644 | 216 |  | Cliff face variant with a ledge and hanging roots. |
+| `SM_CaveEntrance` | WorldProp | 20.9 × 15.4 × 9.8 | 972 | 288 |  | Rock arch that frames a cave mouth. Opening faces Blender -Y (the forest); the tunnel runs along +Y (into the cliff). WorldService carves the tunnel into terrain. |
+| `SM_CaveTunnel_Segment` | WorldProp | 14.8 × 12.9 × 12.4 | 752 | 196 |  | Modular cave interior piece (8 studs long, 11 wide, 10 tall), open front/back. Chain along +Y to line a tunnel carved in terrain. |
+| `SM_CaveChamber_End` | WorldProp | 19.4 × 15.9 × 20.2 | 920 | 240 |  | Dome that caps a cave tunnel (dead end / chamber), with glowing crystals. |
+| `SM_Riverbank_Straight` | WorldProp | 16.0 × 2.1 × 10.1 | 728 | 728 |  | Riverbank strip (16 long): grass/moss -> mud -> rocks -> water edge (at -Y). Lines stream edges; water stays terrain water. |
+| `SM_Riverbank_Bend` | WorldProp | 13.8 × 2.1 × 12.6 | 728 | 728 |  | Curved riverbank strip (45-degree bend). |
+| `SM_Ground_Forest01` | WorldProp | 32.0 × 2.5 × 32.0 | 1152 | 1152 |  | Modular 32x32 forest-floor section (moss, leaf litter, dirt, grass). Edges are flat at Z=0 so sections tile seamlessly; used for hand-built areas (lobby, set pieces). |
+| `SM_Ground_Clearing01` | WorldProp | 32.0 × 2.7 × 32.0 | 1392 | 1392 |  | Modular 32x32 camp-clearing section: packed earth centre, grass edge, a stone ring. |
+| `SM_Trail_Segment01` | WorldProp | 5.0 × 0.7 × 12.0 | 144 | — |  | Dirt trail strip with a log edge and stones (12 long). Decal-like; sits 0.05 above ground. |
+| `SM_Roots01` | WorldProp | 5.0 × 0.6 × 4.8 | 130 | — |  | Surface roots (decor, no collision). |
+| `SM_Roots02` | WorldProp | 4.9 × 0.9 × 2.7 | 108 | — |  | Arching roots (decor, no collision). |
+| `SM_Flowers01` | WorldProp | 2.5 × 1.0 × 2.3 | 308 | — |  | Wildflower clump (warm). |
+| `SM_Flowers02` | WorldProp | 2.4 × 1.0 × 2.4 | 308 | — |  | Wildflower clump (cool). |
+| `SM_Sapling01` | WorldProp | 2.5 × 5.1 × 2.4 | 266 | — |  | Young tree (5 studs). |
+| `SM_Tree_Spruce01` | WorldProp | 12.2 × 20.4 × 12.0 | 166 | 84 |  | Narrow dark spruce (20 studs). |
+| `SM_Tree_Spruce02` | WorldProp | 14.4 × 24.4 × 14.2 | 198 | 100 |  | Broad old spruce (24 studs). |
+| `SM_Tree_Aspen01` | WorldProp | 7.7 × 19.2 × 7.5 | 598 | 160 |  | Slim pale aspen with a high round crown (18 studs). |
+| `SM_ScrapPile01` | Harvestable | 4.3 × 2.1 × 3.8 | 220 | — |  | Scrap Pile resource node (pickaxe). Yield mesh; hide when mined out. |
+| `SM_OreDeposit_Coal` | Harvestable | 5.2 × 3.6 × 4.5 | 200 | — |  | Coal seam node (Stone Pickaxe+). |
+| `SM_OreDeposit_Iron` | Harvestable | 5.4 × 3.3 × 4.6 | 200 | — |  | Iron deposit node (Stone Pickaxe+). Rich veins use this mesh at 1.3x with a glow. |
+
+<details><summary>Notes</summary>
+
+- `SM_Cliff_Face01`: Visual only. The rim is voxel terrain; collision stays on the terrain (simplified).
+- `SM_Ground_Forest01`: Collision: the flat top (box). Small bumps are visual only.
+
+</details>
+
+## Survival Wars: points of interest
+
+| Name | Kind | Size (studs) | Tris | LOD1 | Team | Use |
+|---|---|---|---|---|---|---|
+| `SM_POI_Campsite` | Structure | 18.5 × 3.7 × 15.0 | 436 | 316 |  | Abandoned campsite (common POI): two tents, fire pit, log seats, crate, backpack. |
+| `SM_POI_Shed` | Structure | 9.0 × 7.8 × 7.0 | 724 | — |  | Tool shed (common POI), 8x6, lean-to tin roof. |
+| `SM_POI_HuntingBlind` | Structure | 6.4 × 8.6 × 6.9 | 256 | — |  | Raised hunting blind (common POI): platform at 6 studs, camouflage screens, ladder at +Y. |
+| `SM_POI_BrokenVehicle` | Structure | 15.1 × 5.3 × 9.4 | 368 | 176 |  | Rusted pickup truck (common POI), tilted into a ditch; scrap piles nearby are separate nodes. |
+| `SM_POI_SmallCabin` | Structure | 10.9 × 11.6 × 10.9 | 1040 | 472 |  | Small log cabin (common POI), 10x8 with windows, porch, stove pipe. |
+| `SM_POI_Cabin` | Structure | 14.9 × 12.8 × 13.4 | 1204 | 580 |  | Log cabin (uncommon POI), 14x10, stone chimney, porch. |
+| `SM_POI_RangerStation` | Structure | 15.6 × 12.8 × 22.1 | 1428 | 796 | yes | Ranger station (uncommon POI): green office 14x11 + lookout on stilts behind, flagpole. |
+| `SM_POI_LoggingCamp` | Structure | 19.1 × 9.4 × 24.0 | 960 | 448 |  | Logging camp (uncommon POI): small shed, stacked logs, sawhorse. |
+| `SM_POI_AbandonedHouse` | Structure | 16.5 × 14.0 × 17.6 | 1238 | 704 |  | Ruined two-room house (uncommon POI): collapsed side wall and half the roof. |
+| `SM_POI_MineEntrance` | Structure | 15.7 × 8.5 × 20.6 | 596 | 204 |  | Timbered mine mouth in a rock mound (uncommon POI), rails and a cart outside. |
+| `SM_POI_Bunker` | Structure | 14.6 × 8.7 × 14.9 | 912 | 544 |  | Half-buried concrete bunker (rare POI): thick walls, mossy slab, sandbags. |
+| `SM_POI_Outpost` | Structure | 26.6 × 9.4 × 20.6 | 722 | 504 |  | Abandoned outpost (rare POI): palisade ring open at +Y, tents, small watch deck, fire pit. |
+| `SM_POI_IndustrialSite` | Structure | 34.9 × 10.6 × 22.5 | 312 | 180 |  | Derelict industrial yard (rare POI): steel shed, two containers, fuel tank, barrels. |
+| `SM_POI_LargeMine` | Structure | 19.4 × 14.8 × 20.9 | 776 | 324 |  | Large mine (rare POI): mine mouth + wooden headframe with wheel + ore shed. |
+
+## Survival Wars: POI chests
+
+| Name | Kind | Size (studs) | Tris | LOD1 | Team | Use |
+|---|---|---|---|---|---|---|
+| `SM_Chest_Common` | Structure | 3.4 × 2.4 × 2.5 | 144 | — |  | Common POI chest body (lid stays procedural so it can open). |
+| `SM_Chest_Uncommon` | Structure | 3.4 × 2.4 × 2.5 | 144 | — |  | Uncommon POI chest body (painted green, iron trim). |
+| `SM_Chest_Rare` | Structure | 3.4 × 2.4 × 2.5 | 156 | — |  | Rare POI chest body (blue, brass trim, glowing lock). |
+| `SM_Chest_VeryRare` | Structure | 3.4 × 2.4 × 2.5 | 156 | — |  | Very Rare POI chest body (purple, gold trim, glowing lock). |
+
+## Survival Wars: tiered and breaching tools, bows
+
+| Name | Kind | Size (studs) | Tris | LOD1 | Team | Use |
+|---|---|---|---|---|---|---|
+| `SM_Pickaxe_Stone` | Equippable | 0.5 × 3.6 × 2.2 | 332 | — |  | Crude/Stone Pickaxe (tinted by tier in game). Tool > Handle. |
+| `SM_Pickaxe_Iron` | Equippable | 0.3 × 3.6 × 2.6 | 180 | — |  | Iron/Steel Pickaxe. Tool > Handle. |
+| `SM_Axe_Iron` | Equippable | 0.3 × 3.6 × 1.6 | 136 | — |  | Iron/Steel Axe. Tool > Handle. |
+| `SM_Crowbar` | Equippable | 0.1 × 3.5 × 0.9 | 60 | — |  | Crowbar (breaching tool). Tool > Handle. |
+| `SM_Sledgehammer` | Equippable | 0.6 × 4.2 × 1.5 | 156 | — |  | Sledgehammer (breaching tool, heavy vs walls). Tool > Handle. |
+| `SM_HuntingBow` | Equippable | 0.3 × 4.8 × 0.8 | 96 | — |  | Hunting Bow (Tier III). Draw along -Z. |
+| `SM_Crossbow` | Equippable | 3.2 × 0.9 × 3.0 | 126 | — |  | Crossbow (Tier IV). Points along -Z; bolts. |
+
+## Survival Wars: storage tiers, walls, floor, traps, Workbench IV/V
+
+| Name | Kind | Size (studs) | Tris | LOD1 | Team | Use |
+|---|---|---|---|---|---|---|
+| `SM_ReinforcedChest` | Structure | 6.2 × 4.3 × 4.3 | 124 | — |  | Reinforced Chest storage (Tier II, 20 stacks). |
+| `SM_MetalLocker` | Structure | 4.0 × 7.0 × 3.2 | 92 | — |  | Metal Locker storage (Tier III, 30 stacks). |
+| `SM_SurvivalSafe` | Structure | 4.5 × 5.0 × 4.8 | 100 | — |  | Survival Safe storage (Tier IV, 45 stacks). |
+| `SM_ScrapWall` | Structure | 10.5 × 10.4 × 1.4 | 108 | — |  | Scrap Wall (Tier III): corrugated sheets on a timber frame, 10 wide. |
+| `SM_MetalWall` | Structure | 10.8 × 11.0 × 2.6 | 288 | — |  | Metal Wall (Tier IV): riveted plates between beams, 10 wide. |
+| `SM_WoodFloor` | Structure | 10.0 × 1.0 × 10.0 | 376 | — |  | Wooden Floor (Tier I), 10x10 platform. |
+| `SM_BearTrap` | Structure | 2.6 × 0.6 × 1.8 | 360 | — |  | Bear Trap (Tier III), set. |
+| `SM_Snare` | Structure | 3.1 × 3.2 × 2.5 | 138 | — |  | Snare (Tier II): rope loop on a bent sapling. |
+| `SM_TripwireAlarm` | Structure | 7.9 × 1.4 × 0.5 | 96 | — |  | Tripwire Alarm (Tier II): stakes, wire and can rattle. |
+| `SM_Workbench_Level04` | Structure | 12.1 × 7.7 × 4.0 | 160 | — |  | Workbench Tier IV: stone forge with coals and chimney beside the bench. |
+| `SM_Workbench_Level05` | Structure | 12.2 × 7.7 × 4.1 | 208 | — |  | Workbench Tier V: steel-plated top, tool rack and forge. |
 

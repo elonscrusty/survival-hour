@@ -774,3 +774,291 @@ All positions below are in the asset's own Roblox space (studs; X right, Y up, -
 - Footprint: 2.6 × 0.6 studs (X × Z)
 - Collision: CollisionFidelity **Box**
 
+## Survival Wars: landscape, cave and forest-variety kit
+
+### `SM_Cliff_Face01`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 20.0 × 8.0 studs (X × Z)
+- Collision: CollisionFidelity **Box** (or CanCollide off for decor)
+
+### `SM_Cliff_Face02`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 20.0 × 8.0 studs (X × Z)
+- Collision: CollisionFidelity **Box** (or CanCollide off for decor)
+
+### `SM_CaveEntrance`
+- Pivot: Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.
+- Footprint: 20.0 × 8.0 studs (X × Z)
+- Collision: CollisionFidelity **Box** (or CanCollide off for decor)
+
+### `SM_CaveTunnel_Segment`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 12.0 × 8.0 studs (X × Z)
+- Collision: CollisionFidelity **Box** (or CanCollide off for decor)
+
+### `SM_CaveChamber_End`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 16.0 × 16.0 studs (X × Z)
+- Collision: CollisionFidelity **Box** (or CanCollide off for decor)
+
+### `SM_Riverbank_Straight`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 16.0 × 10.0 studs (X × Z)
+- Collision: CollisionFidelity **Box** (or CanCollide off for decor)
+
+### `SM_Riverbank_Bend`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 16.0 × 12.0 studs (X × Z)
+- Collision: CollisionFidelity **Box** (or CanCollide off for decor)
+
+### `SM_Ground_Forest01`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 32.0 × 32.0 studs (X × Z)
+- Collision: 1 box(es) → `Export/Collision/SW_Landscape/COL_Ground_Forest01.fbx`; fallback CollisionFidelity **Box**
+
+### `SM_Ground_Clearing01`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 32.0 × 32.0 studs (X × Z)
+- Collision: 1 box(es) → `Export/Collision/SW_Landscape/COL_Ground_Clearing01.fbx`; fallback CollisionFidelity **Box**
+
+### `SM_Trail_Segment01`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 4.0 × 12.0 studs (X × Z)
+- Collision: CollisionFidelity **Box** (or CanCollide off for decor)
+
+### `SM_Roots01`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 4.0 × 4.0 studs (X × Z)
+- Collision: CollisionFidelity **Box** (or CanCollide off for decor)
+
+### `SM_Roots02`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 5.0 × 3.0 studs (X × Z)
+- Collision: CollisionFidelity **Box** (or CanCollide off for decor)
+
+### `SM_Flowers01`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 3.0 × 3.0 studs (X × Z)
+- Collision: CollisionFidelity **Box** (or CanCollide off for decor)
+
+### `SM_Flowers02`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 3.0 × 3.0 studs (X × Z)
+- Collision: CollisionFidelity **Box** (or CanCollide off for decor)
+
+### `SM_Sapling01`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 2.0 × 2.0 studs (X × Z)
+- Collision: CollisionFidelity **Box** (or CanCollide off for decor)
+
+### `SM_Tree_Spruce01`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 9.0 × 9.0 studs (X × Z)
+- Collision: CollisionFidelity **Box** (or CanCollide off for decor)
+
+### `SM_Tree_Spruce02`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 11.0 × 11.0 studs (X × Z)
+- Collision: CollisionFidelity **Box** (or CanCollide off for decor)
+
+### `SM_Tree_Aspen01`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 8.0 × 8.0 studs (X × Z)
+- Collision: CollisionFidelity **Box** (or CanCollide off for decor)
+
+### `SM_ScrapPile01`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 5.0 × 4.0 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+### `SM_OreDeposit_Coal`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 5.0 × 5.0 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+### `SM_OreDeposit_Iron`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 5.0 × 5.0 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+## Survival Wars: points of interest
+
+### `SM_POI_Campsite`
+- Pivot: Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.
+- Footprint: 22.0 × 22.0 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+### `SM_POI_Shed`
+- Pivot: Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.
+- Footprint: 10.0 × 8.0 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+### `SM_POI_HuntingBlind`
+- Pivot: Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.
+- Footprint: 9.0 × 9.0 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+### `SM_POI_BrokenVehicle`
+- Pivot: Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.
+- Footprint: 16.0 × 12.0 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+### `SM_POI_SmallCabin`
+- Pivot: Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.
+- Footprint: 13.0 × 11.0 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+### `SM_POI_Cabin`
+- Pivot: Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.
+- Footprint: 18.0 × 14.0 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+### `SM_POI_RangerStation`
+- Pivot: Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.
+- Footprint: 20.0 × 16.0 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+### `SM_POI_LoggingCamp`
+- Pivot: Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.
+- Footprint: 24.0 × 24.0 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+### `SM_POI_AbandonedHouse`
+- Pivot: Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.
+- Footprint: 22.0 × 18.0 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+### `SM_POI_MineEntrance`
+- Pivot: Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.
+- Footprint: 18.0 × 14.0 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+### `SM_POI_Bunker`
+- Pivot: Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.
+- Footprint: 18.0 × 16.0 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+### `SM_POI_Outpost`
+- Pivot: Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.
+- Footprint: 30.0 × 30.0 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+### `SM_POI_IndustrialSite`
+- Pivot: Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.
+- Footprint: 34.0 × 30.0 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+### `SM_POI_LargeMine`
+- Pivot: Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.
+- Footprint: 22.0 × 20.0 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+## Survival Wars: POI chests
+
+### `SM_Chest_Common`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 3.4 × 2.2 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+### `SM_Chest_Uncommon`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 3.4 × 2.2 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+### `SM_Chest_Rare`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 3.4 × 2.2 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+### `SM_Chest_VeryRare`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 3.4 × 2.2 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+## Survival Wars: tiered and breaching tools, bows
+
+### `SM_Pickaxe_Stone`
+- Pivot: Grip point (RightGripAttachment). Handle runs up +Y, striking side faces forward (-Z). Default Tool.Grip = identity.
+- Collision: CollisionFidelity **Box**
+
+### `SM_Pickaxe_Iron`
+- Pivot: Grip point (RightGripAttachment). Handle runs up +Y, striking side faces forward (-Z). Default Tool.Grip = identity.
+- Collision: CollisionFidelity **Box**
+
+### `SM_Axe_Iron`
+- Pivot: Grip point (RightGripAttachment). Handle runs up +Y, striking side faces forward (-Z). Default Tool.Grip = identity.
+- Collision: CollisionFidelity **Box**
+
+### `SM_Crowbar`
+- Pivot: Grip point (RightGripAttachment). Handle runs up +Y, striking side faces forward (-Z). Default Tool.Grip = identity.
+- Collision: CollisionFidelity **Box**
+
+### `SM_Sledgehammer`
+- Pivot: Grip point (RightGripAttachment). Handle runs up +Y, striking side faces forward (-Z). Default Tool.Grip = identity.
+- Collision: CollisionFidelity **Box**
+
+### `SM_HuntingBow`
+- Pivot: Grip point (RightGripAttachment). Points forward along -Z (LookVector), up is +Y. Default Tool.Grip = identity.
+- Collision: CollisionFidelity **Box**
+
+### `SM_Crossbow`
+- Pivot: Grip point (RightGripAttachment). Points forward along -Z (LookVector), up is +Y. Default Tool.Grip = identity.
+- Collision: CollisionFidelity **Box**
+
+## Survival Wars: storage tiers, walls, floor, traps, Workbench IV/V
+
+### `SM_ReinforcedChest`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 6.0 × 4.0 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+### `SM_MetalLocker`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 4.0 × 3.0 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+### `SM_SurvivalSafe`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 4.5 × 4.5 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+### `SM_ScrapWall`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 10.0 × 2.0 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+### `SM_MetalWall`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 10.0 × 2.6 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+### `SM_WoodFloor`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 10.0 × 10.0 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+### `SM_BearTrap`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 3.0 × 3.0 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+### `SM_Snare`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 3.0 × 3.0 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+### `SM_TripwireAlarm`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 8.0 × 1.0 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+### `SM_Workbench_Level04`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 12.0 × 4.0 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+
+### `SM_Workbench_Level05`
+- Pivot: Bottom centre on the ground (Z=0).
+- Footprint: 12.0 × 4.0 studs (X × Z)
+- Collision: CollisionFidelity **Box**
+

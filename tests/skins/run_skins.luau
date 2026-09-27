@@ -249,10 +249,11 @@ test("Workbench levels", function()
 end)
 test("Workbench tiers IV-V keep their upgrades visible", function()
 	local m4 = Camp.Workbench(at, 4, Color3.new(0, 0, 1), workspace)
-	check(skinOf(m4, "SM_Workbench_Level03"), "tier 4 uses the level 3 mesh")
-	check(m4:FindFirstChild("Forge") and m4:FindFirstChild("Forge").Transparency == 0, "forge visible")
+	check(skinOf(m4, "SM_Workbench_Level04"), "tier 4 mesh")
+	check(m4:FindFirstChild("Forge") and m4:FindFirstChild("Forge").CanCollide, "forge collider kept")
+	check(m4:FindFirstChild("ForgeCoals").Transparency == 0, "coals glow stays visible")
 	local m5 = Camp.Workbench(at, 5, Color3.new(0, 0, 1), workspace)
-	check(m5:FindFirstChild("SteelPlate") and m5:FindFirstChild("SteelPlate").Transparency == 0, "steel plate visible")
+	check(skinOf(m5, "SM_Workbench_Level05"), "tier 5 mesh")
 end)
 test("LargeRockPile: bigger yield mesh", function()
 	local m = Flora.LargeRockPile(at, Random.new(5), workspace)
@@ -271,7 +272,10 @@ test("POIs: every landmark builds with a Root and chest mounts", function()
 		end
 		check(mounts >= 1, kind .. " chest mounts")
 	end
+	check(skinOf(Landmarks.Build("Cabin", at, Random.new(4), workspace), "SM_POI_Cabin"), "cabin mesh")
+	check(skinOf(Landmarks.Chest(at, "Rare", workspace), "SM_Chest_Rare"), "rare chest mesh")
 	local cave = Landmarks.CaveEntrance(at, Random.new(2), 34, "Medium", workspace)
+	check(skinOf(cave, "SM_CaveEntrance"), "cave arch mesh")
 	check(cave:FindFirstChild("Crystal") or cave:FindFirstChild("Lantern"), "cave lights")
 	for _, tier in { "Common", "Uncommon", "Rare", "VeryRare" } do
 		local c = Landmarks.Chest(at, tier, workspace)
@@ -285,7 +289,14 @@ test("Decor: mesh-first with colliders for solid kinds", function()
 	check(log and log:FindFirstChild("Collider"), "log collider")
 	local fern = Decor.Place("Fern", at, Random.new(1), 1, workspace)
 	check(fern and not fern:FindFirstChild("Collider"), "fern is decor only")
-	check(Decor.Place("FlowerPatch", at, Random.new(1), 1, workspace), "procedural fallback when no mesh")
+	check(Decor.Place("FlowerPatch", at, Random.new(1), 1, workspace), "flowers")
+	check(Decor.Place("Spruce", at, Random.new(1), 1, workspace):FindFirstChild("Collider"), "spruce trunk collider")
+	for _, id in { "ScrapWall", "MetalWall", "WoodFloor", "ReinforcedChest", "MetalLocker", "SurvivalSafe", "BearTrap", "Snare", "TripwireAlarm" } do
+		check(#skins(Structures.Build(id, at, Color3.new(1, 0, 0), workspace)) >= 1, id .. " mesh")
+	end
+	for _, id in { "StonePickaxe", "IronAxe", "Crowbar", "Sledgehammer", "Crossbow", "HuntingBow" } do
+		check(#skins(ItemModels.Held(id)) >= 1, id .. " held mesh")
+	end
 	for _, id in { "ScrapPile", "CoalDeposit", "IronDeposit", "RichIronDeposit" } do
 		local m = Flora[id](at, Random.new(3), workspace)
 		local yields = 0

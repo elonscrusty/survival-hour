@@ -489,6 +489,7 @@ function Flora.ScrapPile(cf: CFrame, rng: Random, parent: Instance?): Model
 	end
 	markYield(Build.Cyl("Rim", 0.4, 1.6, CFrame.new(1.2, 0.9, -0.6) * CFrame.Angles(0.4, 0, 1.2), Color3.fromRGB(60, 60, 64), M.Metal, m, false)) -- 9
 	finish(m, root, cf, parent)
+	skinHarvest(m, "SM_ScrapPile01", "SM_StoneDeposit01_Depleted", 1)
 	return m
 end
 
@@ -504,6 +505,7 @@ local function oreDeposit(cf: CFrame, rng: Random, parent: Instance?, name: stri
 		markYield(block("Seam", s, CFrame.new(math.cos(a) * main.X * 0.42, main.Y * rng:NextNumber(0.35, 0.7), math.sin(a) * main.Z * 0.42) * CFrame.Angles(rng:NextNumber(0, 1), a, 0), seam, seamMat, m))
 	end
 	finish(m, root, cf, parent)
+	skinHarvest(m, if name == "CoalDeposit" then "SM_OreDeposit_Coal" else "SM_OreDeposit_Iron", "SM_StoneDeposit01_Depleted", k)
 	return m
 end
 

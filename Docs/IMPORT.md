@@ -29,6 +29,23 @@ Luau compiler and passed a smoke test against a mock of the Roblox API
 the Output window text back to Claude. Animations still need importing through the Animation Editor
 (section 6).
 
+## Survival Wars expansion (57 new assets)
+
+The Survival Wars update adds five folders under `Export/Meshes/`: `SW_Landscape`
+(cliff faces, cave entrance and interior pieces, riverbanks, modular ground sections,
+trail strips, roots, flowers, sapling, spruces, aspen, scrap pile, ore seams),
+`SW_POI` (14 points of interest), `SW_Loot` (4 chest tiers), `SW_Tools` (pickaxes,
+iron axe, crowbar, sledgehammer, hunting bow, crossbow) and `SW_Base` (storage tiers,
+scrap/metal walls, wooden floor, traps, Workbench IV/V).
+
+The game already runs without them: every model falls back to its procedural look
+until the mesh is in the library. To add them:
+
+1. Import the `.fbx` files from those five folders (same importer settings as below).
+2. Run `Roblox/SurvivalHour_Paste.lua` again (it skips assets that are already set up).
+3. Select `ServerStorage.SurvivalHour` → right-click → **Save to File…** →
+   overwrite `SurvivalHourAssets.rbxm` in the project, then rebuild with Rojo.
+
 ## 1. How the files were exported
 
 The exporter (`blender/sh/pipeline.py → export_fbx`) uses Roblox's documented Blender FBX settings:

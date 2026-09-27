@@ -12769,6 +12769,2982 @@
   }
  },
  {
+  "name": "SM_Cliff_Face01",
+  "category": "SW_Landscape",
+  "kind": "WorldProp",
+  "kind_note": "Static world prop (anchor it).",
+  "use": "Modular cliff face for the map rim (20 wide x 26 tall). Tile along X; rotate/flip for variety.",
+  "notes": "Visual only. The rim is voxel terrain; collision stays on the terrain (simplified).",
+  "size_studs_roblox_XYZ": [
+   24.8,
+   26.38,
+   9.71
+  ],
+  "footprint_studs": [
+   20,
+   8
+  ],
+  "tris": 1040,
+  "verts": 552,
+  "materials": 1,
+  "texture_tiles": [
+   "moss",
+   "stone",
+   "stone_dark",
+   "stone_mossy"
+  ],
+  "origin_offset": [
+   0.0405,
+   -12.212,
+   0.2555
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": 320,
+  "files": {
+   "fbx": "Export/Meshes/SW_Landscape/SM_Cliff_Face01.fbx",
+   "lod1": "Export/LOD/SW_Landscape/SM_Cliff_Face01_LOD1.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Landscape/SM_Cliff_Face01.png"
+  }
+ },
+ {
+  "name": "SM_Cliff_Face02",
+  "category": "SW_Landscape",
+  "kind": "WorldProp",
+  "kind_note": "Static world prop (anchor it).",
+  "use": "Cliff face variant with a ledge and hanging roots.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   24.62,
+   23.56,
+   9.66
+  ],
+  "footprint_studs": [
+   20,
+   8
+  ],
+  "tris": 644,
+  "verts": 348,
+  "materials": 1,
+  "texture_tiles": [
+   "bark_dead",
+   "stone",
+   "stone_dark",
+   "stone_vein"
+  ],
+  "origin_offset": [
+   0.188,
+   -11.0735,
+   0.02
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": 216,
+  "files": {
+   "fbx": "Export/Meshes/SW_Landscape/SM_Cliff_Face02.fbx",
+   "lod1": "Export/LOD/SW_Landscape/SM_Cliff_Face02_LOD1.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Landscape/SM_Cliff_Face02.png"
+  }
+ },
+ {
+  "name": "SM_CaveEntrance",
+  "category": "SW_Landscape",
+  "kind": "WorldProp",
+  "kind_note": "Static world prop (anchor it).",
+  "use": "Rock arch that frames a cave mouth. Opening faces Blender -Y (the forest); the tunnel runs along +Y (into the cliff). WorldService carves the tunnel into terrain.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   20.87,
+   15.4,
+   9.75
+  ],
+  "footprint_studs": [
+   20,
+   8
+  ],
+  "tris": 972,
+  "verts": 518,
+  "materials": 1,
+  "texture_tiles": [
+   "bark_dead",
+   "moss",
+   "stone_dark",
+   "stone_mossy",
+   "stone_vein"
+  ],
+  "origin_offset": [
+   -0.16,
+   -4.2015,
+   0.568
+  ],
+  "team_colored": false,
+  "pivot": "Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": 288,
+  "files": {
+   "fbx": "Export/Meshes/SW_Landscape/SM_CaveEntrance.fbx",
+   "lod1": "Export/LOD/SW_Landscape/SM_CaveEntrance_LOD1.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Landscape/SM_CaveEntrance.png"
+  }
+ },
+ {
+  "name": "SM_CaveTunnel_Segment",
+  "category": "SW_Landscape",
+  "kind": "WorldProp",
+  "kind_note": "Static world prop (anchor it).",
+  "use": "Modular cave interior piece (8 studs long, 11 wide, 10 tall), open front/back. Chain along +Y to line a tunnel carved in terrain.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   14.75,
+   12.95,
+   12.4
+  ],
+  "footprint_studs": [
+   12,
+   8
+  ],
+  "tris": 752,
+  "verts": 402,
+  "materials": 1,
+  "texture_tiles": [
+   "stone",
+   "stone_dark",
+   "stone_vein"
+  ],
+  "origin_offset": [
+   -0.1465,
+   -5.6865,
+   0.368
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": 196,
+  "files": {
+   "fbx": "Export/Meshes/SW_Landscape/SM_CaveTunnel_Segment.fbx",
+   "lod1": "Export/LOD/SW_Landscape/SM_CaveTunnel_Segment_LOD1.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Landscape/SM_CaveTunnel_Segment.png"
+  }
+ },
+ {
+  "name": "SM_CaveChamber_End",
+  "category": "SW_Landscape",
+  "kind": "WorldProp",
+  "kind_note": "Static world prop (anchor it).",
+  "use": "Dome that caps a cave tunnel (dead end / chamber), with glowing crystals.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   19.37,
+   15.88,
+   20.19
+  ],
+  "footprint_studs": [
+   16,
+   16
+  ],
+  "tris": 920,
+  "verts": 492,
+  "materials": 1,
+  "texture_tiles": [
+   "eye_glow",
+   "stone",
+   "stone_dark"
+  ],
+  "origin_offset": [
+   0.542,
+   -6.7265,
+   -3.894
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": 240,
+  "files": {
+   "fbx": "Export/Meshes/SW_Landscape/SM_CaveChamber_End.fbx",
+   "lod1": "Export/LOD/SW_Landscape/SM_CaveChamber_End_LOD1.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Landscape/SM_CaveChamber_End.png"
+  }
+ },
+ {
+  "name": "SM_Riverbank_Straight",
+  "category": "SW_Landscape",
+  "kind": "WorldProp",
+  "kind_note": "Static world prop (anchor it).",
+  "use": "Riverbank strip (16 long): grass/moss -> mud -> rocks -> water edge (at -Y). Lines stream edges; water stays terrain water.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   16.0,
+   2.08,
+   10.06
+  ],
+  "footprint_studs": [
+   16,
+   10
+  ],
+  "tris": 728,
+  "verts": 378,
+  "materials": 1,
+  "texture_tiles": [
+   "dirt",
+   "grass",
+   "moss",
+   "stone_mossy"
+  ],
+  "origin_offset": [
+   0.0,
+   0.36,
+   0.0285
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": 728,
+  "files": {
+   "fbx": "Export/Meshes/SW_Landscape/SM_Riverbank_Straight.fbx",
+   "lod1": "Export/LOD/SW_Landscape/SM_Riverbank_Straight_LOD1.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Landscape/SM_Riverbank_Straight.png"
+  }
+ },
+ {
+  "name": "SM_Riverbank_Bend",
+  "category": "SW_Landscape",
+  "kind": "WorldProp",
+  "kind_note": "Static world prop (anchor it).",
+  "use": "Curved riverbank strip (45-degree bend).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   13.77,
+   2.08,
+   12.64
+  ],
+  "footprint_studs": [
+   16,
+   12
+  ],
+  "tris": 728,
+  "verts": 378,
+  "materials": 1,
+  "texture_tiles": [
+   "dirt",
+   "grass",
+   "moss",
+   "stone_mossy"
+  ],
+  "origin_offset": [
+   2.5485,
+   0.36,
+   -1.318
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": 728,
+  "files": {
+   "fbx": "Export/Meshes/SW_Landscape/SM_Riverbank_Bend.fbx",
+   "lod1": "Export/LOD/SW_Landscape/SM_Riverbank_Bend_LOD1.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Landscape/SM_Riverbank_Bend.png"
+  }
+ },
+ {
+  "name": "SM_Ground_Forest01",
+  "category": "SW_Landscape",
+  "kind": "WorldProp",
+  "kind_note": "Static world prop (anchor it).",
+  "use": "Modular 32x32 forest-floor section (moss, leaf litter, dirt, grass). Edges are flat at Z=0 so sections tile seamlessly; used for hand-built areas (lobby, set pieces).",
+  "notes": "Collision: the flat top (box). Small bumps are visual only.",
+  "size_studs_roblox_XYZ": [
+   32.0,
+   2.54,
+   32.0
+  ],
+  "footprint_studs": [
+   32,
+   32
+  ],
+  "tris": 1152,
+  "verts": 578,
+  "materials": 1,
+  "texture_tiles": [
+   "dirt",
+   "forest_floor",
+   "grass",
+   "moss"
+  ],
+  "origin_offset": [
+   0.0,
+   0.7305,
+   0.0
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [
+   {
+    "cframe": [
+     0.0,
+     -1,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     32,
+     2,
+     32
+    ]
+   }
+  ],
+  "parts": [],
+  "lod1_tris": 1152,
+  "files": {
+   "fbx": "Export/Meshes/SW_Landscape/SM_Ground_Forest01.fbx",
+   "lod1": "Export/LOD/SW_Landscape/SM_Ground_Forest01_LOD1.fbx",
+   "collision": "Export/Collision/SW_Landscape/COL_Ground_Forest01.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Landscape/SM_Ground_Forest01.png"
+  }
+ },
+ {
+  "name": "SM_Ground_Clearing01",
+  "category": "SW_Landscape",
+  "kind": "WorldProp",
+  "kind_note": "Static world prop (anchor it).",
+  "use": "Modular 32x32 camp-clearing section: packed earth centre, grass edge, a stone ring.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   32.0,
+   2.74,
+   32.0
+  ],
+  "footprint_studs": [
+   32,
+   32
+  ],
+  "tris": 1392,
+  "verts": 722,
+  "materials": 1,
+  "texture_tiles": [
+   "dirt",
+   "forest_floor",
+   "grass",
+   "stone_mossy"
+  ],
+  "origin_offset": [
+   0.0,
+   0.6305,
+   0.0
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [
+   {
+    "cframe": [
+     0.0,
+     -1,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     32,
+     2,
+     32
+    ]
+   }
+  ],
+  "parts": [],
+  "lod1_tris": 1392,
+  "files": {
+   "fbx": "Export/Meshes/SW_Landscape/SM_Ground_Clearing01.fbx",
+   "lod1": "Export/LOD/SW_Landscape/SM_Ground_Clearing01_LOD1.fbx",
+   "collision": "Export/Collision/SW_Landscape/COL_Ground_Clearing01.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Landscape/SM_Ground_Clearing01.png"
+  }
+ },
+ {
+  "name": "SM_Trail_Segment01",
+  "category": "SW_Landscape",
+  "kind": "WorldProp",
+  "kind_note": "Static world prop (anchor it).",
+  "use": "Dirt trail strip with a log edge and stones (12 long). Decal-like; sits 0.05 above ground.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   4.96,
+   0.66,
+   12.02
+  ],
+  "footprint_studs": [
+   4,
+   12
+  ],
+  "tris": 144,
+  "verts": 86,
+  "materials": 1,
+  "texture_tiles": [
+   "bark",
+   "dirt",
+   "end_grain",
+   "stone"
+  ],
+  "origin_offset": [
+   0.08,
+   -0.2715,
+   -0.002
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Landscape/SM_Trail_Segment01.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Landscape/SM_Trail_Segment01.png"
+  }
+ },
+ {
+  "name": "SM_Roots01",
+  "category": "SW_Landscape",
+  "kind": "WorldProp",
+  "kind_note": "Static world prop (anchor it).",
+  "use": "Surface roots (decor, no collision).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   4.97,
+   0.57,
+   4.82
+  ],
+  "footprint_studs": [
+   4,
+   4
+  ],
+  "tris": 130,
+  "verts": 75,
+  "materials": 1,
+  "texture_tiles": [
+   "bark"
+  ],
+  "origin_offset": [
+   0.028,
+   -0.264,
+   -0.2065
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Landscape/SM_Roots01.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Landscape/SM_Roots01.png"
+  }
+ },
+ {
+  "name": "SM_Roots02",
+  "category": "SW_Landscape",
+  "kind": "WorldProp",
+  "kind_note": "Static world prop (anchor it).",
+  "use": "Arching roots (decor, no collision).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   4.86,
+   0.93,
+   2.72
+  ],
+  "footprint_studs": [
+   5,
+   3
+  ],
+  "tris": 108,
+  "verts": 60,
+  "materials": 1,
+  "texture_tiles": [
+   "bark_dead"
+  ],
+  "origin_offset": [
+   -0.0055,
+   -0.4095,
+   -0.0065
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Landscape/SM_Roots02.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Landscape/SM_Roots02.png"
+  }
+ },
+ {
+  "name": "SM_Flowers01",
+  "category": "SW_Landscape",
+  "kind": "WorldProp",
+  "kind_note": "Static world prop (anchor it).",
+  "use": "Wildflower clump (warm).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   2.53,
+   1.04,
+   2.31
+  ],
+  "footprint_studs": [
+   3,
+   3
+  ],
+  "tris": 308,
+  "verts": 192,
+  "materials": 1,
+  "texture_tiles": [
+   "bandage",
+   "enamel_amber",
+   "enamel_red",
+   "fiber",
+   "leaves"
+  ],
+  "origin_offset": [
+   -0.021,
+   -0.396,
+   -0.021
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Landscape/SM_Flowers01.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Landscape/SM_Flowers01.png"
+  }
+ },
+ {
+  "name": "SM_Flowers02",
+  "category": "SW_Landscape",
+  "kind": "WorldProp",
+  "kind_note": "Static world prop (anchor it).",
+  "use": "Wildflower clump (cool).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   2.44,
+   1.03,
+   2.37
+  ],
+  "footprint_studs": [
+   3,
+   3
+  ],
+  "tris": 308,
+  "verts": 192,
+  "materials": 1,
+  "texture_tiles": [
+   "bandage",
+   "enamel_purple",
+   "enamel_teal",
+   "fiber",
+   "leaves"
+  ],
+  "origin_offset": [
+   0.0905,
+   -0.388,
+   0.115
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Landscape/SM_Flowers02.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Landscape/SM_Flowers02.png"
+  }
+ },
+ {
+  "name": "SM_Sapling01",
+  "category": "SW_Landscape",
+  "kind": "WorldProp",
+  "kind_note": "Static world prop (anchor it).",
+  "use": "Young tree (5 studs).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   2.46,
+   5.07,
+   2.41
+  ],
+  "footprint_studs": [
+   2,
+   2
+  ],
+  "tris": 266,
+  "verts": 141,
+  "materials": 1,
+  "texture_tiles": [
+   "bark",
+   "leaves"
+  ],
+  "origin_offset": [
+   0.114,
+   -2.3315,
+   -0.068
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Landscape/SM_Sapling01.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Landscape/SM_Sapling01.png"
+  }
+ },
+ {
+  "name": "SM_Tree_Spruce01",
+  "category": "SW_Landscape",
+  "kind": "WorldProp",
+  "kind_note": "Static world prop (anchor it).",
+  "use": "Narrow dark spruce (20 studs).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   12.21,
+   20.41,
+   12.03
+  ],
+  "footprint_studs": [
+   9,
+   9
+  ],
+  "tris": 166,
+  "verts": 101,
+  "materials": 1,
+  "texture_tiles": [
+   "bark_pine",
+   "end_grain",
+   "pine_needles",
+   "pine_needles_dark"
+  ],
+  "origin_offset": [
+   0.0,
+   -9.797,
+   -0.187
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": 84,
+  "files": {
+   "fbx": "Export/Meshes/SW_Landscape/SM_Tree_Spruce01.fbx",
+   "lod1": "Export/LOD/SW_Landscape/SM_Tree_Spruce01_LOD1.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Landscape/SM_Tree_Spruce01.png"
+  }
+ },
+ {
+  "name": "SM_Tree_Spruce02",
+  "category": "SW_Landscape",
+  "kind": "WorldProp",
+  "kind_note": "Static world prop (anchor it).",
+  "use": "Broad old spruce (24 studs).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   14.42,
+   24.45,
+   14.2
+  ],
+  "footprint_studs": [
+   11,
+   11
+  ],
+  "tris": 198,
+  "verts": 121,
+  "materials": 1,
+  "texture_tiles": [
+   "bark_pine",
+   "end_grain",
+   "pine_needles",
+   "pine_needles_dark"
+  ],
+  "origin_offset": [
+   0.0,
+   -11.8205,
+   -0.2205
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": 100,
+  "files": {
+   "fbx": "Export/Meshes/SW_Landscape/SM_Tree_Spruce02.fbx",
+   "lod1": "Export/LOD/SW_Landscape/SM_Tree_Spruce02_LOD1.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Landscape/SM_Tree_Spruce02.png"
+  }
+ },
+ {
+  "name": "SM_Tree_Aspen01",
+  "category": "SW_Landscape",
+  "kind": "WorldProp",
+  "kind_note": "Static world prop (anchor it).",
+  "use": "Slim pale aspen with a high round crown (18 studs).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   7.67,
+   19.22,
+   7.54
+  ],
+  "footprint_studs": [
+   8,
+   8
+  ],
+  "tris": 598,
+  "verts": 315,
+  "materials": 1,
+  "texture_tiles": [
+   "bark_birch",
+   "end_grain",
+   "leaves_birch"
+  ],
+  "origin_offset": [
+   -0.1635,
+   -9.304,
+   0.1745
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": 160,
+  "files": {
+   "fbx": "Export/Meshes/SW_Landscape/SM_Tree_Aspen01.fbx",
+   "lod1": "Export/LOD/SW_Landscape/SM_Tree_Aspen01_LOD1.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Landscape/SM_Tree_Aspen01.png"
+  }
+ },
+ {
+  "name": "SM_ScrapPile01",
+  "category": "SW_Landscape",
+  "kind": "Harvestable",
+  "kind_note": "Static world prop players harvest; pair with its Depleted variant.",
+  "use": "Scrap Pile resource node (pickaxe). Yield mesh; hide when mined out.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   4.33,
+   2.09,
+   3.75
+  ],
+  "footprint_studs": [
+   5,
+   4
+  ],
+  "tris": 220,
+  "verts": 128,
+  "materials": 1,
+  "texture_tiles": [
+   "dirt",
+   "enamel_teal",
+   "metal_dark",
+   "red_paint"
+  ],
+  "origin_offset": [
+   0.0,
+   -0.706,
+   0.0055
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Landscape/SM_ScrapPile01.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Landscape/SM_ScrapPile01.png"
+  }
+ },
+ {
+  "name": "SM_OreDeposit_Coal",
+  "category": "SW_Landscape",
+  "kind": "Harvestable",
+  "kind_note": "Static world prop players harvest; pair with its Depleted variant.",
+  "use": "Coal seam node (Stone Pickaxe+).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   5.23,
+   3.59,
+   4.49
+  ],
+  "footprint_studs": [
+   5,
+   5
+  ],
+  "tris": 200,
+  "verts": 114,
+  "materials": 1,
+  "texture_tiles": [
+   "charcoal",
+   "stone_dark"
+  ],
+  "origin_offset": [
+   0.1045,
+   -1.19,
+   0.2055
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Landscape/SM_OreDeposit_Coal.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Landscape/SM_OreDeposit_Coal.png"
+  }
+ },
+ {
+  "name": "SM_OreDeposit_Iron",
+  "category": "SW_Landscape",
+  "kind": "Harvestable",
+  "kind_note": "Static world prop players harvest; pair with its Depleted variant.",
+  "use": "Iron deposit node (Stone Pickaxe+). Rich veins use this mesh at 1.3x with a glow.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   5.37,
+   3.26,
+   4.56
+  ],
+  "footprint_studs": [
+   5,
+   5
+  ],
+  "tris": 200,
+  "verts": 114,
+  "materials": 1,
+  "texture_tiles": [
+   "enamel_orange",
+   "stone_dark"
+  ],
+  "origin_offset": [
+   -0.021,
+   -1.1585,
+   0.0205
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Landscape/SM_OreDeposit_Iron.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Landscape/SM_OreDeposit_Iron.png"
+  }
+ },
+ {
+  "name": "SM_POI_Campsite",
+  "category": "SW_POI",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Abandoned campsite (common POI): two tents, fire pit, log seats, crate, backpack.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   18.46,
+   3.71,
+   15.03
+  ],
+  "footprint_studs": [
+   22,
+   22
+  ],
+  "tris": 436,
+  "verts": 260,
+  "materials": 1,
+  "texture_tiles": [
+   "ash",
+   "bark",
+   "charcoal",
+   "cloth",
+   "cloth_dark",
+   "crate_paint",
+   "end_grain",
+   "leather_dark",
+   "stone_dark",
+   "wood_dark"
+  ],
+  "origin_offset": [
+   0.07,
+   -1.746,
+   1.5705
+  ],
+  "team_colored": false,
+  "pivot": "Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": 316,
+  "files": {
+   "fbx": "Export/Meshes/SW_POI/SM_POI_Campsite.fbx",
+   "lod1": "Export/LOD/SW_POI/SM_POI_Campsite_LOD1.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_POI/SM_POI_Campsite.png"
+  }
+ },
+ {
+  "name": "SM_POI_Shed",
+  "category": "SW_POI",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Tool shed (common POI), 8x6, lean-to tin roof.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   9.0,
+   7.83,
+   6.96
+  ],
+  "footprint_studs": [
+   10,
+   8
+  ],
+  "tris": 724,
+  "verts": 396,
+  "materials": 1,
+  "texture_tiles": [
+   "crate_paint",
+   "metal_dark",
+   "wood_dark"
+  ],
+  "origin_offset": [
+   0.0,
+   -3.8145,
+   0.0
+  ],
+  "team_colored": false,
+  "pivot": "Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_POI/SM_POI_Shed.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 26,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_POI/SM_POI_Shed.png"
+  }
+ },
+ {
+  "name": "SM_POI_HuntingBlind",
+  "category": "SW_POI",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Raised hunting blind (common POI): platform at 6 studs, camouflage screens, ladder at +Y.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   6.4,
+   8.6,
+   6.9
+  ],
+  "footprint_studs": [
+   9,
+   9
+  ],
+  "tris": 256,
+  "verts": 154,
+  "materials": 1,
+  "texture_tiles": [
+   "bark",
+   "fern",
+   "wood",
+   "wood_dark"
+  ],
+  "origin_offset": [
+   0.0,
+   -4.3,
+   -0.25
+  ],
+  "team_colored": false,
+  "pivot": "Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_POI/SM_POI_HuntingBlind.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_POI/SM_POI_HuntingBlind.png"
+  }
+ },
+ {
+  "name": "SM_POI_BrokenVehicle",
+  "category": "SW_POI",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Rusted pickup truck (common POI), tilted into a ditch; scrap piles nearby are separate nodes.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   15.11,
+   5.35,
+   9.42
+  ],
+  "footprint_studs": [
+   16,
+   12
+  ],
+  "tris": 368,
+  "verts": 208,
+  "materials": 1,
+  "texture_tiles": [
+   "charcoal",
+   "enamel_amber",
+   "enamel_teal",
+   "metal",
+   "metal_dark",
+   "red_paint",
+   "water"
+  ],
+  "origin_offset": [
+   -1.066,
+   -2.6765,
+   2.0705
+  ],
+  "team_colored": false,
+  "pivot": "Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": 176,
+  "files": {
+   "fbx": "Export/Meshes/SW_POI/SM_POI_BrokenVehicle.fbx",
+   "lod1": "Export/LOD/SW_POI/SM_POI_BrokenVehicle_LOD1.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_POI/SM_POI_BrokenVehicle.png"
+  }
+ },
+ {
+  "name": "SM_POI_SmallCabin",
+  "category": "SW_POI",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Small log cabin (common POI), 10x8 with windows, porch, stove pipe.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   10.87,
+   11.6,
+   10.9
+  ],
+  "footprint_studs": [
+   13,
+   11
+  ],
+  "tris": 1040,
+  "verts": 568,
+  "materials": 1,
+  "texture_tiles": [
+   "bark",
+   "metal_dark",
+   "wood",
+   "wood_dark"
+  ],
+  "origin_offset": [
+   0.0,
+   -5.7,
+   -0.95
+  ],
+  "team_colored": false,
+  "pivot": "Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": 472,
+  "files": {
+   "fbx": "Export/Meshes/SW_POI/SM_POI_SmallCabin.fbx",
+   "lod1": "Export/LOD/SW_POI/SM_POI_SmallCabin_LOD1.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 32,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_POI/SM_POI_SmallCabin.png"
+  }
+ },
+ {
+  "name": "SM_POI_Cabin",
+  "category": "SW_POI",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Log cabin (uncommon POI), 14x10, stone chimney, porch.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   14.87,
+   12.84,
+   13.4
+  ],
+  "footprint_studs": [
+   18,
+   14
+  ],
+  "tris": 1204,
+  "verts": 664,
+  "materials": 1,
+  "texture_tiles": [
+   "bark",
+   "stone_mossy",
+   "wood",
+   "wood_dark"
+  ],
+  "origin_offset": [
+   0.0,
+   -6.319,
+   -1.2
+  ],
+  "team_colored": false,
+  "pivot": "Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": 580,
+  "files": {
+   "fbx": "Export/Meshes/SW_POI/SM_POI_Cabin.fbx",
+   "lod1": "Export/LOD/SW_POI/SM_POI_Cabin_LOD1.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 34,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_POI/SM_POI_Cabin.png"
+  }
+ },
+ {
+  "name": "SM_POI_RangerStation",
+  "category": "SW_POI",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Ranger station (uncommon POI): green office 14x11 + lookout on stilts behind, flagpole.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   15.56,
+   12.84,
+   22.1
+  ],
+  "footprint_studs": [
+   20,
+   16
+  ],
+  "tris": 1428,
+  "verts": 812,
+  "materials": 1,
+  "texture_tiles": [
+   "crate_paint",
+   "metal",
+   "metal_dark",
+   "team_cloth",
+   "wood",
+   "wood_dark"
+  ],
+  "origin_offset": [
+   -0.3485,
+   -6.319,
+   2.35
+  ],
+  "team_colored": true,
+  "pivot": "Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": 796,
+  "files": {
+   "fbx": "Export/Meshes/SW_POI/SM_POI_RangerStation.fbx",
+   "lod1": "Export/LOD/SW_POI/SM_POI_RangerStation_LOD1.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 34,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_POI/SM_POI_RangerStation.png"
+  }
+ },
+ {
+  "name": "SM_POI_LoggingCamp",
+  "category": "SW_POI",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Logging camp (uncommon POI): small shed, stacked logs, sawhorse.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   19.11,
+   9.42,
+   24.0
+  ],
+  "footprint_studs": [
+   24,
+   24
+  ],
+  "tris": 960,
+  "verts": 540,
+  "materials": 1,
+  "texture_tiles": [
+   "bark",
+   "end_grain",
+   "metal_dark",
+   "wood",
+   "wood_dark"
+  ],
+  "origin_offset": [
+   0.8795,
+   -4.6095,
+   5.5
+  ],
+  "team_colored": false,
+  "pivot": "Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": 448,
+  "files": {
+   "fbx": "Export/Meshes/SW_POI/SM_POI_LoggingCamp.fbx",
+   "lod1": "Export/LOD/SW_POI/SM_POI_LoggingCamp_LOD1.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 24,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_POI/SM_POI_LoggingCamp.png"
+  }
+ },
+ {
+  "name": "SM_POI_AbandonedHouse",
+  "category": "SW_POI",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Ruined two-room house (uncommon POI): collapsed side wall and half the roof.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   16.48,
+   13.98,
+   17.62
+  ],
+  "footprint_studs": [
+   22,
+   18
+  ],
+  "tris": 1238,
+  "verts": 702,
+  "materials": 1,
+  "texture_tiles": [
+   "stone",
+   "wood",
+   "wood_dark"
+  ],
+  "origin_offset": [
+   -0.191,
+   -6.889,
+   2.31
+  ],
+  "team_colored": false,
+  "pivot": "Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": 704,
+  "files": {
+   "fbx": "Export/Meshes/SW_POI/SM_POI_AbandonedHouse.fbx",
+   "lod1": "Export/LOD/SW_POI/SM_POI_AbandonedHouse_LOD1.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 26,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_POI/SM_POI_AbandonedHouse.png"
+  }
+ },
+ {
+  "name": "SM_POI_MineEntrance",
+  "category": "SW_POI",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Timbered mine mouth in a rock mound (uncommon POI), rails and a cart outside.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   15.71,
+   8.47,
+   20.56
+  ],
+  "footprint_studs": [
+   18,
+   14
+  ],
+  "tris": 596,
+  "verts": 324,
+  "materials": 1,
+  "texture_tiles": [
+   "charcoal",
+   "metal_dark",
+   "red_paint",
+   "stone_dark",
+   "wood_dark"
+  ],
+  "origin_offset": [
+   0.138,
+   -3.4155,
+   -1.2195
+  ],
+  "team_colored": false,
+  "pivot": "Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": 204,
+  "files": {
+   "fbx": "Export/Meshes/SW_POI/SM_POI_MineEntrance.fbx",
+   "lod1": "Export/LOD/SW_POI/SM_POI_MineEntrance_LOD1.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_POI/SM_POI_MineEntrance.png"
+  }
+ },
+ {
+  "name": "SM_POI_Bunker",
+  "category": "SW_POI",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Half-buried concrete bunker (rare POI): thick walls, mossy slab, sandbags.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   14.6,
+   8.7,
+   14.92
+  ],
+  "footprint_studs": [
+   18,
+   16
+  ],
+  "tris": 912,
+  "verts": 520,
+  "materials": 1,
+  "texture_tiles": [
+   "cloth",
+   "moss",
+   "stone",
+   "wood_dark"
+  ],
+  "origin_offset": [
+   0.0,
+   -4.25,
+   -1.1605
+  ],
+  "team_colored": false,
+  "pivot": "Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": 544,
+  "files": {
+   "fbx": "Export/Meshes/SW_POI/SM_POI_Bunker.fbx",
+   "lod1": "Export/LOD/SW_POI/SM_POI_Bunker_LOD1.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 26,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_POI/SM_POI_Bunker.png"
+  }
+ },
+ {
+  "name": "SM_POI_Outpost",
+  "category": "SW_POI",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Abandoned outpost (rare POI): palisade ring open at +Y, tents, small watch deck, fire pit.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   26.56,
+   9.36,
+   20.6
+  ],
+  "footprint_studs": [
+   30,
+   30
+  ],
+  "tris": 722,
+  "verts": 401,
+  "materials": 1,
+  "texture_tiles": [
+   "ash",
+   "bark",
+   "charcoal",
+   "cloth",
+   "stone_dark",
+   "wood",
+   "wood_dark",
+   "wood_fresh"
+  ],
+  "origin_offset": [
+   0.0,
+   -4.518,
+   3.25
+  ],
+  "team_colored": false,
+  "pivot": "Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": 504,
+  "files": {
+   "fbx": "Export/Meshes/SW_POI/SM_POI_Outpost.fbx",
+   "lod1": "Export/LOD/SW_POI/SM_POI_Outpost_LOD1.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 78,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_POI/SM_POI_Outpost.png"
+  }
+ },
+ {
+  "name": "SM_POI_IndustrialSite",
+  "category": "SW_POI",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Derelict industrial yard (rare POI): steel shed, two containers, fuel tank, barrels.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   34.93,
+   10.6,
+   22.5
+  ],
+  "footprint_studs": [
+   34,
+   30
+  ],
+  "tris": 312,
+  "verts": 184,
+  "materials": 1,
+  "texture_tiles": [
+   "crate_paint",
+   "enamel_orange",
+   "enamel_slate",
+   "metal",
+   "metal_dark",
+   "red_paint"
+  ],
+  "origin_offset": [
+   -0.4655,
+   -5.3,
+   -2.25
+  ],
+  "team_colored": false,
+  "pivot": "Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": 180,
+  "files": {
+   "fbx": "Export/Meshes/SW_POI/SM_POI_IndustrialSite.fbx",
+   "lod1": "Export/LOD/SW_POI/SM_POI_IndustrialSite_LOD1.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_POI/SM_POI_IndustrialSite.png"
+  }
+ },
+ {
+  "name": "SM_POI_LargeMine",
+  "category": "SW_POI",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Large mine (rare POI): mine mouth + wooden headframe with wheel + ore shed.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   19.35,
+   14.81,
+   20.95
+  ],
+  "footprint_studs": [
+   22,
+   20
+  ],
+  "tris": 776,
+  "verts": 420,
+  "materials": 1,
+  "texture_tiles": [
+   "charcoal",
+   "metal_dark",
+   "red_paint",
+   "stone_dark",
+   "wood_dark"
+  ],
+  "origin_offset": [
+   -1.325,
+   -6.174,
+   -1.027
+  ],
+  "team_colored": false,
+  "pivot": "Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": 324,
+  "files": {
+   "fbx": "Export/Meshes/SW_POI/SM_POI_LargeMine.fbx",
+   "lod1": "Export/LOD/SW_POI/SM_POI_LargeMine_LOD1.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_POI/SM_POI_LargeMine.png"
+  }
+ },
+ {
+  "name": "SM_Chest_Common",
+  "category": "SW_Loot",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Common POI chest body (lid stays procedural so it can open).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   3.4,
+   2.4,
+   2.47
+  ],
+  "footprint_studs": [
+   3.4,
+   2.2
+  ],
+  "tris": 144,
+  "verts": 80,
+  "materials": 1,
+  "texture_tiles": [
+   "metal_dark",
+   "wood"
+  ],
+  "origin_offset": [
+   0.0,
+   -1.2,
+   0.0625
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Loot/SM_Chest_Common.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Loot/SM_Chest_Common.png"
+  }
+ },
+ {
+  "name": "SM_Chest_Uncommon",
+  "category": "SW_Loot",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Uncommon POI chest body (painted green, iron trim).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   3.4,
+   2.4,
+   2.47
+  ],
+  "footprint_studs": [
+   3.4,
+   2.2
+  ],
+  "tris": 144,
+  "verts": 80,
+  "materials": 1,
+  "texture_tiles": [
+   "crate_paint",
+   "metal"
+  ],
+  "origin_offset": [
+   0.0,
+   -1.2,
+   0.0625
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Loot/SM_Chest_Uncommon.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Loot/SM_Chest_Uncommon.png"
+  }
+ },
+ {
+  "name": "SM_Chest_Rare",
+  "category": "SW_Loot",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Rare POI chest body (blue, brass trim, glowing lock).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   3.4,
+   2.4,
+   2.53
+  ],
+  "footprint_studs": [
+   3.4,
+   2.2
+  ],
+  "tris": 156,
+  "verts": 88,
+  "materials": 1,
+  "texture_tiles": [
+   "brass",
+   "enamel_slate",
+   "glow"
+  ],
+  "origin_offset": [
+   0.0,
+   -1.2,
+   0.09
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Loot/SM_Chest_Rare.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Loot/SM_Chest_Rare.png"
+  }
+ },
+ {
+  "name": "SM_Chest_VeryRare",
+  "category": "SW_Loot",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Very Rare POI chest body (purple, gold trim, glowing lock).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   3.4,
+   2.4,
+   2.53
+  ],
+  "footprint_studs": [
+   3.4,
+   2.2
+  ],
+  "tris": 156,
+  "verts": 88,
+  "materials": 1,
+  "texture_tiles": [
+   "brass",
+   "enamel_purple",
+   "glow"
+  ],
+  "origin_offset": [
+   0.0,
+   -1.2,
+   0.09
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Loot/SM_Chest_VeryRare.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Loot/SM_Chest_VeryRare.png"
+  }
+ },
+ {
+  "name": "SM_Pickaxe_Stone",
+  "category": "SW_Tools",
+  "kind": "Equippable",
+  "kind_note": "Held item: put in a Tool, rename to Handle.",
+  "use": "Crude/Stone Pickaxe (tinted by tier in game). Tool > Handle.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   0.47,
+   3.61,
+   2.2
+  ],
+  "footprint_studs": [
+   0.47,
+   2.2
+  ],
+  "tris": 332,
+  "verts": 176,
+  "materials": 1,
+  "texture_tiles": [
+   "end_grain",
+   "leather_stitch",
+   "rope",
+   "stone",
+   "stone_dark",
+   "wood"
+  ],
+  "origin_offset": [
+   0.0,
+   -1.103,
+   0.0
+  ],
+  "team_colored": false,
+  "pivot": "Grip point (RightGripAttachment). Handle runs up +Y, striking side faces forward (-Z). Default Tool.Grip = identity.",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Tools/SM_Pickaxe_Stone.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Tools/SM_Pickaxe_Stone.png",
+   "held": "Renders/SW_Tools/SM_Pickaxe_Stone_Held.png"
+  }
+ },
+ {
+  "name": "SM_Pickaxe_Iron",
+  "category": "SW_Tools",
+  "kind": "Equippable",
+  "kind_note": "Held item: put in a Tool, rename to Handle.",
+  "use": "Iron/Steel Pickaxe. Tool > Handle.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   0.31,
+   3.61,
+   2.62
+  ],
+  "footprint_studs": [
+   0.31,
+   2.62
+  ],
+  "tris": 180,
+  "verts": 98,
+  "materials": 1,
+  "texture_tiles": [
+   "end_grain",
+   "leather_stitch",
+   "metal",
+   "metal_dark",
+   "wood"
+  ],
+  "origin_offset": [
+   0.0,
+   -1.103,
+   0.0
+  ],
+  "team_colored": false,
+  "pivot": "Grip point (RightGripAttachment). Handle runs up +Y, striking side faces forward (-Z). Default Tool.Grip = identity.",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Tools/SM_Pickaxe_Iron.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Tools/SM_Pickaxe_Iron.png",
+   "held": "Renders/SW_Tools/SM_Pickaxe_Iron_Held.png"
+  }
+ },
+ {
+  "name": "SM_Axe_Iron",
+  "category": "SW_Tools",
+  "kind": "Equippable",
+  "kind_note": "Held item: put in a Tool, rename to Handle.",
+  "use": "Iron/Steel Axe. Tool > Handle.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   0.31,
+   3.61,
+   1.58
+  ],
+  "footprint_studs": [
+   0.31,
+   1.58
+  ],
+  "tris": 136,
+  "verts": 76,
+  "materials": 1,
+  "texture_tiles": [
+   "end_grain",
+   "leather_stitch",
+   "metal",
+   "metal_dark",
+   "wood"
+  ],
+  "origin_offset": [
+   0.0,
+   -1.103,
+   0.31
+  ],
+  "team_colored": false,
+  "pivot": "Grip point (RightGripAttachment). Handle runs up +Y, striking side faces forward (-Z). Default Tool.Grip = identity.",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Tools/SM_Axe_Iron.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Tools/SM_Axe_Iron.png",
+   "held": "Renders/SW_Tools/SM_Axe_Iron_Held.png"
+  }
+ },
+ {
+  "name": "SM_Crowbar",
+  "category": "SW_Tools",
+  "kind": "Equippable",
+  "kind_note": "Held item: put in a Tool, rename to Handle.",
+  "use": "Crowbar (breaching tool). Tool > Handle.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   0.14,
+   3.5,
+   0.88
+  ],
+  "footprint_studs": [
+   0.14,
+   0.88
+  ],
+  "tris": 60,
+  "verts": 34,
+  "materials": 1,
+  "texture_tiles": [
+   "metal_dark",
+   "red_paint"
+  ],
+  "origin_offset": [
+   0.0,
+   -0.634,
+   0.166
+  ],
+  "team_colored": false,
+  "pivot": "Grip point (RightGripAttachment). Handle runs up +Y, striking side faces forward (-Z). Default Tool.Grip = identity.",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Tools/SM_Crowbar.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Tools/SM_Crowbar.png",
+   "held": "Renders/SW_Tools/SM_Crowbar_Held.png"
+  }
+ },
+ {
+  "name": "SM_Sledgehammer",
+  "category": "SW_Tools",
+  "kind": "Equippable",
+  "kind_note": "Held item: put in a Tool, rename to Handle.",
+  "use": "Sledgehammer (breaching tool, heavy vs walls). Tool > Handle.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   0.6,
+   4.2,
+   1.5
+  ],
+  "footprint_studs": [
+   0.6,
+   1.5
+  ],
+  "tris": 156,
+  "verts": 84,
+  "materials": 1,
+  "texture_tiles": [
+   "end_grain",
+   "leather_stitch",
+   "metal_dark",
+   "wood"
+  ],
+  "origin_offset": [
+   0.0,
+   -1.399,
+   0.0
+  ],
+  "team_colored": false,
+  "pivot": "Grip point (RightGripAttachment). Handle runs up +Y, striking side faces forward (-Z). Default Tool.Grip = identity.",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Tools/SM_Sledgehammer.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Tools/SM_Sledgehammer.png",
+   "held": "Renders/SW_Tools/SM_Sledgehammer_Held.png"
+  }
+ },
+ {
+  "name": "SM_HuntingBow",
+  "category": "SW_Tools",
+  "kind": "Equippable",
+  "kind_note": "Held item: put in a Tool, rename to Handle.",
+  "use": "Hunting Bow (Tier III). Draw along -Z.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   0.3,
+   4.84,
+   0.77
+  ],
+  "footprint_studs": [
+   0.3,
+   0.77
+  ],
+  "tris": 96,
+  "verts": 54,
+  "materials": 1,
+  "texture_tiles": [
+   "leather_stitch",
+   "rope",
+   "wood_dark"
+  ],
+  "origin_offset": [
+   0.0,
+   0.0,
+   -0.0855
+  ],
+  "team_colored": false,
+  "pivot": "Grip point (RightGripAttachment). Points forward along -Z (LookVector), up is +Y. Default Tool.Grip = identity.",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Tools/SM_HuntingBow.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Tools/SM_HuntingBow.png",
+   "held": "Renders/SW_Tools/SM_HuntingBow_Held.png"
+  }
+ },
+ {
+  "name": "SM_Crossbow",
+  "category": "SW_Tools",
+  "kind": "Equippable",
+  "kind_note": "Held item: put in a Tool, rename to Handle.",
+  "use": "Crossbow (Tier IV). Points along -Z; bolts.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   3.21,
+   0.95,
+   3.05
+  ],
+  "footprint_studs": [
+   3.21,
+   3.05
+  ],
+  "tris": 126,
+  "verts": 71,
+  "materials": 1,
+  "texture_tiles": [
+   "metal_dark",
+   "rope",
+   "wood",
+   "wood_dark"
+  ],
+  "origin_offset": [
+   0.0,
+   -0.075,
+   0.9235
+  ],
+  "team_colored": false,
+  "pivot": "Grip point (RightGripAttachment). Points forward along -Z (LookVector), up is +Y. Default Tool.Grip = identity.",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Tools/SM_Crossbow.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Tools/SM_Crossbow.png",
+   "held": "Renders/SW_Tools/SM_Crossbow_Held.png"
+  }
+ },
+ {
+  "name": "SM_ReinforcedChest",
+  "category": "SW_Base",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Reinforced Chest storage (Tier II, 20 stacks).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   6.2,
+   4.3,
+   4.3
+  ],
+  "footprint_studs": [
+   6,
+   4
+  ],
+  "tris": 124,
+  "verts": 72,
+  "materials": 1,
+  "texture_tiles": [
+   "metal_dark",
+   "wood",
+   "wood_dark"
+  ],
+  "origin_offset": [
+   0.0,
+   -2.15,
+   0.0
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Base/SM_ReinforcedChest.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Base/SM_ReinforcedChest.png"
+  }
+ },
+ {
+  "name": "SM_MetalLocker",
+  "category": "SW_Base",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Metal Locker storage (Tier III, 30 stacks).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   4.0,
+   7.0,
+   3.2
+  ],
+  "footprint_studs": [
+   4,
+   3
+  ],
+  "tris": 92,
+  "verts": 56,
+  "materials": 1,
+  "texture_tiles": [
+   "brass",
+   "enamel_teal",
+   "metal_dark"
+  ],
+  "origin_offset": [
+   0.0,
+   -3.5,
+   0.1
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Base/SM_MetalLocker.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Base/SM_MetalLocker.png"
+  }
+ },
+ {
+  "name": "SM_SurvivalSafe",
+  "category": "SW_Base",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Survival Safe storage (Tier IV, 45 stacks).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   4.5,
+   5.0,
+   4.8
+  ],
+  "footprint_studs": [
+   4.5,
+   4.5
+  ],
+  "tris": 100,
+  "verts": 56,
+  "materials": 1,
+  "texture_tiles": [
+   "brass",
+   "gunmetal",
+   "metal"
+  ],
+  "origin_offset": [
+   0.0,
+   -2.5,
+   0.15
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Base/SM_SurvivalSafe.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Base/SM_SurvivalSafe.png"
+  }
+ },
+ {
+  "name": "SM_ScrapWall",
+  "category": "SW_Base",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Scrap Wall (Tier III): corrugated sheets on a timber frame, 10 wide.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   10.46,
+   10.4,
+   1.35
+  ],
+  "footprint_studs": [
+   10,
+   2
+  ],
+  "tris": 108,
+  "verts": 72,
+  "materials": 1,
+  "texture_tiles": [
+   "metal_dark",
+   "red_paint",
+   "wood_dark"
+  ],
+  "origin_offset": [
+   -0.0815,
+   -5.2,
+   0.325
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Base/SM_ScrapWall.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Base/SM_ScrapWall.png"
+  }
+ },
+ {
+  "name": "SM_MetalWall",
+  "category": "SW_Base",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Metal Wall (Tier IV): riveted plates between beams, 10 wide.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   10.8,
+   11.0,
+   2.6
+  ],
+  "footprint_studs": [
+   10,
+   2.6
+  ],
+  "tris": 288,
+  "verts": 160,
+  "materials": 1,
+  "texture_tiles": [
+   "gunmetal",
+   "metal_dark"
+  ],
+  "origin_offset": [
+   0.0,
+   -5.5,
+   0.0
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Base/SM_MetalWall.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Base/SM_MetalWall.png"
+  }
+ },
+ {
+  "name": "SM_WoodFloor",
+  "category": "SW_Base",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Wooden Floor (Tier I), 10x10 platform.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   10.0,
+   1.0,
+   10.02
+  ],
+  "footprint_studs": [
+   10,
+   10
+  ],
+  "tris": 376,
+  "verts": 208,
+  "materials": 1,
+  "texture_tiles": [
+   "wood",
+   "wood_dark",
+   "wood_fresh"
+  ],
+  "origin_offset": [
+   0.0,
+   -0.5,
+   -0.01
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Base/SM_WoodFloor.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Base/SM_WoodFloor.png"
+  }
+ },
+ {
+  "name": "SM_BearTrap",
+  "category": "SW_Base",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Bear Trap (Tier III), set.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   2.56,
+   0.55,
+   1.76
+  ],
+  "footprint_studs": [
+   3,
+   3
+  ],
+  "tris": 360,
+  "verts": 214,
+  "materials": 1,
+  "texture_tiles": [
+   "metal",
+   "metal_dark"
+  ],
+  "origin_offset": [
+   0.0,
+   -0.275,
+   0.0
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Base/SM_BearTrap.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Base/SM_BearTrap.png"
+  }
+ },
+ {
+  "name": "SM_Snare",
+  "category": "SW_Base",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Snare (Tier II): rope loop on a bent sapling.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   3.14,
+   3.25,
+   2.46
+  ],
+  "footprint_studs": [
+   3,
+   3
+  ],
+  "tris": 138,
+  "verts": 71,
+  "materials": 1,
+  "texture_tiles": [
+   "bark",
+   "rope"
+  ],
+  "origin_offset": [
+   0.3095,
+   -1.6035,
+   0.0
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Base/SM_Snare.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Base/SM_Snare.png"
+  }
+ },
+ {
+  "name": "SM_TripwireAlarm",
+  "category": "SW_Base",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Tripwire Alarm (Tier II): stakes, wire and can rattle.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   7.91,
+   1.4,
+   0.53
+  ],
+  "footprint_studs": [
+   8,
+   1
+  ],
+  "tris": 96,
+  "verts": 60,
+  "materials": 1,
+  "texture_tiles": [
+   "enamel_teal",
+   "metal",
+   "wood_dark"
+  ],
+  "origin_offset": [
+   0.003,
+   -0.7,
+   -0.115
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Base/SM_TripwireAlarm.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Base/SM_TripwireAlarm.png"
+  }
+ },
+ {
+  "name": "SM_Workbench_Level04",
+  "category": "SW_Base",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Workbench Tier IV: stone forge with coals and chimney beside the bench.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   12.1,
+   7.7,
+   4.0
+  ],
+  "footprint_studs": [
+   12,
+   4
+  ],
+  "tris": 160,
+  "verts": 96,
+  "materials": 1,
+  "texture_tiles": [
+   "embers",
+   "stone",
+   "stone_dark",
+   "wood",
+   "wood_dark"
+  ],
+  "origin_offset": [
+   2.05,
+   -3.85,
+   0.0
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Base/SM_Workbench_Level04.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Base/SM_Workbench_Level04.png"
+  }
+ },
+ {
+  "name": "SM_Workbench_Level05",
+  "category": "SW_Base",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Workbench Tier V: steel-plated top, tool rack and forge.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   12.15,
+   7.7,
+   4.1
+  ],
+  "footprint_studs": [
+   12,
+   4
+  ],
+  "tris": 208,
+  "verts": 128,
+  "materials": 1,
+  "texture_tiles": [
+   "embers",
+   "metal",
+   "stone",
+   "stone_dark",
+   "wood",
+   "wood_dark"
+  ],
+  "origin_offset": [
+   2.025,
+   -3.85,
+   0.0
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground (Z=0).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/SW_Base/SM_Workbench_Level05.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/SW_Base/SM_Workbench_Level05.png"
+  }
+ },
+ {
   "name": "Scene_Camp",
   "category": "Scenes",
   "kind": "Reference",

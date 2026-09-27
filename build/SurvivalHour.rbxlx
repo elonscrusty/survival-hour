@@ -4421,9 +4421,13 @@ function Camp.Workbench(cf: CFrame, level: number, teamColor: Color3, parent: In
 	m:SetAttribute("Level", level)
 	place(m, top, cf, parent)
 	if Skins.Enabled() then
-		local name = "SM_Workbench_Level0" .. math.clamp(level, 1, 3)
-		local scale = ({ 1.3, 1.12, 1.0 })[math.clamp(level, 1, 3)]
-		Skins.Dress(m, name, { scale = scale, keep = { Pennant = true, Forge = true, ForgeCoals = true, ForgeChimney = true, SteelPlate = true, SteelTool = true } })
+		-- Tier IV/V have their own meshes (forge, steel top); without them the L3 mesh
+		-- is used and the procedural forge / steel parts stay visible.
+		local own = level >= 4 and Skins.Has("SM_Workbench_Level0" .. math.min(level, 5))
+		local name = if own then "SM_Workbench_Level0" .. math.min(level, 5) else "SM_Workbench_Level0" .. math.clamp(level, 1, 3)
+		local scale = if own then 1.0 else ({ 1.3, 1.12, 1.0 })[math.clamp(level, 1, 3)]
+		local keep = if own then { Pennant = true, ForgeCoals = true } else { Pennant = true, Forge = true, ForgeCoals = true, ForgeChimney = true, SteelPlate = true, SteelTool = true }
+		Skins.Dress(m, name, { scale = scale, keep = keep })
 	end
 	return m
 end
@@ -4559,12 +4563,14 @@ Decor.Meshes = {
 	Spruce = { "SM_Tree_Spruce01", "SM_Tree_Spruce02", "SM_Tree_Pine_Medium02" },
 	Aspen = { "SM_Tree_Aspen01", "SM_Tree_Birch_Medium01" },
 	GiantTree = { "SM_Tree_Oak_Large01" },
+	Cliff = { "SM_Cliff_Face01", "SM_Cliff_Face02" },
+	Riverbank = { "SM_Riverbank_Straight" },
 }
 
 -- Target size for mesh variants: kind -> approx height (studs) at scale 1.
 Decor.Height = {
 	Fern = 1.6, TallGrass = 1.8, Bush = 3.2, FallenLog = 2.2, Boulder = 3.6, Stump = 2.2, DeadSnag = 18,
-	Sapling = 5, Spruce = 20, Aspen = 18, GiantTree = 34, FlowerPatch = 0.9, Roots = 1.2,
+	Sapling = 5, Spruce = 20, Aspen = 18, GiantTree = 34, FlowerPatch = 0.9, Roots = 1.2, Cliff = 26,
 }
 
 -- Kinds that block movement: collider box as a fraction of the mesh bounds.
@@ -5132,6 +5138,7 @@ function Flora.ScrapPile(cf: CFrame, rng: Random, parent: Instance?): Model
 	end
 	markYield(Build.Cyl("Rim", 0.4, 1.6, CFrame.new(1.2, 0.9, -0.6) * CFrame.Angles(0.4, 0, 1.2), Color3.fromRGB(60, 60, 64), M.Metal, m, false)) -- 9
 	finish(m, root, cf, parent)
+	skinHarvest(m, "SM_ScrapPile01", "SM_StoneDeposit01_Depleted", 1)
 	return m
 end
 
@@ -5147,6 +5154,7 @@ local function oreDeposit(cf: CFrame, rng: Random, parent: Instance?, name: stri
 		markYield(block("Seam", s, CFrame.new(math.cos(a) * main.X * 0.42, main.Y * rng:NextNumber(0.35, 0.7), math.sin(a) * main.Z * 0.42) * CFrame.Angles(rng:NextNumber(0, 1), a, 0), seam, seamMat, m))
 	end
 	finish(m, root, cf, parent)
+	skinHarvest(m, if name == "CoalDeposit" then "SM_OreDeposit_Coal" else "SM_OreDeposit_Iron", "SM_StoneDeposit01_Depleted", k)
 	return m
 end
 
@@ -5902,13 +5910,22 @@ local UP_TO_FORWARD = CFrame.Angles(0, 0, math.pi) * CFrame.Angles(-math.pi / 2,
 local HELD_SKINS: { [string]: { string | CFrame } } = {
 	Spear = { "Spear", CFrame.new() },
 	Bow = { "Bow", CFrame.new() },
-	HuntingBow = { "Bow", CFrame.new() },
+	HuntingBow = { "HuntingBow", CFrame.new() },
 	Sword = { "Sword", UP_TO_FORWARD },
 	Shield = { "Shield", CFrame.Angles(0, math.pi / 2, 0) },
 	Pistol = { "Pistol", CFrame.new() },
 	Rifle = { "Rifle", CFrame.new() },
 	StoneAxe = { "StoneAxe", UP_TO_FORWARD },
 	CrudeAxe = { "StoneAxe", UP_TO_FORWARD },
+	IronAxe = { "Axe_Iron", UP_TO_FORWARD },
+	SteelAxe = { "Axe_Iron", UP_TO_FORWARD },
+	CrudePickaxe = { "Pickaxe_Stone", UP_TO_FORWARD },
+	StonePickaxe = { "Pickaxe_Stone", UP_TO_FORWARD },
+	IronPickaxe = { "Pickaxe_Iron", UP_TO_FORWARD },
+	SteelPickaxe = { "Pickaxe_Iron", UP_TO_FORWARD },
+	Crowbar = { "Crowbar", UP_TO_FORWARD },
+	Sledgehammer = { "Sledgehammer", UP_TO_FORWARD },
+	Crossbow = { "Crossbow", CFrame.new() },
 	CrudeSpear = { "Spear", CFrame.new() },
 	RepairHammer = { "RepairHammer", UP_TO_FORWARD },
 	Canteen = { "Canteen", CFrame.new() },
@@ -6050,6 +6067,16 @@ builders.Crossbow = function(m)
 	piece(m, { Name = "Stock", Size = Vector3.new(0.4, 0.4, 3), CFrame = CFrame.new(0, 0.35, -0.9), Color = WOOD, Material = Enum.Material.Wood })
 	piece(m, { Name = "Prod", Size = Vector3.new(3.2, 0.25, 0.3), CFrame = CFrame.new(0, 0.45, -2.3), Color = Color3.fromRGB(110, 110, 116), Material = Enum.Material.Metal })
 	piece(m, { Name = "String", Size = Vector3.new(3, 0.05, 0.05), CFrame = CFrame.new(0, 0.5, -1.7), Color = Color3.fromRGB(230, 226, 210), Material = Enum.Material.SmoothPlastic })
+end
+builders.Crowbar = function(m)
+	handle(m, Vector3.new(0.3, 0.3, 1), Color3.fromRGB(150, 60, 50), Enum.Material.Metal)
+	piece(m, { Name = "Bar", Size = Vector3.new(0.22, 0.22, 3), CFrame = CFrame.new(0, 0, -1.4), Color = Color3.fromRGB(150, 60, 50), Material = Enum.Material.Metal })
+	piece(m, { Name = "Claw", Size = Vector3.new(0.2, 0.6, 0.2), CFrame = CFrame.new(0, 0.25, -2.9), Color = Color3.fromRGB(80, 80, 86), Material = Enum.Material.Metal })
+end
+builders.Sledgehammer = function(m)
+	handle(m, Vector3.new(0.35, 0.35, 1), WOOD_DARK, Enum.Material.Wood)
+	piece(m, { Name = "Haft", Size = Vector3.new(0.32, 0.32, 3.8), CFrame = CFrame.new(0, 0, -1.6), Color = WOOD, Material = Enum.Material.Wood })
+	piece(m, { Name = "Head", Size = Vector3.new(0.7, 1.6, 0.7), CFrame = CFrame.new(0, 0, -3.5), Color = Color3.fromRGB(70, 72, 78), Material = Enum.Material.Metal })
 end
 builders.Bolt = function(m)
 	handle(m, Vector3.new(0.14, 0.14, 1.8), Color3.fromRGB(110, 110, 116), Enum.Material.Metal)
@@ -7717,7 +7744,11 @@ function Structures.WoodFloor(cf: CFrame, parent: Instance?): Model
 		Build.Part({ Name = "Joist", Size = Vector3.new(0.6, 0.6, 10), CFrame = CFrame.new(x, 0.3, 0), Color = WOOD_DARK, Material = Enum.Material.Wood, Parent = m, CanCollide = false })
 	end
 	Build.Part({ Name = "Collider", Size = Vector3.new(10, 1, 10), CFrame = CFrame.new(0, 0.5, 0), Transparency = 1, Parent = m })
-	return place(m, cf, parent)
+	place(m, cf, parent)
+	if Skins.Has("SM_WoodFloor") then
+		Skins.Dress(m, "SM_WoodFloor")
+	end
+	return m
 end
 
 -- Stone-and-timber wall with a shooting window (Tier II).
@@ -7762,7 +7793,11 @@ function Structures.ScrapWall(cf: CFrame, parent: Instance?): Model
 	end
 	Build.Part({ Name = "Rail", Size = Vector3.new(10.2, 0.5, 0.5), CFrame = CFrame.new(0, 8.6, 0.6), Color = WOOD_DARK, Material = Enum.Material.Wood, Parent = m, CanCollide = false })
 	Build.Part({ Name = "Collider", Size = Vector3.new(10, 10, 2), CFrame = CFrame.new(0, 5, 0), Transparency = 1, Parent = m })
-	return place(m, cf, parent)
+	place(m, cf, parent)
+	if Skins.Has("SM_ScrapWall") then
+		Skins.Dress(m, "SM_ScrapWall")
+	end
+	return m
 end
 
 -- Metal wall (Tier IV): riveted plates.
@@ -7778,7 +7813,11 @@ function Structures.MetalWall(cf: CFrame, parent: Instance?): Model
 		Build.Part({ Name = "Beam", Size = Vector3.new(0.8, 11, 2.6), CFrame = CFrame.new(x, 5.5, 0), Color = Color3.fromRGB(60, 62, 68), Material = Enum.Material.Metal, Parent = m, CanCollide = false })
 	end
 	Build.Part({ Name = "Collider", Size = Vector3.new(10, 11, 2.6), CFrame = CFrame.new(0, 5.5, 0), Transparency = 1, Parent = m })
-	return place(m, cf, parent)
+	place(m, cf, parent)
+	if Skins.Has("SM_MetalWall") then
+		Skins.Dress(m, "SM_MetalWall")
+	end
+	return m
 end
 
 -- Door/gate variants reuse the Gate model (a "Door" sub-model the server moves).
@@ -7832,9 +7871,18 @@ local function chest(name: string, size: Vector3, body: Color3, lid: Color3, mat
 	return m
 end
 
+-- Dress a storage/trap with its pack mesh, keeping the lock/crest/lamp indicators.
+local function dressKeep(m: Model, name: string)
+	if Skins.Has(name) then
+		Skins.Dress(m, name, { keep = { Lock = true, Lamp = true } })
+	end
+end
+
 function Structures.ReinforcedChest(cf: CFrame, teamColor: Color3, parent: Instance?): Model
 	local m = chest("ReinforcedChest", Vector3.new(6, 4.4, 4), Color3.fromRGB(120, 90, 62), Color3.fromRGB(90, 66, 44), Enum.Material.WoodPlanks, teamColor, 3)
-	return place(m, cf, parent)
+	place(m, cf, parent)
+	dressKeep(m, "SM_ReinforcedChest")
+	return m
 end
 
 function Structures.MetalLocker(cf: CFrame, teamColor: Color3, parent: Instance?): Model
@@ -7847,7 +7895,9 @@ function Structures.MetalLocker(cf: CFrame, teamColor: Color3, parent: Instance?
 	local plate = Build.Decor({ Name = "Crest", Size = Vector3.new(1.2, 1.2, 0.1), CFrame = CFrame.new(0, 4, -1.56), Color = teamColor, Material = Enum.Material.SmoothPlastic, Parent = m })
 	plate:SetAttribute("TeamTint", true)
 	Build.Decor({ Name = "Lock", Size = Vector3.new(0.5, 0.9, 0.2), CFrame = CFrame.new(1.4, 3.5, -1.6), Color = Color3.fromRGB(200, 180, 90), Material = Enum.Material.Metal, Parent = m })
-	return place(m, cf, parent)
+	place(m, cf, parent)
+	dressKeep(m, "SM_MetalLocker")
+	return m
 end
 
 function Structures.SurvivalSafe(cf: CFrame, teamColor: Color3, parent: Instance?): Model
@@ -7858,7 +7908,9 @@ function Structures.SurvivalSafe(cf: CFrame, teamColor: Color3, parent: Instance
 	Build.Decor({ Name = "Lock", Size = Vector3.new(0.4, 1.4, 0.3), CFrame = CFrame.new(-1.1, 2.6, -2.35), Color = Color3.fromRGB(170, 170, 176), Material = Enum.Material.Metal, Parent = m })
 	local plate = Build.Decor({ Name = "Crest", Size = Vector3.new(1, 1, 0.1), CFrame = CFrame.new(0, 4.1, -2.3), Color = teamColor, Material = Enum.Material.SmoothPlastic, Parent = m })
 	plate:SetAttribute("TeamTint", true)
-	return place(m, cf, parent)
+	place(m, cf, parent)
+	dressKeep(m, "SM_SurvivalSafe")
+	return m
 end
 
 -- Breached storage look: the lock hangs open and a red tag shows.
@@ -7897,7 +7949,9 @@ function Structures.TripwireAlarm(cf: CFrame, parent: Instance?): Model
 	Build.Decor({ Name = "Wire", Size = Vector3.new(7.6, 0.05, 0.05), CFrame = CFrame.new(0, 0.6, 0), Color = Color3.fromRGB(200, 200, 190), Material = Enum.Material.SmoothPlastic, Parent = m, CastShadow = false })
 	Build.Cyl("Can", 0.5, 0.35, CFrame.new(3.8, 1.2, 0), Color3.fromRGB(160, 160, 150), Enum.Material.Metal, m, false)
 	trigger(m, Vector3.new(7.6, 1.2, 1.2), 0.6)
-	return place(m, cf, parent)
+	place(m, cf, parent)
+	dressKeep(m, "SM_TripwireAlarm")
+	return m
 end
 
 -- Snare: a rope loop on a bent sapling; holds the victim briefly, then it's spent (Tier II).
@@ -7907,7 +7961,9 @@ function Structures.Snare(cf: CFrame, parent: Instance?): Model
 	Build.Decor({ Name = "Loop", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.1, 2.4, 2.4), CFrame = CFrame.new(0, 0.08, 0) * CFrame.Angles(0, 0, math.rad(90)), Color = ROPE, Material = Enum.Material.Fabric, Parent = m, CastShadow = false })
 	Build.Part({ Name = "Sapling", Size = Vector3.new(0.25, 3.6, 0.25), CFrame = CFrame.new(1.4, 1.5, 0) * CFrame.Angles(0, 0, math.rad(-35)), Color = WOOD, Material = Enum.Material.Wood, Parent = m, CanCollide = false })
 	trigger(m, Vector3.new(2.6, 1.4, 2.6), 0.7)
-	return place(m, cf, parent)
+	place(m, cf, parent)
+	dressKeep(m, "SM_Snare")
+	return m
 end
 
 -- Bear trap: steel jaws (Tier III). Heavy damage + hold; spent after one bite.
@@ -7919,7 +7975,9 @@ function Structures.BearTrap(cf: CFrame, parent: Instance?): Model
 		Build.Decor({ Name = "Jaw", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.2, 2.6, 2.6), CFrame = CFrame.new(0, 0.2, dir * 0.4) * CFrame.Angles(0, 0, math.rad(90)), Color = Color3.fromRGB(120, 124, 130), Material = Enum.Material.Metal, Parent = m, Transparency = 0.2 })
 	end
 	trigger(m, Vector3.new(2.4, 1.2, 2.4), 0.6)
-	return place(m, cf, parent)
+	place(m, cf, parent)
+	dressKeep(m, "SM_BearTrap")
+	return m
 end
 
 -- Advanced alarm (Tier V): a motion-sensor post with a lamp; watches a radius.
@@ -67731,11 +67789,44 @@ function WorldService.BuildMatch(seed: number): MapInfo
 			task.wait()
 		end
 	end
-	-- Cliff rim faces
+	-- Cliff rim faces (Blender cliff kit when loaded, procedural otherwise)
+	local Skins = require(Models:WaitForChild("Skins"))
 	for i, c in layout.Cliffs do
 		local cf = ground(c.X, c.Z) * CFrame.Angles(0, math.rad(c.Rot), 0)
-		atomic(Flora.CliffRock(cf, drng, Vector3.new(c.W, c.H, 8), decor))
+		if Skins.Has("SM_Cliff_Face01") then
+			Decor.Place("Cliff", cf, drng, c.H / 26, decor)
+		else
+			atomic(Flora.CliffRock(cf, drng, Vector3.new(c.W, c.H, 8), decor))
+		end
 		if i % 20 == 0 then
+			task.wait()
+		end
+	end
+	-- Riverbank strips along both sides of every stream (grass -> mud -> rocks -> water).
+	if Skins.Has("SM_Riverbank_Straight") then
+		for _, st in layout.Streams do
+			local pts = st.Points
+			for i = 1, #pts - 1 do
+				local a, b = pts[i], pts[i + 1]
+				local dx, dz = b.X - a.X, b.Z - a.Z
+				local len = math.sqrt(dx * dx + dz * dz)
+				if len > 1 then
+					local nx, nz = -dz / len, dx / len
+					local steps = math.max(1, math.floor(len / 16 + 0.5))
+					for k = 0, steps - 1 do
+						local t = (k + 0.5) / steps
+						local cx, cz = a.X + dx * t, a.Z + dz * t
+						for _, side in { -1, 1 } do
+							local off = st.Width / 2 + 5
+							local px, pz = cx + nx * side * off, cz + nz * side * off
+							local g = ground(px, pz)
+							-- local -Z (the water edge) faces the stream centre line
+							local cf = CFrame.lookAt(g.Position, Vector3.new(cx + O.X, g.Position.Y, cz + O.Z))
+							Decor.Place("Riverbank", cf, drng, 1, decor)
+						end
+					end
+				end
+			end
 			task.wait()
 		end
 	end

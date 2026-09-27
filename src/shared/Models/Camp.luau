@@ -216,9 +216,13 @@ function Camp.Workbench(cf: CFrame, level: number, teamColor: Color3, parent: In
 	m:SetAttribute("Level", level)
 	place(m, top, cf, parent)
 	if Skins.Enabled() then
-		local name = "SM_Workbench_Level0" .. math.clamp(level, 1, 3)
-		local scale = ({ 1.3, 1.12, 1.0 })[math.clamp(level, 1, 3)]
-		Skins.Dress(m, name, { scale = scale, keep = { Pennant = true, Forge = true, ForgeCoals = true, ForgeChimney = true, SteelPlate = true, SteelTool = true } })
+		-- Tier IV/V have their own meshes (forge, steel top); without them the L3 mesh
+		-- is used and the procedural forge / steel parts stay visible.
+		local own = level >= 4 and Skins.Has("SM_Workbench_Level0" .. math.min(level, 5))
+		local name = if own then "SM_Workbench_Level0" .. math.min(level, 5) else "SM_Workbench_Level0" .. math.clamp(level, 1, 3)
+		local scale = if own then 1.0 else ({ 1.3, 1.12, 1.0 })[math.clamp(level, 1, 3)]
+		local keep = if own then { Pennant = true, ForgeCoals = true } else { Pennant = true, Forge = true, ForgeCoals = true, ForgeChimney = true, SteelPlate = true, SteelTool = true }
+		Skins.Dress(m, name, { scale = scale, keep = keep })
 	end
 	return m
 end

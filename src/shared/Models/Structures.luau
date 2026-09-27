@@ -238,7 +238,11 @@ function Structures.WoodFloor(cf: CFrame, parent: Instance?): Model
 		Build.Part({ Name = "Joist", Size = Vector3.new(0.6, 0.6, 10), CFrame = CFrame.new(x, 0.3, 0), Color = WOOD_DARK, Material = Enum.Material.Wood, Parent = m, CanCollide = false })
 	end
 	Build.Part({ Name = "Collider", Size = Vector3.new(10, 1, 10), CFrame = CFrame.new(0, 0.5, 0), Transparency = 1, Parent = m })
-	return place(m, cf, parent)
+	place(m, cf, parent)
+	if Skins.Has("SM_WoodFloor") then
+		Skins.Dress(m, "SM_WoodFloor")
+	end
+	return m
 end
 
 -- Stone-and-timber wall with a shooting window (Tier II).
@@ -283,7 +287,11 @@ function Structures.ScrapWall(cf: CFrame, parent: Instance?): Model
 	end
 	Build.Part({ Name = "Rail", Size = Vector3.new(10.2, 0.5, 0.5), CFrame = CFrame.new(0, 8.6, 0.6), Color = WOOD_DARK, Material = Enum.Material.Wood, Parent = m, CanCollide = false })
 	Build.Part({ Name = "Collider", Size = Vector3.new(10, 10, 2), CFrame = CFrame.new(0, 5, 0), Transparency = 1, Parent = m })
-	return place(m, cf, parent)
+	place(m, cf, parent)
+	if Skins.Has("SM_ScrapWall") then
+		Skins.Dress(m, "SM_ScrapWall")
+	end
+	return m
 end
 
 -- Metal wall (Tier IV): riveted plates.
@@ -299,7 +307,11 @@ function Structures.MetalWall(cf: CFrame, parent: Instance?): Model
 		Build.Part({ Name = "Beam", Size = Vector3.new(0.8, 11, 2.6), CFrame = CFrame.new(x, 5.5, 0), Color = Color3.fromRGB(60, 62, 68), Material = Enum.Material.Metal, Parent = m, CanCollide = false })
 	end
 	Build.Part({ Name = "Collider", Size = Vector3.new(10, 11, 2.6), CFrame = CFrame.new(0, 5.5, 0), Transparency = 1, Parent = m })
-	return place(m, cf, parent)
+	place(m, cf, parent)
+	if Skins.Has("SM_MetalWall") then
+		Skins.Dress(m, "SM_MetalWall")
+	end
+	return m
 end
 
 -- Door/gate variants reuse the Gate model (a "Door" sub-model the server moves).
@@ -353,9 +365,18 @@ local function chest(name: string, size: Vector3, body: Color3, lid: Color3, mat
 	return m
 end
 
+-- Dress a storage/trap with its pack mesh, keeping the lock/crest/lamp indicators.
+local function dressKeep(m: Model, name: string)
+	if Skins.Has(name) then
+		Skins.Dress(m, name, { keep = { Lock = true, Lamp = true } })
+	end
+end
+
 function Structures.ReinforcedChest(cf: CFrame, teamColor: Color3, parent: Instance?): Model
 	local m = chest("ReinforcedChest", Vector3.new(6, 4.4, 4), Color3.fromRGB(120, 90, 62), Color3.fromRGB(90, 66, 44), Enum.Material.WoodPlanks, teamColor, 3)
-	return place(m, cf, parent)
+	place(m, cf, parent)
+	dressKeep(m, "SM_ReinforcedChest")
+	return m
 end
 
 function Structures.MetalLocker(cf: CFrame, teamColor: Color3, parent: Instance?): Model
@@ -368,7 +389,9 @@ function Structures.MetalLocker(cf: CFrame, teamColor: Color3, parent: Instance?
 	local plate = Build.Decor({ Name = "Crest", Size = Vector3.new(1.2, 1.2, 0.1), CFrame = CFrame.new(0, 4, -1.56), Color = teamColor, Material = Enum.Material.SmoothPlastic, Parent = m })
 	plate:SetAttribute("TeamTint", true)
 	Build.Decor({ Name = "Lock", Size = Vector3.new(0.5, 0.9, 0.2), CFrame = CFrame.new(1.4, 3.5, -1.6), Color = Color3.fromRGB(200, 180, 90), Material = Enum.Material.Metal, Parent = m })
-	return place(m, cf, parent)
+	place(m, cf, parent)
+	dressKeep(m, "SM_MetalLocker")
+	return m
 end
 
 function Structures.SurvivalSafe(cf: CFrame, teamColor: Color3, parent: Instance?): Model
@@ -379,7 +402,9 @@ function Structures.SurvivalSafe(cf: CFrame, teamColor: Color3, parent: Instance
 	Build.Decor({ Name = "Lock", Size = Vector3.new(0.4, 1.4, 0.3), CFrame = CFrame.new(-1.1, 2.6, -2.35), Color = Color3.fromRGB(170, 170, 176), Material = Enum.Material.Metal, Parent = m })
 	local plate = Build.Decor({ Name = "Crest", Size = Vector3.new(1, 1, 0.1), CFrame = CFrame.new(0, 4.1, -2.3), Color = teamColor, Material = Enum.Material.SmoothPlastic, Parent = m })
 	plate:SetAttribute("TeamTint", true)
-	return place(m, cf, parent)
+	place(m, cf, parent)
+	dressKeep(m, "SM_SurvivalSafe")
+	return m
 end
 
 -- Breached storage look: the lock hangs open and a red tag shows.
@@ -418,7 +443,9 @@ function Structures.TripwireAlarm(cf: CFrame, parent: Instance?): Model
 	Build.Decor({ Name = "Wire", Size = Vector3.new(7.6, 0.05, 0.05), CFrame = CFrame.new(0, 0.6, 0), Color = Color3.fromRGB(200, 200, 190), Material = Enum.Material.SmoothPlastic, Parent = m, CastShadow = false })
 	Build.Cyl("Can", 0.5, 0.35, CFrame.new(3.8, 1.2, 0), Color3.fromRGB(160, 160, 150), Enum.Material.Metal, m, false)
 	trigger(m, Vector3.new(7.6, 1.2, 1.2), 0.6)
-	return place(m, cf, parent)
+	place(m, cf, parent)
+	dressKeep(m, "SM_TripwireAlarm")
+	return m
 end
 
 -- Snare: a rope loop on a bent sapling; holds the victim briefly, then it's spent (Tier II).
@@ -428,7 +455,9 @@ function Structures.Snare(cf: CFrame, parent: Instance?): Model
 	Build.Decor({ Name = "Loop", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.1, 2.4, 2.4), CFrame = CFrame.new(0, 0.08, 0) * CFrame.Angles(0, 0, math.rad(90)), Color = ROPE, Material = Enum.Material.Fabric, Parent = m, CastShadow = false })
 	Build.Part({ Name = "Sapling", Size = Vector3.new(0.25, 3.6, 0.25), CFrame = CFrame.new(1.4, 1.5, 0) * CFrame.Angles(0, 0, math.rad(-35)), Color = WOOD, Material = Enum.Material.Wood, Parent = m, CanCollide = false })
 	trigger(m, Vector3.new(2.6, 1.4, 2.6), 0.7)
-	return place(m, cf, parent)
+	place(m, cf, parent)
+	dressKeep(m, "SM_Snare")
+	return m
 end
 
 -- Bear trap: steel jaws (Tier III). Heavy damage + hold; spent after one bite.
@@ -440,7 +469,9 @@ function Structures.BearTrap(cf: CFrame, parent: Instance?): Model
 		Build.Decor({ Name = "Jaw", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.2, 2.6, 2.6), CFrame = CFrame.new(0, 0.2, dir * 0.4) * CFrame.Angles(0, 0, math.rad(90)), Color = Color3.fromRGB(120, 124, 130), Material = Enum.Material.Metal, Parent = m, Transparency = 0.2 })
 	end
 	trigger(m, Vector3.new(2.4, 1.2, 2.4), 0.6)
-	return place(m, cf, parent)
+	place(m, cf, parent)
+	dressKeep(m, "SM_BearTrap")
+	return m
 end
 
 -- Advanced alarm (Tier V): a motion-sensor post with a lamp; watches a radius.

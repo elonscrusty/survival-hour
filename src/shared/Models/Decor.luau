@@ -33,12 +33,14 @@ Decor.Meshes = {
 	Spruce = { "SM_Tree_Spruce01", "SM_Tree_Spruce02", "SM_Tree_Pine_Medium02" },
 	Aspen = { "SM_Tree_Aspen01", "SM_Tree_Birch_Medium01" },
 	GiantTree = { "SM_Tree_Oak_Large01" },
+	Cliff = { "SM_Cliff_Face01", "SM_Cliff_Face02" },
+	Riverbank = { "SM_Riverbank_Straight" },
 }
 
 -- Target size for mesh variants: kind -> approx height (studs) at scale 1.
 Decor.Height = {
 	Fern = 1.6, TallGrass = 1.8, Bush = 3.2, FallenLog = 2.2, Boulder = 3.6, Stump = 2.2, DeadSnag = 18,
-	Sapling = 5, Spruce = 20, Aspen = 18, GiantTree = 34, FlowerPatch = 0.9, Roots = 1.2,
+	Sapling = 5, Spruce = 20, Aspen = 18, GiantTree = 34, FlowerPatch = 0.9, Roots = 1.2, Cliff = 26,
 }
 
 -- Kinds that block movement: collider box as a fraction of the mesh bounds.

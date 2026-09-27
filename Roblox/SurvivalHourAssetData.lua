@@ -3124,5 +3124,927 @@ return {
 		Parts = {
 
 		}
+	},
+	SM_Cliff_Face01 = {
+		Kind = "WorldProp",
+		Category = "SW_Landscape",
+		Size = {24.8, 26.38, 9.71},
+		Tris = 1040,
+		OriginOffset = {0.0405, -12.212, 0.2555},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_Cliff_Face02 = {
+		Kind = "WorldProp",
+		Category = "SW_Landscape",
+		Size = {24.62, 23.56, 9.66},
+		Tris = 644,
+		OriginOffset = {0.188, -11.0735, 0.02},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_CaveEntrance = {
+		Kind = "WorldProp",
+		Category = "SW_Landscape",
+		Size = {20.87, 15.4, 9.75},
+		Tris = 972,
+		OriginOffset = {-0.16, -4.2015, 0.568},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_CaveTunnel_Segment = {
+		Kind = "WorldProp",
+		Category = "SW_Landscape",
+		Size = {14.75, 12.95, 12.4},
+		Tris = 752,
+		OriginOffset = {-0.1465, -5.6865, 0.368},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_CaveChamber_End = {
+		Kind = "WorldProp",
+		Category = "SW_Landscape",
+		Size = {19.37, 15.88, 20.19},
+		Tris = 920,
+		OriginOffset = {0.542, -6.7265, -3.894},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_Riverbank_Straight = {
+		Kind = "WorldProp",
+		Category = "SW_Landscape",
+		Size = {16.0, 2.08, 10.06},
+		Tris = 728,
+		OriginOffset = {0.0, 0.36, 0.0285},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_Riverbank_Bend = {
+		Kind = "WorldProp",
+		Category = "SW_Landscape",
+		Size = {13.77, 2.08, 12.64},
+		Tris = 728,
+		OriginOffset = {2.5485, 0.36, -1.318},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_Ground_Forest01 = {
+		Kind = "WorldProp",
+		Category = "SW_Landscape",
+		Size = {32.0, 2.54, 32.0},
+		Tris = 1152,
+		OriginOffset = {0.0, 0.7305, 0.0},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {
+			{
+				CFrame = {0.0, -1, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0},
+				Size = {32, 2, 32}
+			}
+		},
+		Parts = {
+
+		}
+	},
+	SM_Ground_Clearing01 = {
+		Kind = "WorldProp",
+		Category = "SW_Landscape",
+		Size = {32.0, 2.74, 32.0},
+		Tris = 1392,
+		OriginOffset = {0.0, 0.6305, 0.0},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {
+			{
+				CFrame = {0.0, -1, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0},
+				Size = {32, 2, 32}
+			}
+		},
+		Parts = {
+
+		}
+	},
+	SM_Trail_Segment01 = {
+		Kind = "WorldProp",
+		Category = "SW_Landscape",
+		Size = {4.96, 0.66, 12.02},
+		Tris = 144,
+		OriginOffset = {0.08, -0.2715, -0.002},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_Roots01 = {
+		Kind = "WorldProp",
+		Category = "SW_Landscape",
+		Size = {4.97, 0.57, 4.82},
+		Tris = 130,
+		OriginOffset = {0.028, -0.264, -0.2065},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_Roots02 = {
+		Kind = "WorldProp",
+		Category = "SW_Landscape",
+		Size = {4.86, 0.93, 2.72},
+		Tris = 108,
+		OriginOffset = {-0.0055, -0.4095, -0.0065},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_Flowers01 = {
+		Kind = "WorldProp",
+		Category = "SW_Landscape",
+		Size = {2.53, 1.04, 2.31},
+		Tris = 308,
+		OriginOffset = {-0.021, -0.396, -0.021},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_Flowers02 = {
+		Kind = "WorldProp",
+		Category = "SW_Landscape",
+		Size = {2.44, 1.03, 2.37},
+		Tris = 308,
+		OriginOffset = {0.0905, -0.388, 0.115},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_Sapling01 = {
+		Kind = "WorldProp",
+		Category = "SW_Landscape",
+		Size = {2.46, 5.07, 2.41},
+		Tris = 266,
+		OriginOffset = {0.114, -2.3315, -0.068},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_Tree_Spruce01 = {
+		Kind = "WorldProp",
+		Category = "SW_Landscape",
+		Size = {12.21, 20.41, 12.03},
+		Tris = 166,
+		OriginOffset = {0.0, -9.797, -0.187},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_Tree_Spruce02 = {
+		Kind = "WorldProp",
+		Category = "SW_Landscape",
+		Size = {14.42, 24.45, 14.2},
+		Tris = 198,
+		OriginOffset = {0.0, -11.8205, -0.2205},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_Tree_Aspen01 = {
+		Kind = "WorldProp",
+		Category = "SW_Landscape",
+		Size = {7.67, 19.22, 7.54},
+		Tris = 598,
+		OriginOffset = {-0.1635, -9.304, 0.1745},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_ScrapPile01 = {
+		Kind = "Harvestable",
+		Category = "SW_Landscape",
+		Size = {4.33, 2.09, 3.75},
+		Tris = 220,
+		OriginOffset = {0.0, -0.706, 0.0055},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_OreDeposit_Coal = {
+		Kind = "Harvestable",
+		Category = "SW_Landscape",
+		Size = {5.23, 3.59, 4.49},
+		Tris = 200,
+		OriginOffset = {0.1045, -1.19, 0.2055},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_OreDeposit_Iron = {
+		Kind = "Harvestable",
+		Category = "SW_Landscape",
+		Size = {5.37, 3.26, 4.56},
+		Tris = 200,
+		OriginOffset = {-0.021, -1.1585, 0.0205},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_POI_Campsite = {
+		Kind = "Structure",
+		Category = "SW_POI",
+		Size = {18.46, 3.71, 15.03},
+		Tris = 436,
+		OriginOffset = {0.07, -1.746, 1.5705},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_POI_Shed = {
+		Kind = "Structure",
+		Category = "SW_POI",
+		Size = {9.0, 7.83, 6.96},
+		Tris = 724,
+		OriginOffset = {0.0, -3.8145, 0.0},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_POI_HuntingBlind = {
+		Kind = "Structure",
+		Category = "SW_POI",
+		Size = {6.4, 8.6, 6.9},
+		Tris = 256,
+		OriginOffset = {0.0, -4.3, -0.25},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_POI_BrokenVehicle = {
+		Kind = "Structure",
+		Category = "SW_POI",
+		Size = {15.11, 5.35, 9.42},
+		Tris = 368,
+		OriginOffset = {-1.066, -2.6765, 2.0705},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_POI_SmallCabin = {
+		Kind = "Structure",
+		Category = "SW_POI",
+		Size = {10.87, 11.6, 10.9},
+		Tris = 1040,
+		OriginOffset = {0.0, -5.7, -0.95},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_POI_Cabin = {
+		Kind = "Structure",
+		Category = "SW_POI",
+		Size = {14.87, 12.84, 13.4},
+		Tris = 1204,
+		OriginOffset = {0.0, -6.319, -1.2},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_POI_RangerStation = {
+		Kind = "Structure",
+		Category = "SW_POI",
+		Size = {15.56, 12.84, 22.1},
+		Tris = 1428,
+		OriginOffset = {-0.3485, -6.319, 2.35},
+		CollisionFidelity = "Box",
+		TeamColored = true,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_POI_LoggingCamp = {
+		Kind = "Structure",
+		Category = "SW_POI",
+		Size = {19.11, 9.42, 24.0},
+		Tris = 960,
+		OriginOffset = {0.8795, -4.6095, 5.5},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_POI_AbandonedHouse = {
+		Kind = "Structure",
+		Category = "SW_POI",
+		Size = {16.48, 13.98, 17.62},
+		Tris = 1238,
+		OriginOffset = {-0.191, -6.889, 2.31},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_POI_MineEntrance = {
+		Kind = "Structure",
+		Category = "SW_POI",
+		Size = {15.71, 8.47, 20.56},
+		Tris = 596,
+		OriginOffset = {0.138, -3.4155, -1.2195},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_POI_Bunker = {
+		Kind = "Structure",
+		Category = "SW_POI",
+		Size = {14.6, 8.7, 14.92},
+		Tris = 912,
+		OriginOffset = {0.0, -4.25, -1.1605},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_POI_Outpost = {
+		Kind = "Structure",
+		Category = "SW_POI",
+		Size = {26.56, 9.36, 20.6},
+		Tris = 722,
+		OriginOffset = {0.0, -4.518, 3.25},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_POI_IndustrialSite = {
+		Kind = "Structure",
+		Category = "SW_POI",
+		Size = {34.93, 10.6, 22.5},
+		Tris = 312,
+		OriginOffset = {-0.4655, -5.3, -2.25},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_POI_LargeMine = {
+		Kind = "Structure",
+		Category = "SW_POI",
+		Size = {19.35, 14.81, 20.95},
+		Tris = 776,
+		OriginOffset = {-1.325, -6.174, -1.027},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_Chest_Common = {
+		Kind = "Structure",
+		Category = "SW_Loot",
+		Size = {3.4, 2.4, 2.47},
+		Tris = 144,
+		OriginOffset = {0.0, -1.2, 0.0625},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_Chest_Uncommon = {
+		Kind = "Structure",
+		Category = "SW_Loot",
+		Size = {3.4, 2.4, 2.47},
+		Tris = 144,
+		OriginOffset = {0.0, -1.2, 0.0625},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_Chest_Rare = {
+		Kind = "Structure",
+		Category = "SW_Loot",
+		Size = {3.4, 2.4, 2.53},
+		Tris = 156,
+		OriginOffset = {0.0, -1.2, 0.09},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_Chest_VeryRare = {
+		Kind = "Structure",
+		Category = "SW_Loot",
+		Size = {3.4, 2.4, 2.53},
+		Tris = 156,
+		OriginOffset = {0.0, -1.2, 0.09},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_Pickaxe_Stone = {
+		Kind = "Equippable",
+		Category = "SW_Tools",
+		Size = {0.47, 3.61, 2.2},
+		Tris = 332,
+		OriginOffset = {0.0, -1.103, 0.0},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_Pickaxe_Iron = {
+		Kind = "Equippable",
+		Category = "SW_Tools",
+		Size = {0.31, 3.61, 2.62},
+		Tris = 180,
+		OriginOffset = {0.0, -1.103, 0.0},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_Axe_Iron = {
+		Kind = "Equippable",
+		Category = "SW_Tools",
+		Size = {0.31, 3.61, 1.58},
+		Tris = 136,
+		OriginOffset = {0.0, -1.103, 0.31},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_Crowbar = {
+		Kind = "Equippable",
+		Category = "SW_Tools",
+		Size = {0.14, 3.5, 0.88},
+		Tris = 60,
+		OriginOffset = {0.0, -0.634, 0.166},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_Sledgehammer = {
+		Kind = "Equippable",
+		Category = "SW_Tools",
+		Size = {0.6, 4.2, 1.5},
+		Tris = 156,
+		OriginOffset = {0.0, -1.399, 0.0},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_HuntingBow = {
+		Kind = "Equippable",
+		Category = "SW_Tools",
+		Size = {0.3, 4.84, 0.77},
+		Tris = 96,
+		OriginOffset = {0.0, 0.0, -0.0855},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_Crossbow = {
+		Kind = "Equippable",
+		Category = "SW_Tools",
+		Size = {3.21, 0.95, 3.05},
+		Tris = 126,
+		OriginOffset = {0.0, -0.075, 0.9235},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_ReinforcedChest = {
+		Kind = "Structure",
+		Category = "SW_Base",
+		Size = {6.2, 4.3, 4.3},
+		Tris = 124,
+		OriginOffset = {0.0, -2.15, 0.0},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_MetalLocker = {
+		Kind = "Structure",
+		Category = "SW_Base",
+		Size = {4.0, 7.0, 3.2},
+		Tris = 92,
+		OriginOffset = {0.0, -3.5, 0.1},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_SurvivalSafe = {
+		Kind = "Structure",
+		Category = "SW_Base",
+		Size = {4.5, 5.0, 4.8},
+		Tris = 100,
+		OriginOffset = {0.0, -2.5, 0.15},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_ScrapWall = {
+		Kind = "Structure",
+		Category = "SW_Base",
+		Size = {10.46, 10.4, 1.35},
+		Tris = 108,
+		OriginOffset = {-0.0815, -5.2, 0.325},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_MetalWall = {
+		Kind = "Structure",
+		Category = "SW_Base",
+		Size = {10.8, 11.0, 2.6},
+		Tris = 288,
+		OriginOffset = {0.0, -5.5, 0.0},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_WoodFloor = {
+		Kind = "Structure",
+		Category = "SW_Base",
+		Size = {10.0, 1.0, 10.02},
+		Tris = 376,
+		OriginOffset = {0.0, -0.5, -0.01},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_BearTrap = {
+		Kind = "Structure",
+		Category = "SW_Base",
+		Size = {2.56, 0.55, 1.76},
+		Tris = 360,
+		OriginOffset = {0.0, -0.275, 0.0},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_Snare = {
+		Kind = "Structure",
+		Category = "SW_Base",
+		Size = {3.14, 3.25, 2.46},
+		Tris = 138,
+		OriginOffset = {0.3095, -1.6035, 0.0},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_TripwireAlarm = {
+		Kind = "Structure",
+		Category = "SW_Base",
+		Size = {7.91, 1.4, 0.53},
+		Tris = 96,
+		OriginOffset = {0.003, -0.7, -0.115},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_Workbench_Level04 = {
+		Kind = "Structure",
+		Category = "SW_Base",
+		Size = {12.1, 7.7, 4.0},
+		Tris = 160,
+		OriginOffset = {2.05, -3.85, 0.0},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
+	},
+	SM_Workbench_Level05 = {
+		Kind = "Structure",
+		Category = "SW_Base",
+		Size = {12.15, 7.7, 4.1},
+		Tris = 208,
+		OriginOffset = {2.025, -3.85, 0.0},
+		CollisionFidelity = "Box",
+		TeamColored = false,
+		Attachments = {
+
+		},
+		CollisionBoxes = {},
+		Parts = {
+
+		}
 	}
 }
