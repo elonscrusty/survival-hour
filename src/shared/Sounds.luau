@@ -1,0 +1,125 @@
+--!strict
+-- Audio cue registry.
+--
+-- `Bundled` uses sound files that ship inside every Roblox client
+-- (rbxasset://sounds/...). They were confirmed to exist in the local Studio
+-- install and are Roblox engine content, usable in any experience.
+--
+-- `AssetId` is left empty on purpose: no licensed audio was uploaded for this
+-- project, and we never invent asset IDs. To add richer audio, pick licensed
+-- tracks in the Creator Store (Audio → filter by Roblox-provided or your own
+-- uploads) and paste the rbxassetid here. AssetId overrides Bundled.
+-- A cue with neither plays nothing (silent fallback).
+
+export type Cue = { AssetId: string?, Bundled: string?, Volume: number, Pitch: number?, Looped: boolean? }
+
+local Sounds: { [string]: Cue } = {
+	-- UI
+	UiClick = { Bundled = "rbxasset://sounds/volume_slider.ogg", Volume = 0.4, Pitch = 1.4 },
+	UiError = { Bundled = "rbxasset://sounds/volume_slider.ogg", Volume = 0.4, Pitch = 0.6 },
+	UiReady = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.5, Pitch = 1.3 },
+	Notify = { Bundled = "rbxasset://sounds/volume_slider.ogg", Volume = 0.35, Pitch = 1.0 },
+	Victory = { AssetId = nil, Bundled = "rbxasset://sounds/action_get_up.mp3", Volume = 0.7, Pitch = 0.8 },
+	Defeat = { Bundled = "rbxasset://sounds/action_falling.ogg", Volume = 0.6, Pitch = 0.7 },
+
+	-- Player / combat
+	Swing = { Bundled = "rbxasset://sounds/action_jump.mp3", Volume = 0.35, Pitch = 1.6 },
+	HitFlesh = { Bundled = "rbxasset://sounds/ouch.ogg", Volume = 0.5, Pitch = 1.0 },
+	HitStructure = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.6, Pitch = 0.7 },
+	BowRelease = { Bundled = "rbxasset://sounds/action_jump.mp3", Volume = 0.4, Pitch = 2.0 },
+	Gunshot = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 0.45, Pitch = 2.2 },
+	Block = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.6, Pitch = 1.8 },
+	Death = { Bundled = "rbxasset://sounds/oof.ogg", Volume = 0.6, Pitch = 1.0 },
+	Heal = { Bundled = "rbxasset://sounds/action_get_up.mp3", Volume = 0.4, Pitch = 1.3 },
+
+	-- Gathering / building
+	Chop = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.55, Pitch = 1.1 },
+	Gather = { Bundled = "rbxasset://sounds/action_footsteps_plastic.mp3", Volume = 0.45, Pitch = 1.2 },
+	Build = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.7, Pitch = 0.9 },
+	Repair = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.5, Pitch = 1.5 },
+	Craft = { Bundled = "rbxasset://sounds/action_get_up.mp3", Volume = 0.45, Pitch = 1.6 },
+	Break = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 0.4, Pitch = 0.8 },
+	ChopHeavy = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.7, Pitch = 0.8 },
+	TreeCreak = { Bundled = "rbxasset://sounds/action_falling.ogg", Volume = 0.45, Pitch = 0.4 },
+	TreeFall = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 0.65, Pitch = 0.45 },
+	Eat = { Bundled = "rbxasset://sounds/action_footsteps_plastic.mp3", Volume = 0.5, Pitch = 1.8 },
+	ChestOpen = { Bundled = "rbxasset://sounds/action_get_up.mp3", Volume = 0.6, Pitch = 0.9 },
+
+	-- Water / fire
+	Pour = { Bundled = "rbxasset://sounds/action_swim.mp3", Volume = 0.6, Pitch = 0.9, Looped = true },
+	Splash = { Bundled = "rbxasset://sounds/impact_water.mp3", Volume = 0.7, Pitch = 1.0 },
+	FireOut = { Bundled = "rbxasset://sounds/impact_water.mp3", Volume = 1.0, Pitch = 0.6 },
+	Fill = { Bundled = "rbxasset://sounds/action_swim.mp3", Volume = 0.5, Pitch = 1.3 },
+	-- Crackle has no bundled equivalent. Add a licensed loop via AssetId.
+	FireCrackle = { AssetId = nil, Volume = 0.5, Looped = true },
+
+	-- Wildlife
+	WolfGrowl = { Bundled = "rbxasset://sounds/action_falling.ogg", Volume = 0.5, Pitch = 0.45 },
+	BearRoar = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 0.6, Pitch = 0.35 },
+	BatScreech = { Bundled = "rbxasset://sounds/volume_slider.ogg", Volume = 0.35, Pitch = 2.5 },
+	AnimalHit = { Bundled = "rbxasset://sounds/ouch.ogg", Volume = 0.45, Pitch = 0.6 },
+
+	-- Loot
+	PlaneDrone = { AssetId = nil, Volume = 0.5 },
+	PackageLand = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 0.6, Pitch = 0.8 },
+	Pickup = { Bundled = "rbxasset://sounds/action_get_up.mp3", Volume = 0.35, Pitch = 1.8 },
+	Open = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.5, Pitch = 1.2 },
+
+	-- Ambience (licensed loops recommended; silent until configured)
+	AmbientDay = { AssetId = nil, Volume = 0.3, Looped = true },
+	AmbientNight = { AssetId = nil, Volume = 0.3, Looped = true },
+	Stream = { Bundled = "rbxasset://sounds/action_swim.mp3", Volume = 0.15, Pitch = 0.5, Looped = true },
+	Dawn = { Bundled = "rbxasset://sounds/action_get_up.mp3", Volume = 0.5, Pitch = 0.9 },
+	Dusk = { Bundled = "rbxasset://sounds/action_falling.ogg", Volume = 0.4, Pitch = 0.5 },
+}
+
+local SoundLib = {}
+SoundLib.Cues = Sounds
+
+function SoundLib.Resolve(name: string): (string?, Cue?)
+	local cue = Sounds[name]
+	if not cue then
+		return nil, nil
+	end
+	if cue.AssetId and cue.AssetId ~= "" then
+		return cue.AssetId, cue
+	end
+	return cue.Bundled, cue
+end
+
+-- Creates a Sound instance (not parented) or nil if the cue is silent.
+function SoundLib.Make(name: string): Sound?
+	local id, cue = SoundLib.Resolve(name)
+	if not id or not cue then
+		return nil
+	end
+	local s = Instance.new("Sound")
+	s.Name = name
+	s.SoundId = id
+	s.Volume = cue.Volume
+	s.PlaybackSpeed = cue.Pitch or 1
+	s.Looped = cue.Looped == true
+	s.RollOffMaxDistance = 120
+	s.RollOffMinDistance = 10
+	return s
+end
+
+-- Plays a one-shot at a part/attachment; auto-cleans.
+function SoundLib.PlayAt(name: string, parent: Instance)
+	local s = SoundLib.Make(name)
+	if not s then
+		return
+	end
+	s.Parent = parent
+	s:Play()
+	s.Ended:Once(function()
+		s:Destroy()
+	end)
+	task.delay(10, function()
+		if s.Parent then
+			s:Destroy()
+		end
+	end)
+end
+
+return SoundLib

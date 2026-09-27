@@ -1,0 +1,461 @@
+--!nonstrict
+-- Match state machine: arrival → intro → Day/Night cycle → end → return.
+--
+-- Public state replicates through attributes on ReplicatedStorage.MatchState:
+--   Phase ("Idle" | "Loading" | "Intro" | "Day" | "Night" | "Ended"), PhaseEnds (server time),
+--   Day (number), Fire1..4 (bool), Standing1..4 (bool), Alive1..4 (int), Winner (int), MatchId.
+
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local TeleportService = game:GetService("TeleportService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Net = require(Shared:WaitForChild("Net"))
+local Logic = Shared:WaitForChild("Logic")
+local LivesRules = require(Logic:WaitForChild("LivesRules"))
+local ProfileRules = require(Logic:WaitForChild("ProfileRules"))
+local TeamAssignment = require(Logic:WaitForChild("TeamAssignment"))
+
+local MatchService = {}
+
+local ctx: any
+local state: Folder
+local hooks: { [string]: { (...any) -> () } } = {}
+
+MatchService.Active = false
+MatchService.Phase = "Idle"
+MatchService.Day = 0
+MatchService.MatchId = ""
+MatchService.StartedTeams = {} :: { number }
+MatchService.Roster = {} :: { [number]: number } -- userId -> team
+MatchService.Participants = {} :: { [number]: boolean } -- userId -> was in the match at start
+MatchService.Map = nil :: any
+MatchService.State = (nil :: any) :: Folder -- ReplicatedStorage.MatchState, set in Init
+local phaseToken = 0
+local ending = false
+
+function MatchService.On(event: string, fn: (...any) -> ())
+	hooks[event] = hooks[event] or {}
+	table.insert(hooks[event], fn)
+end
+
+local function emit(event: string, ...: any)
+	for _, fn in hooks[event] or {} do
+		local args = table.pack(...)
+		task.spawn(function()
+			local ok, err = pcall(fn, table.unpack(args, 1, args.n))
+			if not ok then
+				warn("[MatchService] hook " .. event .. " error:", err)
+			end
+		end)
+	end
+end
+
+function MatchService.Init(c)
+	ctx = c
+	state = Instance.new("Folder")
+	state.Name = "MatchState"
+	state.Parent = ReplicatedStorage
+	MatchService.State = state
+	MatchService._setPhase("Idle", 0)
+	ctx.Util.OnPlayerRemoving(MatchService._onLeave)
+end
+
+function MatchService.Start()
+	if ctx.Mode == "Match" then
+		MatchService._runReserved()
+	end
+end
+
+function MatchService.Broadcast(eventName: string, payload: any)
+	Net.FireList("MatchEvent", ctx.Util.MatchPlayers(), eventName, payload)
+end
+
+function MatchService._setPhase(phase: string, duration: number)
+	MatchService.Phase = phase
+	state:SetAttribute("Phase", phase)
+	state:SetAttribute("PhaseEnds", workspace:GetServerTimeNow() + duration)
+	state:SetAttribute("Day", MatchService.Day)
+end
+
+local function phaseLength(kind: string): number
+	if ctx.IsStudio and Config.Dev.StudioPhaseLength then
+		return Config.Dev.StudioPhaseLength
+	end
+	return if kind == "Day" then Config.Match.DayLength else Config.Match.NightLength
+end
+
+-- Reserved (production) match server -------------------------------------------------------
+
+function MatchService._runReserved()
+	MatchService._setPhase("Loading", Config.Match.ArrivalTimeout)
+	local manifest = ctx.MatchmakingService.ReadManifest(game.PrivateServerId)
+	if not manifest then
+		warn("[MatchService] no manifest for this reserved server; returning players")
+		task.wait(5)
+		MatchService.ReturnToLobby(Players:GetPlayers(), "Match could not be found.")
+		return
+	end
+	-- manifest.Teams = { { { Id = partyId, Members = { userId... } } ... } x4 }
+	local expected: { [number]: boolean } = {}
+	for _, team in manifest.Teams do
+		for _, party in team do
+			for _, uid in party.Members do
+				expected[uid] = true
+			end
+		end
+	end
+	-- Kick back anyone not in the manifest (late arrivals / strangers).
+	ctx.Util.OnPlayerAdded(function(p: Player)
+		if not expected[p.UserId] or MatchService.Active then
+			task.wait(2)
+			MatchService.ReturnToLobby({ p }, "That match already started. Queue again for the next one!")
+		end
+	end)
+	local deadline = os.clock() + Config.Match.ArrivalTimeout
+	while os.clock() < deadline do
+		local allHere = true
+		for uid in expected do
+			if not Players:GetPlayerByUserId(uid) then
+				allHere = false
+				break
+			end
+		end
+		if allHere then
+			break
+		end
+		task.wait(1)
+	end
+	-- Build party lists with arrived members only, then rebalance if a team emptied (D4).
+	local teams = {}
+	for t, team in manifest.Teams do
+		teams[t] = {}
+		for _, party in team do
+			local members = {}
+			for _, uid in party.Members do
+				if Players:GetPlayerByUserId(uid) then
+					table.insert(members, uid)
+				end
+			end
+			table.insert(teams[t], { Id = party.Id, Size = #members, Members = members })
+		end
+	end
+	local balanced = TeamAssignment.Rebalance(teams, Config.Match.MaxPerTeam)
+	local assignment: { [Player]: number } = {}
+	local populated = 0
+	for t = 1, Config.Match.TeamCount do
+		local any = false
+		for _, party in balanced[t] or {} do
+			for _, uid in party.Members or {} do
+				local p = Players:GetPlayerByUserId(uid)
+				if p then
+					assignment[p] = t
+					any = true
+				end
+			end
+		end
+		if any then
+			populated += 1
+		end
+	end
+	if populated < 2 then
+		MatchService.ReturnToLobby(Players:GetPlayers(), "Not enough players arrived for a fair match. Please ready up again.", true)
+		return
+	end
+	MatchService.Begin(assignment, manifest.MatchId or game.PrivateServerId)
+end
+
+-- Starts a match with players already assigned to teams. Used by both the
+-- reserved-server path and the Studio local mode.
+function MatchService.Begin(assignment: { [Player]: number }, matchId: string?)
+	assert(not MatchService.Active, "match already active")
+	MatchService.Active = true
+	ending = false
+	MatchService.MatchId = matchId or HttpService:GenerateGUID(false)
+	MatchService.Day = 0
+	MatchService.Roster = {}
+	MatchService.Participants = {}
+	state:SetAttribute("MatchId", MatchService.MatchId)
+	state:SetAttribute("Winner", 0)
+	MatchService._setPhase("Loading", 30)
+	Net.FireList("MatchEvent", (function()
+		local list = {}
+		for p in assignment do
+			table.insert(list, p)
+		end
+		return list
+	end)(), "Loading", {})
+
+	local seed = math.floor(os.time() % 1000000) + math.random(1, 9999)
+	local buildStart = os.clock()
+	local map = ctx.WorldService.BuildMatch(seed)
+	print(string.format("[Match] forest built in %.2fs (seed %d)", os.clock() - buildStart, seed))
+	MatchService.Map = map
+
+	local started = {}
+	for t = 1, Config.Match.TeamCount do
+		state:SetAttribute("Fire" .. t, true)
+		state:SetAttribute("Standing" .. t, false)
+		state:SetAttribute("Alive" .. t, 0)
+	end
+	for p, t in assignment do
+		if p.Parent then
+			MatchService.Roster[p.UserId] = t
+			MatchService.Participants[p.UserId] = true
+			if not table.find(started, t) then
+				table.insert(started, t)
+			end
+		end
+	end
+	table.sort(started)
+	MatchService.StartedTeams = started
+	for t = 1, Config.Match.TeamCount do
+		state:SetAttribute("Standing" .. t, table.find(started, t) ~= nil)
+	end
+
+	emit("MatchStarting", map)
+	for p, t in assignment do
+		if p.Parent then
+			p:SetAttribute("Team", t)
+			p:SetAttribute("InMatch", true)
+			emit("PlayerJoinedMatch", p, t)
+		end
+	end
+	-- Give services a moment to set up camps/nodes, then spawn everyone.
+	task.wait(0.5)
+	for p, t in assignment do
+		if p.Parent then
+			ctx.LivesService.SpawnAtCamp(p)
+		end
+	end
+
+	MatchService._setPhase("Intro", Config.Match.IntroLength)
+	-- Publish the initial Alive counts (otherwise they read 0 until the first death).
+	MatchService.CheckOutcome()
+	MatchService.Broadcast("Intro", { Seconds = Config.Match.IntroLength })
+	task.wait(Config.Match.IntroLength)
+	if not MatchService.Active then
+		return
+	end
+	MatchService._cycle()
+end
+
+-- Runs Day/Night forever (no time limit) starting at `first`.
+function MatchService._cycle(first: string?)
+	phaseToken += 1
+	local token = phaseToken
+	task.spawn(function()
+		local phase = first or "Day"
+		while MatchService.Active and not ending and token == phaseToken do
+			if phase == "Day" then
+				MatchService.Day += 1
+			end
+			MatchService._enterPhase(phase)
+			task.wait(phaseLength(phase))
+			phase = if phase == "Day" then "Night" else "Day"
+		end
+	end)
+end
+
+-- Dev/test helper: jump straight to the next phase.
+function MatchService.SkipPhase()
+	if MatchService.Active and not ending and (MatchService.Phase == "Day" or MatchService.Phase == "Night") then
+		MatchService._cycle(if MatchService.Phase == "Day" then "Night" else "Day")
+	end
+end
+
+function MatchService._enterPhase(phase: string)
+	MatchService._setPhase(phase, phaseLength(phase))
+	ctx.WorldService.ApplyLighting(phase, false)
+	MatchService.Broadcast("Phase", { Phase = phase, Day = MatchService.Day })
+	emit("PhaseChanged", phase, MatchService.Day)
+end
+
+function MatchService.IsNight(): boolean
+	return MatchService.Active and MatchService.Phase == "Night"
+end
+
+function MatchService.IsPlaying(): boolean
+	return MatchService.Active and (MatchService.Phase == "Day" or MatchService.Phase == "Night" or MatchService.Phase == "Intro")
+end
+
+-- Fires --------------------------------------------------------------------------------
+
+function MatchService.FireBurning(team: number): boolean
+	return state:GetAttribute("Fire" .. team) == true
+end
+
+function MatchService.ExtinguishFire(team: number, byPlayer: Player?)
+	if not MatchService.FireBurning(team) then
+		return
+	end
+	state:SetAttribute("Fire" .. team, false)
+	emit("FireOut", team, byPlayer)
+	local teamDef = Config.Teams[team]
+	MatchService.Broadcast("FireOut", { Team = team, By = if byPlayer then byPlayer.DisplayName else nil, ByTeam = if byPlayer then ctx.Util.Team(byPlayer) else nil })
+	ctx.Util.NotifyTeam(team, "Your fire is OUT. No more respawns — every life counts now!", "danger")
+	print(string.format("[Match] %s fire extinguished%s", teamDef.Name, if byPlayer then " by " .. byPlayer.Name else ""))
+	MatchService.CheckOutcome()
+end
+
+-- Outcome ------------------------------------------------------------------------------
+
+function MatchService.CheckOutcome()
+	if not MatchService.Active or ending or MatchService.Phase == "Loading" then
+		return
+	end
+	local standing = {}
+	for t = 1, Config.Match.TeamCount do
+		local lives = ctx.LivesService.TeamLives(t)
+		standing[t] = LivesRules.TeamStanding(lives)
+		local alive = 0
+		for _, l in lives do
+			if l.State == "Alive" then
+				alive += 1
+			end
+		end
+		state:SetAttribute("Alive" .. t, alive)
+		local was = state:GetAttribute("Standing" .. t)
+		state:SetAttribute("Standing" .. t, standing[t])
+		if was and not standing[t] and table.find(MatchService.StartedTeams, t) then
+			MatchService.Broadcast("TeamEliminated", { Team = t })
+			emit("TeamEliminated", t)
+		end
+	end
+	local result, winner = LivesRules.Outcome(standing, MatchService.StartedTeams, ctx.IsStudio and Config.Dev.StudioAllowSingleTeam)
+	if result == "Winner" then
+		MatchService.End(winner)
+	elseif result == "NoTeams" then
+		MatchService.End(nil)
+	end
+end
+
+function MatchService.End(winner: number?)
+	if ending then
+		return
+	end
+	ending = true
+	phaseToken += 1
+	state:SetAttribute("Winner", winner or 0)
+	MatchService._setPhase("Ended", Config.Match.EndScreenLength)
+	emit("MatchEnded", winner)
+
+	-- Rewards: winning team players still in the server (including eliminated
+	-- spectators) get the win reward exactly once (ProfileRules.AwardWin by MatchId).
+	local rewarded = {}
+	for _, p in Players:GetPlayers() do
+		if MatchService.Participants[p.UserId] then
+			local session = ctx.DataService.Get(p)
+			if session and ctx.DataService.CanGrant(p) then
+				session.Profile.Matches += 1
+				if winner and MatchService.Roster[p.UserId] == winner then
+					if not ctx.IsStudio or Config.Dev.SaveInStudio or session.State == "Memory" then
+						if ProfileRules.AwardWin(session.Profile, MatchService.MatchId, Config.Match.WinDiamonds, Config.Data.RewardedMatchMemory) then
+							table.insert(rewarded, p)
+						end
+					end
+				end
+				task.spawn(function()
+					ctx.DataService.Save(p, false)
+					ctx.DataService.Push(p)
+				end)
+			end
+		end
+	end
+	for _, p in ctx.Util.MatchPlayers() do
+		local won = winner ~= nil and ctx.Util.Team(p) == winner
+		Net.FireClient("MatchEvent", p, "MatchEnded", {
+			Winner = winner or 0,
+			Won = won,
+			Diamonds = if table.find(rewarded, p) then Config.Match.WinDiamonds else 0,
+		})
+	end
+	print("[Match] ended; winner:", winner and Config.Teams[winner].Name or "none")
+
+	task.delay(Config.Match.EndScreenLength, function()
+		MatchService._teardown()
+	end)
+end
+
+function MatchService._teardown()
+	local players = ctx.Util.MatchPlayers()
+	emit("MatchCleanup")
+	MatchService.Active = false
+	for _, p in players do
+		p:SetAttribute("InMatch", false)
+		p:SetAttribute("Team", 0)
+	end
+	if ctx.Mode == "Match" then
+		MatchService.ReturnToLobby(Players:GetPlayers(), nil)
+	else
+		ctx.WorldService.ClearMatch()
+		MatchService.Map = nil
+		ctx.WorldService.ApplyLighting("Day", true)
+		MatchService._setPhase("Idle", 0)
+		for _, p in players do
+			if p.Parent then
+				ctx.LivesService.SpawnInLobby(p)
+				Net.FireClient("MatchEvent", p, "ReturnedToLobby", {})
+			end
+		end
+	end
+end
+
+-- Returns players to a public lobby server (production) or the local lobby (Studio).
+function MatchService.ReturnToLobby(players: { Player }, message: string?, priority: boolean?)
+	if #players == 0 then
+		return
+	end
+	for _, p in players do
+		if message then
+			ctx.Util.Notify(p, message, "info")
+		end
+	end
+	if ctx.Mode ~= "Match" or ctx.IsStudio then
+		for _, p in players do
+			p:SetAttribute("InMatch", false)
+			ctx.LivesService.SpawnInLobby(p)
+		end
+		return
+	end
+	local options = Instance.new("TeleportOptions")
+	options:SetTeleportData({ ReturnFromMatch = true, Priority = priority == true })
+	for attempt = 1, 3 do
+		local ok, err = pcall(function()
+			TeleportService:TeleportAsync(game.PlaceId, players, options)
+		end)
+		if ok then
+			return
+		end
+		warn("[MatchService] return teleport failed:", err)
+		task.wait(attempt * 2)
+	end
+	for _, p in players do
+		p:Kick("Match over — please rejoin Survival Hour.")
+	end
+end
+
+-- Leavers --------------------------------------------------------------------------------
+
+function MatchService._onLeave(player: Player)
+	if not MatchService.Active then
+		return
+	end
+	if player:GetAttribute("InMatch") then
+		-- LivesService marks the life as Left; re-check next frame.
+		task.defer(MatchService.CheckOutcome)
+	end
+	if ctx.Mode == "Match" then
+		task.delay(1, function()
+			if #Players:GetPlayers() == 0 and MatchService.Active then
+				-- Everyone left: nothing left to do (reserved servers shut down when empty).
+				MatchService.Active = false
+				phaseToken += 1
+			end
+		end)
+	end
+end
+
+return MatchService

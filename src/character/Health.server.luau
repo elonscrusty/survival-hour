@@ -1,0 +1,3 @@
+-- Replaces Roblox's default "Health" regeneration script.
+-- Survival Hour heals only near your own burning campfire (CampService) or with
+-- bandages, so passive regeneration is intentionally disabled.
