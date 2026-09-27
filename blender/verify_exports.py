@@ -1,0 +1,189 @@
+"""Re-import every exported FBX into a clean scene and check it against the
+catalog. Writes Docs/QA_REPORT.md.
+
+    python blender/verify_exports.py        (bpy module)
+    blender --background --python blender/verify_exports.py
+
+This checks the FILES (what Roblox receives), not Roblox Studio itself.
+"""
+
+import json
+import os
+import sys
+
+import bpy
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+
+
+def clean():
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    bpy.context.scene.unit_settings.system = "NONE"
+
+
+def load(path, raw_axes=False):
+    clean()
+    kw = dict(filepath=os.path.join(ROOT, path))
+    if raw_axes:  # identity: Blender XYZ == FBX/Roblox XYZ
+        kw.update(use_manual_orientation=True, axis_forward="Y", axis_up="Z")
+    bpy.ops.import_scene.fbx(**kw)
+    return list(bpy.context.scene.objects)
+
+
+def tris(o):
+    return sum(len(p.vertices) - 2 for p in o.data.polygons)
+
+
+def check_static(rec, path, expect_tris, expect_atts, expect_size):
+    issues = []
+    objs = load(path)
+    meshes = [o for o in objs if o.type == "MESH" and not o.name.endswith("_Att")]
+    atts = sorted(o.name for o in objs if o.name.endswith("_Att"))
+    if len(meshes) != 1:
+        issues.append(f"{len(meshes)} render meshes (expected 1)")
+    m = meshes[0] if meshes else None
+    if m:
+        if len(m.data.materials) > 1:
+            issues.append(f"{len(m.data.materials)} materials")
+        imgs = [n.image for mat in m.data.materials if mat and mat.use_nodes
+                for n in mat.node_tree.nodes if n.type == "TEX_IMAGE" and n.image]
+        if not imgs:
+            issues.append("no embedded texture")
+        t = tris(m)
+        if t != expect_tris:
+            issues.append(f"tris {t} != catalog {expect_tris}")
+        if not m.data.uv_layers:
+            issues.append("no UVs")
+        d = m.dimensions
+        size = (d.x, d.z, d.y)
+        if expect_size and any(abs(a - b) > 0.05 for a, b in zip(size, expect_size)):
+            issues.append(f"size {tuple(round(v, 2) for v in size)} != catalog {tuple(expect_size)}")
+    exp = sorted(expect_atts)
+    if atts != exp:
+        issues.append(f"attachments {atts} != {exp}")
+    return issues
+
+
+def check_rig(rec):
+    issues = []
+    objs = load(rec["files"]["fbx"])
+    arms = [o for o in objs if o.type == "ARMATURE"]
+    meshes = [o for o in objs if o.type == "MESH"]
+    if len(arms) != 1 or len(meshes) != 1:
+        issues.append(f"{len(arms)} armatures / {len(meshes)} meshes")
+        return issues, {}
+    arm, me = arms[0], meshes[0]
+    nb = len(arm.data.bones)
+    if nb != len(rec["bones"]):
+        issues.append(f"bones {nb} != {len(rec['bones'])}")
+    root = arm.data.bones.get("Root")
+    if root is None:
+        issues.append("no Root bone")
+    elif root.head_local.length > 1e-4:
+        issues.append(f"Root not at origin {tuple(root.head_local)}")
+    gi = {g.index: g.name for g in me.vertex_groups}
+    maxinf, rootw = 0, 0
+    for v in me.data.vertices:
+        ws = [g for g in v.groups if g.weight > 1e-4]
+        maxinf = max(maxinf, len(ws))
+        rootw += sum(1 for g in ws if gi[g.group] == "Root")
+    if maxinf > 4:
+        issues.append(f"{maxinf} influences on a vertex (max 4)")
+    if rootw:
+        issues.append(f"{rootw} vertices weighted to Root")
+    if tris(me) != rec["tris"]:
+        issues.append(f"tris {tris(me)} != {rec['tris']}")
+    anims = {}
+    for a in rec["animations"]:
+        objs = load(a["file"])
+        arm = [o for o in objs if o.type == "ARMATURE"]
+        act = arm[0].animation_data.action if arm and arm[0].animation_data else None
+        if not act:
+            issues.append(f"{a['name']}: no animation")
+            continue
+        fr = act.frame_range
+        length = round(fr[1] - fr[0])
+        anims[a["name"]] = length
+        if abs(length - a["frames"]) > 1:
+            issues.append(f"{a['name']}: {length} frames != {a['frames']}")
+    return issues, dict(bones=nb, max_influences=maxinf, anims=anims)
+
+
+def check_orientation():
+    """Muzzle/Tip attachments must be at Roblox -Z (forward) in the raw file."""
+    out = []
+    for path, att in (("Export/Meshes/Firearms/SM_Pistol.fbx", "Muzzle_Att"),
+                      ("Export/Meshes/Firearms/SM_Rifle.fbx", "Muzzle_Att"),
+                      ("Export/Meshes/Crafting_L1/SM_Spear.fbx", "Tip_Att")):
+        objs = load(path, raw_axes=True)
+        a = [o for o in objs if o.name == att]
+        if not a:
+            out.append((path, att, None))
+            continue
+        p = a[0].matrix_world.translation
+        out.append((path, att, (round(p.x, 3), round(p.y, 3), round(p.z, 3))))
+    return out
+
+
+def main():
+    with open(os.path.join(ROOT, "Roblox", "catalog.json")) as f:
+        recs = json.load(f)
+    lines = ["# QA report: exported files", "",
+             "Generated by `blender/verify_exports.py`. Every FBX was re-imported into an empty Blender "
+             "scene and compared with `Roblox/catalog.json`. This validates the files Roblox receives; "
+             "**it is not a Roblox Studio import test.**", ""]
+    fails, checked = [], 0
+    rows = []
+    for r in recs:
+        if r["category"] == "Scenes":
+            continue
+        if r["kind"] == "Rig":
+            iss, info = check_rig(r)
+            checked += 1 + len(r["animations"])
+            rows.append((r["name"], "rig + %d clips" % len(r["animations"]), iss,
+                         f"{info.get('bones')} bones, max {info.get('max_influences')} influences"))
+            continue
+        atts = [a["name"] for a in r.get("attachments", [])]
+        iss = check_static(r, r["files"]["fbx"], r["tris"], atts, r["size_studs_roblox_XYZ"])
+        checked += 1
+        for p in r.get("parts", []):
+            pi = check_static(p, p["file"], p["tris"], [a["name"] for a in p.get("attachments", [])],
+                              p["size_studs_roblox_XYZ"])
+            iss += [f"{p['name']}: {x}" for x in pi]
+            checked += 1
+        if r["files"].get("lod1"):
+            objs = load(r["files"]["lod1"])
+            ms = [o for o in objs if o.type == "MESH" and not o.name.endswith("_Att")]
+            if not ms or tris(ms[0]) != r["lod1_tris"]:
+                iss.append("LOD1 tris mismatch")
+            checked += 1
+        if r["files"].get("collision"):
+            objs = load(r["files"]["collision"])
+            if not [o for o in objs if o.type == "MESH"]:
+                iss.append("collision file empty")
+            checked += 1
+        rows.append((r["name"], r["kind"], iss, ""))
+    orient = check_orientation()
+    lines += [f"**Files checked:** {checked}  ", f"**Assets with issues:** {sum(1 for x in rows if x[2])}", ""]
+    lines += ["## Axis check (raw FBX axes = Roblox axes)", "",
+              "Forward-pointing attachments should have a negative Z (Roblox LookVector is -Z) and X near 0.", "",
+              "| File | Attachment | Position (X, Y, Z) | OK |", "|---|---|---|---|"]
+    for path, att, pos in orient:
+        ok = pos is not None and pos[2] < 0 and abs(pos[0]) < 0.01
+        lines.append(f"| `{path}` | {att} | {pos} | {'yes' if ok else '**NO**'} |")
+    lines += ["", "## Per-asset results", "", "| Asset | Kind | Result | Info |", "|---|---|---|---|"]
+    for name, kind, iss, info in rows:
+        lines.append(f"| `{name}` | {kind} | {'OK' if not iss else '; '.join(iss)} | {info} |")
+    with open(os.path.join(ROOT, "Docs", "QA_REPORT.md"), "w") as f:
+        f.write("\n".join(lines) + "\n")
+    bad = [r for r in rows if r[2]]
+    print(f"checked {checked} files; {len(bad)} assets with issues")
+    for r in bad:
+        print("  ", r[0], r[2])
+    for o in orient:
+        print("  orient", o)
+
+
+if __name__ == "__main__":
+    main()
