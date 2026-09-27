@@ -1,7 +1,7 @@
 --!strict
 -- Central tuning values for Survival Hour. Every gameplay number that designers
 -- are expected to tweak lives here or in the data modules next to this file
--- (Items, Recipes, Powerups, Loot, Products). See docs/TUNING.md.
+-- (Items, Recipes, Loot, Products) and in Classes / Perks / Cosmetics / Progression. See docs/TUNING.md.
 
 local Config = {}
 
@@ -170,6 +170,12 @@ Config.Healing = {
 	FirstAid = { Heal = 50, UseTime = 5 },
 	Medkit = { Heal = 100, UseTime = 8 },
 	MoveSlow = 0.6, -- walk speed multiplier while applying
+}
+
+-- Crafting is a short channel: BaseTime + PerTier * recipe tier (Craftsman shortens it).
+Config.Craft = {
+	BaseTime = 1,
+	PerTier = 0.5,
 }
 
 Config.CarePackage = {

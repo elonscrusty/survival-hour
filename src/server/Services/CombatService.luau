@@ -123,6 +123,7 @@ function CombatService.DamagePlayer(victim: Player, amount: number, source: Sour
 	ctx.ChannelService.OnDamaged(victim)
 	ctx.CampService.NoteHurt(victim)
 	hum.Health = math.max(0, hum.Health - dmg)
+	ctx.PowerupService.OnPlayerHurt(victim, dmg)
 	Net.FireClient("HitFeedback", victim, "Hurt", dmg, source.Pos)
 	if source.By then
 		Net.FireClient("HitFeedback", source.By, "Player", dmg, root.Position)

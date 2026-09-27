@@ -264,6 +264,9 @@ function BuildService.Spawn(id: string, team: number, ground: Vector3, yaw: numb
 		end)
 	elseif def.Limit == "Storage" then
 		ctx.StorageService.Register(s)
+		if builder then
+			ctx.CosmeticService.OnStructurePlaced(builder, model, "Storage")
+		end
 	elseif id == "TripwireAlarm" or id == "Snare" or id == "BearTrap" then
 		local trig = model:FindFirstChild("Trigger") :: BasePart
 		trig.Touched:Connect(function(part)

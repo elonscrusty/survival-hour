@@ -19,7 +19,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Net = require(Shared:WaitForChild("Net"))
-local Powerups = require(Shared:WaitForChild("Powerups"))
+local Progression = require(Shared:WaitForChild("Progression"))
 local ProfileRules = require(Shared:WaitForChild("Logic"):WaitForChild("ProfileRules"))
 
 export type Session = {
@@ -37,6 +37,9 @@ local DataService = {}
 
 local ctx: any
 local store: DataStore? = nil
+local boards: { [string]: OrderedDataStore } = {}
+local boardCache: { [string]: { { UserId: number, Name: string, Value: number } } } = { Wins = {}, XP = {} }
+local names: { [number]: string } = {}
 local sessions: { [Player]: Session } = {}
 
 local function key(userId: number): string
@@ -60,12 +63,28 @@ function DataService.Init(c)
 	else
 		warn("[DataService] DataStore unavailable:", result)
 	end
+	for _, b in { "Wins", "XP" } do
+		local okb, ods = pcall(function()
+			return DataStoreService:GetOrderedDataStore(Config.Data.StoreName .. "_Board_" .. b)
+		end)
+		if okb then
+			boards[b] = ods
+		end
+	end
 	ctx.Util.OnPlayerAdded(DataService._onJoin)
 	ctx.Util.OnPlayerRemoving(DataService._onLeave)
 	game:BindToClose(DataService._onClose)
 end
 
 function DataService.Start()
+	if ctx.Mode == "Lobby" and usePersistence() then
+		task.spawn(function()
+			while true do
+				DataService._refreshBoards()
+				task.wait(120)
+			end
+		end)
+	end
 	while true do
 		task.wait(Config.Data.AutosaveInterval)
 		for p, s in sessions do
@@ -127,6 +146,7 @@ function DataService._onJoin(player: Player)
 		if ctx.IsStudio then
 			-- A little starting currency in Studio so the shop can be tested.
 			s.Profile.Diamonds = 300
+			s.Profile.Coins = 20000
 		end
 	else
 		local attempt = 0
@@ -292,30 +312,92 @@ function DataService.Push(player: Player)
 		return
 	end
 	local p = s.Profile
-	local challenge = {}
-	for _, def in Powerups.List do
-		local lvl = p.Owned[def.Id] or 0
-		local next = lvl + 1
-		local ch = def.Challenges[next]
-		challenge[def.Id] = {
-			Level = lvl,
-			Progress = if ch then (p.Stats[ch.Stat] or 0) else nil,
-			Target = if ch then ch.Target else nil,
-			Text = if ch then ch.Text else nil,
-		}
-	end
+	local now = os.time()
+	local level, into, need = Progression.LevelFromXP(p.XP)
+	local week = Progression.WeekNumber(now)
+	local weekly = if p.Weekly.Week == week then p.Weekly else { Matches = 0, Wins = 0, Claimed = false }
+	local canDaily = ProfileRules.CanClaimDaily(p, now)
+	local nextStreak = if p.Daily.Day == Progression.DayNumber(now) - 1 then p.Daily.Streak + 1 else 1
 	Net.FireClient("ProfileSync", player, {
 		Diamonds = p.Diamonds,
-		Owned = p.Owned,
-		Equipped = p.Equipped or false,
+		Coins = p.Coins,
+		XP = p.XP,
+		Level = level,
+		LevelInto = into,
+		LevelNeed = need,
+		Class = p.Class,
+		OwnedClasses = p.OwnedClasses,
+		Perk = p.Perk or false,
+		OwnedPerks = p.OwnedPerks,
+		Cosmetics = p.Cosmetics,
+		Wearing = p.Wearing,
 		Credits = p.Credits,
 		Wins = p.Wins,
 		Matches = p.Matches,
-		Challenges = challenge,
+		Kills = p.Kills,
+		Eliminations = p.Eliminations,
+		Daily = { CanClaim = canDaily, Streak = p.Daily.Streak, Amount = Progression.DailyCoins(if canDaily then nextStreak else p.Daily.Streak + 1) },
+		Weekly = {
+			Matches = weekly.Matches,
+			Wins = weekly.Wins,
+			Need = Progression.WeeklyMatches,
+			Claimed = weekly.Claimed,
+			CanClaim = ProfileRules.CanClaimWeekly(p, now),
+			Amount = Progression.WeeklyCoins(weekly.Wins),
+		},
 		State = s.State,
 	})
-	player:SetAttribute("Powerup", p.Equipped or "")
-	player:SetAttribute("PowerupLevel", if p.Equipped then p.Owned[p.Equipped] else 0)
+	player:SetAttribute("Level", level)
+	ctx.CosmeticService.Apply(player)
+end
+
+-- Leaderboards (OrderedDataStore; every call is pcall-guarded) ----------------------------
+
+function DataService.PostLeaderboards(player: Player)
+	local s = sessions[player]
+	if not s or s.State ~= "Loaded" then
+		return
+	end
+	for b, value in { Wins = s.Profile.Wins, XP = s.Profile.XP } do
+		local ods = boards[b]
+		if ods and value > 0 then
+			local ok, err = pcall(function()
+				ods:SetAsync(key(player.UserId), math.floor(value))
+			end)
+			if not ok then
+				warn("[DataService] leaderboard write failed:", err)
+			end
+		end
+	end
+end
+
+function DataService._refreshBoards()
+	for b, ods in boards do
+		local ok, pages = pcall(function()
+			return ods:GetSortedAsync(false, 10)
+		end)
+		if ok and pages then
+			local list = {}
+			for _, entry in pages:GetCurrentPage() do
+				local uid = tonumber(string.sub(entry.key, 3))
+				if uid then
+					if not names[uid] then
+						local okn, n = pcall(function()
+							return game:GetService("Players"):GetNameFromUserIdAsync(uid)
+						end)
+						names[uid] = if okn then n else "Player " .. uid
+					end
+					table.insert(list, { UserId = uid, Name = names[uid], Value = entry.value })
+				end
+			end
+			boardCache[b] = list
+		end
+	end
+end
+
+-- Top 10 lists (cached; empty in Studio memory mode).
+function DataService.Boards(): { [string]: { { UserId: number, Name: string, Value: number } } }
+	return boardCache
 end
 
 return DataService

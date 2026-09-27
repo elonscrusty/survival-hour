@@ -14,11 +14,12 @@ export type Product = {
 	Key: string,
 	ProductId: number,
 	SuggestedPrice: number,
-	Kind: string, -- Revive | CarePackage | Bandage | Diamonds | Unlock | Upgrade
+	Kind: string, -- Coins | Bundle (on sale); Revive | CarePackage | Bandage | Diamonds | Unlock | Upgrade (legacy, off sale)
 	Tier: number?,
 	Amount: number?,
 	Powerup: string?,
 	Level: number?,
+	Bundle: string?,
 	Title: string,
 }
 
@@ -32,6 +33,14 @@ local defs: { Product } = {
 
 	{ Key = "CarePackage", ProductId = 0, SuggestedPrice = 75, Kind = "CarePackage", Title = "Call Public Care Package" },
 	{ Key = "Bandage", ProductId = 0, SuggestedPrice = 15, Kind = "Bandage", Amount = 1, Title = "Bandage" },
+
+	-- Coin packs (cosmetics only) and cosmetic bundles: the only products on sale.
+	{ Key = "Coins500", ProductId = 0, SuggestedPrice = 49, Kind = "Coins", Amount = 500, Title = "500 Coins" },
+	{ Key = "Coins1200", ProductId = 0, SuggestedPrice = 99, Kind = "Coins", Amount = 1200, Title = "1,200 Coins" },
+	{ Key = "Coins3000", ProductId = 0, SuggestedPrice = 229, Kind = "Coins", Amount = 3000, Title = "3,000 Coins" },
+	{ Key = "Coins7000", ProductId = 0, SuggestedPrice = 479, Kind = "Coins", Amount = 7000, Title = "7,000 Coins" },
+	{ Key = "BundleFounder", ProductId = 0, SuggestedPrice = 199, Kind = "Bundle", Bundle = "Founder", Title = "Founder Bundle" },
+	{ Key = "BundleEmber", ProductId = 0, SuggestedPrice = 399, Kind = "Bundle", Bundle = "Ember", Title = "Ember Bundle" },
 
 	{ Key = "Diamonds100", ProductId = 0, SuggestedPrice = 99, Kind = "Diamonds", Amount = 100, Title = "100 Diamonds" },
 	{ Key = "Diamonds300", ProductId = 0, SuggestedPrice = 279, Kind = "Diamonds", Amount = 300, Title = "300 Diamonds" },

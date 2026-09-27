@@ -191,7 +191,8 @@ function CampService._onFeed(player: Player, prompt: ProximityPrompt)
 		ctx.Util.Notify(player, "You have no Wood. Chop trees to fuel your fire.", "error")
 		return
 	end
-	local n = FireRules.WoodAccepted(fire, have, FIRE)
+	local fuelMult = ctx.PowerupService.FireFuelMult(player)
+	local n = FireRules.WoodAccepted(fire, have, FIRE, fuelMult)
 	if n <= 0 then
 		ctx.Util.Notify(player, "Your fire is already full.", "info")
 		return
@@ -199,7 +200,7 @@ function CampService._onFeed(player: Player, prompt: ProximityPrompt)
 	if InventoryModel.TakeResource(inv, "Wood", n) ~= n then
 		return
 	end
-	FireRules.AddWood(fire, n, FIRE)
+	FireRules.AddWood(fire, n, FIRE, fuelMult)
 	ctx.InventoryService.Sync(player)
 	CampService._syncFire(team)
 	ctx.Util.Notify(player, string.format("Added %d Wood · fuel %d%%", n, math.floor(fire.Fuel * 100 + 0.5)), "success")
@@ -281,6 +282,7 @@ function CampService.SetLevel(team: number, level: number)
 	ctx.ChannelService.MakePrompt(nb.PrimaryPart, "Workbench", "Craft", "Workbench", 10, "Team", team)
 	camp.Workbench = nb
 	old:Destroy()
+	ctx.CosmeticService.OnWorkbenchRebuilt(team)
 	ctx.MatchService.State:SetAttribute("Bench" .. team, level)
 end
 

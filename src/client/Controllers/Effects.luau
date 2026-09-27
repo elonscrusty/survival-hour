@@ -102,9 +102,8 @@ local function onFx(ev: any)
 		burst(d.Pos + Vector3.new(0, 3, 0), Color3.fromRGB(140, 130, 120), 30, 14, 0.8)
 	elseif name == "PackageOpen" then
 		burst(d.Pos + Vector3.new(0, 2, 0), Color3.fromRGB(255, 170, 70), 40, 20, 0.5)
-	elseif name == "Ability" then
-		local color = Color3.fromRGB(180, 220, 255)
-		burst(d.Pos, color, 25, 14, 0.5)
+	elseif name == "Cosmetic" then
+		burst(d.Pos, d.Color or Color3.new(1, 1, 1), d.Count or 25, 14, 0.7)
 	end
 end
 
@@ -157,7 +156,28 @@ local function onReveal(r: any)
 	end
 end
 
+-- Class / power-up sight: Night Owl brightens nights a little, Miner sees a
+-- little better in caves. Local-only colour correction (no x-ray, no outlines).
+local function senseSight()
+	local cc = Instance.new("ColorCorrectionEffect")
+	cc.Name = "SenseSight"
+	cc.Enabled = false
+	cc.Parent = game:GetService("Lighting")
+	local ms = ReplicatedStorage:WaitForChild("MatchState")
+	RunService.Heartbeat:Connect(function()
+		local inMatch = player:GetAttribute("InMatch") == true
+		local night = ms:GetAttribute("Phase") == "Night"
+		local owl = inMatch and night and player:GetAttribute("Perk") == "NightOwl"
+		local miner = inMatch and player:GetAttribute("Class") == "Miner" and player:GetAttribute("InCave") == true
+		local b = (if owl then 0.07 else 0) + (if miner then 0.08 else 0)
+		cc.Enabled = b > 0
+		cc.Brightness = b
+		cc.Contrast = if b > 0 then 0.05 else 0
+	end)
+end
+
 function Effects.Start()
+	senseSight()
 	fxFolder = Instance.new("Folder")
 	fxFolder.Name = "ClientFx"
 	fxFolder.Parent = workspace

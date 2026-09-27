@@ -230,7 +230,7 @@ local function alertBreach(p: Player, e: Entry, loud: boolean)
 	end
 	-- Raids are loud: anyone near hears it (no position, just that it's close).
 	for _, other in ctx.Util.MatchPlayers() do
-		if other ~= p and ctx.Util.Team(other) ~= e.Structure.Team and ctx.Util.DistTo(other, pos) <= S.NoiseRadius then
+		if other ~= p and ctx.Util.Team(other) ~= e.Structure.Team and ctx.Util.DistTo(other, pos) <= S.NoiseRadius * ctx.PowerupService.BreachNoiseMult(p) then
 			Net.FireClient("MatchEvent", other, "RaidNoise", { Loud = loud })
 		end
 	end
@@ -290,7 +290,7 @@ function StorageService._beginBreach(p: Player, e: Entry, prompt: ProximityPromp
 			else
 				local _, slot = ctx.InventoryService.EquippedItem(p)
 				if slot then
-					ctx.InventoryService.Wear(p, slot, 3 / ctx.PowerupService.BreachSpeedMult(p))
+					ctx.InventoryService.Wear(p, slot, 3 * ctx.PowerupService.BreachWear(p))
 				end
 			end
 			setBreached(e, true)

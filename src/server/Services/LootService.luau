@@ -440,6 +440,17 @@ function LootService._onOpenChest(p: Player, prompt: ProximityPrompt)
 	})
 end
 
+-- Unopened POI chests within `radius` (Scavenger container sense).
+function LootService.ChestsNear(pos: Vector3, radius: number): { Vector3 }
+	local out = {}
+	for _, c in chests do
+		if not c.Opened and (c.Pos - pos).Magnitude <= radius then
+			table.insert(out, c.Pos)
+		end
+	end
+	return out
+end
+
 function LootService.CratesNear(pos: Vector3, radius: number): { Vector3 }
 	local out = {}
 	for _, c in crates do

@@ -614,6 +614,7 @@ function InventoryService._refreshHeld(p: Player)
 				weld.C0 = ItemModels.GripFor(id)
 				weld.Parent = handle
 				model.Parent = char
+				ctx.CosmeticService.DressHeld(p, model)
 			end
 		end
 	end
@@ -655,6 +656,26 @@ function InventoryService._refreshHeld(p: Player)
 				shell:Destroy()
 			end
 		end
+	end
+	-- Worn backpack: a pack on the back, tinted by the BackpackSkin cosmetic.
+	local packId = inv and inv.Backpack and inv.Backpack.Id
+	local tint = p:GetAttribute("PackSkin") :: Color3?
+	local want = if packId then packId .. (if tint then tint:ToHex() else "") else nil
+	local torso = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
+	local pack = torso and torso:FindFirstChild("PackShell")
+	if pack and pack:GetAttribute("Key") ~= want then
+		pack:Destroy()
+		pack = nil
+	end
+	if want and not pack and torso and torso:IsA("BasePart") then
+		local slots = (Items[packId :: string] and Items[packId :: string].Slots) or 10
+		local k = math.clamp(slots / 25, 0.6, 1.4)
+		local shell = Build.Part({ Name = "PackShell", Size = Vector3.new(1.4 * k, 1.6 * k, 0.7 * k), CFrame = torso.CFrame * CFrame.new(0, 0.1, torso.Size.Z / 2 + 0.35 * k), Color = tint or (Items[packId :: string] and Items[packId :: string].Icon.Color) or Color3.fromRGB(120, 90, 60), Material = Enum.Material.Fabric, Anchored = false, CanCollide = false, CanQuery = false, Massless = true, Parent = torso })
+		shell:SetAttribute("Key", want)
+		local w = Instance.new("WeldConstraint")
+		w.Part0 = torso
+		w.Part1 = shell
+		w.Parent = shell
 	end
 end
 

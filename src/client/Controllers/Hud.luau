@@ -1,6 +1,6 @@
 --!nonstrict
 -- Match HUD: phase/timer, clan fire strip, health/lives/pack/pouches, hotbar,
--- ability cooldown, channel progress, death / revive / eliminated screens,
+-- class / power-up badge, channel progress, death / revive / eliminated screens,
 -- announcements, kill feed, fire alerts and the victory/defeat screen.
 
 local Players = game:GetService("Players")
@@ -13,7 +13,8 @@ local Shared = ReplicatedStorage.Shared
 local Config = require(Shared.Config)
 local Items = require(Shared.Items)
 local Products = require(Shared.Products)
-local Powerups = require(Shared.Powerups)
+local Classes = require(Shared.Classes)
+local Perks = require(Shared.Perks)
 local Net = require(Shared.Net)
 local UI = require("../UI/UI")
 local Theme = require("../UI/Theme")
@@ -246,44 +247,30 @@ local function refreshHotbar()
 	end
 end
 
--- Ability ---------------------------------------------------------------------------------------------
+-- Loadout badge (class + power-up; locked for the match) -------------------------------------------
 
 local abilityFrame: Frame
-local abilityCd: Frame
 local abilityText: TextLabel
 
 local function buildAbility()
 	abilityFrame = UI.panel({ Name = "Ability", Size = UDim2.fromOffset(150, 60), AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0.5, 186, 1, -14), Parent = gui })
-	abilityCd = UI.new("Frame", { Name = "Cooldown", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.45, BorderSizePixel = 0, Parent = abilityFrame }, { UI.corner() })
-	abilityText = UI.text("", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, Font = Theme.FontBold, TextSize = 14, Parent = abilityFrame })
+	abilityText = UI.text("", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, Font = Theme.FontBold, TextSize = 13, Parent = abilityFrame })
 	abilityText.ZIndex = 3
 end
 
 local function refreshAbility()
-	local ab = State.Get("Ability")
-	if not ab or not ab.Id then
-		abilityFrame.Visible = false
+	local cls = Classes.ById[player:GetAttribute("Class") or ""]
+	local perk = Perks.ById[player:GetAttribute("Perk") or ""]
+	abilityFrame.Visible = cls ~= nil and player:GetAttribute("LifeState") == "Alive"
+	if not cls then
 		return
 	end
-	local def = Powerups.ById[ab.Id]
-	abilityFrame.Visible = player:GetAttribute("LifeState") == "Alive"
-	local remaining = math.max(0, (ab.CooldownEnds or 0) - now())
-	local lv = def.Levels[ab.Level]
-	local total = lv and lv.Ability.Cooldown or 1
-	abilityCd.Size = UDim2.fromScale(1, math.clamp(remaining / total, 0, 1))
-	local key = if State.Get("IsTouch") then "" else "[X] "
-	if ab.Id == "Sharpshooter" then
-		abilityText.Text = def.Glyph .. " " .. def.AbilityName .. (if remaining > 0 then string.format("  %.0fs", remaining) else " READY (auto)")
-	else
-		abilityText.Text = key .. def.Glyph .. " " .. def.AbilityName .. (if remaining > 0 then string.format("\n%.0fs", remaining) else "\nREADY")
-	end
+	local burst = (player:GetAttribute("Bursting") or 0) > now()
+	abilityText.Text = cls.Glyph .. " " .. cls.Name .. "\n" .. (if perk then perk.Glyph .. " " .. perk.Name else "no power-up") .. (if burst then "  ❤!" else "")
 	local stroke = abilityFrame:FindFirstChildOfClass("UIStroke")
 	if stroke then
-		stroke.Color = if remaining > 0 then C.Stroke else Color3.fromRGB(def.Color[1], def.Color[2], def.Color[3])
-	end
-	local touchBtn = State.Get("TouchAbilityButton")
-	if touchBtn then
-		touchBtn.BackgroundTransparency = if remaining > 0 then 0.6 else 0.25
+		local col = if burst and perk then perk.Color else cls.Color
+		stroke.Color = Color3.fromRGB(col[1], col[2], col[3])
 	end
 end
 
@@ -465,8 +452,18 @@ local function showEnd(data: any)
 	UI.text(if won then "VICTORY" else "DEFEAT", { Size = UDim2.new(1, 0, 0, 56), TextSize = 50, Font = Theme.FontBlack, TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = if won then C.Accent else C.Bad, Parent = frame })
 	local wdef = Config.Teams[winner]
 	UI.text(if wdef then (wdef.Symbol .. " " .. wdef.Name .. " clan kept their fire burning!") else "No clan survived.", { Position = UDim2.fromOffset(0, 62), Size = UDim2.new(1, 0, 0, 26), TextSize = 18, TextXAlignment = Enum.TextXAlignment.Center, Parent = frame })
+	local sum = data.Summary or {}
+	local ORD = { "1st", "2nd", "3rd" }
+	if sum.Place then
+		UI.text("Placed " .. (ORD[sum.Place] or (tostring(sum.Place) .. "th")) .. " of " .. tostring(sum.Of or "?"), { Position = UDim2.fromOffset(0, 90), Size = UDim2.new(1, 0, 0, 22), TextSize = 17, Font = Theme.FontBold, TextXAlignment = Enum.TextXAlignment.Center, Parent = frame })
+	end
+	local bits = { "+" .. tostring(sum.XP or 0) .. " XP", "+" .. tostring(sum.Coins or 0) .. " Coins" }
 	if (data.Diamonds or 0) > 0 then
-		UI.text("+" .. data.Diamonds .. " ◆ diamonds", { Position = UDim2.fromOffset(0, 100), Size = UDim2.new(1, 0, 0, 34), TextSize = 28, Font = Theme.FontBlack, TextColor3 = C.Diamond, TextXAlignment = Enum.TextXAlignment.Center, Parent = frame })
+		table.insert(bits, "+" .. data.Diamonds .. " ◆")
+	end
+	UI.text(table.concat(bits, "   "), { Position = UDim2.fromOffset(0, 116), Size = UDim2.new(1, 0, 0, 32), TextSize = 26, Font = Theme.FontBlack, TextColor3 = if (data.Diamonds or 0) > 0 then C.Diamond else C.Accent, TextXAlignment = Enum.TextXAlignment.Center, Parent = frame })
+	if (sum.Levels or 0) > 0 then
+		UI.text("LEVEL UP → " .. tostring(sum.Level), { Position = UDim2.fromOffset(0, 150), Size = UDim2.new(1, 0, 0, 22), TextSize = 18, Font = Theme.FontBold, TextColor3 = C.Good, TextXAlignment = Enum.TextXAlignment.Center, Parent = frame })
 	end
 	UI.text("Returning to the lobby shortly…", { Position = UDim2.new(0, 0, 1, -24), TextSize = 14, TextColor3 = C.TextDim, TextXAlignment = Enum.TextXAlignment.Center, Parent = frame })
 	task.delay(Config.Match.EndScreenLength + 2, function()
@@ -527,6 +524,12 @@ local function onMatchEvent(ev: any)
 		pushFeed("✚ " .. teamTag(d.ByTeam) .. tostring(d.By) .. " opened a care package", C.TextDim)
 	elseif name == "MatchEnded" then
 		showEnd(d)
+	elseif name == "Reward" then
+		pushFeed(string.format("+%d XP%s  %s", d.XP or 0, if (d.Coins or 0) > 0 then "  +" .. d.Coins .. " Coins" else "", tostring(d.Line or "")), C.Accent)
+	elseif name == "HurtCue" then
+		local dirs = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" }
+		local dir = dirs[math.floor((((d.Bearing or 0) + 22.5) % 360) / 45) + 1]
+		pushFeed("👣 Someone got hurt to the " .. dir, C.Warn)
 	elseif name == "Eliminated" then
 		Hud.Announce("ELIMINATED", if d.Cause == "FireOut" then "Your fire went out while you were down." else "Spectating.", C.Bad, 4)
 	elseif name == "ReturnedToLobby" then

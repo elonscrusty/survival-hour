@@ -13,11 +13,11 @@ local specs = {
 	"./RateLimiter.spec",
 	"./Loot.spec",
 	"./Recipes.spec",
-	"./Powerups.spec",
+	"./Progression.spec",
+	"./Cosmetics.spec",
 	"./LayoutGen.spec",
 	"./ProfileRules.spec",
 	"./PlacementRules.spec",
-	"./ChallengeRules.spec",
 	"./ResourceRules.spec",
 }
 

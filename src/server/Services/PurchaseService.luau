@@ -204,7 +204,7 @@ function PurchaseService._grant(player: Player, product: any, purchaseId: string
 				end
 			end)
 		end
-		if product.Kind == "Diamonds" or product.Kind == "Unlock" or product.Kind == "Upgrade" then
+		if product.Kind == "Coins" or product.Kind == "Bundle" or product.Kind == "Diamonds" or product.Kind == "Unlock" or product.Kind == "Upgrade" then
 			ctx.Util.Notify(player, "Purchase complete: " .. product.Title, "success")
 		end
 	end

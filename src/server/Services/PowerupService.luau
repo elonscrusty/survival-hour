@@ -1,160 +1,256 @@
 --!nonstrict
--- Permanent powerups: passives, active abilities with cooldowns, and
--- anti-farm challenge tracking (Shared/Logic/ChallengeRules).
+-- Classes + power-ups (Shared/Classes, Shared/Perks) and in-match XP / Coin
+-- rewards (Shared/Progression, Logic/ProfileRules).
 --
--- The equipped powerup is read from the profile when the match starts and
--- can't change mid-match (it can only be changed in the lobby).
+-- The equipped class and power-up are read from the profile when the player
+-- joins a match and are LOCKED for that match (changed only in the lobby).
+-- Every effect is a sidegrade exposed through the multiplier hooks below, which
+-- other services already call; nothing here adds raw damage or health.
+--
+-- Rewards are granted live (so leaving early keeps what you earned) and summed
+-- per match for the end screen. Anti-farm: repeat kills on the same victim and
+-- wildlife kills are capped per match; nothing is granted in under-filled live
+-- matches (Studio always counts).
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Net = require(Shared:WaitForChild("Net"))
-local Powerups = require(Shared:WaitForChild("Powerups"))
-local Logic = Shared:WaitForChild("Logic")
-local ChallengeRules = require(Logic:WaitForChild("ChallengeRules"))
-local ProfileRules = require(Logic:WaitForChild("ProfileRules"))
+local Classes = require(Shared:WaitForChild("Classes"))
+local Perks = require(Shared:WaitForChild("Perks"))
+local Progression = require(Shared:WaitForChild("Progression"))
+local ProfileRules = require(Shared:WaitForChild("Logic"):WaitForChild("ProfileRules"))
 
 local PowerupService = {}
 
+local KILL_REWARDS_PER_VICTIM = 2
+local WILDLIFE_REWARDS_PER_MATCH = 25
+local POI_RADIUS = 34
+local SENSE_INTERVAL = 3
+local TRACK_RADIUS = 70
+local BLOOD_DELAY = 4 -- seconds before a blood trail point becomes visible (no live tracking)
+local BLOOD_LIFE = 20
+local HURT_CUE_RADIUS = 60
+local SECOND_WIND_HP = 25
+local SECOND_WIND_TIME = 5
+local SECOND_WIND_SPEED = 0.2
+
+local PREDATORS = { Wolf = true, Bear = true, Boar = true }
+
 type PState = {
-	Id: string?,
-	Level: number,
-	CooldownEnds: number,
-	ActiveUntil: number,
-	FreeRepairs: number,
-	FreeRepairUntil: number,
-	MarkReadyAt: number,
-	Tracker: ChallengeRules.Tracker,
-	LastPos: Vector3?,
-	LastSample: number,
+	Class: string,
+	Perk: string?,
+	Effects: { [string]: number },
+	Earned: { XP: number, Coins: number, Diamonds: number, Levels: number, Lines: { [string]: number } },
+	KillsOn: { [number]: number },
+	WildlifeRewards: number,
+	Pois: { [number]: boolean },
+	SecondWindUsed: boolean,
+	SecondWindUntil: number,
+	LastSense: number,
 }
 
 local ctx: any
 local states: { [Player]: PState } = {}
+local blood: { { Pos: Vector3, At: number, UserId: number } } = {}
+local workbenchRewarded: { [number]: boolean } = {}
 
 local function now(): number
 	return workspace:GetServerTimeNow()
 end
 
-local function level(p: Player): (string?, number, any)
+local function eff(p: Player, key: string): number
 	local st = states[p]
-	if not st or not st.Id then
-		return nil, 0, nil
+	return if st then st.Effects[key] or 0 else 0
+end
+
+local function merge(into: { [string]: number }, from: { [string]: number })
+	for k, v in from do
+		into[k] = (into[k] or 0) + v
 	end
-	local def = Powerups.ById[st.Id]
-	return st.Id, st.Level, def and def.Levels[st.Level]
 end
 
 function PowerupService.Init(c)
 	ctx = c
-	ctx.MatchService.On("PlayerJoinedMatch", function(p: Player)
-		local session = ctx.DataService.Get(p)
-		local id = session and session.Profile.Equipped
-		local lvl = if id and session then session.Profile.Owned[id] or 0 else 0
-		states[p] = {
-			Id = if lvl > 0 then id else nil,
-			Level = lvl,
-			CooldownEnds = 0,
-			ActiveUntil = 0,
-			FreeRepairs = 0,
-			FreeRepairUntil = 0,
-			MarkReadyAt = 0,
-			Tracker = ChallengeRules.NewTracker(),
-			LastPos = nil,
-			LastSample = os.clock(),
-		}
-		PowerupService._sync(p)
-	end)
+	ctx.MatchService.On("PlayerJoinedMatch", PowerupService._lock)
 	ctx.MatchService.On("MatchCleanup", function()
-		for p in states do
-			if p.Parent then
-				p:SetAttribute("Bursting", nil)
-			end
-		end
 		states = {}
+		blood = {}
+		workbenchRewarded = {}
 	end)
-	ctx.MatchService.On("MatchEnded", function()
-		for p in states do
-			if p.Parent then
-				ctx.DataService.Push(p)
+	ctx.MatchService.On("PhaseChanged", function(phase: string, day: number)
+		-- Surviving a night: everyone still alive at sunrise (Day 2 onwards).
+		if phase == "Day" and day > 1 then
+			for p in states do
+				if p.Parent and ctx.Util.IsAlive(p) then
+					PowerupService.Reward(p, "SurviveNight", "Survived night " .. (day - 1))
+				end
 			end
 		end
 	end)
 	ctx.Util.OnPlayerRemoving(function(p)
 		states[p] = nil
 	end)
-	ctx.Util.Connect("UseAbility", "Default", PowerupService._onUse)
+	-- Retired active abilities: tell clients there is none.
+	ctx.Util.Connect("UseAbility", "Default", function() end)
+end
+
+-- Reads (and locks) class + power-up for this match.
+function PowerupService._lock(p: Player)
+	local session = ctx.DataService.Get(p)
+	local profile = session and session.Profile
+	local classId = if profile and Classes.ById[profile.Class] and profile.OwnedClasses[profile.Class] then profile.Class else Classes.Default
+	local perkId = if profile and profile.Perk and Perks.ById[profile.Perk] and profile.OwnedPerks[profile.Perk] then profile.Perk else nil
+	local effects = {}
+	merge(effects, Classes.ById[classId].Effects)
+	if perkId then
+		merge(effects, Perks.ById[perkId].Effects)
+	end
+	states[p] = {
+		Class = classId,
+		Perk = perkId,
+		Effects = effects,
+		Earned = { XP = 0, Coins = 0, Diamonds = 0, Levels = 0, Lines = {} },
+		KillsOn = {},
+		WildlifeRewards = 0,
+		Pois = {},
+		SecondWindUsed = false,
+		SecondWindUntil = 0,
+		LastSense = 0,
+	}
+	PowerupService._sync(p)
 end
 
 function PowerupService.Start()
-	-- Movement: passives, brush slowdown, burst, climb bonus and distance challenge.
 	while true do
 		task.wait(0.25)
 		if ctx.MatchService.Active then
-			local map = ctx.MatchService.Map
-			for p, st in states do
-				local hum = ctx.Util.Humanoid(p)
-				local root = ctx.Util.Root(p)
-				if hum and root and hum.Health > 0 then
-					local speed = Config.Player.WalkSpeed
-					local _, _, lv = level(p)
-					if st.Id == "Trailblazer" and lv then
-						speed *= 1 + lv.Passive.SpeedPct / 100
+			PowerupService._tick()
+		end
+	end
+end
+
+function PowerupService._tick()
+	local map = ctx.MatchService.Map
+	local t = now()
+	for p, st in states do
+		local hum = ctx.Util.Humanoid(p)
+		local root = ctx.Util.Root(p)
+		if hum and root and hum.Health > 0 then
+			-- Movement speed (brush slowdown; Hunter moves through it more easily)
+			local speed = Config.Player.WalkSpeed
+			if map then
+				for _, b in map.Brush do
+					if Vector3.new(root.Position.X - b.Pos.X, 0, root.Position.Z - b.Pos.Z).Magnitude < b.R then
+						speed *= if (st.Effects.QuietBrush or 0) > 0 then 0.92 else 0.82
+						break
 					end
-					local bursting = st.Id == "Trailblazer" and now() < st.ActiveUntil
-					if bursting and lv then
-						speed *= 1 + lv.Ability.BurstPct / 100
-					elseif map then
-						for _, b in map.Brush do
-							if Vector3.new(root.Position.X - b.Pos.X, 0, root.Position.Z - b.Pos.Z).Magnitude < b.R then
-								speed *= 0.82
-								break
-							end
-						end
-					end
-					hum.WalkSpeed = if ctx.BuildService.IsHeld(p) then 0 else speed * ctx.StaminaService.SpeedMult(p) * (if ctx.ChannelService.IsBusy(p, "Heal") then Config.Healing.MoveSlow else 1)
-					-- Distance challenge (sampled once per second)
-					local t = os.clock()
-					if t - st.LastSample >= 1 then
-						local dt = t - st.LastSample
-						st.LastSample = t
-						local pos = root.Position
-						if st.LastPos and ctx.Util.IsAlive(p) then
-							local d = Vector3.new(pos.X - st.LastPos.X, 0, pos.Z - st.LastPos.Z).Magnitude
-							PowerupService._stat(p, "DistanceTravelled", math.floor(d), nil, dt)
-						end
-						st.LastPos = pos
-					end
-				elseif st then
-					st.LastPos = nil
 				end
 			end
+			if t < st.SecondWindUntil then
+				speed *= 1 + SECOND_WIND_SPEED
+			end
+			hum.WalkSpeed = if ctx.BuildService.IsHeld(p) then 0 else speed * ctx.StaminaService.SpeedMult(p) * (if ctx.ChannelService.IsBusy(p, "Heal") then Config.Healing.MoveSlow else 1)
+			-- Second Wind (automatic, once per life)
+			if (st.Effects.SecondWind or 0) > 0 and not st.SecondWindUsed and hum.Health < SECOND_WIND_HP then
+				st.SecondWindUsed = true
+				st.SecondWindUntil = t + SECOND_WIND_TIME
+				ctx.StaminaService.Refill(p, math.huge)
+				p:SetAttribute("Bursting", st.SecondWindUntil)
+				ctx.Util.Notify(p, "Second Wind! Stamina refilled.", "success")
+			end
+			-- In a cave (Miner sight; client lighting reads this)
+			local inCave = false
+			if map then
+				for _, cave in map.Caves or {} do
+					local l = cave.CF:PointToObjectSpace(root.Position)
+					if l.Z > 0 and l.Z < cave.Length + 4 and math.abs(l.X) < cave.Width / 2 + 2 and root.Position.Y < cave.FloorY + 16 then
+						inCave = true
+						break
+					end
+				end
+				-- POI discovery
+				for i, poi in map.Pois or {} do
+					if not st.Pois[i] and (poi.Pos - root.Position).Magnitude <= POI_RADIUS then
+						st.Pois[i] = true
+						PowerupService.Reward(p, "PoiDiscovered", "Discovered a " .. poi.Type)
+					end
+				end
+			end
+			if p:GetAttribute("InCave") ~= inCave then
+				p:SetAttribute("InCave", inCave)
+			end
+			-- Periodic senses
+			if t - st.LastSense >= SENSE_INTERVAL then
+				st.LastSense = t
+				PowerupService._sense(p, st, root.Position)
+			end
+			-- Blood trail sample for Trackers (injured players only)
+			if hum.Health < hum.MaxHealth * 0.6 and math.random() < 0.25 then
+				table.insert(blood, { Pos = root.Position, At = t, UserId = p.UserId })
+			end
+		end
+	end
+	for i = #blood, 1, -1 do
+		if t - blood[i].At > BLOOD_LIFE then
+			table.remove(blood, i)
+		end
+	end
+end
+
+function PowerupService._sense(p: Player, st: PState, pos: Vector3)
+	local fx = st.Effects
+	if (fx.TrackWildlife or 0) > 0 then
+		local list = {}
+		for _, a in ctx.WildlifeService.List() do
+			if (a.Root.Position - pos).Magnitude <= TRACK_RADIUS then
+				table.insert(list, { Species = a.Species, Pos = a.Root.Position })
+			end
+		end
+		if #list > 0 then
+			Net.FireClient("Reveal", p, "Animals", list, SENSE_INTERVAL + 0.5)
+		end
+	end
+	if (fx.ContainerSense or 0) > 0 then
+		local list = ctx.LootService.CratesNear(pos, fx.ContainerSense)
+		for _, c in ctx.LootService.ChestsNear(pos, fx.ContainerSense) do
+			table.insert(list, c)
+		end
+		if #list > 0 then
+			Net.FireClient("Reveal", p, "Crates", list, SENSE_INTERVAL + 0.5)
+		end
+	end
+	if (fx.BloodTrails or 0) > 0 then
+		local t = now()
+		local list = {}
+		for _, b in blood do
+			if b.UserId ~= p.UserId and t - b.At >= BLOOD_DELAY and (b.Pos - pos).Magnitude <= TRACK_RADIUS then
+				table.insert(list, b.Pos)
+			end
+		end
+		if #list > 0 then
+			Net.FireClient("Reveal", p, "Blood", list, SENSE_INTERVAL + 0.5)
 		end
 	end
 end
 
 function PowerupService._sync(p: Player)
 	local st = states[p]
-	if not st then
-		return
-	end
-	local id, lvl, lv = level(p)
-	p:SetAttribute("Powerup", id or "")
-	p:SetAttribute("PowerupLevel", lvl)
-	p:SetAttribute("ClimbBonus", if id == "Climber" and lv then lv.Passive.ClimbPct / 100 else 0)
-	Net.FireClient("AbilitySync", p, {
-		Id = id or false,
-		Level = lvl,
-		CooldownEnds = st.CooldownEnds,
-		ActiveUntil = st.ActiveUntil,
-		FreeRepairs = st.FreeRepairs,
-	})
+	p:SetAttribute("Class", if st then st.Class else nil)
+	p:SetAttribute("Perk", if st then st.Perk else nil)
+	p:SetAttribute("DrawMult", PowerupService.DrawMult(p))
+	p:SetAttribute("ClimbBonus", 0)
+	-- There are no active abilities in Survival Wars.
+	Net.FireClient("AbilitySync", p, { Id = false })
 end
 
 function PowerupService.OnSpawn(p: Player)
-	if states[p] then
-		states[p].LastPos = nil
+	local st = states[p]
+	if st then
+		st.SecondWindUsed = false
+		st.SecondWindUntil = 0
 		PowerupService._sync(p)
 	else
 		p:SetAttribute("ClimbBonus", 0)
@@ -165,254 +261,116 @@ function PowerupService.OnSpawn(p: Player)
 	end
 end
 
+function PowerupService.ClassOf(p: Player): string?
+	local st = states[p]
+	return st and st.Class
+end
+
+function PowerupService.PerkOf(p: Player): string?
+	local st = states[p]
+	return st and st.Perk
+end
+
 -- Multipliers used by other services ------------------------------------------------------------
 
--- Chop/mine power multiplier for a tool class ("Axe" | "Pickaxe"). Classes (Phase 6) hook in here.
+-- Chop/mine power multiplier for a tool class ("Axe" | "Pickaxe"). Never changes yields.
 function PowerupService.ToolSpeedMult(p: Player, toolType: string): number
-	return 1
+	return 1 + (if toolType == "Axe" then eff(p, "AxeSpeed") elseif toolType == "Pickaxe" then eff(p, "PickSpeed") else 0)
 end
 
--- Damage multiplier for wildlife attacks on this player (Hardy power-up).
+-- Durability lost per successful tool hit (1 = one hit).
+function PowerupService.ToolWear(p: Player, toolType: string): number
+	local w = 1 + eff(p, "ToolWear") + (if toolType == "Axe" then eff(p, "AxeWear") elseif toolType == "Pickaxe" then eff(p, "PickWear") else 0)
+	return math.max(0.3, w)
+end
+
 function PowerupService.WildlifeDamageMult(p: Player): number
-	return 1
+	return math.max(0.5, 1 + eff(p, "WildlifeDamage"))
 end
 
--- Extra leather from kills (Hunter class).
 function PowerupService.ExtraHide(p: Player): number
-	return 0
+	return eff(p, "ExtraHide")
 end
 
--- XP/coin hook for wildlife kills (Phase 6).
-function PowerupService.OnWildlifeKill(p: Player, species: string, night: boolean) end
-
--- Chest search speed (Scavenger class) and extra-loot chance.
 function PowerupService.SearchSpeedMult(p: Player): number
-	return 1
+	return 1 + eff(p, "SearchSpeed")
 end
 
 function PowerupService.ExtraLootChance(p: Player): number
-	return 0
+	return eff(p, "ExtraLoot")
 end
 
--- XP/coin hook for chests (Phase 6).
-function PowerupService.OnChestOpened(p: Player, tier: string, poi: string) end
-
--- Storage breaching speed (Raider class).
 function PowerupService.BreachSpeedMult(p: Player): number
-	return 1
+	return 1 + eff(p, "BreachSpeed")
 end
 
--- Extra pack slots (Strong Back power-up, Scavenger class).
+-- Durability multiplier for breaching tools (Raider: tools last longer).
+function PowerupService.BreachWear(p: Player): number
+	return math.max(0.3, 1 + eff(p, "BreachWear"))
+end
+
+-- Radius multiplier for the breach "raid noise" heard by nearby enemies.
+function PowerupService.BreachNoiseMult(p: Player): number
+	return if eff(p, "QuietBreach") > 0 then 0.5 else 1
+end
+
 function PowerupService.BonusSlots(p: Player): number
-	return 0
+	return eff(p, "BonusSlots")
 end
 
 function PowerupService.HealSpeedMult(p: Player): number
-	return 1
+	return 1 + eff(p, "HealSpeed")
 end
 
 function PowerupService.StaminaMaxMult(p: Player): number
-	return 1
+	return 1 + eff(p, "StaminaMax")
 end
 
 function PowerupService.StaminaRegenMult(p: Player): number
-	return 1
+	return 1 + eff(p, "StaminaRegen")
 end
 
 function PowerupService.SprintMult(p: Player): number
-	return 1
+	return 1 + eff(p, "SprintSpeed")
 end
 
--- Durability lost per successful tool hit (1 = one hit). Classes/power-ups reduce it.
-function PowerupService.ToolWear(p: Player, toolType: string): number
-	return 1
+function PowerupService.FireFuelMult(p: Player): number
+	return 1 + eff(p, "FireFuel")
 end
 
-function PowerupService.GatherMult(p: Player): number
-	local id, _, lv = level(p)
-	return if id == "Scavenger" and lv then 1 + lv.Passive.GatherPct / 100 else 1
+function PowerupService.CraftSpeedMult(p: Player): number
+	return 1 + eff(p, "CraftSpeed")
 end
 
-function PowerupService.DamageMult(p: Player, kind: string): number
-	local id, _, lv = level(p)
-	if kind == "Animal" and id == "Hunter" and lv then
-		return 1 + lv.Passive.AnimalDmgPct / 100
-	end
-	return 1
-end
-
-function PowerupService.RepairMult(p: Player): number
-	local id, _, lv = level(p)
-	return if id == "Craftsman" and lv then 1 + lv.Passive.RepairPct / 100 else 1
-end
-
-function PowerupService.SpreadMult(p: Player): number
-	local id, _, lv = level(p)
-	return if id == "Sharpshooter" and lv then 1 - lv.Passive.SpreadPct / 100 else 1
-end
-
+-- Bow draw time multiplier (Hunter: faster draw).
 function PowerupService.DrawMult(p: Player): number
-	local id, _, lv = level(p)
-	return if id == "Sharpshooter" and lv then 1 - lv.Passive.DrawPct / 100 else 1
+	return 1 - eff(p, "DrawSpeed")
 end
 
-function PowerupService.ConsumeFreeRepair(p: Player): boolean
-	local st = states[p]
-	if st and st.FreeRepairs > 0 and now() < st.FreeRepairUntil then
-		st.FreeRepairs -= 1
-		PowerupService._sync(p)
-		return true
-	end
+-- Retired multipliers (kept so callers stay simple): no class changes these.
+function PowerupService.GatherMult(_p: Player): number
+	return 1
+end
+
+function PowerupService.DamageMult(_p: Player, _kind: string): number
+	return 1
+end
+
+function PowerupService.RepairMult(_p: Player): number
+	return 1
+end
+
+function PowerupService.SpreadMult(_p: Player): number
+	return 1
+end
+
+function PowerupService.ConsumeFreeRepair(_p: Player): boolean
 	return false
 end
 
--- Abilities -----------------------------------------------------------------------------------------
+-- Rewards ----------------------------------------------------------------------------------------
 
-function PowerupService._onUse(p: Player)
-	local st = states[p]
-	local id, _, lv = level(p)
-	if not st or not id or not lv or not ctx.Util.IsAlive(p) or not ctx.MatchService.IsPlaying() then
-		return
-	end
-	local t = now()
-	if t < st.CooldownEnds then
-		return
-	end
-	local ab = lv.Ability
-	local root = ctx.Util.Root(p) :: BasePart
-	local used = false
-	if id == "Trailblazer" then
-		st.ActiveUntil = t + ab.Duration
-		p:SetAttribute("Bursting", st.ActiveUntil)
-		used = true
-	elseif id == "Scavenger" then
-		local list = ctx.LootService.CratesNear(root.Position, ab.Radius)
-		Net.FireClient("Reveal", p, "Crates", list, ab.Duration)
-		ctx.Util.Notify(p, if #list > 0 then string.format("You sniff out %d crate%s nearby.", #list, if #list > 1 then "s" else "") else "No crates nearby.", "info")
-		used = true
-	elseif id == "Hunter" then
-		if not ctx.MatchService.IsNight() then
-			ctx.Util.Notify(p, "Tracking only works at night.", "warn")
-			return
-		end
-		local list = {}
-		for _, a in ctx.WildlifeService.List() do
-			if (a.Root.Position - root.Position).Magnitude <= ab.Radius then
-				table.insert(list, { Id = a.Id, Species = a.Species, Pos = a.Root.Position })
-			end
-		end
-		Net.FireClient("Reveal", p, "Animals", list, ab.Duration)
-		used = true
-	elseif id == "Climber" then
-		used = PowerupService._scramble(p, root, ab.MaxHeight)
-		if not used then
-			return
-		end
-	elseif id == "Craftsman" then
-		st.FreeRepairs = ab.FreeSwings
-		st.FreeRepairUntil = t + 20
-		ctx.Util.Notify(p, string.format("Thrifty Repair: next %d repair swings are free (20s).", ab.FreeSwings), "success")
-		used = true
-	elseif id == "Sharpshooter" then
-		ctx.Util.Notify(p, "Mark triggers automatically when your arrows hit an enemy.", "info")
-		return
-	end
-	if used then
-		st.CooldownEnds = t + ab.Cooldown
-		local char = p.Character
-		if char then
-			char:SetAttribute("Action", "Ability")
-			char:SetAttribute("ActionAt", t)
-			char:SetAttribute("ActionItem", id)
-		end
-		Net.FireAll("Fx", "Ability", { Player = p, Id = id, Pos = root.Position })
-		PowerupService._sync(p)
-	end
-end
-
--- Climber: vault over the wall directly ahead if it's short enough and the
--- far side is clear.
-function PowerupService._scramble(p: Player, root: BasePart, maxHeight: number): boolean
-	local char = p.Character :: Model
-	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = { char }
-	params.IgnoreWater = true
-	local look = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
-	local hit = workspace:Raycast(root.Position, look * 6, params)
-	if not hit or hit.Instance == workspace.Terrain then
-		ctx.Util.Notify(p, "Face a wall to scramble over it.", "warn")
-		return false
-	end
-	local groundY = ctx.WorldService.GroundY(root.Position.X, root.Position.Z)
-	-- Find the top of the obstacle by probing downward from above.
-	local top: number? = nil
-	for h = maxHeight + 1, 1, -1 do
-		local probeFrom = Vector3.new(hit.Position.X, groundY + h, hit.Position.Z) - look * 1
-		local r = workspace:Raycast(probeFrom, look * 3, params)
-		if not r then
-			top = groundY + h
-		else
-			break
-		end
-	end
-	local wallTop = workspace:Raycast(Vector3.new(hit.Position.X, groundY + maxHeight + 3, hit.Position.Z) + look * 0.5, Vector3.new(0, -(maxHeight + 4), 0), params)
-	if not top or (wallTop and wallTop.Position.Y > groundY + maxHeight) then
-		ctx.Util.Notify(p, "That's too tall to scramble over.", "warn")
-		return false
-	end
-	-- Landing: far side of the obstacle
-	local landing: Vector3? = nil
-	for dist = 3, 8 do
-		local probe = hit.Position + look * dist
-		local gy = ctx.WorldService.GroundY(probe.X, probe.Z)
-		local spot = Vector3.new(probe.X, gy + 3, probe.Z)
-		local overlap = OverlapParams.new()
-		overlap.FilterType = Enum.RaycastFilterType.Exclude
-		overlap.FilterDescendantsInstances = { char, workspace.Terrain }
-		local blockers = workspace:GetPartBoundsInBox(CFrame.new(spot), Vector3.new(2.5, 5, 2.5), overlap)
-		local solid = false
-		for _, b in blockers do
-			if b.CanCollide then
-				solid = true
-				break
-			end
-		end
-		if not solid then
-			landing = spot
-			break
-		end
-	end
-	if not landing then
-		ctx.Util.Notify(p, "No room to land on the other side.", "warn")
-		return false
-	end
-	local s = ctx.BuildService.FromPart(hit.Instance)
-	if s and s.Team ~= ctx.Util.Team(p) then
-		PowerupService._stat(p, "EnemyWallsScaled", 1, s.Key)
-	end
-	-- Short arc over the wall (server-driven, replicated)
-	local startPos = root.Position
-	local peakY = math.max(startPos.Y, (top or startPos.Y)) + 3
-	local rot = root.CFrame.Rotation
-	task.spawn(function()
-		for i = 1, 8 do
-			local t = i / 8
-			local pos = startPos:Lerp(landing :: Vector3, t)
-			local y = pos.Y + math.sin(t * math.pi) * (peakY - math.min(startPos.Y, (landing :: Vector3).Y))
-			if char.Parent then
-				char:PivotTo(CFrame.new(pos.X, y, pos.Z) * rot)
-			end
-			task.wait(0.04)
-		end
-	end)
-	return true
-end
-
--- Hooks from other services ----------------------------------------------------------------------
-
--- Only matches with a real lobby (or Studio test sessions) count toward challenges.
-local function challengesEnabled(): boolean
+local function rewardsEnabled(): boolean
 	if ctx.IsStudio then
 		return true
 	end
@@ -423,52 +381,134 @@ local function challengesEnabled(): boolean
 	return n >= Config.Match.MinPlayers
 end
 
-function PowerupService._stat(p: Player, stat: string, amount: number, target: string?, dt: number?)
+-- Grants the XP / Coins for `key` (Progression.XP / Progression.Coins) to `p`.
+function PowerupService.Reward(p: Player, key: string, line: string?)
+	local xp = Progression.XP[key] or 0
+	local coins = Progression.Coins[key] or 0
+	PowerupService.Grant(p, xp, coins, 0, line or key)
+end
+
+function PowerupService.Grant(p: Player, xp: number, coins: number, diamonds: number, line: string)
 	local st = states[p]
 	local session = ctx.DataService.Get(p)
-	if not st or not session or not ctx.DataService.CanGrant(p) or not challengesEnabled() then
+	if not session or not ctx.DataService.CanGrant(p) or not rewardsEnabled() or (xp <= 0 and coins <= 0 and diamonds <= 0) then
 		return
 	end
-	if not ChallengeRules.StatRelevant(session.Profile.Owned, stat) then
-		return
+	local res = ProfileRules.AddXP(session.Profile, xp)
+	ProfileRules.AddCoins(session.Profile, coins)
+	session.Profile.Diamonds += diamonds
+	if st then
+		st.Earned.XP += xp
+		st.Earned.Coins += coins + res.Coins
+		st.Earned.Diamonds += diamonds + res.Diamonds
+		st.Earned.Levels += res.Levels
+		st.Earned.Lines[line] = (st.Earned.Lines[line] or 0) + xp
 	end
-	local accepted = ChallengeRules.Accept(st.Tracker, stat, amount, target, dt)
-	if accepted > 0 then
-		ProfileRules.AddStat(session.Profile, stat, accepted)
+	Net.FireClient("MatchEvent", p, "Reward", { XP = xp, Coins = coins, Line = line })
+	if res.Levels > 0 then
+		local extra = {}
+		if res.Coins > 0 then
+			table.insert(extra, "+" .. res.Coins .. " Coins")
+		end
+		if res.Diamonds > 0 then
+			table.insert(extra, "+" .. res.Diamonds .. " ◆")
+		end
+		if #res.Cosmetics > 0 then
+			table.insert(extra, "new title / nameplate unlocked")
+		end
+		ctx.Util.Notify(p, "LEVEL " .. res.NewLevel .. "!" .. (if #extra > 0 then "  " .. table.concat(extra, " · ") else ""), "success")
+		ctx.DataService.Push(p)
 	end
 end
 
-function PowerupService.OnAnimalKilled(p: Player, animalId: number)
-	PowerupService._stat(p, "AnimalsKilled", 1, tostring(animalId))
-end
-
-function PowerupService.OnCrateOpened(p: Player, crateId: number)
-	PowerupService._stat(p, "CratesOpened", 1, tostring(crateId))
-end
-
-function PowerupService.OnRepair(p: Player, amount: number)
-	PowerupService._stat(p, "HealthRepaired", math.floor(amount))
-end
-
-function PowerupService.OnArrowHit(p: Player, victim: Player, distance: number)
-	if distance >= 40 then
-		PowerupService._stat(p, "LongArrowHits", 1, tostring(victim.UserId))
-	end
+-- Totals earned this match (for the end screen).
+function PowerupService.Earned(p: Player): { XP: number, Coins: number, Diamonds: number, Levels: number, Lines: { [string]: number } }?
 	local st = states[p]
-	local id, _, lv = level(p)
-	if st and id == "Sharpshooter" and lv and now() >= st.MarkReadyAt then
-		st.MarkReadyAt = now() + lv.Ability.Cooldown
-		victim:SetAttribute("MarkedTeam", ctx.Util.Team(p))
-		victim:SetAttribute("MarkedUntil", now() + lv.Ability.Duration)
-		ctx.Util.NotifyTeam(ctx.Util.Team(p), p.DisplayName .. " marked " .. victim.DisplayName .. "!", "info")
-		st.CooldownEnds = st.MarkReadyAt
-		PowerupService._sync(p)
+	return st and st.Earned
+end
+
+-- Hooks from other services ----------------------------------------------------------------------
+
+function PowerupService.OnPlayerKill(killer: Player, victim: Player, eliminated: boolean?)
+	local st = states[killer]
+	if not st then
+		return
+	end
+	local n = st.KillsOn[victim.UserId] or 0
+	st.KillsOn[victim.UserId] = n + 1
+	local session = ctx.DataService.Get(killer)
+	if session and ctx.DataService.CanGrant(killer) then
+		session.Profile.Kills += 1
+		if eliminated then
+			session.Profile.Eliminations += 1
+		end
+	end
+	if eliminated then
+		PowerupService.Reward(killer, "Elimination", "Eliminated " .. victim.DisplayName)
+		ctx.CosmeticService.OnElimination(killer, victim)
+	elseif n < KILL_REWARDS_PER_VICTIM then
+		PowerupService.Reward(killer, "Kill", "Kills")
 	end
 end
 
-function PowerupService.OnPlayerKill(_killer: Player, _victim: Player) end
-function PowerupService.OnPickup(_p: Player, _id: string) end
-function PowerupService.OnFireExtinguished(_p: Player) end
+function PowerupService.OnFireExtinguished(p: Player)
+	PowerupService.Reward(p, "ExtinguishFire", "Snuffed a fire")
+end
 
+function PowerupService.OnWildlifeKill(p: Player, species: string, _night: boolean)
+	local st = states[p]
+	if not st or st.WildlifeRewards >= WILDLIFE_REWARDS_PER_MATCH then
+		return
+	end
+	st.WildlifeRewards += 1
+	PowerupService.Reward(p, if PREDATORS[species] then "Predator" else "Wildlife", "Hunting")
+end
+
+function PowerupService.OnChestOpened(p: Player, tier: string, _poi: string?)
+	PowerupService.Reward(p, if tier == "Rare" or tier == "VeryRare" then "RareChest" else "Chest", "Chests")
+end
+
+-- Workbench V: once per camp per match, to the player who finished it.
+function PowerupService.OnWorkbenchLevel(p: Player, team: number, level: number)
+	if level >= 5 and not workbenchRewarded[team] then
+		workbenchRewarded[team] = true
+		PowerupService.Reward(p, "WorkbenchV", "Workbench Tier V")
+	end
+end
+
+-- Tracker: directional cue when a nearby player is hurt (direction only, no position).
+function PowerupService.OnPlayerHurt(victim: Player, _amount: number)
+	local vroot = ctx.Util.Root(victim)
+	if not vroot then
+		return
+	end
+	for p, st in states do
+		if p ~= victim and (st.Effects.HurtCues or 0) > 0 then
+			local root = ctx.Util.Root(p)
+			if root then
+				local d = (vroot.Position - root.Position) * Vector3.new(1, 0, 1)
+				if d.Magnitude > 4 and d.Magnitude <= HURT_CUE_RADIUS then
+					Net.FireClient("MatchEvent", p, "HurtCue", { Bearing = math.deg(math.atan2(d.X, -d.Z)) % 360 })
+				end
+			end
+		end
+	end
+end
+
+-- Legacy hooks (no longer reward anything on their own).
+function PowerupService.OnAnimalKilled(_p: Player, _animalId: number) end
+function PowerupService.OnCrateOpened(_p: Player, _crateId: number) end
+function PowerupService.OnRepair(_p: Player, _amount: number) end
+function PowerupService.OnArrowHit(_p: Player, _victim: Player, _distance: number) end
+function PowerupService.OnPickup(_p: Player, _id: string) end
+
+-- Unused but kept for the end-of-match push.
+function PowerupService.PushAll()
+	for _, p in Players:GetPlayers() do
+		if states[p] then
+			ctx.DataService.Push(p)
+		end
+	end
+end
 
 return PowerupService

@@ -12,7 +12,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local Config = require(Shared.Config)
 local Items = require(Shared.Items)
-local Powerups = require(Shared.Powerups)
 local Net = require(Shared.Net)
 local UI = require("../UI/UI")
 local Theme = require("../UI/Theme")
@@ -54,13 +53,7 @@ end
 
 local function drawTime(def: any): number
 	local t = def.DrawTime or 0.6
-	if player:GetAttribute("Powerup") == "Sharpshooter" then
-		local lv = Powerups.ById.Sharpshooter.Levels[player:GetAttribute("PowerupLevel") or 1]
-		if lv then
-			t *= 1 - lv.Passive.DrawPct / 100
-		end
-	end
-	return t
+	return t * ((player:GetAttribute("DrawMult") :: number?) or 1)
 end
 
 local function attackOnce(heavy: boolean?)
@@ -112,12 +105,6 @@ function Combat.Start()
 	chargeBar.Visible = false
 
 	State.On("Action", function(a)
-		if a.Name == "Ability" and a.Down then
-			if canAct() then
-				Net.Event("UseAbility"):FireServer()
-			end
-			return
-		end
 		if a.Name == "Aim" then
 			State.Set("AimHeld", a.Down)
 			local id = equippedId()

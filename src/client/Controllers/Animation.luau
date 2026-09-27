@@ -166,6 +166,29 @@ local function pose(rig: Rig, t: number): (CFrame, CFrame, CFrame, CFrame)
 		w = CFrame.Angles(rad(-30), 0, 0)
 		r = raise(55 + 30 * math.sin(phase * 2), 1)
 		l = raise(55 + 30 * math.sin(phase * 2 + 1.5), -1)
+	elseif action == "Emote" and elapsed < 2 then
+		local k = math.sin(math.clamp(elapsed / 2, 0, 1) * math.pi)
+		if item == "EmoteWave" then
+			r = raise(150 * k, 1) * CFrame.Angles(0, 0, rad(25 * math.sin(elapsed * 10)))
+		elseif item == "EmoteFlex" then
+			r = raise(90 * k, 1) * CFrame.Angles(rad(-60 * k), 0, 0)
+			l = raise(90 * k, -1) * CFrame.Angles(rad(-60 * k), 0, 0)
+		else
+			r = raise(70 * k, 1)
+			l = raise(70 * k, -1)
+			w = CFrame.Angles(rad(-15 * k), 0, 0)
+		end
+	elseif action == "Victory" and elapsed < 12 then
+		if item == "PoseThrone" then
+			w = CFrame.Angles(rad(10), 0, 0)
+			r = raise(35, 1)
+			l = raise(35, -1)
+		elseif item == "PoseAxe" then
+			r = raise(160, 1) * CFrame.Angles(0, 0, rad(-30))
+		else
+			r = raise(170, 1)
+			n = CFrame.Angles(rad(15), 0, 0)
+		end
 	elseif action == "Ability" and elapsed < 0.6 then
 		local k = math.sin(math.clamp(elapsed / 0.6, 0, 1) * math.pi)
 		r = raise(150 * k, 1)

@@ -133,3 +133,28 @@ yaws with the same handedness as positions; covered by `LayoutGen.spec landmark_
 **Tests:** `LayoutGen.spec` (POI fairness per sector, rarity mix, yaw); `Loot.spec` (new tiers, rare components only
 Rare+); skins suite builds all 14 POIs, the cave, all chests, decor, ore nodes and checks every new mesh is applied
 (32 checks, library data regenerated from the catalog by `tests/skins/make_library_data.py`).
+
+## Phase 6: meta progression (done, not yet playtested)
+
+| Spec rule | Change | Where |
+|---|---|---|
+| Account XP / levels to 100; cosmetics, not power | `Progression`: XP per level 150 + 20·(L−1) (level 100 ≈ 112k XP); every 5 levels +100 Coins, every 10 levels +1 ◆; level-reward titles/nameplates at 5/10/25/50/75/100 | `Shared/Progression`, `Logic/ProfileRules` |
+| XP / Coins sources (spec working targets) | Survive a night 50 XP / 10 C · kill 50 / 15 · elimination 100 / 30 · snuff a fire 150 / 40 · Workbench V 200 · 2nd place 250 XP / 100 C · win 500 XP / 250 C / **exactly 2 ◆** · 3rd 50 C. Extras (tunable): POI discovered 15 XP, wildlife 5/10 XP, chest 10/25 XP. Anti-farm: max 2 kill rewards per victim, 25 wildlife rewards per match; nothing in under-filled live matches | `PowerupService.Reward`, `MatchService.End` (placements by elimination order) |
+| Coins buy cosmetics in the spec bands | 11 types: outfits, tool/weapon skins, backpack skins, campfire/workbench/storage skins, nameplates, titles, emotes, elimination effects, victory poses. Prices tested against the bands. | `Shared/Cosmetics`, `CosmeticService`, Lobby **Locker** |
+| Daily / weekly bonuses | Daily 50 Coins +20 per consecutive day (max 150); weekly after 3 matches: 300 + 75 per win (max 750) | `ProfileRules.ClaimDaily/ClaimWeekly`, Lobby **Profile** |
+| Diamonds buy classes and power-ups | 7 classes (Survivor free … Tracker 200) and 10 power-ups (Strong Back 40 … Second Wind 200), one of each, **locked at match join**. Effects are sidegrades through existing hooks: tool speed/wear, stamina, sprint, heal time, pack slots, search/breach speed, breach noise, extra hide, wildlife damage, fire fuel, craft time, senses. Second Wind is automatic (once per life below 25 HP). Active abilities are gone. | `Shared/Classes`, `Shared/Perks`, `PowerupService` |
+| Senses without wallhacks | Hunter: wildlife within 70 studs on the map; Scavenger: containers within 40 studs; Tracker: blood trails of injured players (4 s delayed) + "someone got hurt to the NE" cues; Miner/Night Owl: slight local brightness in caves / at night | `PowerupService._sense`, `Map`, `Hud`, `Effects` |
+| Crafting takes time (Craftsman −10%) | Crafting is now a 1 s + 0.5 s × tier channel, interrupted by damage or moving | `CraftService`, `Config.Craft` |
+| Robux: Coin packs + cosmetic bundles only | Coins500/1200/3000/7000 and Founder/Ember bundles on sale; everything else stays off sale; owned bundle items refunded as Coins | `Products`, `ProfileRules.ApplyReceipt`, Lobby **Shop** |
+| Leaderboards | OrderedDataStores (Wins, XP) written after each match, top 10 cached every 2 min, pcall everywhere | `DataService` |
+
+**Decision D51 (profile v2):** the six three-level powerups and their challenges are retired. `Reconcile` refunds the
+Diamonds spent on them (unlock + upgrade prices) once, when a v1 profile first loads; old Robux receipts still resolve
+(legacy kinds). `ChallengeRules`/`Powerups` modules and their tests were removed.
+
+**Decision D52:** Coins are granted live during the match (leaving early keeps them); placements are granted once per
+MatchId at the end. The end screen shows place, XP, Coins, ◆ and level-ups.
+
+**Tests:** `ProfileRules.spec` rewritten (15 cases: receipts, bundles, v1 refund, classes, perks, cosmetics, XP/levels,
+placements once, daily streak, weekly), `Progression.spec` (8), `Cosmetics.spec` (6: bands, unique ids, bundles,
+class/perk prices and effect keys, Robux sells only Coins/bundles). 131 unit tests pass.

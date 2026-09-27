@@ -1,8 +1,8 @@
 --!nonstrict
 -- Minimap + full map (M). North-up. Shows paths, streams, landmarks, your
 -- camp and build zone, enemy camps your clan has discovered, care package
--- markers, you and your teammates, plus personal reveals (Scavenger crates,
--- Hunter animals) and Sharpshooter marks.
+-- markers, you and your teammates, plus personal class senses (Scavenger
+-- containers, Hunter wildlife, Tracker blood trails).
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -147,7 +147,7 @@ local function drawDynamic(canvas: Frame, px: number)
 		if now > r.Until then
 			table.remove(reveals, i)
 		else
-			marker(layer, r.Label, if r.Kind == "Crates" then C.Warn else C.Bad, s * 0.8, toMap(data, r.Pos.X, r.Pos.Z), 6)
+			marker(layer, r.Label, if r.Kind == "Crates" then C.Warn elseif r.Kind == "Animals" then C.Info else C.Bad, if r.Kind == "Blood" then s * 0.5 else s * 0.8, toMap(data, r.Pos.X, r.Pos.Z), 6)
 		end
 	end
 	-- players
@@ -218,7 +218,7 @@ function MapCtl.Start()
 	State.On("Reveal", function(r)
 		for _, item in r.List do
 			local pos = if typeof(item) == "Vector3" then item else item.Pos
-			table.insert(reveals, { Kind = r.Kind, Pos = pos, Until = os.clock() + (r.Duration or 8), Label = if r.Kind == "Crates" then "▣" else "☗" })
+			table.insert(reveals, { Kind = r.Kind, Pos = pos, Until = os.clock() + (r.Duration or 8), Label = if r.Kind == "Crates" then "▣" elseif r.Kind == "Blood" then "•" else "☗" })
 		end
 	end)
 	State.On("Action", function(a)

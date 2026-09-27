@@ -1,7 +1,8 @@
 --!nonstrict
 -- Lobby: parties (up to 4, invite/accept/leave/kick), ready status (UI toggle
--- or standing in the Ready ring), powerup shop/equip with diamonds, Robux
--- product prompts, and the lobby view pushed to clients.
+-- or standing in the Ready ring), classes / power-ups (Diamonds), cosmetics
+-- (Coins), daily / weekly bonuses, emotes, Robux Coin packs, and the lobby
+-- view pushed to clients.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -10,7 +11,6 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Net = require(Shared:WaitForChild("Net"))
 local Products = require(Shared:WaitForChild("Products"))
-local Powerups = require(Shared:WaitForChild("Powerups"))
 local ProfileRules = require(Shared:WaitForChild("Logic"):WaitForChild("ProfileRules"))
 
 local LobbyService = {}
@@ -216,8 +216,12 @@ function LobbyService._onAction(p: Player, req: any)
 		LobbyService._checkParty(party)
 	elseif a == "Cancel" then
 		unreadyParty(party)
-	elseif a == "BuyPowerup" or a == "UpgradePowerup" or a == "EquipPowerup" then
-		LobbyService._powerupAction(p, a, req.Id)
+	elseif a == "BuyClass" or a == "EquipClass" or a == "BuyPerk" or a == "EquipPerk" or a == "BuyCosmetic" or a == "WearCosmetic" or a == "ClaimDaily" or a == "ClaimWeekly" then
+		LobbyService._profileAction(p, a, req)
+	elseif a == "Emote" then
+		if canUseLobby(p) and type(req.Id) == "string" then
+			ctx.CosmeticService.Emote(p, req.Id)
+		end
 	elseif a == "BuyRobux" then
 		LobbyService._robux(p, req.Key)
 	end
@@ -272,9 +276,26 @@ end
 
 -- Shop --------------------------------------------------------------------------------------
 
-function LobbyService._powerupAction(p: Player, action: string, id: any)
+local ACTION_FN = {
+	BuyClass = ProfileRules.BuyClass,
+	EquipClass = ProfileRules.EquipClass,
+	BuyPerk = ProfileRules.BuyPerk,
+	EquipPerk = ProfileRules.EquipPerk,
+	BuyCosmetic = ProfileRules.BuyCosmetic,
+}
+
+local ACTION_DONE = {
+	BuyClass = "Class unlocked!",
+	EquipClass = "Class equipped for your next match.",
+	BuyPerk = "Power-up unlocked!",
+	EquipPerk = "Power-up set for your next match.",
+	BuyCosmetic = "Cosmetic unlocked!",
+	WearCosmetic = "Cosmetic updated.",
+}
+
+function LobbyService._profileAction(p: Player, action: string, req: any)
 	if not canUseLobby(p) then
-		ctx.Util.Notify(p, "Powerups can only be changed in the lobby.", "warn")
+		ctx.Util.Notify(p, "Classes, power-ups and cosmetics can only be changed in the lobby.", "warn")
 		return
 	end
 	local session = ctx.DataService.Get(p)
@@ -282,20 +303,34 @@ function LobbyService._powerupAction(p: Player, action: string, id: any)
 		ctx.Util.Notify(p, "Your data isn't loaded — shop unavailable.", "error")
 		return
 	end
-	if id ~= nil and (type(id) ~= "string" or not Powerups.ById[id]) then
+	local profile = session.Profile
+	local id = req.Id
+	if id ~= nil and type(id) ~= "string" then
 		return
 	end
-	local ok, why
-	if action == "BuyPowerup" then
-		ok, why = ProfileRules.BuyUnlock(session.Profile, id)
-	elseif action == "UpgradePowerup" then
-		ok, why = ProfileRules.BuyUpgrade(session.Profile, id)
-	else
-		ok, why = ProfileRules.Equip(session.Profile, id)
+	local ok, why = false, nil
+	local note: string? = nil
+	if action == "ClaimDaily" then
+		local coins = ProfileRules.ClaimDaily(profile, os.time())
+		ok, why = coins > 0, "Already claimed today."
+		note = "Daily bonus: +" .. coins .. " Coins"
+	elseif action == "ClaimWeekly" then
+		local coins = ProfileRules.ClaimWeekly(profile, os.time())
+		ok, why = coins > 0, "Play more matches this week first."
+		note = "Weekly bonus: +" .. coins .. " Coins"
+	elseif action == "WearCosmetic" then
+		if type(req.Type) ~= "string" then
+			return
+		end
+		ok, why = ProfileRules.WearCosmetic(profile, req.Type, id)
+	elseif action == "EquipPerk" then
+		ok, why = ProfileRules.EquipPerk(profile, id)
+	elseif id then
+		ok, why = ACTION_FN[action](profile, id)
 	end
 	if ok then
 		task.spawn(ctx.DataService.Save, p, false)
-		ctx.Util.Notify(p, if action == "EquipPowerup" then (if id then "Equipped " .. id else "Powerup unequipped") else "Done! " .. tostring(id) .. " updated.", "success")
+		ctx.Util.Notify(p, note or ACTION_DONE[action] or "Done!", "success")
 		ctx.Util.PlaySound("UiReady", ctx.Util.Root(p))
 	else
 		ctx.Util.Notify(p, why or "Can't do that.", "error")
@@ -308,20 +343,12 @@ function LobbyService._robux(p: Player, key: any)
 		return
 	end
 	local product = Products.ByKey[key]
-	if not product or not Products.OnSale(key) or not (product.Kind == "Diamonds" or product.Kind == "Unlock" or product.Kind == "Upgrade") then
+	if not product or not Products.OnSale(key) or not (product.Kind == "Coins" or product.Kind == "Bundle") then
 		return
 	end
 	local session = ctx.DataService.Get(p)
 	if not session or not ctx.DataService.CanGrant(p) then
 		ctx.Util.Notify(p, "Your data isn't loaded — purchases are paused to keep them safe.", "error")
-		return
-	end
-	if product.Kind == "Unlock" and session.Profile.Owned[product.Powerup] then
-		ctx.Util.Notify(p, "You already own that powerup.", "info")
-		return
-	end
-	if product.Kind == "Upgrade" and (session.Profile.Owned[product.Powerup] or 0) ~= (product.Level :: number) - 1 then
-		ctx.Util.Notify(p, "Unlock the previous level first.", "info")
 		return
 	end
 	local ok, why = ctx.PurchaseService.Prompt(p, key, {})
@@ -358,6 +385,7 @@ function LobbyService.PushAll()
 				Queue = queueInfo,
 				MinPlayers = if ctx.LocalMatches then Config.Dev.StudioMinPlayers else Config.Match.MinPlayers,
 				MaxPlayers = Config.Match.MaxPlayers,
+				Boards = ctx.DataService.Boards(),
 			})
 		end
 	end

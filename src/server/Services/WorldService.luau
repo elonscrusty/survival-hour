@@ -760,7 +760,7 @@ function WorldService.BuildLobby()
 	folder:SetAttribute("ReadyCenter", readyCenter)
 	folder:SetAttribute("ReadyRadius", 11)
 
-	-- Stations: Shop (east), Powerups (west), Party board (south)
+	-- Stations: Shop (east), Class shrine (west), Party board (south)
 	local function station(name: string, pos: Vector3, color: Color3, label: string, promptText: string)
 		local m = Build.Model(name, folder)
 		local counter = Build.Part({ Name = "Counter", Size = Vector3.new(10, 3.4, 3), CFrame = CFrame.lookAt(pos + Vector3.new(0, 1.7, 0), O + Vector3.new(0, 1.7, 0)), Color = Color3.fromRGB(120, 84, 54), Material = Enum.Material.WoodPlanks, Parent = m })
@@ -784,10 +784,10 @@ function WorldService.BuildLobby()
 		return m
 	end
 	station("Shop", O + Vector3.new(40, 0, 0), Color3.fromRGB(230, 170, 60), "TRADING POST", "Open Shop")
-	local shrine = station("Powerups", O + Vector3.new(-40, 0, 0), Color3.fromRGB(120, 200, 180), "POWERUP SHRINE", "Choose Powerup")
-	local Powerups = require(Shared:WaitForChild("Powerups"))
-	for i, def in Powerups.List do
-		local a = math.rad(-75 + (i - 1) * 30)
+	local shrine = station("Classes", O + Vector3.new(-40, 0, 0), Color3.fromRGB(120, 200, 180), "CLASS SHRINE", "Choose Class")
+	local Classes = require(Shared:WaitForChild("Classes"))
+	for i, def in Classes.List do
+		local a = math.rad(-75 + (i - 1) * 25)
 		local pos = O + Vector3.new(-40 + math.cos(a + math.pi) * -9, 0, math.sin(a) * 12)
 		local ped = Build.Cyl("Pedestal", 3, 2.4, CFrame.new(pos + Vector3.new(0, 1.5, 0)), Color3.fromRGB(140, 136, 128), Enum.Material.Marble, shrine)
 		local orb = Build.Ball("Orb", 1.6, CFrame.new(pos + Vector3.new(0, 4, 0)), Color3.fromRGB(def.Color[1], def.Color[2], def.Color[3]), Enum.Material.Neon, shrine)

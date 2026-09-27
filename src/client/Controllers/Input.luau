@@ -30,7 +30,6 @@ local KEYS: { [Enum.KeyCode]: string } = {
 	[Enum.KeyCode.ButtonL3] = "Sprint",
 	[Enum.KeyCode.Backquote] = "Fists",
 	[Enum.KeyCode.Q] = "Swap",
-	[Enum.KeyCode.X] = "Ability",
 	[Enum.KeyCode.H] = "Bandage",
 	[Enum.KeyCode.I] = "Inventory",
 	[Enum.KeyCode.C] = "Craft",
@@ -41,7 +40,6 @@ local KEYS: { [Enum.KeyCode]: string } = {
 	[Enum.KeyCode.ButtonL2] = "Aim",
 	[Enum.KeyCode.ButtonR1] = "Swap",
 	[Enum.KeyCode.ButtonL1] = "Bandage",
-	[Enum.KeyCode.ButtonY] = "Ability",
 	[Enum.KeyCode.DPadRight] = "NextSlot",
 	[Enum.KeyCode.DPadLeft] = "PrevSlot",
 	[Enum.KeyCode.ButtonSelect] = "Map",
@@ -158,10 +156,8 @@ function Input._buildTouch()
 	-- Bottom-right combat cluster (clear of the default jump button, which sits lower-right).
 	local attack = round("Attack", "⚔", "ATTACK", 92, UDim2.new(1, -170, 1, -190), "Attack", true, Color3.fromRGB(90, 40, 30))
 	round("Aim", "◎", "AIM/BLOCK", 66, UDim2.new(1, -270, 1, -150), "Aim", true)
-	local ability = round("Ability", "⚡", "ABILITY", 66, UDim2.new(1, -250, 1, -250), "Ability", false, Color3.fromRGB(40, 50, 90))
 	round("Bandage", "✚", "HEAL", 58, UDim2.new(1, -90, 1, -270), "Bandage", false, Color3.fromRGB(80, 30, 34))
 	round("Swap", "⇄", "SWAP", 54, UDim2.new(1, -170, 1, -300), "Swap", false)
-	State.Set("TouchAbilityButton", ability)
 	State.Set("TouchAttackButton", attack)
 
 	-- Menu buttons (top right, below the Roblox top bar)

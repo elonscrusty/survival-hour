@@ -50,8 +50,54 @@ function CraftService.Push(p: Player, open: boolean?)
 	})
 end
 
+-- Crafting takes a short, interruptible channel (longer for higher tiers; the
+-- Craftsman power-up shortens it). Everything is re-validated on completion.
 function CraftService._onCraft(p: Player, recipeId: any)
 	if type(recipeId) ~= "string" or not p:GetAttribute("InMatch") or not ctx.Util.IsAlive(p) then
+		return
+	end
+	local recipe = Recipes.ById[recipeId]
+	if not recipe or recipe.Kind == "Structure" then
+		return
+	end
+	local inv = ctx.InventoryService.Get(p)
+	if not inv or not InventoryModel.HasResources(inv, recipe.Cost) then
+		ctx.Util.Notify(p, "Not enough materials in your pack.", "error")
+		return
+	end
+	if recipe.Level > 0 and ctx.CampService.GetLevel(ctx.Util.Team(p)) < recipe.Level then
+		ctx.Util.Notify(p, "Requires Workbench Tier " .. ({ "I", "II", "III", "IV", "V" })[recipe.Level] .. ".", "error")
+		return
+	end
+	if recipe.Level > 0 and not nearWorkbench(p) then
+		ctx.Util.Notify(p, "Stand at your workbench to craft that.", "error")
+		return
+	end
+	local root = ctx.Util.Root(p)
+	if not root then
+		return
+	end
+	local start = root.Position
+	local def = Items[recipe.Result]
+	ctx.ChannelService.Begin(p, {
+		Kind = "Craft",
+		Label = "Crafting " .. (if def then def.Name else recipe.Result),
+		Duration = (Config.Craft.BaseTime + Config.Craft.PerTier * recipe.Level) / ctx.PowerupService.CraftSpeedMult(p),
+		Range = 8,
+		MoveTolerance = 4,
+		InterruptOnDamage = true,
+		Action = "Craft",
+		Position = function()
+			return start
+		end,
+		OnComplete = function()
+			CraftService._craftNow(p, recipeId)
+		end,
+	})
+end
+
+function CraftService._craftNow(p: Player, recipeId: string)
+	if not p:GetAttribute("InMatch") or not ctx.Util.IsAlive(p) then
 		return
 	end
 	local recipe = Recipes.ById[recipeId]
@@ -149,6 +195,7 @@ function CraftService._onUpgrade(p: Player)
 		return
 	end
 	ctx.CampService.SetLevel(team, level + 1)
+	ctx.PowerupService.OnWorkbenchLevel(p, team, level + 1)
 	ctx.InventoryService.Sync(p)
 	ctx.StorageService.SyncTeam(team)
 	ctx.Util.NotifyTeam(team, p.DisplayName .. " upgraded the workbench to level " .. (level + 1) .. "! New recipes unlocked.", "success")

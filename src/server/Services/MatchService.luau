@@ -36,6 +36,7 @@ MatchService.Map = nil :: any
 MatchService.State = (nil :: any) :: Folder -- ReplicatedStorage.MatchState, set in Init
 local phaseToken = 0
 local ending = false
+local elimOrder: { number } = {} -- teams in the order they were eliminated (for placements)
 
 function MatchService.On(event: string, fn: (...any) -> ())
 	hooks[event] = hooks[event] or {}
@@ -213,6 +214,7 @@ function MatchService.Begin(assignment: { [Player]: number }, matchId: string?)
 	end
 	table.sort(started)
 	MatchService.StartedTeams = started
+	elimOrder = {}
 	for t = 1, Config.Match.TeamCount do
 		state:SetAttribute("Standing" .. t, table.find(started, t) ~= nil)
 	end
@@ -325,6 +327,9 @@ function MatchService.CheckOutcome()
 		local was = state:GetAttribute("Standing" .. t)
 		state:SetAttribute("Standing" .. t, standing[t])
 		if was and not standing[t] and table.find(MatchService.StartedTeams, t) then
+			if not table.find(elimOrder, t) then
+				table.insert(elimOrder, t)
+			end
 			MatchService.Broadcast("TeamEliminated", { Team = t })
 			emit("TeamEliminated", t)
 		end
@@ -347,35 +352,58 @@ function MatchService.End(winner: number?)
 	MatchService._setPhase("Ended", Config.Match.EndScreenLength)
 	emit("MatchEnded", winner)
 
-	-- Rewards: winning team players still in the server (including eliminated
-	-- spectators) get the win reward exactly once (ProfileRules.AwardWin by MatchId).
-	local rewarded = {}
+	-- Rewards: placements (1st / 2nd / 3rd by elimination order) are granted
+	-- exactly once per MatchId (ProfileRules.AwardPlacement); everyone gets an
+	-- XP / Coins summary of what they earned during the match.
+	local started = #MatchService.StartedTeams
+	local function placeOf(team: number): number?
+		if winner and team == winner then
+			return 1
+		end
+		local idx = table.find(elimOrder, team)
+		return if idx then started - idx + 1 else nil
+	end
+	local summaries = {}
 	for _, p in Players:GetPlayers() do
-		if MatchService.Participants[p.UserId] then
+		local team = MatchService.Roster[p.UserId]
+		if MatchService.Participants[p.UserId] and team then
+			local place = placeOf(team)
 			local session = ctx.DataService.Get(p)
+			local earned = ctx.PowerupService.Earned(p) or { XP = 0, Coins = 0, Diamonds = 0, Levels = 0 }
+			local sum = { Place = place, Of = started, XP = earned.XP, Coins = earned.Coins, Diamonds = earned.Diamonds, Levels = earned.Levels }
 			if session and ctx.DataService.CanGrant(p) then
 				session.Profile.Matches += 1
-				if winner and MatchService.Roster[p.UserId] == winner then
-					if not ctx.IsStudio or Config.Dev.SaveInStudio or session.State == "Memory" then
-						if ProfileRules.AwardWin(session.Profile, MatchService.MatchId, Config.Match.WinDiamonds, Config.Data.RewardedMatchMemory) then
-							table.insert(rewarded, p)
-						end
-					end
+				ProfileRules.NoteMatch(session.Profile, os.time(), place == 1)
+				if place and place <= 3 then
+					local before = session.Profile.Level
+					local xp, coins, diamonds = ProfileRules.AwardPlacement(session.Profile, MatchService.MatchId, place, Config.Data.RewardedMatchMemory)
+					sum.XP += xp
+					sum.Coins += coins
+					sum.Diamonds += diamonds
+					sum.Levels += session.Profile.Level - before
 				end
+				sum.Level = session.Profile.Level
 				task.spawn(function()
 					ctx.DataService.Save(p, false)
 					ctx.DataService.Push(p)
+					ctx.DataService.PostLeaderboards(p)
 				end)
 			end
+			summaries[p] = sum
 		end
 	end
 	for _, p in ctx.Util.MatchPlayers() do
 		local won = winner ~= nil and ctx.Util.Team(p) == winner
+		local sum = summaries[p] or {}
 		Net.FireClient("MatchEvent", p, "MatchEnded", {
 			Winner = winner or 0,
 			Won = won,
-			Diamonds = if table.find(rewarded, p) then Config.Match.WinDiamonds else 0,
+			Diamonds = sum.Diamonds or 0,
+			Summary = sum,
 		})
+		if won then
+			ctx.CosmeticService.OnVictory(p)
+		end
 	end
 	print("[Match] ended; winner:", winner and Config.Teams[winner].Name or "none")
 

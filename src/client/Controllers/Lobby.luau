@@ -1,14 +1,17 @@
 --!nonstrict
 -- Lobby interface: ready button + matchmaking status, party management,
--- powerup shrine (unlock / upgrade / equip / challenge progress), diamond shop,
--- and a how-to-play page.
+-- Classes and Power-ups (Diamonds), the cosmetic Locker (Coins), Profile &
+-- Rewards (level, daily / weekly bonus, leaderboards), the Coin shop, and a
+-- how-to-play page.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage.Shared
-local Config = require(Shared.Config)
-local Powerups = require(Shared.Powerups)
+local Classes = require(Shared.Classes)
+local Perks = require(Shared.Perks)
+local Cosmetics = require(Shared.Cosmetics)
+local Progression = require(Shared.Progression)
 local Products = require(Shared.Products)
 local Net = require(Shared.Net)
 local UI = require("../UI/UI")
@@ -27,8 +30,12 @@ local statusLabel: TextLabel
 local partyStrip: Frame
 local diamondsLabel: TextLabel
 local partyBody: ScrollingFrame
-local powerBody: ScrollingFrame
+local classBody: ScrollingFrame
+local perkBody: ScrollingFrame
+local lockerBody: ScrollingFrame
+local profileBody: ScrollingFrame
 local shopBody: ScrollingFrame
+local lockerType = "Outfit"
 local helpBody: ScrollingFrame
 
 local function send(action: string, extra: { [string]: any }?)
@@ -43,8 +50,10 @@ local function renderHud()
 	local lobby = State.Get("Lobby")
 	local profile = State.Get("Profile")
 	if profile then
-		local eq = profile.Equipped and Powerups.ById[profile.Equipped]
-		diamondsLabel.Text = string.format("◆ %d     %s", profile.Diamonds, if eq then (eq.Glyph .. " " .. eq.Name .. " Lv" .. (profile.Owned[profile.Equipped] or 1)) else "No powerup equipped")
+		local cls = Classes.ById[profile.Class]
+		local perk = profile.Perk and Perks.ById[profile.Perk]
+		diamondsLabel.Text = string.format("Lv %d   ◆ %d   🪙 %d   %s %s · %s", profile.Level or 1, profile.Diamonds, profile.Coins or 0,
+			if cls then cls.Glyph else "", if cls then cls.Name else "?", if perk then perk.Glyph .. " " .. perk.Name else "no power-up")
 	end
 	if not lobby then
 		return
@@ -120,60 +129,200 @@ local function renderParty()
 	UI.text("Tip: friends can join your server from the Roblox friends list, then accept your invite here.", { LayoutOrder = 999, TextSize = 12, TextColor3 = C.TextDim, Parent = partyBody })
 end
 
--- Powerups panel ------------------------------------------------------------------------------------
+-- Shared bits ------------------------------------------------------------------------------------
 
-local function renderPowerups()
-	UI.clear(powerBody)
+local function rgb(c: { number }?): Color3
+	return if c then Color3.fromRGB(c[1], c[2], c[3]) else C.Text
+end
+
+local function card(parent: Instance, order: number, height: number, color: Color3, selected: boolean): Frame
+	return UI.new("Frame", { LayoutOrder = order, Size = UDim2.new(1, -8, 0, height), BackgroundColor3 = C.PanelLight, BorderSizePixel = 0, Parent = parent }, { UI.corner(UDim.new(0, 10)), UI.stroke(if selected then color else C.Stroke, if selected then 3 else 1, 0.2), UI.padding(10) })
+end
+
+local function buttonRow(parent: Instance): Frame
+	return UI.new("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, 0, 1, 0), Size = UDim2.new(0.5, 0, 0, 44), Parent = parent }, { UI.list(Enum.FillDirection.Horizontal, 6, Enum.HorizontalAlignment.Right) })
+end
+
+local BUY = Color3.fromRGB(40, 90, 120)
+
+-- Classes panel ----------------------------------------------------------------------------------
+
+local function renderClasses()
+	UI.clear(classBody)
 	local profile = State.Get("Profile")
 	if not profile then
-		UI.text("Loading your profile…", { Parent = powerBody })
+		UI.text("Loading your profile…", { Parent = classBody })
 		return
 	end
-	UI.text(string.format("◆ %d diamonds  ·  Win a match: +%d ◆  ·  One powerup equipped at a time (lobby only)", profile.Diamonds, Config.Match.WinDiamonds), { LayoutOrder = 0, TextSize = 14, TextColor3 = C.Diamond, Parent = powerBody })
-	for i, def in Powerups.List do
-		local lvl = profile.Owned[def.Id] or 0
-		local color = Color3.fromRGB(def.Color[1], def.Color[2], def.Color[3])
-		local card = UI.new("Frame", { LayoutOrder = i, Size = UDim2.new(1, -8, 0, 176), BackgroundColor3 = C.PanelLight, BorderSizePixel = 0, Parent = powerBody }, { UI.corner(UDim.new(0, 10)), UI.stroke(if profile.Equipped == def.Id then color else C.Stroke, if profile.Equipped == def.Id then 3 else 1, 0.2), UI.padding(10) })
-		local ic = UI.icon(def.Glyph, color, 60, "Round")
-		ic.Parent = card
-		UI.text(def.Name .. (if lvl > 0 then "   Level " .. lvl .. "/3" else "   🔒 " .. def.Price .. " ◆"), { Position = UDim2.fromOffset(72, 0), Size = UDim2.new(1, -72, 0, 24), TextSize = 19, Font = Theme.FontBlack, TextColor3 = color, Parent = card })
-		local shown = def.Levels[math.max(1, lvl)]
-		UI.text("Passive: " .. Powerups.Describe(def.Passive, shown.Passive), { Position = UDim2.fromOffset(72, 26), Size = UDim2.new(1, -72, 0, 18), TextSize = 13, Parent = card })
-		UI.text("Ability: " .. Powerups.Describe(def.Ability, shown.Ability), { Position = UDim2.fromOffset(72, 44), Size = UDim2.new(1, -72, 0, 34), TextSize = 13, TextColor3 = C.TextDim, Parent = card })
-		local buttons = UI.new("Frame", { BackgroundTransparency = 1, Position = UDim2.new(0, 0, 1, -48), Size = UDim2.new(1, 0, 0, 46), Parent = card }, { UI.list(Enum.FillDirection.Horizontal, 6, Enum.HorizontalAlignment.Right) })
-		if lvl == 0 then
-			UI.button("Unlock " .. def.Price .. " ◆", { Size = UDim2.fromOffset(150, 44), BackgroundColor3 = if profile.Diamonds >= def.Price then Color3.fromRGB(40, 90, 120) else C.PanelLighter, Parent = buttons }, function()
-				send("BuyPowerup", { Id = def.Id })
+	UI.text(string.format("◆ %d Diamonds · one class per match, locked when the match starts · a win gives exactly %d ◆, +1 ◆ every 10 levels", profile.Diamonds, Progression.WinDiamonds), { LayoutOrder = 0, Size = UDim2.new(1, -8, 0, 34), TextWrapped = true, TextSize = 13, TextColor3 = C.Diamond, Parent = classBody })
+	for i, def in Classes.List do
+		local owned = profile.OwnedClasses[def.Id] == true
+		local color = rgb(def.Color)
+		local sel = profile.Class == def.Id
+		local cd = card(classBody, i, 124, color, sel)
+		local ic = UI.icon(def.Glyph, color, 56, "Round")
+		ic.Parent = cd
+		UI.text(def.Name .. (if owned then "" else "   🔒 " .. def.Price .. " ◆"), { Position = UDim2.fromOffset(68, 0), Size = UDim2.new(1, -68, 0, 22), TextSize = 18, Font = Theme.FontBlack, TextColor3 = color, Parent = cd })
+		UI.text(def.Summary, { Position = UDim2.fromOffset(68, 22), Size = UDim2.new(1, -68, 0, 18), TextSize = 13, TextColor3 = C.TextDim, Parent = cd })
+		UI.text("• " .. table.concat(def.Lines, "\n• "), { Position = UDim2.fromOffset(68, 40), Size = UDim2.new(0.55, -68, 0, 64), TextSize = 12, TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top, Parent = cd })
+		local row = buttonRow(cd)
+		if owned then
+			UI.button(if sel then "Selected ✓" else "Select", { Size = UDim2.fromOffset(120, 40), BackgroundColor3 = if sel then C.AccentDark else C.PanelLighter, Parent = row }, function()
+				send("EquipClass", { Id = def.Id })
 			end)
-			if Products.OnSale("Unlock_" .. def.Id) then
-				UI.button("Unlock " .. Hud.PriceText("Unlock_" .. def.Id), { Size = UDim2.fromOffset(170, 44), BackgroundColor3 = Color3.fromRGB(40, 110, 60), Parent = buttons }, function()
-					send("BuyRobux", { Key = "Unlock_" .. def.Id })
-				end)
-			end
 		else
-			UI.button(if profile.Equipped == def.Id then "Equipped ✓" else "Equip", { Size = UDim2.fromOffset(120, 44), BackgroundColor3 = if profile.Equipped == def.Id then C.AccentDark else C.PanelLighter, Parent = buttons }, function()
-				send("EquipPowerup", { Id = if profile.Equipped == def.Id then nil else def.Id })
+			UI.button("Unlock " .. def.Price .. " ◆", { Size = UDim2.fromOffset(140, 40), BackgroundColor3 = if profile.Diamonds >= def.Price then BUY else C.PanelLighter, Parent = row }, function()
+				send("BuyClass", { Id = def.Id })
 			end)
-			if lvl < Powerups.MaxLevel then
-				local ch = profile.Challenges and profile.Challenges[def.Id]
-				local price = Powerups.UpgradePrice(def.Id, lvl + 1)
-				local met = ch and ch.Progress and ch.Target and ch.Progress >= ch.Target
-				UI.button("Upgrade " .. price .. " ◆", { Size = UDim2.fromOffset(150, 44), BackgroundColor3 = if met and profile.Diamonds >= price then Color3.fromRGB(40, 90, 120) else C.PanelLighter, Parent = buttons }, function()
-					send("UpgradePowerup", { Id = def.Id })
-				end)
-				if Products.OnSale("Upgrade_" .. def.Id .. "_" .. (lvl + 1)) then
-					UI.button("Skip " .. Hud.PriceText("Upgrade_" .. def.Id .. "_" .. (lvl + 1)), { Size = UDim2.fromOffset(150, 44), BackgroundColor3 = Color3.fromRGB(40, 110, 60), Parent = buttons }, function()
-						send("BuyRobux", { Key = "Upgrade_" .. def.Id .. "_" .. (lvl + 1) })
+		end
+	end
+end
+
+-- Power-ups panel ------------------------------------------------------------------------------------
+
+local function renderPerks()
+	UI.clear(perkBody)
+	local profile = State.Get("Profile")
+	if not profile then
+		UI.text("Loading your profile…", { Parent = perkBody })
+		return
+	end
+	UI.text(string.format("◆ %d Diamonds · equip ONE power-up before a match (no swapping mid-match)", profile.Diamonds), { LayoutOrder = 0, TextSize = 13, TextColor3 = C.Diamond, Parent = perkBody })
+	for i, def in Perks.List do
+		local owned = profile.OwnedPerks[def.Id] == true
+		local color = rgb(def.Color)
+		local sel = profile.Perk == def.Id
+		local cd = card(perkBody, i, 84, color, sel)
+		local ic = UI.icon(def.Glyph, color, 48, "Round")
+		ic.Parent = cd
+		UI.text(def.Name .. (if owned then "" else "   🔒 " .. def.Price .. " ◆"), { Position = UDim2.fromOffset(60, 0), Size = UDim2.new(1, -60, 0, 22), TextSize = 17, Font = Theme.FontBlack, TextColor3 = color, Parent = cd })
+		UI.text(def.Text, { Position = UDim2.fromOffset(60, 24), Size = UDim2.new(0.62, -60, 0, 36), TextWrapped = true, TextSize = 13, TextYAlignment = Enum.TextYAlignment.Top, Parent = cd })
+		local row = buttonRow(cd)
+		if owned then
+			UI.button(if sel then "Equipped ✓" else "Equip", { Size = UDim2.fromOffset(120, 40), BackgroundColor3 = if sel then C.AccentDark else C.PanelLighter, Parent = row }, function()
+				send("EquipPerk", { Id = if sel then nil else def.Id })
+			end)
+		else
+			UI.button("Unlock " .. def.Price .. " ◆", { Size = UDim2.fromOffset(140, 40), BackgroundColor3 = if profile.Diamonds >= def.Price then BUY else C.PanelLighter, Parent = row }, function()
+				send("BuyPerk", { Id = def.Id })
+			end)
+		end
+	end
+end
+
+-- Locker (cosmetics) --------------------------------------------------------------------------------------
+
+local TYPE_LABEL = {
+	Outfit = "Outfits", ToolSkin = "Tool skins", BackpackSkin = "Backpacks", CampfireSkin = "Campfire", WorkbenchSkin = "Workbench",
+	StorageSkin = "Storage", Nameplate = "Nameplates", Title = "Titles", Emote = "Emotes", EliminationFx = "Elim. effects", VictoryPose = "Victory poses",
+}
+
+local function renderLocker()
+	UI.clear(lockerBody)
+	local profile = State.Get("Profile")
+	if not profile then
+		UI.text("Loading your profile…", { Parent = lockerBody })
+		return
+	end
+	UI.text(string.format("🪙 %d Coins · cosmetics are purely visual — they never change stats", profile.Coins or 0), { LayoutOrder = 0, TextSize = 14, TextColor3 = C.Accent, Parent = lockerBody })
+	local tabs = UI.new("Frame", { LayoutOrder = 1, BackgroundTransparency = 1, Size = UDim2.new(1, -8, 0, 72), Parent = lockerBody }, { UI.new("UIGridLayout", { CellSize = UDim2.fromOffset(104, 32), CellPadding = UDim2.fromOffset(4, 4) }) })
+	for _, typ in Cosmetics.Types do
+		UI.button(TYPE_LABEL[typ] or typ, { Size = UDim2.fromOffset(104, 32), TextSize = 12, BackgroundColor3 = if typ == lockerType then C.AccentDark else C.PanelLighter, Parent = tabs }, function()
+			lockerType = typ
+			renderLocker()
+		end)
+	end
+	local order = 10
+	local wearing = profile.Wearing[lockerType]
+	if wearing then
+		UI.button("Remove " .. (TYPE_LABEL[lockerType] or lockerType):lower(), { LayoutOrder = 2, Size = UDim2.new(1, -8, 0, 36), BackgroundColor3 = C.PanelLighter, Parent = lockerBody }, function()
+			send("WearCosmetic", { Type = lockerType, Id = nil })
+		end)
+	end
+	for _, def in Cosmetics.List do
+		if def.Type == lockerType then
+			order += 1
+			local owned = profile.Cosmetics[def.Id] == true
+			local rarity = rgb(Cosmetics.RarityColor[def.Rarity])
+			local sel = wearing == def.Id
+			local cd = card(lockerBody, order, 64, rarity, sel)
+			local sw = UI.new("Frame", { Size = UDim2.fromOffset(42, 42), BackgroundColor3 = if def.Color then rgb(def.Color) else C.PanelLighter, Parent = cd }, { UI.corner(UDim.new(0, 8)) })
+			if def.Text then
+				UI.text("✎", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, Parent = sw })
+			end
+			UI.text(def.Name .. (if def.Text then '  "' .. def.Text .. '"' else ""), { Position = UDim2.fromOffset(52, 0), Size = UDim2.new(0.6, -52, 0, 22), TextSize = 15, Font = Theme.FontBold, Parent = cd })
+			UI.text(def.Rarity .. (if def.Level then " · level " .. def.Level .. " reward" elseif def.Price > 0 then " · " .. def.Price .. " Coins" else " · bundle"), { Position = UDim2.fromOffset(52, 22), Size = UDim2.new(0.6, -52, 0, 18), TextSize = 12, TextColor3 = rarity, Parent = cd })
+			local row = buttonRow(cd)
+			if owned then
+				if def.Type == "Emote" then
+					UI.button("Play", { Size = UDim2.fromOffset(80, 40), BackgroundColor3 = C.PanelLighter, Parent = row }, function()
+						send("Emote", { Id = def.Id })
 					end)
 				end
-				if ch and ch.Target then
-					local bar, set = UI.bar({ Position = UDim2.fromOffset(72, 82), Size = UDim2.new(1, -72, 0, 22), Parent = card }, color)
-					bar.Name = "Challenge"
-					set((ch.Progress or 0) / ch.Target, string.format("Lv%d challenge: %s  (%d/%d)", lvl + 1, ch.Text, math.min(ch.Progress or 0, ch.Target), ch.Target))
-				end
+				UI.button(if sel then "Wearing ✓" else "Wear", { Size = UDim2.fromOffset(110, 40), BackgroundColor3 = if sel then C.AccentDark else C.PanelLighter, Parent = row }, function()
+					send("WearCosmetic", { Type = def.Type, Id = if sel then nil else def.Id })
+				end)
+			elseif def.Price > 0 then
+				UI.button("Buy " .. def.Price .. " 🪙", { Size = UDim2.fromOffset(140, 40), BackgroundColor3 = if (profile.Coins or 0) >= def.Price then BUY else C.PanelLighter, Parent = row }, function()
+					send("BuyCosmetic", { Id = def.Id })
+				end)
 			else
-				UI.text("MAX LEVEL", { Position = UDim2.fromOffset(72, 84), TextSize = 15, Font = Theme.FontBlack, TextColor3 = C.Good, Parent = card })
+				UI.text(if def.Level then "🔒 Lv " .. def.Level else "🔒 bundle", { Size = UDim2.fromOffset(110, 40), TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = C.TextDim, Parent = row })
 			end
+		end
+	end
+end
+
+-- Profile & rewards ------------------------------------------------------------------------------------------
+
+local function renderProfile()
+	UI.clear(profileBody)
+	local profile = State.Get("Profile")
+	if not profile then
+		UI.text("Loading your profile…", { Parent = profileBody })
+		return
+	end
+	UI.text("Level " .. tostring(profile.Level or 1), { LayoutOrder = 1, TextSize = 24, Font = Theme.FontBlack, TextColor3 = C.Accent, Parent = profileBody })
+	local barHolder = UI.new("Frame", { LayoutOrder = 2, BackgroundTransparency = 1, Size = UDim2.new(1, -8, 0, 26), Parent = profileBody })
+	local _, set = UI.bar({ Size = UDim2.fromScale(1, 1), Parent = barHolder }, C.Accent)
+	if (profile.LevelNeed or 0) > 0 then
+		set(profile.LevelInto / profile.LevelNeed, string.format("%d / %d XP to level %d", profile.LevelInto, profile.LevelNeed, (profile.Level or 1) + 1))
+	else
+		set(1, "MAX LEVEL")
+	end
+	UI.text(string.format("Matches %d · Wins %d · Kills %d · Eliminations %d · ◆ %d · 🪙 %d", profile.Matches or 0, profile.Wins or 0, profile.Kills or 0, profile.Eliminations or 0, profile.Diamonds or 0, profile.Coins or 0), { LayoutOrder = 3, TextSize = 14, TextColor3 = C.TextDim, Parent = profileBody })
+	UI.text("Every 5 levels: +" .. Progression.LevelCoins .. " Coins · every 10 levels: +" .. Progression.MilestoneDiamonds .. " ◆ · titles & nameplates at 5 / 10 / 25 / 50 / 75 / 100", { LayoutOrder = 4, Size = UDim2.new(1, -8, 0, 32), TextWrapped = true, TextSize = 12, TextColor3 = C.TextDim, Parent = profileBody })
+	-- Daily
+	local daily = profile.Daily or {}
+	local dcard = card(profileBody, 10, 64, C.Accent, daily.CanClaim == true)
+	UI.text("Daily bonus", { Size = UDim2.new(0.6, 0, 0, 22), TextSize = 16, Font = Theme.FontBold, Parent = dcard })
+	UI.text(string.format("Streak %d · +%d Coins (grows each day in a row, max 150)", daily.Streak or 0, daily.Amount or 50), { Position = UDim2.fromOffset(0, 22), Size = UDim2.new(0.6, 0, 0, 20), TextSize = 12, TextColor3 = C.TextDim, Parent = dcard })
+	UI.button(if daily.CanClaim then "Claim +" .. (daily.Amount or 50) else "Claimed ✓", { Size = UDim2.fromOffset(130, 40), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), BackgroundColor3 = if daily.CanClaim then Color3.fromRGB(40, 110, 60) else C.PanelLighter, Parent = dcard }, function()
+		send("ClaimDaily")
+	end)
+	-- Weekly
+	local wk = profile.Weekly or {}
+	local wcard = card(profileBody, 11, 64, C.Accent, wk.CanClaim == true)
+	UI.text("Weekly bonus", { Size = UDim2.new(0.6, 0, 0, 22), TextSize = 16, Font = Theme.FontBold, Parent = wcard })
+	UI.text(string.format("Matches %d/%d · wins %d → +%d Coins", wk.Matches or 0, wk.Need or 3, wk.Wins or 0, wk.Amount or 300), { Position = UDim2.fromOffset(0, 22), Size = UDim2.new(0.6, 0, 0, 20), TextSize = 12, TextColor3 = C.TextDim, Parent = wcard })
+	UI.button(if wk.Claimed then "Claimed ✓" elseif wk.CanClaim then "Claim" else "Keep playing", { Size = UDim2.fromOffset(130, 40), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), BackgroundColor3 = if wk.CanClaim then Color3.fromRGB(40, 110, 60) else C.PanelLighter, Parent = wcard }, function()
+		send("ClaimWeekly")
+	end)
+	-- Leaderboards
+	local lobby = State.Get("Lobby")
+	local boards = lobby and lobby.Boards or {}
+	UI.text("Leaderboards", { LayoutOrder = 20, TextSize = 18, Font = Theme.FontBlack, TextColor3 = C.Accent, Parent = profileBody })
+	local cols = UI.new("Frame", { LayoutOrder = 21, BackgroundTransparency = 1, Size = UDim2.new(1, -8, 0, 230), Parent = profileBody }, { UI.list(Enum.FillDirection.Horizontal, 8) })
+	for _, spec in { { "Wins", "Most wins" }, { "XP", "Highest level" } } do
+		local col = UI.new("Frame", { Size = UDim2.new(0.5, -4, 1, 0), BackgroundColor3 = C.PanelLight, BorderSizePixel = 0, Parent = cols }, { UI.corner(UDim.new(0, 8)), UI.padding(8), UI.list(Enum.FillDirection.Vertical, 2) })
+		UI.text(spec[2], { Size = UDim2.new(1, 0, 0, 20), TextSize = 14, Font = Theme.FontBold, Parent = col })
+		local list = boards[spec[1]] or {}
+		if #list == 0 then
+			UI.text("No entries yet (live servers only).", { Size = UDim2.new(1, 0, 0, 18), TextSize = 12, TextColor3 = C.TextDim, Parent = col })
+		end
+		for rank, e in list do
+			local v = if spec[1] == "XP" then "Lv " .. (Progression.LevelFromXP(e.Value)) else tostring(e.Value)
+			UI.text(string.format("%d. %s — %s", rank, e.Name, v), { Size = UDim2.new(1, 0, 0, 18), TextSize = 12, TextColor3 = if e.UserId == player.UserId then C.Accent else C.Text, Parent = col })
 		end
 	end
 end
@@ -182,29 +331,31 @@ end
 
 local function renderShop()
 	UI.clear(shopBody)
-	local profile = State.Get("Profile")
-	UI.text("Diamonds are earned by playing: +" .. Config.Match.WinDiamonds .. " ◆ per win. Robux never buys gameplay power — Coin packs for cosmetics are coming soon.", { LayoutOrder = 0, TextSize = 14, TextColor3 = C.TextDim, Parent = shopBody })
-	for i, key in { "Diamonds100", "Diamonds300", "Diamonds800" } do
-		if not Products.OnSale(key) then
-			continue
+	UI.text("Robux only buys Coins and cosmetics — never gameplay power. Diamonds (classes & power-ups) are earned by playing.", { LayoutOrder = 0, Size = UDim2.new(1, -8, 0, 34), TextWrapped = true, TextSize = 13, TextColor3 = C.TextDim, Parent = shopBody })
+	local order = 0
+	for _, p in Products.List do
+		if Products.OnSale(p.Key) then
+			order += 1
+			local isBundle = p.Kind == "Bundle"
+			local r = UI.new("Frame", { LayoutOrder = order, Size = UDim2.new(1, -8, 0, 70), BackgroundColor3 = C.PanelLight, BorderSizePixel = 0, Parent = shopBody }, { UI.corner(UDim.new(0, 8)), UI.padding(8) })
+			local ic = UI.icon(if isBundle then "🎁" else "🪙", if isBundle then C.Dev else C.Accent, 52, "Round")
+			ic.Parent = r
+			UI.text(p.Title, { Position = UDim2.fromOffset(64, 4), Size = UDim2.new(1, -240, 0, 26), TextSize = 19, Font = Theme.FontBlack, TextColor3 = if isBundle then C.Dev else C.Accent, Parent = r })
+			if isBundle then
+				local names = {}
+				local items: { string } = Cosmetics.Bundles[p.Bundle or ""] or {}
+				for _, id in items do
+					local d = Cosmetics.ById[id]
+					table.insert(names, if d then d.Name else id)
+				end
+				UI.text(table.concat(names, " · "), { Position = UDim2.fromOffset(64, 32), Size = UDim2.new(1, -240, 0, 18), TextSize = 12, TextColor3 = C.TextDim, Parent = r })
+			end
+			UI.button(Hud.PriceText(p.Key), { Size = UDim2.fromOffset(160, 48), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), BackgroundColor3 = Color3.fromRGB(40, 110, 60), Parent = r }, function()
+				send("BuyRobux", { Key = p.Key })
+			end)
 		end
-		local p = Products.ByKey[key]
-		local r = UI.new("Frame", { LayoutOrder = i, Size = UDim2.new(1, -8, 0, 70), BackgroundColor3 = C.PanelLight, BorderSizePixel = 0, Parent = shopBody }, { UI.corner(UDim.new(0, 8)), UI.padding(8) })
-		local ic = UI.icon("◆", C.Diamond, 52, "Round")
-		ic.Parent = r
-		UI.text(p.Title, { Position = UDim2.fromOffset(64, 12), Size = UDim2.new(1, -240, 0, 28), TextSize = 20, Font = Theme.FontBlack, TextColor3 = C.Diamond, Parent = r })
-		UI.button(Hud.PriceText(key), { Size = UDim2.fromOffset(160, 48), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), BackgroundColor3 = Color3.fromRGB(40, 110, 60), Parent = r }, function()
-			send("BuyRobux", { Key = key })
-		end)
 	end
-	if profile and profile.Credits then
-		local rev = {}
-		for tier, n in profile.Credits.Revive or {} do
-			table.insert(rev, "tier " .. tier .. " ×" .. n)
-		end
-		UI.text(string.format("Stored credits (used automatically in matches): revives %s · care packages %d · bandages %d", if #rev > 0 then table.concat(rev, ", ") else "none", profile.Credits.CarePackage or 0, profile.Credits.Bandage or 0), { LayoutOrder = 10, TextSize = 13, TextColor3 = C.TextDim, Parent = shopBody })
-	end
-	UI.text("Prices are shown by Roblox for your region. Purchases are only granted after Roblox confirms them.", { LayoutOrder = 11, TextSize = 12, TextColor3 = C.TextDim, Parent = shopBody })
+	UI.text("Prices are shown by Roblox for your region. Purchases are only granted after Roblox confirms them. Bundle items you already own are refunded as Coins.", { LayoutOrder = 100, Size = UDim2.new(1, -8, 0, 34), TextWrapped = true, TextSize = 12, TextColor3 = C.TextDim, Parent = shopBody })
 end
 
 local HELP = {
@@ -215,8 +366,10 @@ local HELP = {
 	{ "Progression", "Start with nothing. Gather sticks, loose stones, fibre and berries by hand, then craft a Crude Axe, Pickaxe and Spear. Small trees give 4 Wood, large trees 16 (Stone Axe). Upgrade your Workbench (Tiers I-V) with your pack + storage." },
 	{ "Health & stamina", "Health 100, stamina 100 (sprint with Shift). There's no fast regen: bandages (+20), First Aid kits (+50) and Medkits (+100) take time and are interrupted by damage." },
 	{ "Deaths", "Only materials drop, in one loot bag. You keep tools, weapons, armour, backpack and Workbench progress." },
-	{ "PC controls", "WASD move · Shift sprint · Click attack · Right-click aim/block · 1-5 slots · ` fists · Q swap · X ability · H bandage · I bag · C craft · B build · M map · E/F interact" },
-	{ "Mobile", "Use the on-screen buttons: ATTACK, AIM/BLOCK, ABILITY, HEAL, SWAP and RUN. Tap the prompt cards to interact. BAG, CRAFT, BUILD and MAP are at the top right." },
+	{ "Classes & power-ups", "Pick one class and one power-up in the lobby (Diamonds). They're locked for the whole match. They are sidegrades: faster chopping, more pack slots, better senses — never more damage or health." },
+	{ "XP, Coins & Diamonds", "Earn XP and Coins by surviving nights, kills, snuffing fires, exploring, hunting, opening chests and placing top 3. Coins buy cosmetics. Diamonds come from wins (exactly 2) and every 10 levels." },
+	{ "PC controls", "WASD move · Shift sprint · Click attack · Right-click aim/block · 1-5 slots · ` fists · Q swap · H bandage · I bag · C craft · B build · M map · E/F interact" },
+	{ "Mobile", "Use the on-screen buttons: ATTACK, AIM/BLOCK, HEAL, SWAP and RUN. Tap the prompt cards to interact. BAG, CRAFT, BUILD and MAP are at the top right." },
 }
 
 local function renderHelp()
@@ -257,7 +410,7 @@ function Lobby.Start()
 	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(rescale)
 	rescale()
 
-	local top = UI.panel({ Size = UDim2.fromOffset(420, 40), Position = UDim2.fromOffset(12, 8), Parent = gui })
+	local top = UI.panel({ Size = UDim2.fromOffset(560, 40), Position = UDim2.fromOffset(12, 8), Parent = gui })
 	diamondsLabel = UI.text("", { Position = UDim2.fromOffset(12, 0), Size = UDim2.new(1, -12, 1, 0), TextSize = 17, Font = Theme.FontBold, TextColor3 = C.Diamond, Parent = top })
 
 	local bottom = UI.panel({ Size = UDim2.fromOffset(640, 150), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12), Parent = gui }, { UI.padding(10) })
@@ -272,17 +425,23 @@ function Lobby.Start()
 	statusLabel = UI.text("", { Position = UDim2.fromOffset(0, 60), Size = UDim2.new(1, 0, 0, 20), TextSize = 13, TextColor3 = C.TextDim, TextXAlignment = Enum.TextXAlignment.Center, Parent = bottom })
 	partyStrip = UI.new("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 82), Size = UDim2.new(1, 0, 0, 24), Parent = bottom }, { UI.list(Enum.FillDirection.Horizontal, 4, Enum.HorizontalAlignment.Center) })
 	local nav = UI.new("Frame", { BackgroundTransparency = 1, Position = UDim2.new(0, 0, 1, -40), Size = UDim2.new(1, 0, 0, 40), Parent = bottom }, { UI.list(Enum.FillDirection.Horizontal, 6, Enum.HorizontalAlignment.Center) })
-	for _, spec in { { "Party", "♟ Party" }, { "Powerups", "⚡ Powerups" }, { "LobbyShop", "◆ Shop" }, { "Help", "? How to play" } } do
-		UI.button(spec[2], { Size = UDim2.fromOffset(148, 40), TextSize = 15, Parent = nav }, function()
+	for _, spec in { { "Party", "♟ Party" }, { "Classes", "⛺ Class" }, { "Perks", "⚡ Power-up" }, { "Locker", "👕 Locker" }, { "Profile", "★ Profile" }, { "LobbyShop", "🪙 Shop" }, { "Help", "?" } } do
+		UI.button(spec[2], { Size = UDim2.fromOffset(if spec[1] == "Help" then 40 else 90, 40), TextSize = 13, Parent = nav }, function()
 			Panels.Toggle(spec[1])
 		end)
 	end
 
 	partyBody = Panels.Create("Party", "PARTY", Vector2.new(560, 560), renderParty)
 	UI.list(Enum.FillDirection.Vertical, 6).Parent = partyBody
-	powerBody = Panels.Create("Powerups", "POWERUP SHRINE", Vector2.new(680, 640), renderPowerups)
-	UI.list(Enum.FillDirection.Vertical, 8).Parent = powerBody
-	shopBody = Panels.Create("LobbyShop", "TRADING POST", Vector2.new(600, 480), renderShop)
+	classBody = Panels.Create("Classes", "CLASSES", Vector2.new(700, 640), renderClasses)
+	UI.list(Enum.FillDirection.Vertical, 8).Parent = classBody
+	perkBody = Panels.Create("Perks", "POWER-UPS", Vector2.new(640, 640), renderPerks)
+	UI.list(Enum.FillDirection.Vertical, 6).Parent = perkBody
+	lockerBody = Panels.Create("Locker", "LOCKER", Vector2.new(640, 640), renderLocker)
+	UI.list(Enum.FillDirection.Vertical, 6).Parent = lockerBody
+	profileBody = Panels.Create("Profile", "PROFILE & REWARDS", Vector2.new(620, 640), renderProfile)
+	UI.list(Enum.FillDirection.Vertical, 6).Parent = profileBody
+	shopBody = Panels.Create("LobbyShop", "TRADING POST", Vector2.new(600, 520), renderShop)
 	UI.list(Enum.FillDirection.Vertical, 8).Parent = shopBody
 	helpBody = Panels.Create("Help", "HOW TO PLAY", Vector2.new(640, 600), renderHelp)
 	UI.list(Enum.FillDirection.Vertical, 4).Parent = helpBody
@@ -293,19 +452,17 @@ function Lobby.Start()
 			renderParty()
 		end
 	end)
+	local RENDER = { Classes = renderClasses, Perks = renderPerks, Locker = renderLocker, Profile = renderProfile, LobbyShop = renderShop }
 	State.On("Profile", function()
 		renderHud()
-		if Panels.IsOpen("Powerups") then
-			renderPowerups()
-		end
-		if Panels.IsOpen("LobbyShop") then
-			renderShop()
+		for name, fn in RENDER do
+			if Panels.IsOpen(name) then
+				fn()
+			end
 		end
 	end)
 	State.On("PricesUpdated", function()
-		if Panels.IsOpen("Powerups") then
-			renderPowerups()
-		elseif Panels.IsOpen("LobbyShop") then
+		if Panels.IsOpen("LobbyShop") then
 			renderShop()
 		end
 	end)
@@ -314,7 +471,7 @@ function Lobby.Start()
 			showInvite(ev.Data)
 		elseif ev.Name == "OpenStation" then
 			local st = ev.Data.Station
-			Panels.Open(if st == "Shop" then "LobbyShop" elseif st == "Powerups" then "Powerups" else "Party")
+			Panels.Open(if st == "Shop" then "LobbyShop" elseif st == "Powerups" or st == "Classes" then "Classes" elseif st == "Locker" then "Locker" elseif st == "Profile" then "Profile" else "Party")
 		end
 	end)
 	local function vis()

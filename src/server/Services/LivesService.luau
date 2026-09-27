@@ -280,7 +280,7 @@ function LivesService._onDied(p: Player, char: Model)
 		Eliminated = action == "Eliminate",
 	})
 	if killer and killer ~= p then
-		ctx.PowerupService.OnPlayerKill(killer, p)
+		ctx.PowerupService.OnPlayerKill(killer, p, action == "Eliminate")
 	end
 
 	if action == "Respawn" then

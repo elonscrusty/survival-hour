@@ -1,24 +1,39 @@
 --!strict
--- Persistent profile schema and every rule that mutates it: receipts,
--- diamond purchases, powerup upgrades, match rewards and deferred credits.
--- Pure Luau so idempotency can be tested without Roblox (tests/ProfileRules.spec.luau).
+-- Persistent profile schema and every rule that mutates it: receipts, account
+-- XP / levels, Coins, Diamonds, classes, power-ups, cosmetics, daily / weekly
+-- bonuses and match rewards. Pure Luau so idempotency can be tested without
+-- Roblox (tests/ProfileRules.spec.luau).
 --
--- DataService loads/saves the table; PurchaseService and RewardService call
--- these functions and only report success once the profile has been saved.
+-- Schema v2 (Survival Wars): the old three-level powerups are retired; Diamonds
+-- spent on them are refunded by Reconcile so players can buy classes/power-ups.
 
-local Powerups = require("../Powerups")
+local Classes = require("../Classes")
+local Perks = require("../Perks")
+local Cosmetics = require("../Cosmetics")
+local Progression = require("../Progression")
 
 export type Profile = {
 	Version: number,
 	Diamonds: number,
-	Owned: { [string]: number }, -- powerup id -> level (1..3)
-	Equipped: string?,
-	Stats: { [string]: number }, -- challenge counters
-	Credits: { Revive: { [string]: number }, CarePackage: number, Bandage: number },
+	Coins: number,
+	XP: number,
+	Level: number, -- derived from XP (stored for leaderboards)
+	Class: string,
+	OwnedClasses: { [string]: boolean },
+	Perk: string?,
+	OwnedPerks: { [string]: boolean },
+	Cosmetics: { [string]: boolean },
+	Wearing: { [string]: string }, -- cosmetic type -> id
+	Stats: { [string]: number },
+	Credits: { Revive: { [string]: number }, CarePackage: number, Bandage: number }, -- legacy (off sale)
 	Receipts: { string }, -- recently processed PurchaseIds (bounded)
 	RewardedMatches: { string },
 	Wins: number,
 	Matches: number,
+	Kills: number,
+	Eliminations: number,
+	Daily: { Day: number, Streak: number },
+	Weekly: { Week: number, Matches: number, Wins: number, Claimed: boolean },
 }
 
 export type ProductLike = {
@@ -27,25 +42,45 @@ export type ProductLike = {
 	Amount: number?,
 	Powerup: string?,
 	Level: number?,
+	Bundle: string?,
 }
 
 local ProfileRules = {}
 
-ProfileRules.SchemaVersion = 1
+ProfileRules.SchemaVersion = 2
+
+-- Old (v1) powerups: unlock price and upgrade multipliers, for the refund.
+local OLD_POWERUPS = { Trailblazer = 100, Scavenger = 175, Hunter = 150, Climber = 200, Craftsman = 125, Sharpshooter = 250 }
+local OLD_MULT = { 1, 0.8, 1.5 }
 
 function ProfileRules.New(): Profile
 	return {
 		Version = ProfileRules.SchemaVersion,
 		Diamonds = 0,
-		Owned = {},
-		Equipped = nil,
+		Coins = 0,
+		XP = 0,
+		Level = 1,
+		Class = Classes.Default,
+		OwnedClasses = { [Classes.Default] = true },
+		Perk = nil,
+		OwnedPerks = {},
+		Cosmetics = {},
+		Wearing = {},
 		Stats = {},
 		Credits = { Revive = {}, CarePackage = 0, Bandage = 0 },
 		Receipts = {},
 		RewardedMatches = {},
 		Wins = 0,
 		Matches = 0,
+		Kills = 0,
+		Eliminations = 0,
+		Daily = { Day = -1, Streak = 0 },
+		Weekly = { Week = -1, Matches = 0, Wins = 0, Claimed = false },
 	}
+end
+
+local function num(v: any, default: number): number
+	return if type(v) == "number" and v == v then v else default
 end
 
 -- Fills in missing fields from older/partial saves without discarding data.
@@ -54,16 +89,55 @@ function ProfileRules.Reconcile(data: any): Profile
 	if type(data) ~= "table" then
 		return p
 	end
-	p.Diamonds = if type(data.Diamonds) == "number" then math.max(0, math.floor(data.Diamonds)) else 0
-	if type(data.Owned) == "table" then
+	p.Diamonds = math.max(0, math.floor(num(data.Diamonds, 0)))
+	p.Coins = math.max(0, math.floor(num(data.Coins, 0)))
+	p.XP = math.max(0, math.floor(num(data.XP, 0)))
+	p.Level = (Progression.LevelFromXP(p.XP))
+	-- v1 -> v2: refund Diamonds spent on retired powerups
+	if num(data.Version, 1) < 2 and type(data.Owned) == "table" then
 		for id, lvl in data.Owned do
-			if Powerups.ById[id] and type(lvl) == "number" then
-				p.Owned[id] = math.clamp(math.floor(lvl), 1, Powerups.MaxLevel)
+			local price = OLD_POWERUPS[id]
+			if price and type(lvl) == "number" then
+				for l = 1, math.clamp(math.floor(lvl), 1, 3) do
+					p.Diamonds += math.floor(price * OLD_MULT[l] + 0.5)
+				end
 			end
 		end
 	end
-	if type(data.Equipped) == "string" and p.Owned[data.Equipped] then
-		p.Equipped = data.Equipped
+	if type(data.OwnedClasses) == "table" then
+		for id, v in data.OwnedClasses do
+			if Classes.ById[id] and v == true then
+				p.OwnedClasses[id] = true
+			end
+		end
+	end
+	if type(data.Class) == "string" and p.OwnedClasses[data.Class] then
+		p.Class = data.Class
+	end
+	if type(data.OwnedPerks) == "table" then
+		for id, v in data.OwnedPerks do
+			if Perks.ById[id] and v == true then
+				p.OwnedPerks[id] = true
+			end
+		end
+	end
+	if type(data.Perk) == "string" and p.OwnedPerks[data.Perk] then
+		p.Perk = data.Perk
+	end
+	if type(data.Cosmetics) == "table" then
+		for id, v in data.Cosmetics do
+			if Cosmetics.ById[id] and v == true then
+				p.Cosmetics[id] = true
+			end
+		end
+	end
+	if type(data.Wearing) == "table" then
+		for typ, id in data.Wearing do
+			local def = if type(id) == "string" then Cosmetics.ById[id] else nil
+			if def and def.Type == typ and p.Cosmetics[id] then
+				p.Wearing[typ] = id
+			end
+		end
 	end
 	if type(data.Stats) == "table" then
 		for k, v in data.Stats do
@@ -81,25 +155,29 @@ function ProfileRules.Reconcile(data: any): Profile
 				end
 			end
 		end
-		p.Credits.CarePackage = if type(c.CarePackage) == "number" then math.max(0, c.CarePackage) else 0
-		p.Credits.Bandage = if type(c.Bandage) == "number" then math.max(0, c.Bandage) else 0
+		p.Credits.CarePackage = math.max(0, num(c.CarePackage, 0))
+		p.Credits.Bandage = math.max(0, num(c.Bandage, 0))
 	end
-	if type(data.Receipts) == "table" then
-		for _, r in data.Receipts do
-			if type(r) == "string" then
-				table.insert(p.Receipts, r)
+	for _, key in { "Receipts", "RewardedMatches" } do
+		if type(data[key]) == "table" then
+			for _, r in data[key] do
+				if type(r) == "string" then
+					table.insert((p :: any)[key], r)
+				end
 			end
 		end
 	end
-	if type(data.RewardedMatches) == "table" then
-		for _, r in data.RewardedMatches do
-			if type(r) == "string" then
-				table.insert(p.RewardedMatches, r)
-			end
-		end
+	p.Wins = num(data.Wins, 0)
+	p.Matches = num(data.Matches, 0)
+	p.Kills = num(data.Kills, 0)
+	p.Eliminations = num(data.Eliminations, 0)
+	if type(data.Daily) == "table" then
+		p.Daily = { Day = num(data.Daily.Day, -1), Streak = num(data.Daily.Streak, 0) }
 	end
-	p.Wins = if type(data.Wins) == "number" then data.Wins else 0
-	p.Matches = if type(data.Matches) == "number" then data.Matches else 0
+	if type(data.Weekly) == "table" then
+		p.Weekly = { Week = num(data.Weekly.Week, -1), Matches = num(data.Weekly.Matches, 0), Wins = num(data.Weekly.Wins, 0), Claimed = data.Weekly.Claimed == true }
+	end
+	ProfileRules.GrantLevelCosmetics(p)
 	return p
 end
 
@@ -114,50 +192,47 @@ function ProfileRules.HasReceipt(p: Profile, purchaseId: string): boolean
 	return table.find(p.Receipts, purchaseId) ~= nil
 end
 
--- Applies a receipt exactly once. Returns "AlreadyGranted" or "Granted" and a
--- human-readable note. Every product becomes a durable profile change; in-match
--- effects (revive, package, bandage) are credits the match consumes afterwards,
--- so a purchase can never be lost because the player died, left or the match ended.
+-- Applies a receipt exactly once. Returns "AlreadyGranted" or "Granted" and a note.
+-- Coins and cosmetic bundles are the only products on sale (non-pay-to-win); the
+-- legacy kinds still resolve so an old receipt can never be lost.
 function ProfileRules.ApplyReceipt(p: Profile, purchaseId: string, product: ProductLike, memory: number): (string, string)
 	if ProfileRules.HasReceipt(p, purchaseId) then
 		return "AlreadyGranted", "duplicate"
 	end
 	local note = ""
 	local kind = product.Kind
-	if kind == "Diamonds" then
+	if kind == "Coins" then
+		p.Coins += product.Amount or 0
+		note = "coins"
+	elseif kind == "Bundle" then
+		local list: { string } = Cosmetics.Bundles[product.Bundle or ""] or {}
+		for _, id in list do
+			if p.Cosmetics[id] then
+				-- already owned: refund its coin value
+				local def = Cosmetics.ById[id]
+				p.Coins += if def then def.Price else 0
+			else
+				p.Cosmetics[id] = true
+			end
+		end
+		note = "bundle"
+	elseif kind == "Diamonds" then
 		p.Diamonds += product.Amount or 0
-		note = "diamonds"
-	elseif kind == "Unlock" then
-		local id = product.Powerup :: string
-		if p.Owned[id] then
-			-- Already owned (race between two purchase paths): refund as diamonds.
-			p.Diamonds += Powerups.UpgradePrice(id, 1)
-			note = "refunded-as-diamonds"
-		else
-			p.Owned[id] = 1
-			note = "unlocked"
-		end
-	elseif kind == "Upgrade" then
-		local id = product.Powerup :: string
-		local target = product.Level :: number
-		local current = p.Owned[id] or 0
-		if current == target - 1 then
-			p.Owned[id] = target
-			note = "upgraded"
-		else
-			p.Diamonds += Powerups.UpgradePrice(id, target)
-			note = "refunded-as-diamonds"
-		end
+		note = "diamonds (legacy)"
+	elseif kind == "Unlock" or kind == "Upgrade" then
+		-- retired powerup products: refund at the old unlock price
+		p.Diamonds += OLD_POWERUPS[product.Powerup or ""] or 0
+		note = "refunded-as-diamonds"
 	elseif kind == "Revive" then
 		local key = tostring(product.Tier or 1)
 		p.Credits.Revive[key] = (p.Credits.Revive[key] or 0) + 1
-		note = "revive-credit"
+		note = "revive-credit (legacy)"
 	elseif kind == "CarePackage" then
 		p.Credits.CarePackage += 1
-		note = "package-credit"
+		note = "package-credit (legacy)"
 	elseif kind == "Bandage" then
 		p.Credits.Bandage += product.Amount or 1
-		note = "bandage-credit"
+		note = "bandage-credit (legacy)"
 	else
 		error("unknown product kind " .. tostring(kind))
 	end
@@ -171,93 +246,212 @@ function ProfileRules.ConsumeReviveCredit(p: Profile, tier: number): boolean
 	if n <= 0 then
 		return false
 	end
-	p.Credits.Revive[key] = n - 1
-	if n - 1 == 0 then
+	if n > 1 then
+		p.Credits.Revive[key] = n - 1
+	else
 		p.Credits.Revive[key] = nil
 	end
 	return true
 end
 
--- Diamonds ------------------------------------------------------------------------
+-- Classes & power-ups (Diamonds) -----------------------------------------------------
 
-function ProfileRules.BuyUnlock(p: Profile, id: string): (boolean, string?)
-	local def = Powerups.ById[id]
+function ProfileRules.BuyClass(p: Profile, id: string): (boolean, string?)
+	local def = Classes.ById[id]
 	if not def then
-		return false, "Unknown powerup"
+		return false, "Unknown class"
 	end
-	if p.Owned[id] then
+	if p.OwnedClasses[id] then
 		return false, "Already owned"
 	end
 	if p.Diamonds < def.Price then
-		return false, "Not enough diamonds"
+		return false, "Not enough Diamonds"
 	end
 	p.Diamonds -= def.Price
-	p.Owned[id] = 1
+	p.OwnedClasses[id] = true
 	return true, nil
 end
 
-function ProfileRules.ChallengeMet(p: Profile, id: string, level: number): boolean
-	local def = Powerups.ById[id]
-	local ch = def and def.Challenges[level]
-	if not ch then
-		return false
-	end
-	return (p.Stats[ch.Stat] or 0) >= ch.Target
-end
-
-function ProfileRules.BuyUpgrade(p: Profile, id: string): (boolean, string?)
-	local def = Powerups.ById[id]
-	if not def then
-		return false, "Unknown powerup"
-	end
-	local current = p.Owned[id]
-	if not current then
-		return false, "Unlock it first"
-	end
-	if current >= Powerups.MaxLevel then
-		return false, "Already max level"
-	end
-	local target = current + 1
-	if not ProfileRules.ChallengeMet(p, id, target) then
-		return false, "Challenge not complete"
-	end
-	local price = Powerups.UpgradePrice(id, target)
-	if p.Diamonds < price then
-		return false, "Not enough diamonds"
-	end
-	p.Diamonds -= price
-	p.Owned[id] = target
-	return true, nil
-end
-
-function ProfileRules.Equip(p: Profile, id: string?): (boolean, string?)
-	if id == nil then
-		p.Equipped = nil
-		return true, nil
-	end
-	if not p.Owned[id] then
+function ProfileRules.EquipClass(p: Profile, id: string): (boolean, string?)
+	if not p.OwnedClasses[id] then
 		return false, "Not owned"
 	end
-	p.Equipped = id
+	p.Class = id
 	return true, nil
 end
 
--- Match rewards (exactly once per match id) ---------------------------------------
-
-function ProfileRules.AwardWin(p: Profile, matchId: string, diamonds: number, memory: number): boolean
-	if table.find(p.RewardedMatches, matchId) then
-		return false
+function ProfileRules.BuyPerk(p: Profile, id: string): (boolean, string?)
+	local def = Perks.ById[id]
+	if not def then
+		return false, "Unknown power-up"
 	end
-	p.Diamonds += diamonds
-	p.Wins += 1
+	if p.OwnedPerks[id] then
+		return false, "Already owned"
+	end
+	if p.Diamonds < def.Price then
+		return false, "Not enough Diamonds"
+	end
+	p.Diamonds -= def.Price
+	p.OwnedPerks[id] = true
+	return true, nil
+end
+
+function ProfileRules.EquipPerk(p: Profile, id: string?): (boolean, string?)
+	if id == nil then
+		p.Perk = nil
+		return true, nil
+	end
+	if not p.OwnedPerks[id] then
+		return false, "Not owned"
+	end
+	p.Perk = id
+	return true, nil
+end
+
+-- Cosmetics (Coins) -------------------------------------------------------------------
+
+function ProfileRules.BuyCosmetic(p: Profile, id: string): (boolean, string?)
+	local def = Cosmetics.ById[id]
+	if not def then
+		return false, "Unknown cosmetic"
+	end
+	if p.Cosmetics[id] then
+		return false, "Already owned"
+	end
+	if def.Price <= 0 then
+		return false, if def.Level then "Unlocked at level " .. def.Level else "Not sold"
+	end
+	if p.Coins < def.Price then
+		return false, "Not enough Coins"
+	end
+	p.Coins -= def.Price
+	p.Cosmetics[id] = true
+	return true, nil
+end
+
+function ProfileRules.WearCosmetic(p: Profile, typ: string, id: string?): (boolean, string?)
+	if id == nil then
+		p.Wearing[typ] = nil
+		return true, nil
+	end
+	local def = Cosmetics.ById[id]
+	if not def or def.Type ~= typ or not p.Cosmetics[id] then
+		return false, "Not owned"
+	end
+	p.Wearing[typ] = id
+	return true, nil
+end
+
+-- Level-reward cosmetics (titles / nameplates) for the current level.
+function ProfileRules.GrantLevelCosmetics(p: Profile): { string }
+	local granted = {}
+	for _, def in Cosmetics.List do
+		if def.Level and p.Level >= def.Level and not p.Cosmetics[def.Id] then
+			p.Cosmetics[def.Id] = true
+			table.insert(granted, def.Id)
+		end
+	end
+	return granted
+end
+
+-- XP / Coins --------------------------------------------------------------------------
+
+export type XPResult = { Levels: number, NewLevel: number, Coins: number, Diamonds: number, Cosmetics: { string } }
+
+-- Adds XP, applying level-up rewards (Coins every 5 levels, 1 Diamond every 10,
+-- title/nameplate unlocks at milestones).
+function ProfileRules.AddXP(p: Profile, amount: number): XPResult
+	local before = p.Level
+	p.XP += math.max(0, math.floor(amount))
+	p.Level = (Progression.LevelFromXP(p.XP))
+	local res: XPResult = { Levels = p.Level - before, NewLevel = p.Level, Coins = 0, Diamonds = 0, Cosmetics = {} }
+	for _, r in Progression.LevelRewards(before, p.Level) do
+		p.Coins += r.Coins
+		p.Diamonds += r.Diamonds
+		res.Coins += r.Coins
+		res.Diamonds += r.Diamonds
+	end
+	res.Cosmetics = ProfileRules.GrantLevelCosmetics(p)
+	return res
+end
+
+function ProfileRules.AddCoins(p: Profile, amount: number)
+	p.Coins += math.max(0, math.floor(amount))
+end
+
+-- Match rewards (exactly once per match id) ---------------------------------------------
+
+-- Placement rewards (1st: 500 XP, 250 Coins, EXACTLY 2 Diamonds; 2nd: 250 XP, 100 Coins;
+-- 3rd: 50 Coins). Returns xp, coins, diamonds granted (zeros if already rewarded).
+function ProfileRules.AwardPlacement(p: Profile, matchId: string, place: number, memory: number): (number, number, number)
+	if table.find(p.RewardedMatches, matchId) then
+		return 0, 0, 0
+	end
 	pushBounded(p.RewardedMatches, matchId, memory)
-	return true
+	local xp, coins, diamonds = Progression.Placement(place)
+	if place == 1 then
+		p.Wins += 1
+	end
+	ProfileRules.AddXP(p, xp)
+	p.Coins += coins
+	p.Diamonds += diamonds
+	return xp, coins, diamonds
+end
+
+-- Kept for older callers: a win = placement 1.
+function ProfileRules.AwardWin(p: Profile, matchId: string, _diamonds: number, memory: number): boolean
+	local _, _, d = ProfileRules.AwardPlacement(p, matchId, 1, memory)
+	return d > 0
 end
 
 function ProfileRules.AddStat(p: Profile, stat: string, amount: number)
 	if amount > 0 then
 		p.Stats[stat] = (p.Stats[stat] or 0) + amount
 	end
+end
+
+-- Daily / weekly bonuses ----------------------------------------------------------------
+
+function ProfileRules.CanClaimDaily(p: Profile, now: number): boolean
+	return p.Daily.Day ~= Progression.DayNumber(now)
+end
+
+function ProfileRules.ClaimDaily(p: Profile, now: number): number
+	local day = Progression.DayNumber(now)
+	if p.Daily.Day == day then
+		return 0
+	end
+	local streak = if p.Daily.Day == day - 1 then p.Daily.Streak + 1 else 1
+	p.Daily = { Day = day, Streak = streak }
+	local coins = Progression.DailyCoins(streak)
+	p.Coins += coins
+	return coins
+end
+
+-- Counts a finished match toward this week's bonus.
+function ProfileRules.NoteMatch(p: Profile, now: number, won: boolean)
+	local week = Progression.WeekNumber(now)
+	if p.Weekly.Week ~= week then
+		p.Weekly = { Week = week, Matches = 0, Wins = 0, Claimed = false }
+	end
+	p.Weekly.Matches += 1
+	if won then
+		p.Weekly.Wins += 1
+	end
+end
+
+function ProfileRules.CanClaimWeekly(p: Profile, now: number): boolean
+	return p.Weekly.Week == Progression.WeekNumber(now) and not p.Weekly.Claimed and p.Weekly.Matches >= Progression.WeeklyMatches
+end
+
+function ProfileRules.ClaimWeekly(p: Profile, now: number): number
+	if not ProfileRules.CanClaimWeekly(p, now) then
+		return 0
+	end
+	p.Weekly.Claimed = true
+	local coins = Progression.WeeklyCoins(p.Weekly.Wins)
+	p.Coins += coins
+	return coins
 end
 
 return ProfileRules

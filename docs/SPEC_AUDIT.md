@@ -96,12 +96,13 @@ Studio yet**.
 ## Meta: XP, coins, diamonds, classes, power-ups, Robux
 | Requirement | Status | Current build | Phase |
 |---|---|---|---|
-| Account XP / Level 100 cosmetic progression | ❌ | – | 6 |
-| Coins (cosmetics) with the listed rewards and price bands; cosmetics catalogue | ❌ | – | 6 |
-| Non-pay-to-win Robux (coin packs, cosmetic bundles only) | 🟡 | Phase 1: all gameplay products off sale; Coin packs come in Phase 6 | 6 |
-| Diamonds: win = exactly 2 | ✅ | Phase 1 | – |
-| Classes: Survivor (free) + Lumberjack 40 … Tracker 200; one per match | ❌ | – | 6 |
-| Power-ups: Strong Back 40 … Second Wind 200; one equipped; no mid-match swap | 🟡 | 6 different powerups with 3 levels | 6 |
+| Account XP / Level 100 cosmetic progression | ✅ | Phase 6: `Progression` curve (150 + 20/level), level rewards (Coins /5, ◆ /10, titles & nameplates) | 6 |
+| Coins (cosmetics) with the listed rewards and price bands; cosmetics catalogue | ✅ | Phase 6: 11 cosmetic types, ~40 items inside the spec bands (tested), daily/weekly bonuses, placement rewards | 6 |
+| Non-pay-to-win Robux (coin packs, cosmetic bundles only) | ✅ | Phase 6: 4 Coin packs + 2 cosmetic bundles are the only products on sale (tested) | 6 |
+| Diamonds: win = exactly 2 | ✅ | Phase 1/6 (placement 1st) | – |
+| Classes: Survivor (free) + Lumberjack 40 … Tracker 200; one per match | ✅ | Phase 6: 7 classes, locked at match join | 6 |
+| Power-ups: Strong Back 40 … Second Wind 200; one equipped; no mid-match swap | ✅ | Phase 6: 10 single-level power-ups; v1 powerup Diamonds refunded | 6 |
+| Leaderboards | ✅ | Phase 6: OrderedDataStore Wins / XP top 10 in the lobby Profile panel (live servers) | 6 |
 
 ## Lobby / UI / art / world / audio / performance
 | Requirement | Status | Current build | Phase |
