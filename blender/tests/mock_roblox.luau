@@ -187,6 +187,16 @@ function Inst:FindFirstAncestorOfClass(cl)
 	end
 	return nil
 end
+function Inst:IsDescendantOf(anc)
+	local p = self.Parent
+	while p do
+		if p == anc then
+			return true
+		end
+		p = p.Parent
+	end
+	return false
+end
 function Inst:Destroy()
 	self.Parent = nil
 end
@@ -219,6 +229,8 @@ local services = {
 	ServerStorage = new("Service", "ServerStorage"),
 	ReplicatedStorage = new("Service", "ReplicatedStorage"),
 	ChangeHistoryService = new("Service", "ChangeHistoryService"),
+	StarterPack = new("Service", "StarterPack"),
+	Lighting = new("Service", "Lighting"),
 }
 game = setmetatable({ _services = services }, { __index = Inst })
 

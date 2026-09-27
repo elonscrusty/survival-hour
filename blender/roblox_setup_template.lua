@@ -8,6 +8,8 @@
 	     and paste their ids into TEXTURES below. Leave them "" to keep the preview texture that
 	     each file already has embedded.
 	  3. Paste this whole file into the Command Bar and press Enter.
+	  Safe to run again: assets already in ServerStorage.SurvivalHour are skipped, so if some files
+	  were missing you can import just those and re-run.
 
 	Result:
 	  ServerStorage > SurvivalHour > <Category> > ready-made Models, Tools (Crafting/Firearms/Loot) and
@@ -99,19 +101,51 @@ for name, e in DATA do
 	end
 end
 
+local root = folder(ServerStorage, "SurvivalHour")
+
+-- Names can come back from the importer as "SM_Sword.001", "SM_Sword (1)" or "Handle" inside a
+-- Tool/Accessory/Model named after the file, so normalise and also look at ancestors.
+local function clean(n)
+	n = string.gsub(n, "%.%d+$", "")
+	n = string.gsub(n, "%s*%(%d+%)$", "")
+	return n
+end
+local function known(n)
+	return DATA[n] or partOwner[n]
+end
+local function alreadyBuilt(name)
+	local e = DATA[name]
+	if not e then
+		return false
+	end
+	local cat = root:FindFirstChild(e.Category)
+	if not cat then
+		return false
+	end
+	local short = string.gsub(string.gsub(name, "^SM_", ""), "^ACC_", "")
+	return cat:FindFirstChild(name) ~= nil or cat:FindFirstChild(short) ~= nil
+end
+
 local found = {}
 local strayAtt = {}
-for _, d in workspace:GetDescendants() do
-	if d:IsA("MeshPart") then
-		if string.sub(d.Name, -4) == "_Att" then
-			table.insert(strayAtt, d) -- importer left an attachment marker as a mesh
-		else
-			local key = d.Name
-			if not (DATA[key] or partOwner[key]) and d.Parent and (DATA[d.Parent.Name] or partOwner[d.Parent.Name]) then
-				key = d.Parent.Name
-			end
-			if (DATA[key] or partOwner[key]) and not found[key] then
-				found[key] = d
+local showcase = workspace:FindFirstChild("SurvivalHour_Showcase")
+local searchRoots = { workspace, ReplicatedStorage, ServerStorage, game:GetService("StarterPack"),
+	game:GetService("Lighting") }
+for _, sr in searchRoots do
+	for _, d in sr:GetDescendants() do
+		if d:IsA("MeshPart") and not (showcase and d:IsDescendantOf(showcase)) and not d:IsDescendantOf(root) then
+			if string.sub(d.Name, -4) == "_Att" then
+				table.insert(strayAtt, d) -- importer left an attachment marker as a mesh
+			else
+				local key = clean(d.Name)
+				local node = d.Parent
+				while not known(key) and node and node ~= game do
+					key = clean(node.Name)
+					node = node.Parent
+				end
+				if known(key) and not found[key] and not alreadyBuilt(key) then
+					found[key] = d
+				end
 			end
 		end
 	end
@@ -119,8 +153,6 @@ end
 for _, s in strayAtt do
 	s:Destroy() -- rebuilt from DATA below
 end
-
-local root = folder(ServerStorage, "SurvivalHour")
 
 local function prepareMesh(mesh, e, anchored)
 	mesh.Anchored = anchored
@@ -205,7 +237,11 @@ end
 for name, e in DATA do
 	local mesh = found[name]
 	if not mesh then
-		table.insert(report.missing, name)
+		if alreadyBuilt(name) then
+			report.skipped = (report.skipped or 0) + 1
+		else
+			table.insert(report.missing, name)
+		end
 		continue
 	end
 	local ok, err = pcall(function()
@@ -398,10 +434,12 @@ end
 History:SetWaypoint("Survival Hour setup")
 
 -- 5. Report ----------------------------------------------------------------------------------
-print(string.format("[SurvivalHour] Set up %d assets into ServerStorage.SurvivalHour.", report.made))
+print(string.format("[SurvivalHour] Set up %d assets into ServerStorage.SurvivalHour (%d already done earlier).",
+	report.made, report.skipped or 0))
 if #report.missing > 0 then
 	table.sort(report.missing)
-	print("[SurvivalHour] Not found in Workspace (not imported?): " .. table.concat(report.missing, ", "))
+	print("[SurvivalHour] Not found anywhere (not imported?): " .. table.concat(report.missing, ", "))
+	print("[SurvivalHour] Import just those files and run this script again; finished assets are skipped.")
 end
 if #report.warnings > 0 then
 	print(string.format("[SurvivalHour] %d warning(s) above.", #report.warnings))

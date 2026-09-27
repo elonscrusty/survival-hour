@@ -8,23 +8,36 @@ mock = open(os.path.join(ROOT, "blender", "tests", "mock_roblox.luau")).read()
 mock = mock[:mock.rindex("return {")]
 script = open(os.path.join(ROOT, "Roblox", "SurvivalHour_CommandBarSetup.lua")).read()
 
-skip = "SM_Pickup_Rope"  # deliberately 'not imported' to test the missing report
-pop = ["-- populate a fake import"]
-for r in recs:
-    if r["name"] == skip:
-        continue
+skip = {"SM_Pickup_Rope", "SM_Rifle"}  # deliberately 'not imported' on the first run
+def populate(r, lines):
     n = r["name"]
-    pop.append(f'do local m = new("Model", "{n}"); m.Parent = workspace; local mp = new("MeshPart", "{n}"); mp.Parent = m')
+    if r["kind"] in ("Equippable", "Accessory"):
+        # importer variant: Tool/Accessory named after the file, mesh called Handle, in StarterPack
+        cls = "Tool" if r["kind"] == "Equippable" else "Accessory"
+        lines.append(f'do local m = new("{cls}", "{n}"); m.Parent = game:GetService("StarterPack"); '
+                     f'local mp = new("MeshPart", "Handle"); mp.Parent = m')
+    elif n == "SM_Sword":
+        lines.append(f'do local mp = new("MeshPart", "SM_Sword.001"); mp.Parent = workspace')
+    else:
+        lines.append(f'do local m = new("Model", "{n}"); m.Parent = workspace; local mp = new("MeshPart", "{n}"); mp.Parent = m')
+    return lines
+
+pop = ["-- populate a fake import"]
+second = ["-- second import: the files that were missing"]
+for r in recs:
+    n = r["name"]
+    target = second if n in skip else pop
+    populate(r, target)
     for a in r.get("attachments", []):
-        pop.append(f'  new("Attachment", "{a["name"]}").Parent = mp')
+        target.append(f'  new("Attachment", "{a["name"]}").Parent = mp')
     if r["kind"] == "Rig":
-        pop.append('  local rp = new("Part", "RootPart"); rp.Parent = m')
-        pop.append('  local b = new("Bone", "Root"); b.Parent = rp')
+        target.append('  local rp = new("Part", "RootPart"); rp.Parent = m')
+        target.append('  local b = new("Bone", "Root"); b.Parent = rp')
         for bn in ("Hips", "Body", "Head"):
-            pop.append(f'  new("Bone", "{bn}").Parent = b')
-    pop.append("end")
+            target.append(f'  new("Bone", "{bn}").Parent = b')
+    target.append("end")
     for p in r.get("parts", []):
-        pop.append(f'do local m = new("Model", "{p["name"]}"); m.Parent = workspace; new("MeshPart", "{p["name"]}").Parent = m end')
+        target.append(f'do local m = new("Model", "{p["name"]}"); m.Parent = workspace; new("MeshPart", "{p["name"]}").Parent = m end')
 pop.append('new("MeshPart", "Fire_Att").Parent = workspace  -- stray marker the importer did not convert')
 
 checks = """
@@ -40,6 +53,8 @@ end
 print(string.format("SMOKE: tools=%d accessories=%d models=%d", counts.Tool, counts.Accessory, counts.Model))
 local gate = root.Crafting_L2:FindFirstChild("SM_Gate")
 assert(gate and gate:FindFirstChild("SM_Gate_Door"), "gate door not placed in gate model")
+local sword = root.Crafting_L3:FindFirstChild("Sword")
+assert(sword and sword:FindFirstChild("Handle"), "renamed SM_Sword.001 not picked up")
 local axe = root.Crafting_L1:FindFirstChild("StoneAxe")
 assert(axe and axe:FindFirstChild("Handle") and axe.Grip, "stone axe tool incomplete")
 local pistol = root.Firearms:FindFirstChild("Pistol")
@@ -55,7 +70,17 @@ assert(wall.SM_WoodenWall:FindFirstChild("SnapLeft"), "wall attachment not renam
 assert(workspace:FindFirstChild("SurvivalHour_Showcase"), "showcase missing")
 print("SMOKE: all checks passed")
 """
-src = mock + "\n" + "\n".join(pop) + "\n" + "do\n" + script + "\nend\n" + checks
+rerun = """
+local stock = #game:GetService("ServerStorage").SurvivalHour.Firearms:GetChildren()
+assert(stock == 2, "first run should have 2 firearms (rifle missing), got " .. stock)
+"""
+recheck = """
+assert(#game:GetService("ServerStorage").SurvivalHour.Firearms:GetChildren() == 3, "rerun should add the rifle only")
+assert(#game:GetService("ServerStorage").SurvivalHour.Crafting_L3:GetChildren() == 5, "rerun must not duplicate")
+print("SMOKE: rerun picked up the missing files without duplicates")
+"""
+src = (mock + "\n" + "\n".join(pop) + "\ndo\n" + script + "\nend\n" + rerun + "\n".join(second)
+       + "\ndo\n" + script + "\nend\n" + recheck + checks)
 path = os.path.join(ROOT, "blender", "tests", "_smoke_run.luau")
 open(path, "w").write(src)
 luau = os.environ.get("LUAU", "luau")

@@ -211,8 +211,13 @@ def main():
         f.write(rigs_md(recs))
     with open(os.path.join(ROOT, "Roblox", "SurvivalHourAssetData.lua"), "w") as f:
         f.write(data_lua(recs))
+    full = command_bar_script(data_table(recs))
     with open(os.path.join(ROOT, "Roblox", "SurvivalHour_CommandBarSetup.lua"), "w") as f:
-        f.write(command_bar_script(data_table(recs)))
+        f.write(full)
+    # same script without the instruction header, for pasting straight into the Command Bar
+    body = full[full.index("]]") + 2:].lstrip()
+    with open(os.path.join(ROOT, "Roblox", "SurvivalHour_Paste.lua"), "w") as f:
+        f.write(body)
     print("docs written for", len(recs), "records")
 
 
