@@ -4,8 +4,13 @@
 -- the ground. Visible parts carry collision. Pivot = ground centre.
 
 local Build = require("./Build")
+local Skins = require("./Skins")
 
 local Structures = {}
+
+-- The mesh pack builds walls on an 8-stud grid; this game snaps every 10 studs,
+-- so wall-like meshes are stretched along X to span the same footprint.
+local GRID_STRETCH = 10 / 8
 
 local WOOD = Color3.fromRGB(138, 98, 62)
 local WOOD_DARK = Color3.fromRGB(98, 68, 42)
@@ -48,7 +53,11 @@ function Structures.WoodWall(cf: CFrame, parent: Instance?): Model
 	local m = Build.Model("WoodWall")
 	root(m, Vector3.new(10, 9, 1.6))
 	palisade(m, 10, 9, 1.6)
-	return place(m, cf, parent)
+	place(m, cf, parent)
+	if Skins.Enabled() then
+		Skins.Dress(m, "SM_WoodenWall", { stretch = Vector3.new(GRID_STRETCH, 0.95, 1.05) })
+	end
+	return m
 end
 
 function Structures.ReinforcedWall(cf: CFrame, parent: Instance?): Model
@@ -71,7 +80,11 @@ function Structures.ReinforcedWall(cf: CFrame, parent: Instance?): Model
 	end
 	Build.Part({ Name = "Band", Size = Vector3.new(10.2, 0.5, 2.6), CFrame = CFrame.new(0, 5.6, 0), Color = Color3.fromRGB(70, 72, 78), Material = Enum.Material.Metal, Parent = m, CanCollide = false })
 	Build.Part({ Name = "Collider", Size = Vector3.new(10, 10, 2.4), CFrame = CFrame.new(0, 5, 0), Transparency = 1, Parent = m })
-	return place(m, cf, parent)
+	place(m, cf, parent)
+	if Skins.Enabled() then
+		Skins.Dress(m, "SM_ReinforcedWall", { stretch = Vector3.new(GRID_STRETCH, 1.0, 1.4) })
+	end
+	return m
 end
 
 -- Gate: a door panel ("Door") that the server moves between Closed/Open.
@@ -88,7 +101,19 @@ function Structures.Gate(cf: CFrame, teamColor: Color3, parent: Instance?): Mode
 	local sigil = Build.Decor({ Name = "Sigil", Size = Vector3.new(2, 2, 0.1), CFrame = CFrame.new(0, 6.2, -0.56), Color = teamColor, Material = Enum.Material.Fabric, Parent = door })
 	sigil:SetAttribute("TeamTint", true)
 	door.PrimaryPart = doorPanel
-	return place(m, cf, parent)
+	place(m, cf, parent)
+	if Skins.Enabled() then
+		-- frame + door mesh; the door mesh rides inside the Door model so SetGateOpen moves it
+		Skins.Dress(m, "SM_Gate", { stretch = Vector3.new(GRID_STRETCH, 0.9, 1.1), keep = { Sigil = true } })
+		for _, d in m:GetChildren() do
+			if d:IsA("BasePart") and d:GetAttribute("Skin") and d.Name == "SM_Gate_Door" then
+				d.Parent = door
+			end
+		end
+		-- the pack's gate owns one post; add the other side's post
+		Skins.Dress(m, "SM_WallPost", { offset = CFrame.new(-5, 0, 0), noHide = true, extra = true })
+	end
+	return m
 end
 
 -- Opens/closes a gate's door on the server (replicates).
@@ -122,7 +147,11 @@ function Structures.Spikes(cf: CFrame, parent: Instance?): Model
 	local hurt = Build.Part({ Name = "Hurt", Size = Vector3.new(8.4, 3.2, 3.4), CFrame = CFrame.new(0, 1.6, 0), Transparency = 1, CanCollide = false, Parent = m })
 	hurt.CanTouch = true
 	hurt.CanQuery = false
-	return place(m, cf, parent)
+	place(m, cf, parent)
+	if Skins.Enabled() then
+		Skins.Dress(m, "SM_Spikes")
+	end
+	return m
 end
 
 function Structures.StorageBox(cf: CFrame, teamColor: Color3, parent: Instance?): Model
@@ -135,7 +164,11 @@ function Structures.StorageBox(cf: CFrame, teamColor: Color3, parent: Instance?)
 	end
 	local plate = Build.Decor({ Name = "Crest", Size = Vector3.new(1.4, 1.4, 0.1), CFrame = CFrame.new(0, 1.8, -2.06), Color = teamColor, Material = Enum.Material.SmoothPlastic, Parent = m })
 	plate:SetAttribute("TeamTint", true)
-	return place(m, cf, parent)
+	place(m, cf, parent)
+	if Skins.Enabled() then
+		Skins.Dress(m, "SM_StorageBox", { scale = 1.9 })
+	end
+	return m
 end
 
 function Structures.Watchtower(cf: CFrame, teamColor: Color3, parent: Instance?): Model
@@ -176,7 +209,16 @@ function Structures.Watchtower(cf: CFrame, teamColor: Color3, parent: Instance?)
 			Build.Part({ Name = "RoofPost", Size = Vector3.new(0.5, 4.4, 0.5), CFrame = CFrame.new(x, 14.2, z), Color = WOOD_DARK, Material = Enum.Material.Wood, Parent = m, CanCollide = false })
 		end
 	end
-	return place(m, cf, parent)
+	place(m, cf, parent)
+	if Skins.Enabled() then
+		-- The pack's tower has its platform at 10 studs with the hatch on the other
+		-- side: raise it to this tower's 12-stud floor and turn it so the hatch lines
+		-- up, then move the climbable truss under the mesh ladder.
+		Skins.Dress(m, "SM_Watchtower", { stretch = Vector3.new(1, 1.2, 1), offset = CFrame.Angles(0, math.rad(-90), 0) })
+		ladder.CFrame = m:GetPivot() * CFrame.new(2.4, 7, -3.0)
+		ladder.Transparency = 1
+	end
+	return m
 end
 
 function Structures.Build(id: string, cf: CFrame, teamColor: Color3, parent: Instance?): Model
@@ -203,6 +245,15 @@ function Structures.ApplyDamageState(m: Model, frac: number)
 		return
 	end
 	m:SetAttribute("DamageStage", stage)
+	-- mesh pack: swap to the damaged mesh below 66% health (and back when repaired)
+	local skinBase = m:GetAttribute("SkinBase")
+	if skinBase then
+		if stage >= 1 and Skins.Has(skinBase .. "_Damaged") then
+			Skins.Swap(m, skinBase .. "_Damaged")
+		elseif stage == 0 then
+			Skins.Swap(m, skinBase)
+		end
+	end
 	for _, d in m:GetDescendants() do
 		if d:IsA("BasePart") and d.Name ~= "Root" and d.Transparency < 1 and not d:GetAttribute("TeamTint") then
 			local base = d:GetAttribute("BaseColor")

@@ -3,6 +3,7 @@
 -- spawn pads, banners and a clan-themed hut. Pivot = ground centre.
 
 local Build = require("./Build")
+local Skins = require("./Skins")
 
 local Camp = {}
 
@@ -78,11 +79,17 @@ function Camp.Campfire(cf: CFrame, teamColor: Color3, parent: Instance?): Model
 	ring:SetAttribute("TeamTint", true)
 
 	embers:SetAttribute("Burning", true)
-	return place(m, base, cf, parent)
+	place(m, base, cf, parent)
+	-- mesh-pack look; the Fire/Glow/Sparks/Smoke on FireCore and the team SafeRing stay
+	if Skins.Enabled() then
+		Skins.Dress(m, "SM_Campfire_Burning", { scale = 1.2, keep = { SafeRing = true } })
+	end
+	return m
 end
 
 -- Switches a campfire model to its extinguished look (permanent).
 function Camp.Extinguish(m: Model)
+	Skins.Swap(m, "SM_Campfire_Extinguished")
 	local core = m:FindFirstChild("FireCore")
 	if core then
 		local flame = core:FindFirstChild("Flame") :: Fire?
@@ -158,7 +165,13 @@ function Camp.Workbench(cf: CFrame, level: number, teamColor: Color3, parent: In
 	tl.Parent = sg
 	sg.Parent = lvl
 	m:SetAttribute("Level", level)
-	return place(m, top, cf, parent)
+	place(m, top, cf, parent)
+	if Skins.Enabled() then
+		local name = "SM_Workbench_Level0" .. math.clamp(level, 1, 3)
+		local scale = ({ 1.3, 1.12, 1.0 })[math.clamp(level, 1, 3)]
+		Skins.Dress(m, name, { scale = scale, keep = { Pennant = true } })
+	end
+	return m
 end
 
 function Camp.SpawnPad(cf: CFrame, teamColor: Color3, parent: Instance?): Model
@@ -243,7 +256,11 @@ function Camp.Lantern(cf: CFrame, teamColor: Color3, parent: Instance?): Model
 	l.Brightness = 1.4
 	l.Color = Color3.fromRGB(255, 200, 130):Lerp(teamColor, 0.25)
 	l.Parent = lamp
-	return place(m, post, cf, parent)
+	place(m, post, cf, parent)
+	if Skins.Enabled() then
+		Skins.Dress(m, "SM_Camp_Lantern", { scale = 1.3, offset = CFrame.Angles(0, math.pi, 0) }) -- the PointLight keeps working in the hidden lamp
+	end
+	return m
 end
 
 return Camp

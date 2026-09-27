@@ -4,7 +4,7 @@ A 16-player, four-clan Roblox forest survival game: gather, craft, fortify, hunt
 
 - **Open it:** `build/SurvivalHour.rbxlx` in Roblox Studio, then press Play and ready up (a Studio local match starts automatically).
 - **Rebuild:** run `rojo build default.project.json -o build/SurvivalHour.rbxlx`.
-- **Test logic:** run `cd tests` then `luau run.luau`.
+- **Test logic:** run `cd tests` then `luau run.luau`. Mesh skins: `python tests/skins/bundle.py`.
 
 Docs:
 
@@ -16,6 +16,7 @@ Docs:
 | [docs/SETUP.md](docs/SETUP.md) | Studio testing, publishing, product IDs, data stores, audio |
 | [docs/TESTING.md](docs/TESTING.md) | What was verified, and the Studio/live test plan |
 | [docs/STATUS.md](docs/STATUS.md) | Current state, known gaps, how to resume |
+| [docs/MESH_SKINS.md](docs/MESH_SKINS.md) | How the 3D asset pack meshes are wired into the game |
 
 ## 3D asset pack
 

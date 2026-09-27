@@ -24,6 +24,7 @@ local InventoryModel = require(Logic:WaitForChild("InventoryModel"))
 local Rng = require(Logic:WaitForChild("Rng"))
 local Models = Shared:WaitForChild("Models")
 local Flora = require(Models:WaitForChild("Flora"))
+local Skins = require(Models:WaitForChild("Skins"))
 
 local GatherService = {}
 
@@ -292,6 +293,8 @@ function GatherService._show(n: Node, state: string, from: Vector3?)
 		n.Prompt.Enabled = state == "Healthy" or state == "Damaged"
 	end
 	if def.Kind == "Tree" then
+		-- mesh-pack stump (Skins): visible whenever the tree isn't standing
+		Skins.SetTagged(n.Model, "SkinStump", state ~= "Healthy" and state ~= "Damaged")
 		if state == "Healthy" then
 			n.Anim += 1
 			if n.Top and n.TopHome then

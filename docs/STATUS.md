@@ -16,7 +16,7 @@ The whole game is implemented as source (Rojo project) and builds into `build/Su
 
 ## Honest list of fallbacks and gaps
 
-- **Models** are built at runtime from Roblox primitives and materials (`src/shared/Models`), not uploaded meshes. They are shaped and coloured rather than grey blocks, but they are not sculpted meshes.
+- **Models** are built at runtime from Roblox primitives (`src/shared/Models`) and, when the mesh library is present, dressed with the uploaded 3D asset pack (`SurvivalHourAssets.rbxm`, see [MESH_SKINS.md](MESH_SKINS.md)). Wildlife, worn armour and a few landmarks are still procedural.
 - **Animations** are procedural joint offsets (`Controllers/Animation.luau`, `Controllers/Creatures.luau`), not authored KeyframeSequences. The joint axis conventions (R15 vs R6) were written from API knowledge and **need a visual check in Studio**. Swap signs in `raise()` if an arm moves the wrong way.
 - **Audio**: only Roblox's engine-bundled sounds are used (`rbxasset://sounds/...`: jump, landing, swim, splash, explosion, ouch/oof, slider). Crackle, ambience and plane-drone cues are silent until you add licensed asset IDs in `Sounds.luau`.
 - **Icons** are drawn with UI primitives (shaped badge + glyph). There are no image assets.

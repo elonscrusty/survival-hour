@@ -12,6 +12,7 @@
 --  * Parts smaller than 1.5 studs never cast shadows.
 
 local Build = require("./Build")
+local Skins = require("./Skins")
 
 local Flora = {}
 
@@ -205,6 +206,43 @@ local function newScale(rng: Random, scale: number?): number
 	return (scale or 1) * rng:NextNumber(0.88, 1.12)
 end
 
+
+--------------------------------------------------------------------------------
+-- Mesh-pack skins for resource nodes (see Skins.luau). The procedural parts stay
+-- as invisible colliders/yield markers; meshes follow the same state rules:
+--   * trees: mesh inside Top (falls with it), stump mesh tagged SkinStump
+--   * harvest nodes: full mesh tagged Yield, depleted mesh always visible
+--------------------------------------------------------------------------------
+
+local TREE_SKINS = {
+	Pine = { Small = "SM_Tree_Pine_Small01", Medium = "SM_Tree_Pine_Medium01", Large = "SM_Tree_Pine_Large01" },
+	Oak = { Small = "SM_Tree_Oak_Small01", Medium = "SM_Tree_Oak_Medium01", Large = "SM_Tree_Oak_Large01" },
+	Birch = { Small = "SM_Tree_Birch_Small01", Medium = "SM_Tree_Birch_Medium01", Large = "SM_Tree_Birch_Medium01" },
+}
+local STUMP_SKINS = { Pine = "SM_Tree_Pine_Small01_Stump", Oak = "SM_Tree_Oak_Small01_Stump", Birch = "SM_Tree_Birch_Small01_Stump", Dead = "SM_Stump_Old02" }
+
+local function skinTree(m: Model, top: Model, treeName: string, stumpName: string, height: number)
+	if not Skins.Enabled() then
+		return
+	end
+	local k = height / Skins.Height(treeName)
+	Skins.Hide(m)
+	Skins.Dress(m, treeName, { scale = k, parent = top, noHide = true })
+	-- stump mesh: hidden while the tree stands, shown once it is felled
+	Skins.Dress(m, stumpName, { scale = math.max(0.8, k), noHide = true, transparency = 1, attrs = { SkinStump = true } })
+end
+
+local function skinHarvest(m: Model, full: string, depleted: string?, scale: number, keep: { [string]: boolean }?)
+	if not Skins.Enabled() then
+		return
+	end
+	Skins.Hide(m, keep)
+	Skins.Dress(m, full, { scale = scale, noHide = true, attrs = { Yield = true } })
+	if depleted then
+		Skins.Dress(m, depleted, { scale = scale, noHide = true })
+	end
+end
+
 --------------------------------------------------------------------------------
 -- Resource models
 --------------------------------------------------------------------------------
@@ -284,7 +322,9 @@ function Flora.ResourceTree(cf: CFrame, rng: Random, size: string, species: stri
 	end
 
 	Build.SetPivot(top, trunk, CFrame.new(0, hingeY, 0))
-	return finish(m, root, cf, parent)
+	finish(m, root, cf, parent)
+	skinTree(m, top, TREE_SKINS[sp][size] or TREE_SKINS[sp].Medium, STUMP_SKINS[sp], H)
+	return m
 end
 
 --- Dead tree (dry wood resource): grey leafless snag with Root/Stump/Notch/Top roles.
@@ -321,7 +361,9 @@ function Flora.DeadTree(cf: CFrame, rng: Random, parent: Instance?): Model
 	end
 
 	Build.SetPivot(top, trunk, CFrame.new(0, hingeY, 0))
-	return finish(m, root, cf, parent)
+	finish(m, root, cf, parent)
+	skinTree(m, top, "SM_Tree_Dead_Large01", STUMP_SKINS.Dead, H)
+	return m
 end
 
 --- Berry bush: 2-3 leafy balls with 6-8 berries (Yield) of one colour.
@@ -348,7 +390,11 @@ function Flora.BerryBush(cf: CFrame, rng: Random, parent: Instance?): Model
 		local dir = Vector3.new(math.cos(el) * math.cos(a), math.sin(el), math.cos(el) * math.sin(a))
 		markYield(Build.Ball("Berry", rng:NextNumber(0.42, 0.55), CFrame.new(b.c + dir * b.r * 0.94), vary(rng, berryCol, 0.1), M.SmoothPlastic, m))
 	end
-	return finish(m, root, cf, parent)
+	finish(m, root, cf, parent)
+	if Skins.Enabled() then
+		Skins.Dress(m, "SM_Bush01", { scale = 4.5 / 3.4, keep = { Berry = true } }) -- berries stay procedural (they are the yield)
+	end
+	return m
 end
 
 --- Mushroom patch: a mossy base with 4-5 mushrooms; stems and caps are Yield.
@@ -369,7 +415,9 @@ function Flora.MushroomPatch(cf: CFrame, rng: Random, parent: Instance?): Model
 		local cd = rng:NextNumber(0.6, 1.0)
 		markYield(Build.Cyl("Cap", 0.28, cd, CFrame.new(pos + Vector3.new(0, h, 0)) * CFrame.Angles(rng:NextNumber(-0.12, 0.12), 0, rng:NextNumber(-0.12, 0.12)), vary(rng, capCol, 0.1), M.SmoothPlastic, m, false))
 	end
-	return finish(m, root, cf, parent)
+	finish(m, root, cf, parent)
+	skinHarvest(m, "SM_Mushrooms01", nil, 2.2)
+	return m
 end
 
 --- Loose stones on a dirt patch; the stones are Yield. Parts: <= 8.
@@ -385,7 +433,9 @@ function Flora.LooseStones(cf: CFrame, rng: Random, parent: Instance?): Model
 		markYield(block("Stone", s, CFrame.new(math.cos(a) * dist, s.Y * 0.4, math.sin(a) * dist) * CFrame.Angles(rng:NextNumber(-0.3, 0.3), rng:NextNumber(0, TAU), rng:NextNumber(-0.3, 0.3)),
 			shade(rng, ROCK, 0.1), if rng:NextNumber() < 0.5 then M.Slate else M.Rock, m))
 	end
-	return finish(m, root, cf, parent)
+	finish(m, root, cf, parent)
+	skinHarvest(m, "SM_StreamRocks01", "SM_StreamRocks03", 1.0)
+	return m
 end
 
 --- Rock pile: a colliding main boulder (+ optional side rock) that stays, with
@@ -410,7 +460,9 @@ function Flora.RockPile(cf: CFrame, rng: Random, parent: Instance?): Model
 		markYield(block("Chunk", s, CFrame.new(math.cos(a) * dist, s.Y * 0.4, math.sin(a) * dist) * CFrame.Angles(rng:NextNumber(-0.4, 0.4), rng:NextNumber(0, TAU), rng:NextNumber(-0.4, 0.4)),
 			shade(rng, ROCK, 0.1), mat, m))
 	end
-	return finish(m, root, cf, parent)
+	finish(m, root, cf, parent)
+	skinHarvest(m, "SM_StoneDeposit01", "SM_StoneDeposit01_Depleted", 1.05)
+	return m
 end
 
 --- Twig pile: a leaf-litter patch with 5-7 crossed twigs (Yield). Parts: <= 9.
@@ -427,7 +479,9 @@ function Flora.TwigPile(cf: CFrame, rng: Random, parent: Instance?): Model
 		local dir = Vector3.new(math.cos(a), rng:NextNumber(-0.08, 0.12), math.sin(a)) * (len / 2)
 		markYield(limb("Twig", c - dir, c + dir, rng:NextNumber(0.14, 0.22), vary(rng, if i % 2 == 0 then BARK else BARK_GREY, 0.1), M.Wood, m, false))
 	end
-	return finish(m, root, cf, parent)
+	finish(m, root, cf, parent)
+	skinHarvest(m, "SM_Sticks_Loose01", nil, 1.3, { Litter = true })
+	return m
 end
 
 --- Fibre plant: dark basal fronds that stay, plus tall pale fibre fronds and
@@ -454,7 +508,9 @@ function Flora.FibrePlant(cf: CFrame, rng: Random, parent: Instance?): Model
 		local a = a0 + i * TAU / 3 + 0.5
 		markYield(Build.Ball("Bud", rng:NextNumber(0.45, 0.6), CFrame.Angles(0, a, 0) * CFrame.new(0, rng:NextNumber(2.3, 2.9), 0.9), budCol, M.SmoothPlastic, m))
 	end
-	return finish(m, root, cf, parent)
+	finish(m, root, cf, parent)
+	skinHarvest(m, "SM_FiberPlant01", "SM_FiberPlant01_Harvested", 1.0)
+	return m
 end
 
 --------------------------------------------------------------------------------

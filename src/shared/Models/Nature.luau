@@ -3,8 +3,31 @@
 -- with its pivot at ground level, then moved with PivotTo.
 
 local Build = require("./Build")
+local Skins = require("./Skins")
 
 local Nature = {}
+
+-- Mesh-pack look (see Skins.luau): pick a variant by position and size it to
+-- roughly match the procedural silhouette it replaces.
+local function skinHeight(m: Model, names: { string }, height: number, opts: Skins.Opts?)
+	if not Skins.Enabled() then
+		return
+	end
+	local name = Skins.Pick(names, m:GetPivot())
+	local o = opts or {}
+	o.scale = height / Skins.Height(name)
+	Skins.Dress(m, name, o)
+end
+
+local function skinWidth(m: Model, names: { string }, width: number, opts: Skins.Opts?)
+	if not Skins.Enabled() then
+		return
+	end
+	local name = Skins.Pick(names, m:GetPivot())
+	local o = opts or {}
+	o.scale = width / Skins.Width(name)
+	Skins.Dress(m, name, o)
+end
 
 local BARK = Color3.fromRGB(94, 66, 44)
 local BARK_LIGHT = Color3.fromRGB(122, 90, 62)
@@ -42,7 +65,9 @@ function Nature.Pine(cf: CFrame, scale: number, parent: Instance?): Model
 
 	end
 	Build.Ball("Tip", 3 * s, CFrame.new(0, (10 + 4.6 * tiers) * s, 0), PINE, Enum.Material.Grass, m)
-	return finish(m, trunk, cf, parent)
+	finish(m, trunk, cf, parent)
+	skinHeight(m, { "SM_Tree_Pine_Medium01", "SM_Tree_Pine_Medium02", "SM_Tree_Pine_Large01" }, 30 * s)
+	return m
 end
 
 function Nature.Oak(cf: CFrame, scale: number, parent: Instance?): Model
@@ -58,7 +83,9 @@ function Nature.Oak(cf: CFrame, scale: number, parent: Instance?): Model
 	for i, b in blobs do
 		Build.Ball("Canopy", b[4] * s, CFrame.new(b[1] * s, b[2] * s, b[3] * s), if i % 2 == 0 then LEAF else LEAF_LIGHT, Enum.Material.LeafyGrass, m)
 	end
-	return finish(m, trunk, cf, parent)
+	finish(m, trunk, cf, parent)
+	skinHeight(m, { "SM_Tree_Oak_Medium01", "SM_Tree_Oak_Medium02", "SM_Tree_Oak_Large01" }, 28 * s)
+	return m
 end
 
 function Nature.Birch(cf: CFrame, scale: number, parent: Instance?): Model
@@ -72,7 +99,9 @@ function Nature.Birch(cf: CFrame, scale: number, parent: Instance?): Model
 	for i, b in { { 0, 23, 0, 9 }, { 2.5, 20, 1, 7 }, { -2.5, 19, -1, 7 } } do
 		Build.Ball("Canopy", b[4] * s, CFrame.new(b[1] * s, b[2] * s, b[3] * s), if i == 1 then Color3.fromRGB(150, 180, 80) else Color3.fromRGB(128, 168, 74), Enum.Material.LeafyGrass, m)
 	end
-	return finish(m, trunk, cf, parent)
+	finish(m, trunk, cf, parent)
+	skinHeight(m, { "SM_Tree_Birch_Medium01" }, 27 * s)
+	return m
 end
 
 -- Choppable small tree (wood node). `Stage` attribute switches between full and stump.
@@ -118,7 +147,9 @@ function Nature.Bush(cf: CFrame, scale: number, parent: Instance?): Model
 	for _, d in m:GetChildren() do
 		(d :: BasePart).CastShadow = false
 	end
-	return finish(m, main, cf, parent)
+	finish(m, main, cf, parent)
+	skinWidth(m, { "SM_Bush01", "SM_Bush02", "SM_Bush03_Berry" }, 7 * s)
+	return m
 end
 
 -- Plant fibre node: a fern cluster with pale fronds.
@@ -182,7 +213,9 @@ function Nature.BigRock(cf: CFrame, scale: number, parent: Instance?): Model
 	Build.Part({ Name = "Rock", Size = Vector3.new(5, 4, 5) * s, CFrame = CFrame.new(3 * s, 1.6 * s, 2 * s) * CFrame.Angles(0.3, 0.9, 0.2), Color = ROCK_DARK, Material = Enum.Material.Rock, Parent = m })
 	Build.Part({ Class = "WedgePart", Name = "Rock", Size = Vector3.new(4, 3, 5) * s, CFrame = CFrame.new(-3.5 * s, 1.2 * s, -1 * s) * CFrame.Angles(0, math.rad(80), 0), Color = ROCK, Material = Enum.Material.Rock, Parent = m })
 	Build.Decor({ Name = "Moss", Size = Vector3.new(6, 0.5, 5) * s, CFrame = CFrame.new(0, 5 * s, 0) * CFrame.Angles(0.15, 0.3, 0.08), Color = MOSS, Material = Enum.Material.Grass, Parent = m, CastShadow = false })
-	return finish(m, main, cf, parent)
+	finish(m, main, cf, parent)
+	skinWidth(m, { "SM_Boulder01", "SM_Boulder02", "SM_Boulder03" }, 10 * s)
+	return m
 end
 
 function Nature.StandingStone(cf: CFrame, parent: Instance?): Model
@@ -204,7 +237,12 @@ function Nature.FallenGiant(cf: CFrame, parent: Instance?): Model
 	for i = 1, 3 do
 		Build.Ball("Mushroom", 1.2, CFrame.new(2.3, 1 + i * 0.6, -6 + i * 5), Color3.fromRGB(220, 90, 70), Enum.Material.SmoothPlastic, m)
 	end
-	return finish(m, log, cf, parent)
+	finish(m, log, cf, parent)
+	-- the pack's giant log runs along X; this one runs along Z
+	if Skins.Enabled() then
+		Skins.Dress(m, "SM_Landmark_GiantLog", { scale = 1.1, offset = CFrame.Angles(0, math.rad(90), 0) })
+	end
+	return m
 end
 
 function Nature.Ruins(cf: CFrame, parent: Instance?): Model
@@ -233,7 +271,9 @@ function Nature.GrassClump(cf: CFrame, parent: Instance?): Model
 	for i = 0, 4 do
 		Build.Decor({ Name = "Blade", Class = "WedgePart", Size = Vector3.new(0.2, 4.5, 1), CFrame = CFrame.Angles(0, math.rad(i * 72), 0) * CFrame.new(0, 2.2, 0.4) * CFrame.Angles(math.rad(10), 0, 0), Color = if i % 2 == 0 then Color3.fromRGB(130, 170, 80) else Color3.fromRGB(104, 146, 66), Material = Enum.Material.Grass, Parent = m, CastShadow = false })
 	end
-	return finish(m, base, cf, parent)
+	finish(m, base, cf, parent)
+	skinHeight(m, { "SM_Grass_Clump03", "SM_Grass_Clump01", "SM_Fern01" }, 4)
+	return m
 end
 
 function Nature.Flower(cf: CFrame, color: Color3, parent: Instance?): Model

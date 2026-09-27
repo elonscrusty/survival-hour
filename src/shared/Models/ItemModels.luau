@@ -4,8 +4,37 @@
 -- grip. The server welds Handle to the character's RightHand with `Grip`.
 
 local Build = require("./Build")
+local Skins = require("./Skins")
 
 local ItemModels = {}
+
+-- Mesh-pack look for held items. The pack's tools point their barrel/blade
+-- along -Z with up +Y; this game's grips differ per item, so each entry maps
+-- the pack frame onto this game's Handle frame.
+local UP_TO_FORWARD = CFrame.Angles(0, 0, math.pi) * CFrame.Angles(-math.pi / 2, 0, 0) -- haft up -> haft along -Z, head up
+local HELD_SKINS: { [string]: { string | CFrame } } = {
+	Spear = { "Spear", CFrame.new() },
+	Bow = { "Bow", CFrame.new() },
+	Sword = { "Sword", UP_TO_FORWARD },
+	Shield = { "Shield", CFrame.Angles(0, math.pi / 2, 0) },
+	Pistol = { "Pistol", CFrame.new() },
+	Rifle = { "Rifle", CFrame.new() },
+	StoneAxe = { "StoneAxe", UP_TO_FORWARD },
+	RepairHammer = { "RepairHammer", UP_TO_FORWARD },
+	Canteen = { "Canteen", CFrame.new() },
+	Bandage = { "Bandage_Held", CFrame.new() },
+	Arrow = { "SM_Arrow", CFrame.new() },
+	Bullet = { "SM_Pickup_Ammo", CFrame.new(0, -0.3, 0) },
+}
+-- World pickups for raw resources.
+local PICKUP_SKINS = {
+	Stick = "SM_Pickup_Stick",
+	Stone = "SM_Pickup_Stone",
+	Wood = "SM_Pickup_Wood",
+	Plant = "SM_Pickup_Fiber",
+	Leather = "SM_Pickup_Leather",
+	Rope = "SM_Pickup_Rope",
+}
 
 local WOOD = Color3.fromRGB(140, 100, 64)
 local WOOD_DARK = Color3.fromRGB(96, 66, 42)
@@ -157,6 +186,10 @@ function ItemModels.Held(id: string): Model?
 			w.Parent = d
 		end
 	end
+	local skin = HELD_SKINS[id]
+	if skin then
+		Skins.DressHeld(m, skin[1] :: string, skin[2] :: CFrame)
+	end
 	return m
 end
 
@@ -191,6 +224,9 @@ function ItemModels.Pickup(id: string, count: number, cf: CFrame, parent: Instan
 			end
 			held.Parent = m
 		end
+	end
+	if look and PICKUP_SKINS[id] and Skins.Enabled() then
+		Skins.Dress(m, PICKUP_SKINS[id], { scale = 1.4, offset = CFrame.new(0, 0.1, 0) })
 	end
 	local glow = Build.Decor({ Name = "Glow", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.1, 3, 3), CFrame = CFrame.new(0, 0.08, 0) * CFrame.Angles(0, 0, math.rad(90)), Color = Color3.fromRGB(255, 230, 150), Material = Enum.Material.Neon, Transparency = 0.6, Parent = m, CastShadow = false })
 	glow.Name = "Glow"

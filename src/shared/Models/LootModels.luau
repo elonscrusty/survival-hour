@@ -2,6 +2,7 @@
 -- Care package (with parachute + beacon) and hidden forest crate.
 
 local Build = require("./Build")
+local Skins = require("./Skins")
 
 local LootModels = {}
 
@@ -62,6 +63,14 @@ function LootModels.CarePackage(cf: CFrame, parent: Instance?): Model
 	light.Parent = beacon
 	Build.SetPivot(m, box, CFrame.new())
 	m:PivotTo(cf)
+	if Skins.Enabled() then
+		local k = 5 / Skins.Width("SM_CarePackage_Crate")
+		-- crate (with lid) on the model; canopy + lines inside Parachute so Land() removes them
+		Skins.Dress(m, "SM_CarePackage_Crate", { scale = k })
+		local top = m:GetPivot() * CFrame.new(0, 3.4 * k, 0)
+		Skins.Dress(m, "SM_Parachute_Canopy", { scale = k, cf = top, parent = chute, noHide = true, extra = true })
+		Skins.Dress(m, "SM_Parachute_Lines", { scale = k, cf = top, parent = chute, noHide = true, extra = true })
+	end
 	if parent then
 		m.Parent = parent
 	end
@@ -89,6 +98,10 @@ function LootModels.ForestCrate(cf: CFrame, parent: Instance?): Model
 	Build.Decor({ Name = "Moss", Size = Vector3.new(1.4, 0.2, 1.2), CFrame = CFrame.new(-0.6, 2.3, 0.3), Color = Color3.fromRGB(84, 118, 64), Material = Enum.Material.Grass, Parent = m })
 	Build.SetPivot(m, box, CFrame.new())
 	m:PivotTo(cf)
+	if Skins.Enabled() then
+		local name = Skins.Pick({ "SM_SupplyCrate_Small01", "SM_SupplyCrate_Small02", "SM_SupplyCrate_Small03" }, cf)
+		Skins.Dress(m, name, { scale = 2.6 / Skins.Width(name) * 1.1 })
+	end
 	if parent then
 		m.Parent = parent
 	end
