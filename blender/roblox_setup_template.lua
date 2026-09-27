@@ -444,3 +444,5 @@ end
 if #report.warnings > 0 then
 	print(string.format("[SurvivalHour] %d warning(s) above.", #report.warnings))
 end
+
+return true -- lets this file run as a ModuleScript via require()

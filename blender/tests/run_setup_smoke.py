@@ -88,8 +88,8 @@ assert(#game:GetService("ServerStorage").SurvivalHour.Firearms:GetChildren() == 
 assert(#game:GetService("ServerStorage").SurvivalHour.Crafting_L3:GetChildren() == 5, "rerun must not duplicate")
 print("SMOKE: rerun picked up the missing files without duplicates")
 """
-src = (mock + "\n" + "\n".join(pop) + "\ndo\n" + script + "\nend\n" + rerun + "\n".join(second)
-       + "\ndo\n" + script + "\nend\n" + recheck + checks + "\ndo\n" + mapscript + "\nend\n" + mapcheck)
+src = (mock + "\n" + "\n".join(pop) + "\n;(function()\n" + script + "\nend)()\n" + rerun + "\n".join(second)
+       + "\n;(function()\n" + script + "\nend)()\n" + recheck + checks + "\n;(function()\n" + mapscript + "\nend)()\n" + mapcheck)
 path = os.path.join(ROOT, "blender", "tests", "_smoke_run.luau")
 open(path, "w").write(src)
 luau = os.environ.get("LUAU", "luau")

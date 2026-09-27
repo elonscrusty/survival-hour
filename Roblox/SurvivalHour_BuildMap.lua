@@ -257,3 +257,5 @@ print(string.format("[SurvivalHour] Map built: %d objects in Workspace.SurvivalH
 if #miss > 0 then
 	print("[SurvivalHour] Skipped (not in ServerStorage.SurvivalHour): " .. table.concat(miss, ", "))
 end
+
+return true -- lets this file run as a ModuleScript via require()
