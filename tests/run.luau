@@ -19,6 +19,7 @@ local specs = {
 	"./ProfileRules.spec",
 	"./PlacementRules.spec",
 	"./ResourceRules.spec",
+	"./AssetFit.spec",
 }
 
 local passed, failed = 0, 0

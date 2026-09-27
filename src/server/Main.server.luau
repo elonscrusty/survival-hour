@@ -38,6 +38,7 @@ StarterGui.ResetPlayerGuiOnSpawn = false
 -- Load order matters only for Init; Start runs after every Init.
 local order = {
 	"Util",
+	"AssetLoaderService",
 	"DataService",
 	"PurchaseService",
 	"WorldService",

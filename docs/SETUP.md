@@ -71,6 +71,7 @@ The game plays engine-bundled sounds (`rbxasset://sounds/...`) where they fit. S
 ## 7. Remaining account-dependent steps
 
 - [ ] Publish the place and set Max Players ≥ 20.
+- [ ] Publish from the account that owns the uploaded models (kcdrewcarter), so `AssetLoaderService` can load them.
 - [ ] Create the 6 on-sale developer products (4 Coin packs, 2 bundles) and paste their IDs into `Products.luau`.
 - [ ] (Optional) Enable Studio API access and set `SaveInStudio = true` for a persistence test.
 - [ ] (Optional) Choose licensed audio and set `AssetId`s.

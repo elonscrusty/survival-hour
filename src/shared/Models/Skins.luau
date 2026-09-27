@@ -16,6 +16,11 @@ local index: { [string]: Instance } = {}
 local looked = false
 
 local function library(): boolean
+	-- The server may still be adding uploaded meshes (AssetLoaderService):
+	-- don't cache a partial library until it's done.
+	if ReplicatedStorage:GetAttribute("AssetsLoading") then
+		return false
+	end
 	if not looked then
 		looked = true
 		local lib = ReplicatedStorage:FindFirstChild("SurvivalHourAssets") or ReplicatedStorage:FindFirstChild("SurvivalHour")
