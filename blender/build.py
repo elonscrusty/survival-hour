@@ -227,12 +227,19 @@ def render_entry(ctx, e, obj, part_objs, rec):
     out = os.path.join(P.OUT["render"], e["category"])
     vis = [obj] + part_objs
     dummy = ctx.objects["SH_Dummy"]
+    lift = 0.0
+    if e["kind"] in ("Equippable", "Projectile", "Accessory"):  # preview only: rest on the ground
+        lift = -min((obj.matrix_world @ Vector(c)).z for c in obj.bound_box)
+        for o in vis:
+            o.location.z += lift
     if e["dummy"]:
         maxx = max((o.matrix_world @ Vector(c)).x for o in vis for c in o.bound_box)
         dummy.location = (maxx + 1.8, 0.5, 0)
         vis.append(dummy)
     rec.setdefault("renders", {})["preview"] = P.rel(r.render(vis, os.path.join(out, e["name"] + ".png")))
     dummy.location = (0, 0, 0)
+    for o in [obj] + part_objs:
+        o.location.z -= lift
     if e["kind"] == "Equippable":
         hold = ctx.objects["SH_Dummy_Hold"]
         old = obj.matrix_world.copy()

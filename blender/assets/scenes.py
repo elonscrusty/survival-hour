@@ -81,10 +81,15 @@ def glow_material():
     return m
 
 
-def scatter(sb, rng, names, n, rmin, rmax, center=(0, 0), avoid=None):
+def scatter(sb, rng, names, n, rmin, rmax, center=(0, 0), avoid=None, open_sector=(-85, -20)):
+    """open_sector keeps a view corridor (degrees) clear towards the camera."""
     for i in range(n):
-        for _ in range(20):
+        for _ in range(40):
             a = rng.uniform(0, math.tau)
+            deg = math.degrees(a)
+            deg = deg - 360 if deg > 180 else deg
+            if open_sector and open_sector[0] < deg < open_sector[1]:
+                continue
             r = rng.uniform(rmin, rmax)
             p = (center[0] + math.cos(a) * r, center[1] + math.sin(a) * r)
             if not avoid or all(math.hypot(p[0] - q[0], p[1] - q[1]) > d for q, d in avoid):
@@ -109,6 +114,9 @@ def render_scene(ctx, sb, path, film_transparent=False):
     s.render.film_transparent = film_transparent
     vis = set(sb.objs)
     for o in s.objects:
+        if o is r.ground:
+            o.hide_render = True  # scenes have their own ground
+            continue
         if o in r.fixed:
             continue
         o.hide_render = o not in vis
@@ -116,6 +124,7 @@ def render_scene(ctx, sb, path, film_transparent=False):
     s.render.filepath = path
     bpy.ops.render.render(write_still=True)
     s.render.film_transparent = True
+    r.ground.hide_render = False
     return P.rel(path)
 
 
@@ -129,7 +138,7 @@ def ground(sb, size=400, mat_name="forest_floor"):
         mat = bpy.data.materials.new("M_PreviewGround")
         mat.use_nodes = True
         b = mat.node_tree.nodes["Principled BSDF"]
-        b.inputs["Base Color"].default_value = (0.13, 0.14, 0.07, 1)
+        b.inputs["Base Color"].default_value = (0.09, 0.12, 0.05, 1)
         b.inputs["Roughness"].default_value = 1.0
     me.materials.append(mat)
     o = bpy.data.objects.new("PreviewGround_" + sb.col.name, me)
@@ -176,11 +185,11 @@ def scene_camp(ctx):
              "SM_Tree_Pine_Large01", "SM_Tree_Oak_Medium02", "SM_Tree_Pine_Small01", "SM_Tree_Birch_Small01"]
     scatter(sb, rng, trees, 26, 24, 50)
     scatter(sb, rng, ["SM_Bush01", "SM_Bush02", "SM_Fern01", "SM_Grass_Clump01", "SM_Grass_Clump03",
-                      "SM_Rock_Small02", "SM_Boulder03", "SM_FiberPlant01"], 30, 19, 40)
+                      "SM_Rock_Small02", "SM_Boulder03", "SM_FiberPlant01"], 30, 19, 40, open_sector=None)
     sb.put("SM_StoneDeposit01", (-22, -12, 0), 40)
     sb.rig("SK_Wolf", (16, -27, 0), 150, "Alert", 30)
     renders = {}
-    camera(ctx, (34, -46, 26), (0, 0, 2), lens=30)
+    camera(ctx, (30, -42, 36), (0, 1, 0), lens=30)
     ctx.renderer.day()
     renders["day"] = render_scene(ctx, sb, os.path.join(P.OUT["render"], "Scenes", "Scene_Camp_Day.png"))
     # night: warm fire light + glowing flames
@@ -250,11 +259,11 @@ def scene_clearing(ctx):
             center=(ox, 0))
     scatter(sb, rng, ["SM_Fern01", "SM_Fern02", "SM_Bush01", "SM_Bush03_Berry", "SM_Grass_Clump02",
                       "SM_Mushrooms01", "SM_Rock_Small01", "SM_Branch01", "SM_Stump_Old01", "SM_Boulder01"],
-            40, 14, 34, center=(ox, 0), avoid=[((ox - 20, 0), 9)])
+            40, 14, 34, center=(ox, 0), avoid=[((ox - 20, 0), 9)], open_sector=None)
     sb.rig("SK_Wolf", (ox + 14, 4, 0), 110, "Howl", 40)
     sb.rig("SK_Bear", (ox + 22, -16, 0), 140, "RearUp", 36)
     sb.rig("SK_Bat", (ox + 4, 6, 9), 200, "Fly", 6)
-    camera(ctx, (ox + 34, -44, 24), (ox, 0, 2), lens=28)
+    camera(ctx, (ox + 32, -42, 28), (ox, 0, 1), lens=28)
     ctx.renderer.day()
     renders = {"day": render_scene(ctx, sb, os.path.join(P.OUT["render"], "Scenes", "Scene_Clearing_Day.png"))}
     return [dict(name="Scene_Clearing", category="Scenes", kind="Reference", kind_note="Preview scene",

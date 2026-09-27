@@ -222,7 +222,7 @@ class Renderer:
         self.sun = bpy.data.objects.new("SH_Sun", bpy.data.lights.new("SH_Sun", "SUN"))
         s.collection.objects.link(self.sun)
         g = bpy.data.meshes.new("SH_Ground")
-        g.from_pydata([(-400, -400, 0), (400, -400, 0), (400, 400, 0), (-400, 400, 0)], [],
+        g.from_pydata([(-400, -400, -0.015), (400, -400, -0.015), (400, 400, -0.015), (-400, 400, -0.015)], [],
                       [(0, 1, 2, 3)])
         self.ground = bpy.data.objects.new("SH_ShadowCatcher", g)
         self.ground.is_shadow_catcher = True

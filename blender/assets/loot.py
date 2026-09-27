@@ -98,8 +98,8 @@ def beacon(m):
 @asset("SM_LandingMarker", "Loot", "WorldProp", density=3.0, pivot="Centre on the ground.", footprint=[10, 10],
        use="Ground X of orange cloth pinned with stones: marks where the package will land (CanCollide off).")
 def landing_marker(m):
-    for rot in (45, -45):
-        m.box("chute_a", (10, 1.3, 0.06), loc=(0, 0, 0.03), rot=(0, 0, rot))
+    for i, rot in enumerate((45, -45)):  # second strip sits on the first (no z-fighting)
+        m.box("chute_a", (10, 1.3, 0.06), loc=(0, 0, 0.03 + i * 0.05), rot=(0, 0, rot))
     for k in range(4):
         a = math.radians(45 + k * 90)
         m.blob("stone", 0.35, loc=(math.cos(a) * 4.6, math.sin(a) * 4.6, 0.12), scale=(1.2, 1, 0.6))
