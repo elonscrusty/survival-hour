@@ -344,7 +344,7 @@ def build_bear(ctx):
         c.tag(m.cone("bone", 0.06, 0.22, seg=4, loc=(sg * 0.15, -4.3, 3.28), rot=(180, 0, 0)), "Head")
         c.tag(m.cone("bone", 0.05, 0.17, seg=4, loc=(sg * 0.13, -4.12, 3.12)), "Jaw")
         for k in (-1, 0, 1):  # front claws
-            c.tag(m.cone("bone", 0.07, 0.35, seg=4, loc=(sg * 1.0 + k * 0.2, -2.3, 0.12),
+            c.tag(m.cone("bone", 0.07, 0.35, seg=4, loc=(sg * 1.0 + k * 0.2, -2.12, 0.2),
                          rot=(-100, 0, 0)), "FrontPaw_" + ("L" if sg > 0 else "R"))
     c.tag(m.blob("nose", 0.2, loc=(0, -4.52, 3.47), scale=(1.2, 0.9, 0.8)), "Head")
     c.tag(m.blob("nose", 0.3, loc=(0, -3.8, 3.3), scale=(1, 2.2, 0.5)), "Head")

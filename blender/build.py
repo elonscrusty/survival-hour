@@ -218,7 +218,11 @@ def main():
     if renderer:
         make_sheets(merged)
 
-    layout_and_save(ctx)
+    blend = os.path.join(P.OUT["src"], "SH_AssetPack.blend")
+    if args.no_render and os.path.exists(blend):
+        print("--no-render: keeping the existing .blend (it holds the sample scenes)")
+    else:
+        layout_and_save(ctx)
     print(f"done in {time.time() - t0:.0f}s, {len(catalog)} assets")
 
 
@@ -228,8 +232,9 @@ def render_entry(ctx, e, obj, part_objs, rec):
     vis = [obj] + part_objs
     dummy = ctx.objects["SH_Dummy"]
     lift = 0.0
-    if e["kind"] in ("Equippable", "Projectile", "Accessory"):  # preview only: rest on the ground
-        lift = -min((obj.matrix_world @ Vector(c)).z for c in obj.bound_box)
+    low = min((o.matrix_world @ Vector(c)).z for o in vis for c in o.bound_box)
+    if e["kind"] in ("Equippable", "Projectile", "Accessory") or low < -0.3:  # preview only: rest on the ground
+        lift = -low
         for o in vis:
             o.location.z += lift
     if e["dummy"]:

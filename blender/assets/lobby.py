@@ -156,9 +156,9 @@ def sign_frame_panel(m, name, W, H, loc, rot=(0, 0, 0)):
     """Rustic frame on the main mesh + separate blank panel part."""
     x, y, z = loc
     for s in (-1, 1):
-        m.box("wood_dark", (0.25, 0.3, H + 0.5), loc=(x + s * (W / 2 + 0.12), y, z), rot=rot)
-    for s in (-1, 1):
-        m.box("wood_dark", (W + 0.5, 0.3, 0.25), loc=(x, y, z + s * (H / 2 + 0.12)), rot=rot)
+        m.box("wood_dark", (0.25, 0.3, H + 0.26), loc=(x + s * (W / 2 + 0.12), y, z), rot=rot)
+    for s in (-1, 1):  # slightly deeper than the side rails: no coplanar faces at the corners
+        m.box("wood_dark", (W + 0.5, 0.34, 0.25), loc=(x, y, z + s * (H / 2 + 0.12)), rot=rot)
     p = m.part(name, placement=(x, y, z), rot=rot)
     p.meta["pivot"] = "Panel centre. Front (-Z) face is the UI surface; use SurfaceGui Face=Front."
     p.box("sign_blank", (W, 0.2, H), loc=(0, 0, 0))

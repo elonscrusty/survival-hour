@@ -167,6 +167,7 @@ def export_collision(model, path, material):
     if col.name not in bpy.context.scene.collection.children:
         bpy.context.scene.collection.children.link(col)
     o = m.build(material, col)
+    o.data.materials.clear()  # collision proxies carry no material/texture
     export_fbx([o], path)
     bpy.data.objects.remove(o)
     return path
