@@ -9,7 +9,7 @@ export type Inventory = {
 	Resources: { [string]: number },
 	Capacity: number, -- pack SLOTS (spec: ~6 to start; backpacks 10/16/24/32/40)
 	Slots: { [string]: Stack? },
-	Armor: Stack?,
+	Armor: { [string]: Stack }, -- worn pieces: Head / Chest / Legs
 	Backpack: Stack?, -- worn; sets Capacity (kept on death)
 	BaseSlots: number, -- slots without a backpack
 	BonusSlots: number, -- class / power-up extra slots
@@ -94,7 +94,7 @@ function InventoryModel.New(capacity: number, bandageMax: number, ammoMax: { [st
 		BaseSlots = capacity,
 		BonusSlots = 0,
 		Slots = {},
-		Armor = nil,
+		Armor = {},
 		Backpack = nil,
 		Bandages = 0,
 		BandageMax = bandageMax,
@@ -220,9 +220,11 @@ end
 -- kind cannot be held.
 function InventoryModel.AddEquipment(inv: Inventory, kind: string, stack: Stack, preferSlot: string?): (string?, Stack?)
 	if kind == "Armor" then
-		local old = inv.Armor
-		inv.Armor = stack
-		return "Armor", old
+		-- preferSlot = the piece ("Head" | "Chest" | "Legs"); returns slot "Armor<piece>"
+		local piece = if preferSlot == "Head" or preferSlot == "Legs" then preferSlot else "Chest"
+		local old = inv.Armor[piece]
+		inv.Armor[piece] = stack
+		return "Armor" .. piece, old
 	elseif kind == "Backpack" then
 		local old = inv.Backpack
 		inv.Backpack = stack
@@ -247,15 +249,24 @@ function InventoryModel.AddEquipment(inv: Inventory, kind: string, stack: Stack,
 	return target, old
 end
 
+InventoryModel.ArmorPieces = { "Head", "Chest", "Legs" }
+
+-- "ArmorHead" -> "Head" (nil for other slot names).
+function InventoryModel.ArmorPiece(slot: string): string?
+	local piece = string.match(slot, "^Armor(%a+)$")
+	return if piece == "Head" or piece == "Chest" or piece == "Legs" then piece else nil
+end
+
 -- Recomputes pack slots from the worn backpack (`packSlots` = its Slots) + bonus.
 function InventoryModel.SetPackSlots(inv: Inventory, packSlots: number?)
 	inv.Capacity = (packSlots or inv.BaseSlots) + inv.BonusSlots
 end
 
 function InventoryModel.RemoveSlot(inv: Inventory, slot: string): Stack?
-	if slot == "Armor" then
-		local old = inv.Armor
-		inv.Armor = nil
+	local piece = InventoryModel.ArmorPiece(slot)
+	if piece then
+		local old = inv.Armor[piece]
+		inv.Armor[piece] = nil
 		return old
 	elseif slot == "Backpack" then
 		local old = inv.Backpack
@@ -277,8 +288,10 @@ function InventoryModel.HasItem(inv: Inventory, itemId: string): string?
 			return s
 		end
 	end
-	if inv.Armor and inv.Armor.Id == itemId then
-		return "Armor"
+	for piece, st in inv.Armor do
+		if st.Id == itemId then
+			return "Armor" .. piece
+		end
 	end
 	return nil
 end
@@ -335,7 +348,8 @@ end
 
 -- Wears down durability on a slot; returns true if the item broke (and was removed).
 function InventoryModel.Wear(inv: Inventory, slot: string, amount: number): boolean
-	local st = if slot == "Armor" then inv.Armor else inv.Slots[slot]
+	local piece = InventoryModel.ArmorPiece(slot)
+	local st = if piece then inv.Armor[piece] else inv.Slots[slot]
 	if st == nil or st.Durability == nil then
 		return false
 	end
@@ -358,7 +372,13 @@ function InventoryModel.Snapshot(inv: Inventory)
 		Resources = table.clone(inv.Resources),
 		Capacity = inv.Capacity,
 		Slots = slots,
-		Armor = if inv.Armor then table.clone(inv.Armor) else false,
+		Armor = (function()
+			local out = {}
+			for k, v in inv.Armor do
+				out[k] = table.clone(v)
+			end
+			return out
+		end)(),
 		Backpack = if inv.Backpack then table.clone(inv.Backpack) else false,
 		SlotsUsed = InventoryModel.SlotsUsedBy(inv.Resources),
 		Bandages = inv.Bandages,

@@ -63,7 +63,13 @@ return {
 	end,
 	armor_is_worn = function(t)
 		local inv = new()
-		t.eq((I.AddEquipment(inv, "Armor", { Id = "Armor", Durability = 300 })), "Armor")
+		t.eq((I.AddEquipment(inv, "Armor", { Id = "HideChest", Durability = 300 }, "Chest")), "ArmorChest")
+		t.eq((I.AddEquipment(inv, "Armor", { Id = "HideHead", Durability = 100 }, "Head")), "ArmorHead")
+		local _, old = I.AddEquipment(inv, "Armor", { Id = "IronHead", Durability = 200 }, "Head")
+		t.eq(old.Id, "HideHead", "same piece swaps")
+		t.eq(inv.Armor.Chest.Id, "HideChest", "other pieces stay")
+		t.ok(I.Wear(inv, "ArmorHead", 999), "breaks")
+		t.eq(inv.Armor.Head, nil)
 		t.eq(inv.Slots.Weapon1, nil)
 	end,
 	death_drop_keeps_equipment = function(t)

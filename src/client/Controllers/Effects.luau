@@ -113,8 +113,14 @@ local function onHit(h: any)
 		vignette.BackgroundTransparency = 0.55
 		TweenService:Create(vignette, TweenInfo.new(0.5), { BackgroundTransparency = 1 }):Play()
 	else
-		hitMarker.Text = if h.Kind == "Repair" then "+" .. tostring(h.Amount) else "✖ " .. tostring(h.Amount)
-		hitMarker.TextColor3 = if h.Kind == "Repair" then Theme.Colors.Good elseif h.Kind == "Structure" then Theme.Colors.Warn else Color3.new(1, 1, 1)
+		hitMarker.Text = if h.Kind == "Repair" then "+" .. tostring(h.Amount)
+			elseif h.Kind == "Headshot" then "◎ HEADSHOT " .. tostring(h.Amount)
+			elseif h.Kind == "GuardBreak" then "GUARD BROKEN"
+			else "✖ " .. tostring(h.Amount)
+		hitMarker.TextColor3 = if h.Kind == "Repair" then Theme.Colors.Good
+			elseif h.Kind == "Structure" then Theme.Colors.Warn
+			elseif h.Kind == "Headshot" or h.Kind == "GuardBreak" then Color3.fromRGB(255, 200, 80)
+			else Color3.new(1, 1, 1)
 		hitMarker.TextTransparency = 0
 		TweenService:Create(hitMarker, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()
 	end

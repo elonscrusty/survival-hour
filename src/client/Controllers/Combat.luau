@@ -1,13 +1,16 @@
 --!nonstrict
--- Combat input → server intents. Melee/tools swing on press (and repeat while
--- held), bows draw on press and fire on release, guns fire on press, shields
--- block while Aim is held. The server re-validates everything.
+-- Combat input → server intents. Melee/tools: tap = LIGHT attack, hold and
+-- release after the wind-up = HEAVY attack (more damage, more stamina, breaks
+-- guards). Aim (RMB / L2) with any melee weapon or tool = BLOCK. Bows and
+-- crossbows draw on press and fire on release; guns fire on press (repeat while
+-- held). The server re-validates everything (stamina, cooldowns, wind-up).
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage.Shared
+local Config = require(Shared.Config)
 local Items = require(Shared.Items)
 local Powerups = require(Shared.Powerups)
 local Net = require(Shared.Net)
@@ -22,6 +25,7 @@ local Combat = {}
 local player = Players.LocalPlayer
 local nextAttack = 0
 local drawStart: number? = nil
+local swingStart: number? = nil -- melee press time (light vs heavy)
 local chargeBar: Frame
 local chargeSet: (number, string?) -> ()
 
@@ -59,7 +63,7 @@ local function drawTime(def: any): number
 	return t
 end
 
-local function attackOnce()
+local function attackOnce(heavy: boolean?)
 	local id = equippedId()
 	local def = Items[id]
 	if not def or def.Kind == "Utility" then
@@ -69,13 +73,17 @@ local function attackOnce()
 	if t < nextAttack then
 		return
 	end
-	nextAttack = t + (def.Cooldown or 0.6)
+	nextAttack = t + (def.Cooldown or 0.6) * (if heavy then Config.Combat.HeavyCooldownMult else 1)
 	local dir = CameraCtl.AimDirection(true)
 	if not def.Ranged then
 		face(dir)
 	end
-	State.Emit("LocalAction", { Kind = "Attack", Item = id })
-	Net.Event("Attack"):FireServer({ Dir = dir })
+	State.Emit("LocalAction", { Kind = if heavy then "Heavy" else "Attack", Item = id })
+	Net.Event("Attack"):FireServer({ Dir = dir, Heavy = heavy == true })
+end
+
+local function isMelee(def: any): boolean
+	return def ~= nil and not def.Ranged and (def.Kind == "Weapon" or def.Kind == "Tool")
 end
 
 local function releaseBow()
@@ -113,7 +121,7 @@ function Combat.Start()
 		if a.Name == "Aim" then
 			State.Set("AimHeld", a.Down)
 			local id = equippedId()
-			if id == "Shield" then
+			if id == "Shield" or isMelee(Items[id]) then
 				Net.Event("BlockState"):FireServer(a.Down and canAct())
 				State.Emit("LocalAction", { Kind = if a.Down then "BlockOn" else "BlockOff", Item = id })
 			elseif Items[id] and Items[id].Ranged then
@@ -140,8 +148,9 @@ function Combat.Start()
 					return
 				end
 				local inv = State.Get("Inventory")
-				if not inv or (inv.Ammo.Arrow or 0) <= 0 then
-					State.Emit("Notify", { Text = "No arrows! Craft them at Workbench Tier II.", Kind = "warn" })
+				local ammo = def.AmmoType or "Arrow"
+				if not inv or (inv.Ammo[ammo] or 0) <= 0 then
+					State.Emit("Notify", { Text = if ammo == "Bolt" then "No bolts! Craft them at Workbench Tier IV." else "No arrows! Craft them at Workbench Tier II.", Kind = "warn" })
 					return
 				end
 				drawStart = os.clock()
@@ -150,6 +159,16 @@ function Combat.Start()
 				State.Emit("LocalAction", { Kind = "Draw", Item = id })
 			else
 				releaseBow()
+			end
+		elseif isMelee(def) or id == "Fists" then
+			-- Melee: measure the hold; release decides light vs heavy.
+			if a.Down then
+				swingStart = os.clock()
+			elseif swingStart then
+				local held = os.clock() - swingStart
+				swingStart = nil
+				chargeBar.Visible = false
+				attackOnce(held >= Config.Combat.HeavyWindup)
 			end
 		elseif a.Down then
 			attackOnce()
@@ -169,10 +188,24 @@ function Combat.Start()
 			local c = math.clamp((os.clock() - drawStart) / drawTime(def), 0, 1)
 			chargeSet(c, if c >= 1 then "FULL" else "")
 		end
+		-- Heavy wind-up meter while a melee press is held.
+		if swingStart then
+			if not canAct() or not Input.Down.Attack then
+				swingStart = nil
+				chargeBar.Visible = false
+			else
+				local c = math.clamp((os.clock() - swingStart) / Config.Combat.HeavyWindup, 0, 1)
+				if c > 0.3 then
+					chargeBar.Visible = true
+					chargeSet(c, if c >= 1 then "HEAVY" else "")
+				end
+			end
+		end
+		-- Guns repeat while held.
 		local held = Input.Down.Attack
 		if held and canAct() then
 			local def = Items[equippedId()]
-			if def and not def.Ranged then
+			if def and def.Ranged == "Hitscan" then
 				attackOnce()
 			end
 		end
@@ -188,7 +221,7 @@ function Combat.Start()
 	end)
 	State.On("Inventory", function()
 		local id = equippedId()
-		if id ~= "Shield" and State.Get("AimHeld") then
+		if id ~= "Shield" and not isMelee(Items[id]) and State.Get("AimHeld") then
 			Net.Event("BlockState"):FireServer(false)
 		end
 	end)

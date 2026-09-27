@@ -1,12 +1,14 @@
 --!nonstrict
--- Night wildlife: wolves (fast packs, telegraphed lunge), bears (roar → charge,
--- heavy swipe), bats (erratic flying swarms that swoop).
+-- Wildlife (spec): deer flee, rabbits are fast and passive, boars charge when
+-- provoked, wolves hunt aggressively in packs at night, bears are uncommon,
+-- territorial and dangerous (bats are kept in code but no longer spawn).
 --
--- Rules: animals spawn only at night, away from players' view distance and
--- outside burning campfire light, never enter burning fire light, flee and
--- despawn at dawn, and drop leather only when killed at night. Movement is
--- cheap steering (Humanoid:MoveTo / AlignPosition), not pathfinding, with
--- stuck detection, jumps, sidesteps and a give-up despawn.
+-- Night escalation (Logic/WildlifeRules) raises predator pressure, aggression,
+-- pack size and roaming each night; it never inflates health. Animals spawn away
+-- from players and outside burning campfire light, never enter fire light;
+-- night-only hunters leave at dawn. Every animal drops leather when killed.
+-- Movement is cheap steering (Humanoid:MoveTo / AlignPosition), not pathfinding,
+-- with stuck detection, jumps, sidesteps and a give-up despawn.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -15,13 +17,19 @@ local Config = require(Shared:WaitForChild("Config"))
 local Net = require(Shared:WaitForChild("Net"))
 local Models = Shared:WaitForChild("Models")
 local AnimalModels = require(Models:WaitForChild("Animals"))
+local WildlifeRules = require(Shared:WaitForChild("Logic"):WaitForChild("WildlifeRules"))
 
 local WildlifeService = {}
 
+-- Role: "Prey" flees; "Pack" hunts (wolves); "Territorial" defends a home area
+-- (bears); "Charger" charges when provoked (boars); "Flyer" (bats, disabled).
 WildlifeService.Species = {
-	Wolf = { Health = 60, Damage = 12, Speed = 21, Reach = 6.5, Cooldown = 1.6, Telegraph = 0.45, Leather = 1, Pack = { 2, 3 }, Weight = 5, Sound = "WolfGrowl" },
-	Bear = { Health = 220, Damage = 30, Speed = 13, ChargeSpeed = 25, Reach = 8, Cooldown = 2.4, Telegraph = 0.8, Leather = 3, Pack = { 1, 1 }, Weight = 2, Sound = "BearRoar" },
-	Bat = { Health = 25, Damage = 6, Speed = 24, Reach = 5, Cooldown = 1.3, Telegraph = 0.35, Leather = 1, Pack = { 3, 4 }, Weight = 3, Sound = "BatScreech" },
+	Wolf = { Role = "Pack", NightOnly = true, Health = 60, Damage = 12, Speed = 21, Reach = 6.5, Cooldown = 1.6, Telegraph = 0.45, Leather = 1, Pack = { 2, 3 }, Sound = "WolfGrowl" },
+	Bear = { Role = "Territorial", Health = 220, Damage = 30, Speed = 13, ChargeSpeed = 25, Reach = 8, Cooldown = 2.4, Telegraph = 0.8, Leather = 4, Pack = { 1, 1 }, Sound = "BearRoar" },
+	Boar = { Role = "Charger", Health = 110, Damage = 18, Speed = 14, ChargeSpeed = 27, Reach = 6, Cooldown = 2.2, Telegraph = 0.6, Leather = 2, Pack = { 1, 2 }, Sound = "BearRoar" },
+	Deer = { Role = "Prey", Health = 70, Damage = 0, Speed = 12, FleeSpeed = 26, Reach = 0, Cooldown = 1, Telegraph = 0, Leather = 2, Pack = { 1, 3 }, Sound = "AnimalHit" },
+	Rabbit = { Role = "Prey", Health = 15, Damage = 0, Speed = 10, FleeSpeed = 30, Reach = 0, Cooldown = 1, Telegraph = 0, Leather = 1, Pack = { 1, 2 }, Sound = "AnimalHit" },
+	Bat = { Role = "Flyer", NightOnly = true, Health = 25, Damage = 6, Speed = 24, Reach = 5, Cooldown = 1.3, Telegraph = 0.35, Leather = 1, Pack = { 3, 4 }, Sound = "BatScreech" },
 }
 
 type Animal = {
@@ -44,6 +52,9 @@ type Animal = {
 	Dead: boolean,
 	Leaving: boolean,
 	SpawnedAt: number,
+	Home: Vector3, -- territorial animals defend around here
+	FleeUntil: number,
+	FleeFrom: Vector3?,
 }
 
 local ctx: any
@@ -63,7 +74,9 @@ function WildlifeService.Init(c)
 	ctx.MatchService.On("PhaseChanged", function(phase: string)
 		if phase == "Day" then
 			for _, a in animals do
-				a.Leaving = true
+				if WildlifeService.Species[a.Species].NightOnly then
+					a.Leaving = true
+				end
 			end
 		end
 	end)
@@ -83,10 +96,12 @@ function WildlifeService.Start()
 		local dt = task.wait(Config.Wildlife.ThinkRate)
 		if ctx.MatchService.Active and folder then
 			spawnAcc += dt
-			if spawnAcc >= Config.Wildlife.SpawnInterval then
+			local pressure = WildlifeService.Pressure()
+			if spawnAcc >= Config.Wildlife.SpawnInterval * pressure.IntervalMult then
 				spawnAcc = 0
-				if ctx.MatchService.IsNight() then
-					WildlifeService._trySpawn()
+				local phase = ctx.MatchService.Phase
+				if phase == "Day" or phase == "Night" then
+					WildlifeService._trySpawn(pressure)
 				end
 			end
 			for _, a in animals do
@@ -124,6 +139,12 @@ function WildlifeService.List(): { Animal }
 	return out
 end
 
+-- Current escalation (Logic/WildlifeRules).
+function WildlifeService.Pressure(): WildlifeRules.Pressure
+	local night = WildlifeRules.NightNumber(ctx.MatchService.Phase, ctx.MatchService.Day)
+	return WildlifeRules.Pressure(night, Config.Wildlife)
+end
+
 -- Spawning --------------------------------------------------------------------------------
 
 local function count(species: string?): number
@@ -147,7 +168,17 @@ local function nearestPlayerDist(pos: Vector3): number
 	return best
 end
 
-function WildlifeService._trySpawn()
+local function predatorCount(): number
+	local n = 0
+	for _, a in animals do
+		if not a.Dead and WildlifeRules.Predators[a.Species] then
+			n += 1
+		end
+	end
+	return n
+end
+
+function WildlifeService._trySpawn(pressure: WildlifeRules.Pressure)
 	if count(nil) >= Config.Wildlife.MaxTotal then
 		return
 	end
@@ -162,26 +193,17 @@ function WildlifeService._trySpawn()
 		return
 	end
 	local focus = candidates[rng:NextInteger(1, #candidates)]
-	-- Weighted species choice respecting per-species caps
-	local pool, total = {}, 0
-	for name, sp in WildlifeService.Species do
-		if count(name) < Config.Wildlife.MaxPerSpecies[name] then
-			table.insert(pool, name)
-			total += sp.Weight
+	-- Weighted species choice (by time of day / night number) respecting caps
+	local allowed = {}
+	local predatorsFull = predatorCount() >= pressure.PredatorCap
+	for name in WildlifeService.Species do
+		if count(name) < (Config.Wildlife.MaxPerSpecies[name] or 0) and not (predatorsFull and WildlifeRules.Predators[name]) then
+			allowed[name] = true
 		end
 	end
-	if #pool == 0 then
+	local species = WildlifeRules.Pick(WildlifeRules.Weights(pressure.Night), allowed, rng:NextNumber())
+	if not species then
 		return
-	end
-	table.sort(pool)
-	local pick = rng:NextNumber() * total
-	local species = pool[1]
-	for _, name in pool do
-		pick -= WildlifeService.Species[name].Weight
-		if pick <= 0 then
-			species = name
-			break
-		end
 	end
 	local map = ctx.MatchService.Map
 	local H = map.Layout.HalfSize - 12
@@ -194,7 +216,7 @@ function WildlifeService._trySpawn()
 		local pos = Vector3.new(x, y, z)
 		if not ctx.CampService.InFireLight(pos, 25) and nearestPlayerDist(pos) >= Config.Wildlife.SpawnMinPlayerDist then
 			local sp = WildlifeService.Species[species]
-			local n = rng:NextInteger(sp.Pack[1], sp.Pack[2])
+			local n = rng:NextInteger(sp.Pack[1], sp.Pack[2]) + (if species == "Wolf" then pressure.PackBonus else 0)
 			n = math.min(n, Config.Wildlife.MaxPerSpecies[species] - count(species), Config.Wildlife.MaxTotal - count(nil))
 			for i = 1, n do
 				WildlifeService._spawn(species, pos + Vector3.new(i * 3, 0, (i % 2) * 3))
@@ -206,7 +228,7 @@ end
 
 function WildlifeService._spawn(species: string, pos: Vector3): Animal?
 	local sp = WildlifeService.Species[species]
-	local model = if species == "Wolf" then AnimalModels.Wolf() elseif species == "Bear" then AnimalModels.Bear() else AnimalModels.Bat()
+	local model = AnimalModels.Build(species)
 	local root = (model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart) :: BasePart
 	local hum = model:FindFirstChildOfClass("Humanoid") :: Humanoid
 	hum.MaxHealth = sp.Health
@@ -245,6 +267,9 @@ function WildlifeService._spawn(species: string, pos: Vector3): Animal?
 		Dead = false,
 		Leaving = false,
 		SpawnedAt = os.clock(),
+		Home = pos,
+		FleeUntil = 0,
+		FleeFrom = nil,
 	}
 	model:SetAttribute("Species", species)
 	model:SetAttribute("AnimalId", a.Id)
@@ -273,15 +298,31 @@ local function safeGoal(goal: Vector3): Vector3
 	return goal
 end
 
-local function pickTarget(a: Animal): Player?
-	local range = Config.Wildlife.AggroRange[a.Species]
-	local best, bestD = nil, range
+-- Nearest valid player within `range` of `from` (default: the animal).
+local function pickTarget(a: Animal, range: number?, from: Vector3?): Player?
+	local origin = from or a.Root.Position
+	local best, bestD = nil, range or (Config.Wildlife.AggroRange[a.Species] or 0) * WildlifeService.Pressure().AggroMult
 	for _, p in ctx.Util.MatchPlayers() do
 		local r = ctx.Util.Root(p)
 		if r and ctx.Util.IsAlive(p) and not ctx.CampService.InFireLight(r.Position) then
-			local d = (r.Position - a.Root.Position).Magnitude
+			local d = (r.Position - origin).Magnitude
 			if d < bestD then
 				best, bestD = p, d
+			end
+		end
+	end
+	return best
+end
+
+-- Nearest player position within range (prey watch for threats, even in fire light).
+local function nearestThreat(pos: Vector3, range: number): Vector3?
+	local best, bestD = nil, range
+	for _, p in ctx.Util.MatchPlayers() do
+		local r = ctx.Util.Root(p)
+		if r and ctx.Util.IsAlive(p) then
+			local d = (r.Position - pos).Magnitude
+			if d < bestD then
+				best, bestD = r.Position, d
 			end
 		end
 	end
@@ -329,7 +370,7 @@ local function hitIfClose(a: Animal, target: Player, reach: number)
 	end
 	if (r.Position - a.Root.Position).Magnitude <= reach and not ctx.CampService.InFireLight(r.Position) then
 		local sp = WildlifeService.Species[a.Species]
-		ctx.CombatService.DamagePlayer(target, sp.Damage, { Kind = "Animal", Name = a.Species, Pos = a.Root.Position })
+		ctx.CombatService.DamagePlayer(target, sp.Damage * ctx.PowerupService.WildlifeDamageMult(target), { Kind = "Animal", Name = a.Species, Pos = a.Root.Position })
 		a.Model:SetAttribute("Telegraph", "Strike")
 		a.Model:SetAttribute("TelegraphAt", workspace:GetServerTimeNow())
 	end
@@ -341,7 +382,7 @@ function WildlifeService._think(a: Animal, dt: number)
 	local sp = WildlifeService.Species[a.Species]
 
 	-- Dawn: run away from the nearest player and despawn.
-	if a.Leaving or not ctx.MatchService.IsNight() then
+	if a.Leaving or (sp.NightOnly and not ctx.MatchService.IsNight()) then
 		a.Leaving = true
 		a.Model:SetAttribute("Telegraph", nil)
 		if now - a.SpawnedAt > 0 then
@@ -362,6 +403,35 @@ function WildlifeService._think(a: Animal, dt: number)
 		return
 	end
 
+	-- Prey: roam; bolt away from nearby players or after being hit.
+	if sp.Role == "Prey" then
+		local threat = nearestThreat(pos, (Config.Wildlife.FleeRange[a.Species] or 25) * WildlifeService.Pressure().AggroMult)
+		if threat then
+			a.FleeUntil = now + 3
+			a.FleeFrom = threat
+		end
+		if now < a.FleeUntil and a.FleeFrom then
+			a.State = "Flee"
+			a.Hum.WalkSpeed = sp.FleeSpeed
+			local away = (pos - a.FleeFrom) * Vector3.new(1, 0, 1)
+			local dir = if away.Magnitude > 0.1 then away.Unit else Vector3.new(1, 0, 0)
+			-- zig-zag a little so it reads as a panicked run
+			local jig = CFrame.Angles(0, math.sin(now * 3 + a.Id) * 0.5, 0) * dir
+			local goal = pos + jig * 24
+			moveTo(a, safeGoal(Vector3.new(goal.X, ctx.WorldService.GroundY(goal.X, goal.Z), goal.Z)))
+		else
+			a.State = "Roam"
+			a.Hum.WalkSpeed = sp.Speed * 0.5
+			if not a.Waypoint or flatDist(pos, a.Waypoint) < 5 then
+				local wp = pos + Vector3.new(rng:NextNumber(-30, 30), 0, rng:NextNumber(-30, 30))
+				a.Waypoint = safeGoal(Vector3.new(wp.X, ctx.WorldService.GroundY(wp.X, wp.Z), wp.Z))
+			end
+			moveTo(a, a.Waypoint :: Vector3)
+		end
+		WildlifeService._unstick(a, dt)
+		return
+	end
+
 	-- Never linger inside fire light.
 	if ctx.CampService.InFireLight(pos) then
 		a.Target = nil
@@ -374,8 +444,24 @@ function WildlifeService._think(a: Animal, dt: number)
 		return -- mid-telegraph / recovering
 	end
 
-	-- Target selection
-	if not a.Target or not ctx.Util.IsAlive(a.Target) or (ctx.Util.Root(a.Target) and ctx.CampService.InFireLight((ctx.Util.Root(a.Target) :: BasePart).Position)) then
+	-- Target selection by role
+	local pressure = WildlifeService.Pressure()
+	local function lost(t: Player?): boolean
+		local r = t and ctx.Util.Root(t)
+		return not t or not r or not ctx.Util.IsAlive(t) or ctx.CampService.InFireLight(r.Position)
+	end
+	if sp.Role == "Territorial" then
+		-- Bears defend a home area; they drop the chase once you leave it.
+		local territory = Config.Wildlife.Territory * pressure.AggroMult
+		if lost(a.Target) or flatDist((ctx.Util.Root(a.Target :: Player) :: BasePart).Position, a.Home) > territory * 1.6 then
+			a.Target = pickTarget(a, territory, a.Home)
+		end
+	elseif sp.Role == "Charger" then
+		-- Boars ignore you unless you come close (or hit them), and give up at a distance.
+		if lost(a.Target) or ((ctx.Util.Root(a.Target :: Player) :: BasePart).Position - pos).Magnitude > 45 then
+			a.Target = pickTarget(a)
+		end
+	elseif lost(a.Target) then
 		a.Target = pickTarget(a)
 	end
 	local target = a.Target
@@ -386,7 +472,9 @@ function WildlifeService._think(a: Animal, dt: number)
 		a.State = "Roam"
 		a.Hum.WalkSpeed = sp.Speed * 0.5
 		if not a.Waypoint or flatDist(pos, a.Waypoint) < 5 then
-			local wp = pos + Vector3.new(rng:NextNumber(-40, 40), 0, rng:NextNumber(-40, 40))
+			local base = if sp.Role == "Territorial" then a.Home else pos
+			local reach = 40 * pressure.AggroMult
+			local wp = base + Vector3.new(rng:NextNumber(-reach, reach), 0, rng:NextNumber(-reach, reach))
 			local map = ctx.MatchService.Map
 			local H = map.Layout.HalfSize - 15
 			wp = Vector3.new(math.clamp(wp.X, -H, H), ctx.WorldService.GroundY(wp.X, wp.Z) + (if a.Species == "Bat" then 14 else 0), math.clamp(wp.Z, -H, H))
@@ -422,7 +510,7 @@ function WildlifeService._think(a: Animal, dt: number)
 				local offset = CFrame.lookAt(tpos, pos).RightVector * side * math.min(6, dist * 0.2)
 				moveTo(a, safeGoal(tpos + offset))
 			end
-		elseif a.Species == "Bear" then
+		elseif a.Species == "Bear" or a.Species == "Boar" then
 			if now < a.ChargeUntil and a.ChargeDir then
 				a.Hum.WalkSpeed = sp.ChargeSpeed :: number
 				moveTo(a, safeGoal(pos + a.ChargeDir * 20))
@@ -438,7 +526,7 @@ function WildlifeService._think(a: Animal, dt: number)
 				task.delay(0.5, function()
 					hitIfClose(a, target, sp.Reach + 1)
 				end)
-			elseif dist < 32 and dist > 12 and now >= a.NextAttack then
+			elseif dist < (if a.Species == "Boar" then 22 else 32) and dist > (if a.Species == "Boar" then 6 else 12) and now >= a.NextAttack then
 				-- Roar, then charge in a straight line
 				telegraph(a, "Roar", sp.Telegraph)
 				a.NextAttack = now + sp.Cooldown + 1
@@ -470,7 +558,12 @@ function WildlifeService._think(a: Animal, dt: number)
 		end
 	end
 
-	-- Stuck detection (ground animals)
+	WildlifeService._unstick(a, dt)
+end
+
+-- Stuck detection (ground animals): jump, sidestep, and give up if hopeless.
+function WildlifeService._unstick(a: Animal, dt: number)
+	local pos = a.Root.Position
 	if a.Species ~= "Bat" then
 		local moved = flatDist(pos, a.LastPos)
 		if moved < 0.6 * dt * 5 then
@@ -506,8 +599,14 @@ function WildlifeService.Damage(a: Animal, amount: number, attacker: Player?): b
 	end
 	if attacker then
 		a.Damage[attacker] = (a.Damage[attacker] or 0) + amount
-		-- Being hit draws aggro to the attacker (unless they're in fire light).
-		a.Target = attacker
+		-- Being hit draws aggro (predators, boars) or makes prey bolt.
+		if WildlifeService.Species[a.Species].Role == "Prey" then
+			local r = ctx.Util.Root(attacker)
+			a.FleeFrom = if r then r.Position else a.Root.Position
+			a.FleeUntil = os.clock() + 5
+		else
+			a.Target = attacker
+		end
 		Net.FireClient("HitFeedback", attacker, "Animal", math.floor(amount + 0.5), a.Root.Position)
 	end
 	ctx.Util.PlaySound("AnimalHit", a.Root)
@@ -529,13 +628,13 @@ function WildlifeService._onDied(a: Animal)
 			killer, best = p, d
 		end
 	end
-	if night then
-		local sp = WildlifeService.Species[a.Species]
-		local ground = ctx.WorldService.GroundY(pos.X, pos.Z)
-		ctx.InventoryService.SpawnPickup("Leather", sp.Leather, Vector3.new(pos.X, ground + 1, pos.Z))
-		if killer then
-			ctx.PowerupService.OnAnimalKilled(killer, a.Id)
-		end
+	local sp = WildlifeService.Species[a.Species]
+	local ground = ctx.WorldService.GroundY(pos.X, pos.Z)
+	local leather = sp.Leather + (if killer then ctx.PowerupService.ExtraHide(killer) else 0)
+	ctx.InventoryService.SpawnPickup("Leather", leather, Vector3.new(pos.X, ground + 1, pos.Z))
+	if killer then
+		ctx.PowerupService.OnAnimalKilled(killer, a.Id)
+		ctx.PowerupService.OnWildlifeKill(killer, a.Species, night)
 	end
 	a.Model:SetAttribute("Telegraph", "Dead")
 	for _, d in a.Model:GetDescendants() do

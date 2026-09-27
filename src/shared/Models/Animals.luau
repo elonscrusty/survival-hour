@@ -1,5 +1,5 @@
 --!nonstrict
--- Wildlife rigs built from primitives.
+-- Wildlife rigs built from primitives: wolf, bear, deer, rabbit, boar (+ bat).
 --
 -- Wolf and Bear: a Humanoid with an invisible HumanoidRootPart. Visible body
 -- parts are welded/Motor6D'd so the client-side CreatureAnimator can drive
@@ -115,6 +115,61 @@ function Animals.Bear(): Model
 		Eye = Color3.fromRGB(255, 120, 60),
 		Scale = 1.8,
 	}, { W = 2.2, H = 2.2, L = 4, Leg = 2.1, Tail = 0.6, Ear = 0.3 })
+end
+
+-- Prey and boar (Survival Wars). Same quadruped rig, so the client animator drives them.
+local function headOf(m: Model): BasePart
+	return m:FindFirstChild("Head") :: BasePart
+end
+
+function Animals.Deer(): Model
+	local m = quadruped("Deer", {
+		Body = Color3.fromRGB(150, 104, 66),
+		Dark = Color3.fromRGB(108, 72, 46),
+		Belly = Color3.fromRGB(226, 206, 176),
+		Eye = Color3.fromRGB(30, 24, 20),
+		Scale = 1.1,
+	}, { W = 1.3, H = 1.6, L = 3.8, Leg = 3.2, Tail = 0.5, Ear = 0.5 })
+	local head = headOf(m)
+	for _, x in { -1, 1 } do
+		local beam = bodyPart(m, "Antler", Vector3.new(0.18, 1.6, 0.18), Color3.fromRGB(214, 196, 160), Enum.Material.Wood)
+		weld(head, beam, CFrame.new(x * 0.35, 1.2, 0.1) * CFrame.Angles(0, 0, math.rad(-x * 25)))
+		local tine = bodyPart(m, "Antler", Vector3.new(0.14, 0.8, 0.14), Color3.fromRGB(214, 196, 160), Enum.Material.Wood)
+		weld(head, tine, CFrame.new(x * 0.7, 1.6, -0.2) * CFrame.Angles(math.rad(-30), 0, math.rad(-x * 10)))
+	end
+	return m
+end
+
+function Animals.Rabbit(): Model
+	local m = quadruped("Rabbit", {
+		Body = Color3.fromRGB(150, 130, 110),
+		Dark = Color3.fromRGB(120, 100, 84),
+		Belly = Color3.fromRGB(236, 228, 214),
+		Eye = Color3.fromRGB(20, 20, 20),
+		Scale = 0.45,
+	}, { W = 1.4, H = 1.4, L = 2.2, Leg = 1.1, Tail = 0.6, Ear = 1.2 })
+	return m
+end
+
+function Animals.Boar(): Model
+	local m = quadruped("Boar", {
+		Body = Color3.fromRGB(84, 66, 54),
+		Dark = Color3.fromRGB(54, 42, 34),
+		Belly = Color3.fromRGB(120, 100, 86),
+		Eye = Color3.fromRGB(200, 90, 50),
+		Scale = 1.05,
+	}, { W = 1.8, H = 1.8, L = 3.4, Leg = 1.5, Tail = 0.6, Ear = 0.35 })
+	local snout = m:FindFirstChild("Snout") :: BasePart
+	for _, x in { -1, 1 } do
+		local tusk = bodyPart(m, "Tusk", Vector3.new(0.16, 0.6, 0.16), Color3.fromRGB(236, 226, 200), Enum.Material.SmoothPlastic)
+		weld(snout, tusk, CFrame.new(x * 0.35, 0.2, -0.2) * CFrame.Angles(math.rad(-30), 0, math.rad(-x * 15)))
+	end
+	return m
+end
+
+function Animals.Build(species: string): Model
+	local f = (Animals :: any)[species]
+	return f()
 end
 
 function Animals.Bat(): Model

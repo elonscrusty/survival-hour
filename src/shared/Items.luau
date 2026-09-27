@@ -38,6 +38,8 @@ export type ItemDef = {
 	Door: boolean?, -- structures: has an owner-only door
 	Hold: number?, -- traps: seconds the victim is held in place
 	Detect: number?, -- alarms: detection radius (studs)
+	ArmorSlot: string?, -- "Head" | "Chest" | "Legs"
+	Headshots: boolean?, -- ranged: head hits deal Config.Combat.HeadshotMult
 	Food: boolean?, -- resource that can be eaten (heal values in Resources.Food)
 	BlockReduction: number?, -- shield
 	DamageReduction: number?, -- armor
@@ -98,11 +100,25 @@ add({
 	Icon = icon("↗", WOOD),
 	Damage = 22, Cooldown = 0.9, Range = 9.5, Durability = 100, StructureMult = 0.6, AnimalMult = 1.15,
 })
+-- Ranged (spec): Crude Bow II, Hunting Bow III, Crossbow III/IV. Headshots x1.75, and
+-- no early bow one-shots a full-health player (see CombatRules.spec).
 add({
-	Id = "Bow", Name = "Bow", Kind = "Weapon", Description = "Hold to draw, release to fire. Uses arrows.",
+	Id = "Bow", Name = "Crude Bow", Kind = "Weapon", Description = "Hold to draw, release to fire. Uses arrows.",
 	Icon = icon("》", WOOD),
-	Damage = 28, Cooldown = 0.35, DrawTime = 0.6, Range = 220, Durability = 150, Ranged = "Arrow",
-	AmmoType = "Arrow", Spread = 1.2, StructureMult = 0.4, AnimalMult = 1,
+	Damage = 22, Cooldown = 0.35, DrawTime = 0.7, Range = 200, Durability = 100, Ranged = "Arrow",
+	AmmoType = "Arrow", Spread = 1.4, StructureMult = 0.3, AnimalMult = 1, Headshots = true,
+})
+add({
+	Id = "HuntingBow", Name = "Hunting Bow", Kind = "Weapon", Description = "Stronger draw, flatter shots. Uses arrows.",
+	Icon = icon("》", Color3.fromRGB(120, 80, 50)),
+	Damage = 34, Cooldown = 0.35, DrawTime = 0.8, Range = 240, Durability = 180, Ranged = "Arrow",
+	AmmoType = "Arrow", Spread = 1.0, StructureMult = 0.35, AnimalMult = 1.1, Headshots = true,
+})
+add({
+	Id = "Crossbow", Name = "Crossbow", Kind = "Weapon", Description = "Slow to load (hold), hits hard. Uses bolts.",
+	Icon = icon("✚", Color3.fromRGB(110, 110, 116)),
+	Damage = 48, Cooldown = 0.4, DrawTime = 1.6, Range = 260, Durability = 220, Ranged = "Arrow",
+	AmmoType = "Bolt", Spread = 0.6, StructureMult = 0.5, AnimalMult = 1.1, Headshots = true,
 })
 add({
 	Id = "Sword", Name = "Sword", Kind = "Weapon", Description = "Fast, heavy melee strikes.",
@@ -185,12 +201,37 @@ end
 
 -- Utility / worn / pouches ---------------------------------------------------------
 add({ Id = "Canteen", Name = "Canteen", Kind = "Utility", Description = "Fill at a stream. Pour on an enemy fire at night.", Icon = icon("💧", BLUE) })
-add({ Id = "Armor", Name = "Leather Armor", Kind = "Armor", Description = "Worn. Reduces incoming damage by 25%.", Icon = icon("▣", LEATHER), Durability = 300, DamageReduction = 0.25 })
+-- Armour (spec): Head / Chest / Legs, Hide -> Reinforced Hide -> Scrap -> Iron -> Tactical.
+-- A full set reduces damage by 15 / 22 / 30 / 38 / 46% (split 25 / 45 / 30% across pieces).
+local ARMOR_TIERS: { { Key: string, Name: string, Set: number, Dur: number, Color: Color3 } } = {
+	{ Key = "Hide", Name = "Hide", Set = 0.15, Dur = 120, Color = LEATHER },
+	{ Key = "ReinforcedHide", Name = "Reinforced Hide", Set = 0.22, Dur = 200, Color = Color3.fromRGB(120, 76, 50) },
+	{ Key = "Scrap", Name = "Scrap", Set = 0.30, Dur = 300, Color = Color3.fromRGB(128, 112, 96) },
+	{ Key = "Iron", Name = "Iron", Set = 0.38, Dur = 420, Color = Color3.fromRGB(110, 114, 124) },
+	{ Key = "Tactical", Name = "Tactical", Set = 0.46, Dur = 560, Color = Color3.fromRGB(70, 84, 70) },
+}
+local ARMOR_PIECES: { { Slot: string, Name: string, Share: number, Glyph: string } } = {
+	{ Slot = "Head", Name = "Helmet", Share = 0.25, Glyph = "⛑" },
+	{ Slot = "Chest", Name = "Chestpiece", Share = 0.45, Glyph = "▣" },
+	{ Slot = "Legs", Name = "Leggings", Share = 0.30, Glyph = "‖" },
+}
+for tier, at in ARMOR_TIERS do
+	for _, piece in ARMOR_PIECES do
+		add({
+			Id = at.Key .. piece.Slot, Name = at.Name .. " " .. piece.Name, Kind = "Armor", ArmorSlot = piece.Slot, Tier = tier,
+			Description = string.format("Worn (%s). -%d%% damage; a full %s set gives -%d%%.", piece.Slot:lower(), math.floor(at.Set * piece.Share * 100 + 0.5), at.Name, math.floor(at.Set * 100 + 0.5)),
+			Icon = icon(piece.Glyph, at.Color), Durability = math.floor(at.Dur * (0.6 + piece.Share)), DamageReduction = at.Set * piece.Share,
+		})
+	end
+end
+-- Legacy loot item: a hide chestpiece.
+add({ Id = "Armor", Name = "Leather Vest", Kind = "Armor", ArmorSlot = "Chest", Tier = 1, Description = "Worn (chest). -7% damage.", Icon = icon("▣", LEATHER), Durability = 150, DamageReduction = 0.15 * 0.45 })
 add({ Id = "Bandage", Name = "Bandage", Kind = "Consumable", Description = "Heals 20 HP over a 3 s use. Interrupted by damage.", Icon = icon("✚", RED), Heal = 20, UseTime = 3 })
 -- Stronger healing lives in the pack (stackable, dropped on death like materials).
 add({ Id = "FirstAid", Name = "First Aid Kit", Kind = "Resource", Description = "Heals 50 HP over a 5 s use. Interrupted by damage.", Icon = icon("✚", Color3.fromRGB(230, 230, 230), "Square"), Heal = 50, UseTime = 5 })
 add({ Id = "Medkit", Name = "Medkit", Kind = "Resource", Description = "Heals 100 HP over an 8 s use. Interrupted by damage.", Icon = icon("✚", Color3.fromRGB(80, 200, 120), "Square"), Heal = 100, UseTime = 8 })
 add({ Id = "Arrow", Name = "Arrows", Kind = "Ammo", Description = "Ammunition for bows.", Icon = icon("🏹", WOOD) })
+add({ Id = "Bolt", Name = "Bolts", Kind = "Ammo", Description = "Ammunition for crossbows.", Icon = icon("➶", Color3.fromRGB(110, 110, 116)) })
 add({ Id = "Bullet", Name = "Bullets", Kind = "Ammo", Description = "Ammunition for guns.", Icon = icon("•", Color3.fromRGB(200, 170, 90)) })
 
 -- Structures -------------------------------------------------------------------

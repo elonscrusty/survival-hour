@@ -93,6 +93,7 @@ local Camp = require("../../src/shared/Models/Camp")
 local Structures = require("../../src/shared/Models/Structures")
 local ItemModels = require("../../src/shared/Models/ItemModels")
 local LootModels = require("../../src/shared/Models/LootModels")
+local Animals = require("../../src/shared/Models/Animals")
 
 -- helpers -----------------------------------------------------------------------
 local passed, failed = 0, 0
@@ -255,6 +256,20 @@ test("LargeRockPile: bigger yield mesh", function()
 	local m = Flora.LargeRockPile(at, Random.new(5), workspace)
 	check(skinOf(m, "SM_StoneDeposit01"), "deposit mesh")
 	check(m.PrimaryPart.Size.X > 10, "double-size root")
+end)
+test("Wildlife rigs: deer, rabbit, boar", function()
+	for _, sp in { "Deer", "Rabbit", "Boar", "Wolf", "Bear" } do
+		local m = Animals.Build(sp)
+		check(m:FindFirstChildOfClass("Humanoid"), sp .. " humanoid")
+		check(m:FindFirstChild("HumanoidRootPart"), sp .. " root")
+	end
+	check(Animals.Build("Deer"):FindFirstChild("Antler"), "deer antlers")
+	check(Animals.Build("Boar"):FindFirstChild("Tusk"), "boar tusks")
+end)
+test("Ranged tiers + armour pieces build", function()
+	for _, id in { "HuntingBow", "Crossbow", "Bolt" } do
+		check(ItemModels.Held(id), id)
+	end
 end)
 test("Tiered tools build (axes, pickaxes, crude spear, meds)", function()
 	for _, tn in { "Crude", "Stone", "Iron", "Steel" } do

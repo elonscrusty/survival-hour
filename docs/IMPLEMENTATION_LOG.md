@@ -92,3 +92,18 @@ Also: the pre-existing `LayoutGen fair_resources` failure is fixed (the test use
 **Decisions:** D45 First Aid / Medkit / Breaching Charges are pack items (drop on death). D46 Breaching needs the tool in your tool/weapon slots (not equipped). D47 Survival Safe is Tier IV. D48 tiered doors and the window wall use the procedural look (new `Skins.Unskin`), since the pack meshes don't match their shape.
 
 **Tests:** slot/stack cases in `InventoryModel.spec` and `StorageLedger.spec`; `Recipes.spec` checks every tier's unlocks; the skins suite builds every new structure, checks door opening, the breach tag and trap triggers (28 checks).
+
+## Phase 4: wildlife, melee, ranged, armour (done, not yet playtested)
+
+| Spec rule | Change | Where |
+|---|---|---|
+| Deer flee; rabbits fast/passive; boars charge; wolves aggressive packs; bears uncommon/territorial/dangerous | New Deer, Rabbit, Boar rigs (same quadruped rig as wolf/bear, so the client animator drives them). Roles: **Prey** (roam; bolt away from players within 38/22 studs or when hit, zig-zag), **Charger** (boar: ignores you until you're within 14 studs or hit it, snorts then charges, gives up past 45), **Pack** (wolves, night only), **Territorial** (bears defend ~32 studs around where they spawned, give up when you leave). Bats aren't in the spec: kept in code, capped at 0. | `WildlifeService`, `Models/Animals` |
+| Night escalation = pressure/aggression/pack size/roaming, not HP | New pure `WildlifeRules`: per night +pack size (≤+3 wolves), aggro/territory range ×1.0→1.6, spawn interval ×1→0.5, predator cap 6 → 14. Day: prey + a few boars and a rare bear, calmer ranges. Health never changes. | `Logic/WildlifeRules` (+ tests), `Config.Wildlife` |
+| – | Leather now drops from every kill (day too); hooks for Hunter (extra hide), Hardy (wildlife damage), XP/Coins | `WildlifeService`, `PowerupService` |
+| Melee Light / Heavy / Block; stamina and guard break matter | Tap = light (6 stamina), hold ≥0.45 s and release = heavy (×1.8 damage, ×1.6 cooldown, 18 stamina, drains 20 extra from a blocker). Right-click blocks with **any** melee weapon/tool (45%; Shield 70%), costing stamina per point blocked; running out breaks the guard (1.5 s no block). Too little stamina = weak swings. The server enforces the heavy wind-up. | `CombatService`, `Logic/CombatRules` (+ tests), `Combat` (client), `Config.Combat` |
+| Tools hurt players but weapons are better | Tool damage 10–19 vs spears 16–22, sword 32 (unchanged tables) | `Items` |
+| Crude Bow II, Hunting Bow III, Crossbow III/IV; headshots; no casual early one-shots | Crude Bow 22 (Tier II), Hunting Bow 34 (Tier III), Crossbow 48 with Bolts (Tier IV). Head hits ×1.75 on bows, crossbows and guns ("◎ HEADSHOT" marker); every bow/crossbow headshot stays under 100 HP (tested). | `Items`, `Recipes`, `CombatService` |
+| Armour Head/Chest/Legs, Hide → Reinforced Hide → Scrap → Iron → Tactical; full set < 45–50% | 15 pieces generated from one table; full-set reduction 15/22/30/38/46% (split 25/45/30%), capped at 50%. Three worn slots, each piece wears separately and shows as a tier-coloured shell on the head/torso/legs. The old "Leather Armor" loot item is now a hide chestpiece. | `Items`, `InventoryModel`, `InventoryService`, `CombatService` |
+| No downed state for solo | Unchanged (none exists) | – |
+
+**Tests:** `WildlifeRules.spec` (4), `CombatRules.spec` (4), armour-slot case in `InventoryModel.spec`, skins suite builds the new animals and ranged weapons (30 checks).

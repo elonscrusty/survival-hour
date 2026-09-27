@@ -15,6 +15,7 @@ local UP_TO_FORWARD = CFrame.Angles(0, 0, math.pi) * CFrame.Angles(-math.pi / 2,
 local HELD_SKINS: { [string]: { string | CFrame } } = {
 	Spear = { "Spear", CFrame.new() },
 	Bow = { "Bow", CFrame.new() },
+	HuntingBow = { "Bow", CFrame.new() },
 	Sword = { "Sword", UP_TO_FORWARD },
 	Shield = { "Shield", CFrame.Angles(0, math.pi / 2, 0) },
 	Pistol = { "Pistol", CFrame.new() },
@@ -148,6 +149,23 @@ for tn, head in TIER_HEAD do
 		piece(m, { Name = "Pick", Class = "WedgePart", Size = Vector3.new(0.4, 0.5, 1.6), CFrame = CFrame.new(0, -0.7, -3.1) * CFrame.Angles(math.rad(180), 0, 0), Color = head[1], Material = head[2] })
 		piece(m, { Name = "Collar", Size = Vector3.new(0.5, 0.5, 0.6), CFrame = CFrame.new(0, 0.1, -3.1), Color = if tn == "Crude" or tn == "Stone" then ROPE else Color3.fromRGB(70, 60, 50), Material = Enum.Material.Fabric })
 	end
+end
+builders.HuntingBow = function(m)
+	builders.Bow(m)
+	for _, d in m:GetChildren() do
+		if d:IsA("BasePart") and string.find(d.Name, "^Limb") then
+			d.Color = Color3.fromRGB(96, 60, 36)
+		end
+	end
+end
+builders.Crossbow = function(m)
+	handle(m, Vector3.new(0.4, 0.8, 0.5), WOOD_DARK, Enum.Material.Wood)
+	piece(m, { Name = "Stock", Size = Vector3.new(0.4, 0.4, 3), CFrame = CFrame.new(0, 0.35, -0.9), Color = WOOD, Material = Enum.Material.Wood })
+	piece(m, { Name = "Prod", Size = Vector3.new(3.2, 0.25, 0.3), CFrame = CFrame.new(0, 0.45, -2.3), Color = Color3.fromRGB(110, 110, 116), Material = Enum.Material.Metal })
+	piece(m, { Name = "String", Size = Vector3.new(3, 0.05, 0.05), CFrame = CFrame.new(0, 0.5, -1.7), Color = Color3.fromRGB(230, 226, 210), Material = Enum.Material.SmoothPlastic })
+end
+builders.Bolt = function(m)
+	handle(m, Vector3.new(0.14, 0.14, 1.8), Color3.fromRGB(110, 110, 116), Enum.Material.Metal)
 end
 builders.CrudeSpear = function(m)
 	builders.Spear(m)

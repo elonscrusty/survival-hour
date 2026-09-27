@@ -197,10 +197,10 @@ function InventoryService.Give(p: Player, id: string, count: number, stack: any?
 			st.Filled = false
 		end
 		local slot
-		slot, displaced = InventoryModel.AddEquipment(inv, def.Kind, st, preferSlot or inv.Equipped)
+		slot, displaced = InventoryModel.AddEquipment(inv, def.Kind, st, if def.Kind == "Armor" then def.ArmorSlot else preferSlot or inv.Equipped)
 		if slot then
 			taken = 1
-			if slot ~= "Armor" and inv.Equipped == nil then
+			if def.Kind ~= "Armor" and inv.Equipped == nil then
 				inv.Equipped = slot
 			end
 		end
@@ -361,7 +361,7 @@ function InventoryService._onDrop(p: Player, req: any)
 		return
 	end
 	local dropPos = root.Position + root.CFrame.LookVector * 3
-	if type(req.Slot) == "string" and (table.find(InventoryModel.SlotNames, req.Slot) or req.Slot == "Armor" or req.Slot == "Backpack") then
+	if type(req.Slot) == "string" and (table.find(InventoryModel.SlotNames, req.Slot) or InventoryModel.ArmorPiece(req.Slot) or req.Slot == "Backpack") then
 		if ctx.ChannelService.IsBusy(p) then
 			return
 		end
@@ -564,7 +564,8 @@ function InventoryService.Wear(p: Player, slot: string, amount: number)
 	if not inv then
 		return
 	end
-	local st = if slot == "Armor" then inv.Armor else inv.Slots[slot]
+	local piece = InventoryModel.ArmorPiece(slot)
+	local st = if piece then inv.Armor[piece] else inv.Slots[slot]
 	local name = st and Items[st.Id] and Items[st.Id].Name
 	if InventoryModel.Wear(inv, slot, amount) then
 		ctx.Util.Notify(p, (name or "Item") .. " broke!", "warn")
@@ -619,20 +620,41 @@ function InventoryService._refreshHeld(p: Player)
 	-- Canteen fill state for visuals
 	local util = inv and inv.Slots.Utility
 	char:SetAttribute("CanteenFilled", util ~= nil and util.Id == "Canteen" and util.Filled == true)
-	-- Armor vest
-	local hasArmor = inv ~= nil and inv.Armor ~= nil
-	local vest = char:FindFirstChild("ArmorVest")
-	if hasArmor and not vest then
-		local torso = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
-		if torso and torso:IsA("BasePart") then
-			local v = Build.Part({ Name = "ArmorVest", Size = torso.Size + Vector3.new(0.3, 0.1, 0.3), CFrame = torso.CFrame, Color = Color3.fromRGB(130, 80, 52), Material = Enum.Material.Fabric, Anchored = false, CanCollide = false, CanQuery = false, Massless = true, Parent = char })
-			local w = Instance.new("WeldConstraint")
-			w.Part0 = torso
-			w.Part1 = v
-			w.Parent = v
+	-- Worn armour: one shell per piece, coloured by tier (Hide → Tactical).
+	local ARMOR_BONES = { Head = { "Head" }, Chest = { "UpperTorso", "Torso" }, Legs = { "LeftUpperLeg", "RightUpperLeg" } }
+	for piece, bones in ARMOR_BONES do
+		local st = inv and inv.Armor[piece]
+		local wantId = if st then st.Id else nil
+		for _, old in char:GetChildren() do
+			if old:GetAttribute("ArmorPiece") == piece and old:GetAttribute("ArmorId") ~= wantId then
+				old:Destroy()
+			end
 		end
-	elseif not hasArmor and vest then
-		vest:Destroy()
+		local def = wantId and Items[wantId]
+		if def then
+			for _, boneName in bones do
+				local bone = char:FindFirstChild(boneName)
+				if bone and bone:IsA("BasePart") and not bone:FindFirstChild("ArmorShell") then
+					local mat = if (def.Tier or 1) >= 3 then Enum.Material.Metal else Enum.Material.Fabric
+					local size = bone.Size + (if piece == "Head" then Vector3.new(0.25, -0.2, 0.25) else Vector3.new(0.3, 0.1, 0.3))
+					local shell = Build.Part({ Name = "ArmorShell", Size = size, CFrame = bone.CFrame * CFrame.new(0, if piece == "Head" then 0.25 else 0, 0), Color = def.Icon.Color, Material = mat, Anchored = false, CanCollide = false, CanQuery = false, Massless = true, Parent = bone })
+					shell:SetAttribute("ArmorPiece", piece)
+					shell:SetAttribute("ArmorId", wantId)
+					local w = Instance.new("WeldConstraint")
+					w.Part0 = bone
+					w.Part1 = shell
+					w.Parent = shell
+				end
+			end
+		end
+		-- remove stale shells parented under bones
+		for _, boneName in bones do
+			local bone = char:FindFirstChild(boneName)
+			local shell = bone and bone:FindFirstChild("ArmorShell")
+			if shell and shell:GetAttribute("ArmorId") ~= wantId then
+				shell:Destroy()
+			end
+		end
 	end
 end
 

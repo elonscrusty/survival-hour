@@ -79,13 +79,13 @@ Studio yet**.
 ## Wildlife / combat
 | Requirement | Status | Current build | Phase |
 |---|---|---|---|
-| Deer, Bears, Rabbits, Boar, Wolves with distinct behaviour | 🟡 | Wolf, Bear, Bat (no deer/rabbit/boar) | 4 |
-| Night escalation (pressure, not HP inflation) | 🟡 | Spawn at night only | 4 |
+| Deer, Bears, Rabbits, Boar, Wolves with distinct behaviour | ✅ | Phase 4 (procedural rigs; Blender meshes for the new three in Phase 5) | 4 |
+| Night escalation (pressure, not HP inflation) | ✅ | Phase 4 | 4 |
 | Health 100; Stamina 100; no fast regen | ✅ | Phase 2 (sprint uses stamina; melee costs come in Phase 4) | 2 |
 | Healing takes time, interruptible: Bandage ~20 / First Aid ~50 / Medkit ~100 | ✅ | Phase 2 | 2 |
-| Melee Light / Heavy / Block with stamina and guard break | ❌ | Single attack | 4 |
-| Ranged: Crude Bow II, Hunting Bow III, Crossbow III/IV; headshots | 🟡 | Bow + Pistol + Rifle; no headshots | 4 |
-| Armour Head/Chest/Legs, Hide → Tactical, ≤ 45–50 % full set | 🟡 | One "Leather Armor", 25 % | 4 |
+| Melee Light / Heavy / Block with stamina and guard break | ✅ | Phase 4 | 4 |
+| Ranged: Crude Bow II, Hunting Bow III, Crossbow III/IV; headshots | ✅ | Phase 4 | 4 |
+| Armour Head/Chest/Legs, Hide → Tactical, ≤ 45–50 % full set | ✅ | Phase 4 | 4 |
 
 ## Caves / houses / POIs / loot
 | Requirement | Status | Current build | Phase |

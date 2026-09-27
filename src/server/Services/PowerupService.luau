@@ -172,6 +172,19 @@ function PowerupService.ToolSpeedMult(p: Player, toolType: string): number
 	return 1
 end
 
+-- Damage multiplier for wildlife attacks on this player (Hardy power-up).
+function PowerupService.WildlifeDamageMult(p: Player): number
+	return 1
+end
+
+-- Extra leather from kills (Hunter class).
+function PowerupService.ExtraHide(p: Player): number
+	return 0
+end
+
+-- XP/coin hook for wildlife kills (Phase 6).
+function PowerupService.OnWildlifeKill(p: Player, species: string, night: boolean) end
+
 -- Storage breaching speed (Raider class).
 function PowerupService.BreachSpeedMult(p: Player): number
 	return 1

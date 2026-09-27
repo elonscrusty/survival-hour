@@ -203,7 +203,7 @@ end
 
 function Animation.Start()
 	State.On("LocalAction", function(a)
-		if a.Kind == "Attack" or a.Kind == "Release" then
+		if a.Kind == "Attack" or a.Kind == "Heavy" or a.Kind == "Release" then
 			localSwingAt = os.clock()
 			localSwingItem = a.Item
 			localDraw = false

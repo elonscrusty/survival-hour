@@ -77,10 +77,11 @@ Config.Stamina = {
 	ExhaustedMult = 0.9, -- slight slow while exhausted
 }
 
+-- (armour pieces: Items.luau ARMOR_TIERS)
 Config.Inventory = {
 	PackSlots = 6, -- spec: ~6 starting slots; backpacks give 10/16/24/32/40
 	BandageMax = 3,
-	AmmoMax = { Arrow = 30, Bullet = 24 },
+	AmmoMax = { Arrow = 30, Bullet = 24, Bolt = 20 },
 	DropDespawn = 180,
 	SupplyBagDespawn = 180,
 	PickupRange = 10,
@@ -190,13 +191,19 @@ Config.Crates = {
 }
 
 Config.Wildlife = {
-	MaxTotal = 14,
-	MaxPerSpecies = { Wolf = 7, Bear = 3, Bat = 8 },
+	MaxTotal = 20,
+	MaxPerSpecies = { Wolf = 9, Bear = 2, Boar = 4, Deer = 6, Rabbit = 6, Bat = 0 }, -- bats aren't in the spec
+	-- Predators (wolf/bear/boar) alive at once: base on Night 1, +2 per night, capped (Logic/WildlifeRules)
+	PredatorBase = 6,
+	PredatorPerNight = 2,
+	PredatorMax = 14,
 	SpawnInterval = 6,
 	SpawnMinPlayerDist = 60,
 	SpawnMaxPlayerDist = 170,
 	DespawnDistance = 260,
-	AggroRange = { Wolf = 60, Bear = 45, Bat = 50 },
+	AggroRange = { Wolf = 60, Bear = 45, Boar = 14, Bat = 50 }, -- × night AggroMult
+	FleeRange = { Deer = 38, Rabbit = 22 },
+	Territory = 32, -- bears defend this radius around where they spawned
 	StuckTime = 3,
 	StuckGiveUp = 12,
 	ThinkRate = 0.2, -- seconds between AI decisions
@@ -210,6 +217,19 @@ Config.Combat = {
 	ArrowMaxTime = 3,
 	HitMarkerTime = 0.25,
 	StructureDamageScale = 1,
+	-- Melee (spec: Light / Heavy / Block; stamina and guard break matter)
+	LightStamina = 6,
+	HeavyStamina = 18,
+	HeavyMult = 1.8, -- damage
+	HeavyCooldownMult = 1.6,
+	HeavyWindup = 0.45, -- seconds held before a heavy can release (server enforces spacing)
+	HeavyGuardDrain = 20, -- extra stamina a heavy hit drains from a blocker
+	BlockReduction = 0.45, -- melee weapons/tools; the Shield uses its own (0.7)
+	BlockDrainPerHp = 1.0, -- stamina per point blocked (Shield: ShieldDrainPerHp)
+	ShieldDrainPerHp = 0.6,
+	GuardBreakTime = 1.5, -- seconds you can't block after your guard breaks
+	HeadshotMult = 1.75,
+	ArmorCap = 0.5,
 }
 
 Config.Camera = {

@@ -18,7 +18,7 @@ local Inventory = {}
 local player = Players.LocalPlayer
 local body: ScrollingFrame
 local C = Theme.Colors
-local SLOT_LABEL = { Weapon1 = "Weapon 1", Weapon2 = "Weapon 2", Tool = "Tool 1", Tool2 = "Tool 2", Utility = "Utility", Armor = "Armor (worn)", Backpack = "Backpack (worn)" }
+local SLOT_LABEL = { Weapon1 = "Weapon 1", Weapon2 = "Weapon 2", Tool = "Tool 1", Tool2 = "Tool 2", Utility = "Utility", ArmorHead = "Head (worn)", ArmorChest = "Chest (worn)", ArmorLegs = "Legs (worn)", Backpack = "Backpack (worn)" }
 local RES = InventoryModel.ResourceIds
 
 local function section(title: string, order: number)
@@ -45,8 +45,9 @@ function Inventory.Render()
 	end
 	section("Equipment", 1)
 	local order = 2
-	for _, slot in { "Weapon1", "Weapon2", "Tool", "Tool2", "Utility", "Armor", "Backpack" } do
-		local stack = if slot == "Armor" then inv.Armor elseif slot == "Backpack" then inv.Backpack else inv.Slots[slot]
+	for _, slot in { "Weapon1", "Weapon2", "Tool", "Tool2", "Utility", "ArmorHead", "ArmorChest", "ArmorLegs", "Backpack" } do
+		local piece = string.match(slot, "^Armor(%a+)$")
+		local stack = if piece then (inv.Armor or {})[piece] elseif slot == "Backpack" then inv.Backpack else inv.Slots[slot]
 		local r = row(order)
 		order += 1
 		UI.text(SLOT_LABEL[slot], { Position = UDim2.fromOffset(62, 4), Size = UDim2.new(0.5, 0, 0, 16), TextSize = 12, TextColor3 = C.TextDim, Parent = r })
@@ -66,7 +67,7 @@ function Inventory.Render()
 			if def.Slots then
 				extra = "  ·  " .. def.Slots .. " slots"
 			end
-			if slot ~= "Armor" and slot ~= "Backpack" then
+			if not piece and slot ~= "Backpack" then
 				UI.button(if inv.Equipped == slot then "Equipped" else "Equip", { Size = UDim2.fromOffset(92, 40), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -104, 0.5, 0), TextSize = 14, BackgroundColor3 = if inv.Equipped == slot then C.AccentDark else C.PanelLighter, Parent = r }, function()
 					Net.Event("Equip"):FireServer(slot)
 				end)
@@ -88,7 +89,7 @@ function Inventory.Render()
 	order += 1
 	local pr = row(order, 54)
 	order += 1
-	UI.text(string.format("✚ Bandages %d/3     🏹 Arrows %d     • Bullets %d", inv.Bandages, inv.Ammo.Arrow or 0, inv.Ammo.Bullet or 0), { Position = UDim2.fromOffset(10, 14), Size = UDim2.new(1, -130, 0, 24), TextSize = 16, Parent = pr })
+	UI.text(string.format("✚ Bandages %d/3   🏹 Arrows %d   ➶ Bolts %d   • Bullets %d", inv.Bandages, inv.Ammo.Arrow or 0, inv.Ammo.Bolt or 0, inv.Ammo.Bullet or 0), { Position = UDim2.fromOffset(10, 14), Size = UDim2.new(1, -130, 0, 24), TextSize = 16, Parent = pr })
 	UI.button("Use bandage", { Size = UDim2.fromOffset(116, 40), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0), TextSize = 14, BackgroundColor3 = Color3.fromRGB(110, 40, 44), Parent = pr }, function()
 		Net.Event("UseBandage"):FireServer()
 	end)
