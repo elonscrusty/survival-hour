@@ -6,6 +6,29 @@
 > available. Import one asset from each group below and check it before bulk-importing. See
 > `Docs/QA_REPORT.md` for what *was* verified.
 
+## Quick start: one-paste setup
+
+1. **Home → Import 3D** and select **every** `.fbx` in `Export/Meshes/*` (all category folders) and
+   `Export/Rigs/*`. Set **World Forward = Front**, **World Up = Top**, **Scale Unit = Stud**.
+2. Optional, for full-quality textures: upload the 8 PNGs in `Textures/` (Asset Manager → Import) and
+   paste their ids into the `TEXTURES` table at the top of the script. Leave them blank to keep the
+   preview texture already embedded in each file.
+3. Open **View → Command Bar**, paste all of `Roblox/SurvivalHour_CommandBarSetup.lua`, press Enter.
+
+The script finishes everything below in one pass:
+- sets pivots, attachments and collision (invisible box Parts; decor and effects don't collide)
+- builds Tools for held items and Accessories for armour
+- places doors, lids and gun parts
+- adds an AnimationController, Animator and hitboxes to each animal
+- files everything under **ServerStorage › SurvivalHour › <Category>**, and lays out a showcase copy
+  in **Workspace › SurvivalHour_Showcase**
+
+It prints any assets it couldn't find, and **Ctrl+Z** undoes the whole run. It compiles with the official
+Luau compiler and passed a smoke test against a mock of the Roblox API
+(`blender/tests/run_setup_smoke.py`), but it **hasn't been run in real Studio yet**. If it errors, copy
+the Output window text back to Claude. Animations still need importing through the Animation Editor
+(section 6).
+
 ## 1. How the files were exported
 
 The exporter (`blender/sh/pipeline.py → export_fbx`) uses Roblox's documented Blender FBX settings:
