@@ -1,8 +1,11 @@
 local Recipes = require("../src/shared/Recipes")
 
 local expected = {
-	[1] = { "CrudeAxe", "CrudePickaxe", "CrudeSpear", "StorageBox", "WoodWall", "RepairHammer" },
-	[2] = { "StoneAxe", "StonePickaxe", "Spear", "Bow", "Arrows", "Canteen", "Gate", "Spikes", "FirstAid" },
+	[1] = { "CrudeAxe", "CrudePickaxe", "CrudeSpear", "StorageBox", "WoodWall", "Gate", "WoodFloor", "Spikes", "RepairHammer", "FibrePack" },
+	[2] = { "StoneAxe", "StonePickaxe", "Spear", "Bow", "Arrows", "Canteen", "FirstAid", "ReinforcedWall", "ReinforcedDoor", "WindowWall", "TripwireAlarm", "Snare", "ReinforcedChest", "HidePack" },
+	[3] = { "ScrapWall", "BearTrap", "Watchtower", "MetalLocker", "Crowbar", "FramePack" },
+	[4] = { "MetalWall", "HeavyGate", "SurvivalSafe", "Sledgehammer", "IronPack" },
+	[5] = { "AdvancedAlarm", "BreachingCharge", "ExpeditionPack" },
 }
 
 return {

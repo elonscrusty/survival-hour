@@ -22,17 +22,18 @@ return {
 		conserved(t, { a }, st, 20)
 	end,
 	withdraw_respects_carry_limit = function(t)
-		local a, st = inv(), S.New(200)
+		local a, st = I.New(2, 3, {}), S.New(200)
 		st.Items.Stone = 50
 		I.AddResource(a, "Wood", 25)
-		t.eq(S.Withdraw(st, a, "Stone", 50), 5)
-		t.eq(st.Items.Stone, 45)
+		t.eq(S.Withdraw(st, a, "Stone", 50), 24, "one free slot = one stone stack")
+		t.eq(st.Items.Stone, 26)
 	end,
 	storage_capacity = function(t)
-		local a, st = inv(), S.New(10)
-		I.AddResource(a, "Wood", 30)
-		t.eq(S.Deposit(st, a, "Wood", 30), 10)
-		t.eq(a.Resources.Wood, 20)
+		local a, st = inv(), S.New(1) -- one stack slot
+		I.AddResource(a, "Wood", 40)
+		t.eq(S.Deposit(st, a, "Wood", 40), 32)
+		t.eq(a.Resources.Wood, 8)
+		t.eq(S.Free(st), 0)
 	end,
 	simultaneous_withdraw_no_dupe = function(t)
 		-- Two teammates (or a thief and an owner) request the same 8 stone.

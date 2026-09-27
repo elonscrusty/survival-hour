@@ -35,7 +35,10 @@ end
 function InventoryService.Init(c)
 	ctx = c
 	ctx.MatchService.On("PlayerJoinedMatch", function(p: Player)
-		invs[p] = InventoryModel.New(Config.Inventory.ResourceCapacity, Config.Inventory.BandageMax, Config.Inventory.AmmoMax)
+		local inv = InventoryModel.New(Config.Inventory.PackSlots, Config.Inventory.BandageMax, Config.Inventory.AmmoMax)
+		inv.BonusSlots = ctx.PowerupService.BonusSlots(p)
+		InventoryModel.SetPackSlots(inv, nil)
+		invs[p] = inv
 		InventoryService._deliverBandageCredits(p)
 		InventoryService.Sync(p)
 	end)
@@ -152,7 +155,7 @@ function InventoryService.AddResource(p: Player, id: string, n: number): number
 	end
 	local added = InventoryModel.AddResource(inv, id, n)
 	if added < n then
-		Net.FireClient("Notify", p, "Your pack is full (" .. inv.Capacity .. "/" .. inv.Capacity .. "). Deposit at your storage.", "warn")
+		Net.FireClient("Notify", p, "Your pack is full (" .. inv.Capacity .. " slots). Deposit at your storage or craft a bigger backpack.", "warn")
 	end
 	if added > 0 then
 		InventoryService.Sync(p)
@@ -175,6 +178,19 @@ function InventoryService.Give(p: Player, id: string, count: number, stack: any?
 		taken = InventoryModel.AddAmmo(inv, id, count)
 	elseif def.Kind == "Consumable" then
 		taken = InventoryModel.AddBandages(inv, count)
+	elseif def.Kind == "Backpack" then
+		local old
+		_, old = InventoryModel.AddEquipment(inv, "Backpack", stack or { Id = id })
+		displaced = old
+		taken = 1
+		InventoryModel.SetPackSlots(inv, def.Slots)
+		local overflow = InventoryModel.TrimToCapacity(inv)
+		if next(overflow) then
+			local root = ctx.Util.Root(p)
+			if root then
+				InventoryService.SpawnBag(overflow, root.Position + root.CFrame.LookVector * 3, Color3.fromRGB(150, 120, 80), "Overflow")
+			end
+		end
 	elseif def.Kind == "Weapon" or def.Kind == "Tool" or def.Kind == "Utility" or def.Kind == "Armor" then
 		local st = stack or { Id = id, Durability = def.Durability }
 		if st.Id == "Canteen" and st.Filled == nil then
@@ -345,13 +361,20 @@ function InventoryService._onDrop(p: Player, req: any)
 		return
 	end
 	local dropPos = root.Position + root.CFrame.LookVector * 3
-	if type(req.Slot) == "string" and (table.find(InventoryModel.SlotNames, req.Slot) or req.Slot == "Armor") then
+	if type(req.Slot) == "string" and (table.find(InventoryModel.SlotNames, req.Slot) or req.Slot == "Armor" or req.Slot == "Backpack") then
 		if ctx.ChannelService.IsBusy(p) then
 			return
 		end
 		local st = InventoryModel.RemoveSlot(inv, req.Slot)
 		if st then
 			InventoryService.SpawnPickup(st.Id, 1, dropPos, st)
+			if req.Slot == "Backpack" then
+				InventoryModel.SetPackSlots(inv, nil)
+				local overflow = InventoryModel.TrimToCapacity(inv)
+				if next(overflow) then
+					InventoryService.SpawnBag(overflow, dropPos + Vector3.new(0, 0, 2), Color3.fromRGB(150, 120, 80), "Overflow")
+				end
+			end
 			InventoryService.Sync(p)
 		end
 	elseif type(req.Resource) == "string" and ctx.Util.IsInt(req.Count, 1, 100) then

@@ -33,6 +33,11 @@ export type ItemDef = {
 	UseTime: number?, -- seconds to apply (interrupted by damage)
 	Slots: number?, -- backpacks: pack slots
 	Tier: number?, -- general tier (armor, backpacks, storage)
+	Stacks: number?, -- storage: stack slots
+	BreachTool: string?, -- tools: "Crowbar" | "Sledgehammer" (storage breaching)
+	Door: boolean?, -- structures: has an owner-only door
+	Hold: number?, -- traps: seconds the victim is held in place
+	Detect: number?, -- alarms: detection radius (studs)
 	Food: boolean?, -- resource that can be eaten (heal values in Resources.Food)
 	BlockReduction: number?, -- shield
 	DamageReduction: number?, -- armor
@@ -54,6 +59,7 @@ local LEATHER = Color3.fromRGB(150, 92, 60)
 local STEEL = Color3.fromRGB(190, 198, 210)
 local RED = Color3.fromRGB(210, 70, 70)
 local BLUE = Color3.fromRGB(80, 150, 220)
+local ROPE_COLOR = Color3.fromRGB(205, 180, 120)
 
 local Items: { [string]: ItemDef } = {}
 
@@ -146,11 +152,36 @@ for tier = 1, 4 do
 		ToolPower = TIER_POWER[tier], StructureMult = 1.25 + tier * 0.25, AnimalMult = 1,
 	})
 end
+-- Breaching tools (spec progression: normal tools -> Crowbar -> Sledgehammer -> Breaching Charge)
+add({
+	Id = "Crowbar", Name = "Crowbar", Kind = "Tool", Description = "Breaches storage faster. Opens Metal Lockers.",
+	Icon = icon("⌐", Color3.fromRGB(150, 60, 50)),
+	Damage = 12, Cooldown = 0.75, Range = 6, Durability = 120, BreachTool = "Crowbar", StructureMult = 1.2, AnimalMult = 1,
+})
+add({
+	Id = "Sledgehammer", Name = "Sledgehammer", Kind = "Tool", Description = "Breaches any storage, including Survival Safes. Heavy against walls.",
+	Icon = icon("⚒", Color3.fromRGB(110, 110, 116)),
+	Damage = 20, Cooldown = 1.2, Range = 6.5, Durability = 200, BreachTool = "Sledgehammer", StructureMult = 3, AnimalMult = 1,
+})
+add({ Id = "BreachingCharge", Name = "Breaching Charge", Kind = "Resource", Description = "Blows any storage open in 5 s. Very loud; damages what's around it.", Icon = icon("✹", Color3.fromRGB(220, 120, 40), "Square") })
+
 add({
 	Id = "RepairHammer", Name = "Repair Hammer", Kind = "Tool", Description = "Repairs your team's structures using resources.",
 	Icon = icon("⚒", STONE),
 	Damage = 7, Cooldown = 0.8, Range = 7, Durability = 200, StructureMult = 0.3, AnimalMult = 1,
 })
+
+-- Backpacks (worn, kept on death): pack slots 10 / 16 / 24 / 32 / 40 by tier.
+local PACKS: { { Id: string, Name: string, Slots: number, Color: Color3 } } = {
+	{ Id = "FibrePack", Name = "Fibre Pack", Slots = 10, Color = Color3.fromRGB(150, 170, 110) },
+	{ Id = "HidePack", Name = "Hide Pack", Slots = 16, Color = LEATHER },
+	{ Id = "FramePack", Name = "Scrap-Frame Pack", Slots = 24, Color = Color3.fromRGB(140, 120, 100) },
+	{ Id = "IronPack", Name = "Iron-Frame Pack", Slots = 32, Color = Color3.fromRGB(150, 110, 96) },
+	{ Id = "ExpeditionPack", Name = "Expedition Pack", Slots = 40, Color = Color3.fromRGB(80, 110, 90) },
+}
+for tier, pack in PACKS do
+	add({ Id = pack.Id, Name = pack.Name, Kind = "Backpack", Description = string.format("Worn. %d pack slots. Kept when you die.", pack.Slots), Icon = icon("🎒", pack.Color), Slots = pack.Slots, Tier = tier })
+end
 
 -- Utility / worn / pouches ---------------------------------------------------------
 add({ Id = "Canteen", Name = "Canteen", Kind = "Utility", Description = "Fill at a stream. Pour on an enemy fire at night.", Icon = icon("💧", BLUE) })
@@ -163,26 +194,80 @@ add({ Id = "Arrow", Name = "Arrows", Kind = "Ammo", Description = "Ammunition fo
 add({ Id = "Bullet", Name = "Bullets", Kind = "Ammo", Description = "Ammunition for guns.", Icon = icon("•", Color3.fromRGB(200, 170, 90)) })
 
 -- Structures -------------------------------------------------------------------
+-- Storage (spec): Wooden Crate I ~12 stacks, Reinforced Chest II ~20, Metal Locker III ~30,
+-- Survival Safe (high tier) ~45. Enemies breach it to unlock it; the owner can resecure.
 add({
-	Id = "StorageBox", Name = "Storage Box", Kind = "Structure", Description = "Shared team storage (200 units). Enemies can steal from it.",
-	Icon = icon("▤", WOOD, "Square"), Health = 400, Size = Vector3.new(6, 4, 4), Material = "Wood", Limit = "Storage",
+	Id = "StorageBox", Name = "Wooden Crate", Kind = "Structure", Description = "12 stack slots. Enemies can breach it with any tool.",
+	Icon = icon("▤", WOOD, "Square"), Health = 400, Size = Vector3.new(6, 4, 4), Material = "Wood", Limit = "Storage", Tier = 1, Stacks = 12,
+})
+add({
+	Id = "ReinforcedChest", Name = "Reinforced Chest", Kind = "Structure", Description = "20 stack slots. Iron-banded; slower to breach.",
+	Icon = icon("▤", Color3.fromRGB(120, 96, 70), "Square"), Health = 800, Size = Vector3.new(6, 4.4, 4), Material = "Wood", Limit = "Storage", Tier = 2, Stacks = 20,
+})
+add({
+	Id = "MetalLocker", Name = "Metal Locker", Kind = "Structure", Description = "30 stack slots. Needs a Crowbar or better to breach.",
+	Icon = icon("▯", Color3.fromRGB(120, 130, 140), "Square"), Health = 1400, Size = Vector3.new(4, 7, 3), Material = "Scrap", Limit = "Storage", Tier = 3, Stacks = 30,
+})
+add({
+	Id = "SurvivalSafe", Name = "Survival Safe", Kind = "Structure", Description = "45 stack slots. Needs a Sledgehammer or a Breaching Charge.",
+	Icon = icon("▣", Color3.fromRGB(70, 74, 80), "Square"), Health = 2400, Size = Vector3.new(4.5, 5, 4.5), Material = "Iron", Limit = "Storage", Tier = 4, Stacks = 45,
 })
 add({
 	Id = "WoodWall", Name = "Wooden Wall", Kind = "Structure", Description = "Palisade wall section.",
 	Icon = icon("▥", WOOD, "Square"), Health = 250, Size = Vector3.new(10, 9, 1.6), Material = "Wood", Limit = "Wall",
 })
 add({
-	Id = "Gate", Name = "Gate", Kind = "Structure", Description = "Opens for your team only.",
-	Icon = icon("Π", WOOD, "Square"), Health = 300, Size = Vector3.new(10, 9, 1.6), Material = "Wood", Limit = "Wall",
+	Id = "Gate", Name = "Wooden Door", Kind = "Structure", Description = "Opens for you only.",
+	Icon = icon("Π", WOOD, "Square"), Health = 300, Size = Vector3.new(10, 9, 1.6), Material = "Wood", Limit = "Wall", Door = true,
 })
 add({
-	Id = "Spikes", Name = "Spikes", Kind = "Structure", Description = "Damages enemies who touch it (15 per second).",
-	Icon = icon("▲", WOOD, "Square"), Health = 120, Size = Vector3.new(8, 3, 3), Material = "Wood", Limit = "Spikes",
+	Id = "WoodFloor", Name = "Wooden Floor", Kind = "Structure", Description = "10×10 platform. Level uneven ground or build a raised base.",
+	Icon = icon("▭", WOOD, "Square"), Health = 300, Size = Vector3.new(10, 1, 10), Material = "Wood", Limit = "Floor",
+})
+add({
+	Id = "Spikes", Name = "Spike Barricade", Kind = "Structure", Description = "Damages enemies who touch it (15 per second). Counts as a trap.",
+	Icon = icon("▲", WOOD, "Square"), Health = 120, Size = Vector3.new(8, 3, 3), Material = "Wood", Limit = "Trap",
 	Damage = 15,
 })
 add({
 	Id = "ReinforcedWall", Name = "Reinforced Wall", Kind = "Structure", Description = "Stone-faced wall. Very tough.",
 	Icon = icon("▦", STONE, "Square"), Health = 700, Size = Vector3.new(10, 10, 2.4), Material = "Stone", Limit = "Wall",
+})
+add({
+	Id = "ReinforcedDoor", Name = "Reinforced Door", Kind = "Structure", Description = "Iron-strapped door. Opens for you only.",
+	Icon = icon("Π", Color3.fromRGB(110, 84, 58), "Square"), Health = 700, Size = Vector3.new(10, 9, 1.6), Material = "Stone", Limit = "Wall", Door = true,
+})
+add({
+	Id = "WindowWall", Name = "Window Wall", Kind = "Structure", Description = "Reinforced wall with a shooting window.",
+	Icon = icon("▣", STONE, "Square"), Health = 600, Size = Vector3.new(10, 10, 2.4), Material = "Stone", Limit = "Wall",
+})
+add({
+	Id = "TripwireAlarm", Name = "Tripwire Alarm", Kind = "Structure", Description = "Rattles and warns you (with a direction) when an enemy walks through.",
+	Icon = icon("〰", ROPE_COLOR, "Square"), Health = 60, Size = Vector3.new(8, 1.5, 1), Material = "Wood", Limit = "Trap",
+})
+add({
+	Id = "Snare", Name = "Snare", Kind = "Structure", Description = "Holds an enemy in place for 2.5 s. Used up when it catches someone.",
+	Icon = icon("◎", ROPE_COLOR, "Square"), Health = 50, Size = Vector3.new(3, 1, 3), Material = "Wood", Limit = "Trap", Hold = 2.5,
+})
+add({
+	Id = "ScrapWall", Name = "Scrap Wall", Kind = "Structure", Description = "Salvaged metal sheets. Much tougher than stone.",
+	Icon = icon("▥", Color3.fromRGB(128, 112, 96), "Square"), Health = 1200, Size = Vector3.new(10, 10, 2), Material = "Scrap", Limit = "Wall",
+})
+add({
+	Id = "BearTrap", Name = "Bear Trap", Kind = "Structure", Description = "Steel jaws: 35 damage and a 3.5 s hold. Used up when it bites.",
+	Icon = icon("✶", Color3.fromRGB(120, 124, 130), "Square"), Health = 150, Size = Vector3.new(3, 1, 3), Material = "Scrap", Limit = "Trap", Damage = 35, Hold = 3.5,
+})
+add({
+	Id = "MetalWall", Name = "Metal Wall", Kind = "Structure", Description = "Heavy riveted plates. Raiding it takes serious tools.",
+	Icon = icon("▦", Color3.fromRGB(92, 96, 104), "Square"), Health = 2200, Size = Vector3.new(10, 11, 2.6), Material = "Iron", Limit = "Wall",
+})
+add({
+	Id = "HeavyGate", Name = "Heavy Gate", Kind = "Structure", Description = "Iron-plated gate. Opens for you only.",
+	Icon = icon("Π", Color3.fromRGB(92, 96, 104), "Square"), Health = 1800, Size = Vector3.new(10, 9, 1.6), Material = "Iron", Limit = "Wall", Door = true,
+})
+add({
+	Id = "AdvancedAlarm", Name = "Advanced Alarm", Kind = "Structure", Description = "Motion sensor: tells you who is near your base and from which side (no wallhack).",
+	Icon = icon("◉", Color3.fromRGB(120, 220, 120), "Square"), Health = 200, Size = Vector3.new(1.5, 5, 1.5), Material = "Iron", Limit = "Trap", Detect = 16,
 })
 add({
 	Id = "Watchtower", Name = "Watchtower", Kind = "Structure", Description = "Raised platform with a ladder. See further, shoot down.",

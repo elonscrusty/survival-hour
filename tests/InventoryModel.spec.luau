@@ -6,11 +6,28 @@ end
 
 return {
 	capacity_limit = function(t)
-		local inv = new()
-		t.eq(I.AddResource(inv, "Wood", 25), 25)
-		t.eq(I.AddResource(inv, "Stone", 10), 5, "only 5 fit")
+		-- 2 slots: Wood stacks to 32, Stone to 24
+		local inv = I.New(2, 3, { Arrow = 30, Bullet = 24 })
+		t.eq(I.AddResource(inv, "Wood", 40), 40, "two wood stacks")
 		t.eq(I.FreeSpace(inv), 0)
-		t.eq(I.AddResource(inv, "Stick", 1), 0)
+		t.eq(I.SpaceFor(inv, "Wood"), 24, "room left in the partial wood stack")
+		t.eq(I.AddResource(inv, "Stone", 1), 0, "no slot for stone")
+		t.eq(I.AddResource(inv, "Wood", 30), 24)
+	end,
+	spec_stack_sizes = function(t)
+		t.eq(I.Stack("Wood"), 32); t.eq(I.Stack("Stone"), 24); t.eq(I.Stack("Plant"), 32)
+		t.eq(I.Stack("Scrap"), 20); t.eq(I.Stack("Iron"), 16); t.eq(I.Stack("Coal"), 20); t.eq(I.Stack("RareComponent"), 5)
+		local inv = I.New(6, 3, {})
+		t.eq(I.SpaceFor(inv, "Wood"), 6 * 32, "6 starting slots")
+	end,
+	trim_after_smaller_pack = function(t)
+		local inv = I.New(3, 3, {})
+		I.AddResource(inv, "Wood", 40)
+		I.AddResource(inv, "Stone", 5)
+		inv.Capacity = 2
+		local out = I.TrimToCapacity(inv)
+		t.eq(out.Stone, 5, "smallest partial stack dropped")
+		t.eq(I.SlotsUsed(inv), 2)
 	end,
 	rejects_bad_input = function(t)
 		local inv = new()

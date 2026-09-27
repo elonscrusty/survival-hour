@@ -38,7 +38,11 @@ local touchBar: Frame
 local statusLabel: TextLabel
 local conn: RBXScriptConnection? = nil
 
-local WALLS = { WoodWall = true, Gate = true, ReinforcedWall = true }
+-- Structures whose ends snap together (walls, doors, gates; floors snap edge to edge too).
+local WALLS = {
+	WoodWall = true, Gate = true, ReinforcedWall = true, ReinforcedDoor = true, WindowWall = true,
+	ScrapWall = true, MetalWall = true, HeavyGate = true, WoodFloor = true,
+}
 
 local function aimPoint(): Vector3?
 	local char = player.Character
@@ -255,7 +259,7 @@ local function renderPicker()
 			ic.Position = UDim2.new(0.5, 0, 0, 8)
 			ic.Parent = b
 			UI.text(def.Name, { Position = UDim2.fromOffset(0, 60), TextSize = 15, Font = Theme.FontBold, TextXAlignment = Enum.TextXAlignment.Center, Parent = b })
-			UI.text(if locked then "🔒 Workbench Lv " .. r.Level else ("HP " .. tostring(def.Health)), { Position = UDim2.fromOffset(0, 84), TextSize = 13, TextColor3 = Theme.Colors.TextDim, TextXAlignment = Enum.TextXAlignment.Center, Parent = b })
+			UI.text(if locked then "🔒 Workbench Tier " .. ({ "I", "II", "III", "IV", "V" })[r.Level] else ("HP " .. tostring(def.Health) .. (if def.Limit == "Trap" then " · trap" elseif def.Stacks then " · " .. def.Stacks .. " stacks" else "")), { Position = UDim2.fromOffset(0, 84), TextSize = 13, TextColor3 = Theme.Colors.TextDim, TextXAlignment = Enum.TextXAlignment.Center, Parent = b })
 		end
 	end
 end

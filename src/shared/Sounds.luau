@@ -44,6 +44,10 @@ local Sounds: { [string]: Cue } = {
 	TreeFall = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 0.65, Pitch = 0.45 },
 	Eat = { Bundled = "rbxasset://sounds/action_footsteps_plastic.mp3", Volume = 0.5, Pitch = 1.8 },
 	ChestOpen = { Bundled = "rbxasset://sounds/action_get_up.mp3", Volume = 0.6, Pitch = 0.9 },
+	Alarm = { Bundled = "rbxasset://sounds/volume_slider.ogg", Volume = 0.9, Pitch = 0.5 },
+	TrapSnap = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 0.6, Pitch = 1.8 },
+	Breach = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 1.0, Pitch = 0.5 },
+	Explosion = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 1.0, Pitch = 0.7 },
 
 	-- Water / fire
 	Pour = { Bundled = "rbxasset://sounds/action_swim.mp3", Volume = 0.6, Pitch = 0.9, Looped = true },

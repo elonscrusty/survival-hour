@@ -64,17 +64,17 @@ Studio yet**.
 ## Storage / inventory
 | Requirement | Status | Current build | Phase |
 |---|---|---|---|
-| Storage breach unlocks (not deletes); owner repairs/resecures | 🟡 | 3 s steal channel takes 10 units | 3 |
-| Crate / Reinforced Chest / Metal Locker / Survival Safe (12/20/30/40–50 stacks); cap 1–5 by bench tier | ❌ | One StorageBox, capacity 200 units, limit 2 | 3 |
-| Breaching tools: Crowbar → Sledgehammer → Breaching Charge | ❌ | – | 3 |
-| ~6 starting slots; packs 10/16/24/32/40; stack sizes (Wood 32, Stone 24, …) | ❌ | 4 equipment slots + 30-unit resource pack | 3 |
+| Storage breach unlocks (not deletes); owner repairs/resecures | ✅ | Phase 3 | 3 |
+| Crate / Reinforced Chest / Metal Locker / Survival Safe (12/20/30/40–50 stacks); cap 1–5 by bench tier | ✅ | Phase 3 (12/20/30/45) | 3 |
+| Breaching tools: Crowbar → Sledgehammer → Breaching Charge | ✅ | Phase 3 | 3 |
+| ~6 starting slots; packs 10/16/24/32/40; stack sizes (Wood 32, Stone 24, …) | ✅ | Phase 3 | 3 |
 
 ## Building / raids / traps
 | Requirement | Status | Current build | Phase |
 |---|---|---|---|
-| Build only in own camp radius; no cave/river blocking or map spam | 🟡 | 55-stud radius ✅; verify river/cave rules | 3 |
-| Tier I–V structures (walls, doors, floors, windows, scrap/heavy defences) | 🟡 | Wood/Reinforced wall, Gate, Spikes, Watchtower, Storage | 3 |
-| Traps: Tripwire Alarm, Snare, Spike Barricade, Bear Trap, Advanced Alarm; cap 2–6; no turrets | 🟡 | Spikes only | 3 |
+| Build only in own camp radius; no cave/river blocking or map spam | ✅ | Phase 3 stream clearance + `NoBuild` zones | 3 |
+| Tier I–V structures (walls, doors, floors, windows, scrap/heavy defences) | ✅ | Phase 3 | 3 |
+| Traps: Tripwire Alarm, Snare, Spike Barricade, Bear Trap, Advanced Alarm; cap 2–6; no turrets | ✅ | Phase 3 | 3 |
 
 ## Wildlife / combat
 | Requirement | Status | Current build | Phase |

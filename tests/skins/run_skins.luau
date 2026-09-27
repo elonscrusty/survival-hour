@@ -269,11 +269,31 @@ test("Tiered tools build (axes, pickaxes, crude spear, meds)", function()
 end)
 
 -- structures -------------------------------------------------------------------------
+test("Survival Wars structures build (tiers, storage, traps)", function()
+	for _, id in { "WoodFloor", "WindowWall", "ScrapWall", "MetalWall", "ReinforcedDoor", "HeavyGate", "ReinforcedChest", "MetalLocker", "SurvivalSafe", "TripwireAlarm", "Snare", "BearTrap", "AdvancedAlarm" } do
+		local m = Structures.Build(id, at, Color3.new(1, 0, 0), workspace)
+		check(m.PrimaryPart and m.PrimaryPart.Name == "Root", id .. " root")
+	end
+	local win = Structures.Build("WindowWall", at, Color3.new(1, 0, 0), workspace)
+	check(#skins(win) == 0, "window wall shows the procedural wall (the pack wall has no window)")
+	local door = Structures.Build("ReinforcedDoor", at, Color3.new(1, 0, 0), workspace)
+	check(door:FindFirstChild("Door") and door:FindFirstChild("Door").PrimaryPart, "door panel")
+	Structures.SetGateOpen(door, true)
+	check(door:GetAttribute("Open") == true, "tiered doors open")
+	local crate = Structures.Build("StorageBox", at, Color3.new(1, 0, 0), workspace)
+	Structures.SetBreached(crate, true)
+	check(crate:FindFirstChild("BreachTag"), "breach tag")
+	Structures.SetBreached(crate, false)
+	check(not crate:FindFirstChild("BreachTag"), "resecured")
+	for _, id in { "Snare", "BearTrap", "TripwireAlarm" } do
+		check(Structures.Build(id, at, Color3.new(1, 0, 0), workspace):FindFirstChild("Trigger"), id .. " trigger")
+	end
+end)
 test("Structures dressed + collision intact", function()
 	for _, id in { "WoodWall", "ReinforcedWall", "Gate", "Spikes", "StorageBox", "Watchtower" } do
 		local m = Structures.Build(id, at, Color3.new(1, 0, 0), workspace)
 		check(#skins(m) >= 1, id .. " no mesh")
-		check(visibleProcedural(m) == 0, id .. " procedural visible")
+		check(visibleProcedural(m, { Lock = true }) == 0, id .. " procedural visible")
 	end
 end)
 test("WoodWall stretched to the 10-stud grid", function()

@@ -131,6 +131,7 @@ function Skins.Hide(model: Instance, keep: { [string]: boolean }?)
 	for _, d in model:GetDescendants() do
 		if d:IsA("BasePart") and not d:GetAttribute("Skin") then
 			if d.Transparency < 1 and not d:GetAttribute("TeamTint") and not (keep and keep[d.Name]) then
+				d:SetAttribute("SkinT", d.Transparency)
 				d.Transparency = 1
 				d.CastShadow = false
 				d:SetAttribute("SkinHidden", true)
@@ -211,6 +212,30 @@ function Skins.Strip(target: Instance, name: string?)
 		if d:IsA("BasePart") and d:GetAttribute("Skin") and (name == nil or d:GetAttribute("SkinOf") == name) then
 			d:Destroy()
 		end
+	end
+end
+
+-- Removes every mesh skin and shows the procedural parts again (for variants whose
+-- shape no longer matches the pack mesh, e.g. a wall with a window cut in it).
+function Skins.Unskin(target: Instance)
+	Skins.Strip(target)
+	for _, d in target:GetDescendants() do
+		if d:IsA("BasePart") and d:GetAttribute("SkinHidden") then
+			d.Transparency = d:GetAttribute("SkinT") or 0
+			d.CastShadow = true
+			d:SetAttribute("SkinHidden", nil)
+			for _, g in d:GetChildren() do
+				if g:IsA("SurfaceGui") then
+					g.Enabled = true
+				elseif g:IsA("Decal") or g:IsA("Texture") then
+					(g :: any).Transparency = 0
+				end
+			end
+		end
+	end
+	if target:IsA("Model") then
+		target:SetAttribute("SkinName", nil)
+		target:SetAttribute("SkinBase", nil)
 	end
 end
 

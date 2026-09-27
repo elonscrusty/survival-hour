@@ -7,9 +7,12 @@ export type Stack = { Id: string, Durability: number?, Filled: boolean? }
 
 export type Inventory = {
 	Resources: { [string]: number },
-	Capacity: number,
+	Capacity: number, -- pack SLOTS (spec: ~6 to start; backpacks 10/16/24/32/40)
 	Slots: { [string]: Stack? },
 	Armor: Stack?,
+	Backpack: Stack?, -- worn; sets Capacity (kept on death)
+	BaseSlots: number, -- slots without a backpack
+	BonusSlots: number, -- class / power-up extra slots
 	Bandages: number,
 	BandageMax: number,
 	Ammo: { [string]: number },
@@ -19,8 +22,53 @@ export type Inventory = {
 
 local InventoryModel = {}
 
-InventoryModel.ResourceIds = { "Stick", "Stone", "Wood", "Plant", "Leather", "Rope", "Berries", "Mushroom", "Scrap", "Iron", "Coal", "RareComponent", "FirstAid", "Medkit" }
+InventoryModel.ResourceIds = { "Stick", "Stone", "Wood", "Plant", "Leather", "Rope", "Berries", "Mushroom", "Scrap", "Iron", "Coal", "RareComponent", "FirstAid", "Medkit", "BreachingCharge" }
 InventoryModel.SlotNames = { "Weapon1", "Weapon2", "Tool", "Tool2", "Utility" }
+
+-- Spec stack targets (Wood 32, Stone 24, Fibre 32, Scrap 20, Iron 16, Coal 20, Rare 5).
+-- Every resource stacks; a slot holds one stack of one resource.
+InventoryModel.StackSize = {
+	Stick = 32,
+	Stone = 24,
+	Wood = 32,
+	Plant = 32,
+	Leather = 16,
+	Rope = 16,
+	Berries = 20,
+	Mushroom = 20,
+	Scrap = 20,
+	Iron = 16,
+	Coal = 20,
+	RareComponent = 5,
+	FirstAid = 5,
+	Medkit = 3,
+	BreachingCharge = 3,
+} :: { [string]: number }
+
+function InventoryModel.Stack(id: string): number
+	return InventoryModel.StackSize[id] or 20
+end
+
+-- Slots used by a set of counts.
+function InventoryModel.SlotsUsedBy(items: { [string]: number }): number
+	local used = 0
+	for id, n in items do
+		if n > 0 then
+			used += math.ceil(n / InventoryModel.Stack(id))
+		end
+	end
+	return used
+end
+
+-- How many more of `id` fit in `capacity` slots already holding `items`:
+-- free slots × stack size, plus the room left in the last partial stack.
+function InventoryModel.RoomFor(items: { [string]: number }, capacity: number, id: string): number
+	local s = InventoryModel.Stack(id)
+	local n = items[id] or 0
+	local partial = if n > 0 then math.ceil(n / s) * s - n else 0
+	local free = math.max(0, capacity - InventoryModel.SlotsUsedBy(items))
+	return free * s + partial
+end
 
 local RESOURCE_SET = {}
 for _, id in InventoryModel.ResourceIds do
@@ -43,8 +91,11 @@ function InventoryModel.New(capacity: number, bandageMax: number, ammoMax: { [st
 	return {
 		Resources = res,
 		Capacity = capacity,
+		BaseSlots = capacity,
+		BonusSlots = 0,
 		Slots = {},
 		Armor = nil,
+		Backpack = nil,
 		Bandages = 0,
 		BandageMax = bandageMax,
 		Ammo = ammo,
@@ -61,8 +112,43 @@ function InventoryModel.ResourceTotal(inv: Inventory): number
 	return t
 end
 
+-- Free pack SLOTS.
 function InventoryModel.FreeSpace(inv: Inventory): number
-	return math.max(0, inv.Capacity - InventoryModel.ResourceTotal(inv))
+	return math.max(0, inv.Capacity - InventoryModel.SlotsUsedBy(inv.Resources))
+end
+
+function InventoryModel.SlotsUsed(inv: Inventory): number
+	return InventoryModel.SlotsUsedBy(inv.Resources)
+end
+
+-- How many more of one resource the pack can take.
+function InventoryModel.SpaceFor(inv: Inventory, id: string): number
+	return InventoryModel.RoomFor(inv.Resources, inv.Capacity, id)
+end
+
+-- Removes whatever no longer fits after the pack shrank (e.g. a smaller backpack);
+-- returns the overflow so the caller can drop it.
+function InventoryModel.TrimToCapacity(inv: Inventory): { [string]: number }
+	local out = {}
+	while InventoryModel.SlotsUsedBy(inv.Resources) > inv.Capacity do
+		-- drop the smallest partial stack first
+		local best, bestN = nil, math.huge
+		for id, n in inv.Resources do
+			if n > 0 then
+				local part = n % InventoryModel.Stack(id)
+				local k = if part == 0 then InventoryModel.Stack(id) else part
+				if k < bestN then
+					best, bestN = id, k
+				end
+			end
+		end
+		if not best then
+			break
+		end
+		inv.Resources[best] -= bestN
+		out[best] = (out[best] or 0) + bestN
+	end
+	return out
 end
 
 -- Adds up to `n`; returns how many were actually added.
@@ -70,7 +156,7 @@ function InventoryModel.AddResource(inv: Inventory, id: string, n: number): numb
 	if not RESOURCE_SET[id] or n <= 0 or n ~= math.floor(n) then
 		return 0
 	end
-	local add = math.min(n, InventoryModel.FreeSpace(inv))
+	local add = math.min(n, InventoryModel.SpaceFor(inv, id))
 	inv.Resources[id] += add
 	return add
 end
@@ -137,6 +223,10 @@ function InventoryModel.AddEquipment(inv: Inventory, kind: string, stack: Stack,
 		local old = inv.Armor
 		inv.Armor = stack
 		return "Armor", old
+	elseif kind == "Backpack" then
+		local old = inv.Backpack
+		inv.Backpack = stack
+		return "Backpack", old
 	end
 	local slots = InventoryModel.SlotsForKind(kind)
 	if #slots == 0 then
@@ -157,10 +247,19 @@ function InventoryModel.AddEquipment(inv: Inventory, kind: string, stack: Stack,
 	return target, old
 end
 
+-- Recomputes pack slots from the worn backpack (`packSlots` = its Slots) + bonus.
+function InventoryModel.SetPackSlots(inv: Inventory, packSlots: number?)
+	inv.Capacity = (packSlots or inv.BaseSlots) + inv.BonusSlots
+end
+
 function InventoryModel.RemoveSlot(inv: Inventory, slot: string): Stack?
 	if slot == "Armor" then
 		local old = inv.Armor
 		inv.Armor = nil
+		return old
+	elseif slot == "Backpack" then
+		local old = inv.Backpack
+		inv.Backpack = nil
 		return old
 	end
 	local old = inv.Slots[slot]
@@ -260,6 +359,8 @@ function InventoryModel.Snapshot(inv: Inventory)
 		Capacity = inv.Capacity,
 		Slots = slots,
 		Armor = if inv.Armor then table.clone(inv.Armor) else false,
+		Backpack = if inv.Backpack then table.clone(inv.Backpack) else false,
+		SlotsUsed = InventoryModel.SlotsUsedBy(inv.Resources),
 		Bandages = inv.Bandages,
 		Ammo = table.clone(inv.Ammo),
 		Equipped = inv.Equipped or false,

@@ -427,9 +427,17 @@ function GatherService._apply(p: Player, n: Node, toolType: string?, power: numb
 		return false
 	end
 	local inv = ctx.InventoryService.Get(p)
-	if inv and InventoryModel.FreeSpace(inv) <= 0 then
-		ctx.Util.Notify(p, "Your pack is full. Deposit at your storage or eat some food.", "warn")
-		return false
+	if inv then
+		local room = false
+		for id in def.Yield or def.PerHit do
+			if InventoryModel.SpaceFor(inv, id) > 0 then
+				room = true
+			end
+		end
+		if not room then
+			ctx.Util.Notify(p, "Your pack is full. Deposit at your storage or craft a bigger backpack.", "warn")
+			return false
+		end
 	end
 	local r = ResourceRules.Hit(def, n.S, toolType, power, os.clock(), rng, tier)
 	if not r.Ok then

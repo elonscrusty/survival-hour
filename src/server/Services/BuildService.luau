@@ -1,6 +1,7 @@
 --!nonstrict
 -- Free-placement base building with server validation, structure health,
--- damage states, repair, gates and spikes.
+-- damage states, repair, doors, spikes and traps (tripwire, snare, bear trap,
+-- advanced alarm). Storage and trap counts are capped by Workbench tier.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -34,7 +35,9 @@ local ctx: any
 local structures: { [Model]: Structure } = {}
 local folder: Folder? = nil
 local spikeTouch: { [string]: number } = {}
+local alarmCooldown: { [string]: number } = {}
 local counter = 0
+local STREAM_CLEARANCE = 9 -- studs from a stream's centre line (don't dam rivers)
 
 function BuildService.Init(c)
 	ctx = c
@@ -49,6 +52,7 @@ function BuildService.Init(c)
 		structures = {}
 		folder = nil
 		spikeTouch = {}
+		alarmCooldown = {}
 	end)
 end
 
@@ -74,6 +78,15 @@ function BuildService.TeamStructures(team: number): { Structure }
 		end
 	end
 	return out
+end
+
+-- Cap for a limit key: Workbench-tier caps (spec: storage 1-5, traps 2-6) else a flat limit.
+function BuildService.LimitMax(team: number, limit: string): number
+	local tiers = Config.Build.TierLimits[limit]
+	if tiers then
+		return tiers[math.clamp(ctx.CampService.GetLevel(team), 1, #tiers)]
+	end
+	return Config.Build.Limits[limit] or 10
 end
 
 local function limitUsed(team: number, limit: string): number
@@ -125,10 +138,38 @@ function BuildService.Validate(p: Player, id: string, pos: Vector3, yaw: number)
 		Clearances = camp.Clearances,
 		Existing = existing,
 		LimitUsed = limitUsed(team, limitName),
-		LimitMax = Config.Build.Limits[limitName] or 10,
+		LimitMax = BuildService.LimitMax(team, limitName),
 	})
 	if not ok then
+		if why and string.find(why, "limit") and Config.Build.TierLimits[limitName] then
+			why = string.format("%s cap reached (%d at this Workbench tier)", limitName, BuildService.LimitMax(team, limitName))
+		end
 		return false, why
+	end
+	-- Rivers and streams stay open: no building across the water.
+	local map = ctx.MatchService.Map
+	if map and map.Layout and map.Layout.Streams then
+		local O = map.Origin
+		local px, pz = pos.X - O.X, pos.Z - O.Z
+		local reach = STREAM_CLEARANCE + math.max(size.X, size.Z) / 2
+		for _, st in map.Layout.Streams do
+			local pts = st.Points
+			for i = 1, #pts - 1 do
+				local a, b = pts[i], pts[i + 1]
+				local abx, abz = b.X - a.X, b.Z - a.Z
+				local len2 = abx * abx + abz * abz
+				local tt = if len2 > 0 then math.clamp(((px - a.X) * abx + (pz - a.Z) * abz) / len2, 0, 1) else 0
+				local dx, dz = px - (a.X + abx * tt), pz - (a.Z + abz * tt)
+				if dx * dx + dz * dz < reach * reach then
+					return false, "Too close to the stream (keep waterways open)"
+				end
+			end
+		end
+	end
+	for _, nb in (map and map.NoBuild) or {} do
+		if (Vector3.new(pos.X, 0, pos.Z) - Vector3.new(nb.X, 0, nb.Z)).Magnitude < nb.R then
+			return false, "You can't build here (" .. (nb.Label or "blocked") .. ")"
+		end
 	end
 	-- Terrain: sample the footprint corners; reject steep or water spots.
 	local heights = {}
@@ -213,16 +254,21 @@ function BuildService.Spawn(id: string, team: number, ground: Vector3, yaw: numb
 	model:SetAttribute("Health", s.Health)
 	model:SetAttribute("MaxHealth", s.Max)
 	ctx.Util.PlaySound("Build", model.PrimaryPart)
-	if id == "Gate" then
+	if def.Door then
 		local door = model:FindFirstChild("Door") :: Model
-		ctx.ChannelService.MakePrompt(door.PrimaryPart :: BasePart, "Gate", "Open / Close", "Gate", 10, "Team", team)
+		ctx.ChannelService.MakePrompt(door.PrimaryPart :: BasePart, "Gate", "Open / Close", def.Name, 10, "Team", team)
 	elseif id == "Spikes" then
 		local hurt = model:FindFirstChild("Hurt") :: BasePart
 		hurt.Touched:Connect(function(part)
 			BuildService._spikeTouch(s, part)
 		end)
-	elseif id == "StorageBox" then
+	elseif def.Limit == "Storage" then
 		ctx.StorageService.Register(s)
+	elseif id == "TripwireAlarm" or id == "Snare" or id == "BearTrap" then
+		local trig = model:FindFirstChild("Trigger") :: BasePart
+		trig.Touched:Connect(function(part)
+			BuildService._trapTouch(s, part)
+		end)
 	end
 	return s
 end
@@ -260,7 +306,7 @@ function BuildService.Destroy(s: Structure, by: Player?)
 	end
 	structures[s.Model] = nil
 	local pos = s.Model:GetPivot().Position
-	if s.Id == "StorageBox" then
+	if Items[s.Id].Limit == "Storage" then
 		ctx.StorageService.OnDestroyed(s, pos)
 	end
 	Net.FireAll("Fx", "StructureBreak", { Pos = pos, Id = s.Id })
@@ -307,7 +353,7 @@ end
 
 function BuildService._onGate(p: Player, prompt: ProximityPrompt)
 	local s = BuildService.FromPart(prompt)
-	if not s or s.Id ~= "Gate" or ctx.Util.Team(p) ~= s.Team or not ctx.Util.IsAlive(p) then
+	if not s or not Items[s.Id].Door or ctx.Util.Team(p) ~= s.Team or not ctx.Util.IsAlive(p) then
 		return
 	end
 	local open = not s.Model:GetAttribute("Open")
@@ -360,6 +406,99 @@ function BuildService._spikeTouch(s: Structure, part: BasePart)
 		end
 		spikeTouch[key] = t
 		ctx.WildlifeService.Damage(animal, Items.Spikes.Damage :: number, nil)
+	end
+end
+
+-- Traps -------------------------------------------------------------------------------------------
+
+-- Compass side (from `from` toward `to`) for warnings without positions.
+local function bearing(from: Vector3, to: Vector3): string
+	local d = (to - from) * Vector3.new(1, 0, 1)
+	if d.Magnitude < 0.1 then
+		return "near"
+	end
+	local deg = math.deg(math.atan2(d.X, -d.Z)) % 360
+	local dirs = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" }
+	return dirs[math.floor(((deg + 22.5) % 360) / 45) + 1]
+end
+
+local function warnOwner(s: Structure, text: string)
+	for _, p in ctx.Util.TeamPlayers(s.Team) do
+		Net.FireClient("MatchEvent", p, "TrapAlert", { Text = text, Trap = s.Id })
+	end
+end
+
+function BuildService._trapTouch(s: Structure, part: BasePart)
+	if not structures[s.Model] then
+		return
+	end
+	local victim = ctx.Util.PlayerFromPart(part)
+	if not victim or ctx.Util.Team(victim) == s.Team or not ctx.Util.IsAlive(victim) then
+		return
+	end
+	local def = Items[s.Id]
+	local fire = ctx.CampService.GetCamp(s.Team)
+	local side = if fire then bearing(fire.FirePos, s.Model:GetPivot().Position) else "?"
+	if s.Id == "TripwireAlarm" then
+		local t = os.clock()
+		if t - (alarmCooldown[s.Key] or 0) < 8 then
+			return
+		end
+		alarmCooldown[s.Key] = t
+		ctx.Util.PlaySound("Alarm", s.Model.PrimaryPart)
+		warnOwner(s, "⚠ Tripwire rattled on the " .. side .. " side of your camp!")
+		return
+	end
+	-- Snare / bear trap: bite once, hold, then the trap is spent.
+	local owner = Players:GetPlayerByUserId(s.Builder)
+	if def.Damage then
+		ctx.CombatService.DamagePlayer(victim, def.Damage, { Kind = "Trap", By = if owner and ctx.Util.Team(owner) == s.Team then owner else nil, Name = def.Name, Pos = s.Model:GetPivot().Position })
+	end
+	if def.Hold then
+		BuildService.HoldPlayer(victim, def.Hold)
+	end
+	ctx.Util.PlaySound(if s.Id == "BearTrap" then "TrapSnap" else "Gather", s.Model.PrimaryPart)
+	ctx.Util.Notify(victim, "Caught in a " .. def.Name .. "!", "danger")
+	warnOwner(s, "⚠ Your " .. def.Name .. " caught someone on the " .. side .. " side!")
+	BuildService.Destroy(s, nil)
+end
+
+-- Holds a player in place (traps). PowerupService's movement loop reads HeldUntil.
+function BuildService.HoldPlayer(p: Player, seconds: number)
+	local untilT = workspace:GetServerTimeNow() + seconds
+	local prev = p:GetAttribute("HeldUntil")
+	p:SetAttribute("HeldUntil", math.max(untilT, if type(prev) == "number" then prev else 0))
+	ctx.ChannelService.CancelFor(p, "Caught in a trap")
+end
+
+function BuildService.IsHeld(p: Player): boolean
+	local t = p:GetAttribute("HeldUntil")
+	return type(t) == "number" and workspace:GetServerTimeNow() < t
+end
+
+-- Advanced alarms watch a radius (checked a few times a second).
+function BuildService.Start()
+	while true do
+		task.wait(0.5)
+		if ctx.MatchService.Active then
+			local t = os.clock()
+			for _, s in structures do
+				local detect = Items[s.Id].Detect
+				if detect and t - (alarmCooldown[s.Key] or 0) >= 6 then
+					local pos = s.Model:GetPivot().Position
+					for _, p in ctx.Util.MatchPlayers() do
+						if ctx.Util.Team(p) ~= s.Team and ctx.Util.IsAlive(p) and ctx.Util.DistTo(p, pos) <= detect then
+							alarmCooldown[s.Key] = t
+							local fire = ctx.CampService.GetCamp(s.Team)
+							local side = if fire then bearing(fire.FirePos, pos) else "?"
+							ctx.Util.PlaySound("Alarm", s.Model.PrimaryPart)
+							warnOwner(s, "🚨 Advanced alarm: " .. p.DisplayName .. " is at the " .. side .. " side of your camp!")
+							break
+						end
+					end
+				end
+			end
+		end
 	end
 end
 

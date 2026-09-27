@@ -1,12 +1,11 @@
 --!nonstrict
--- Shared storage panel. Owners deposit/withdraw; enemies choose a resource to
--- steal (3 s, taking damage interrupts, takes up to 10 within pack space).
+-- Storage panel. Owners deposit/withdraw; enemies can take anything from a
+-- storage they have breached (StorageService).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage.Shared
-local Config = require(Shared.Config)
 local Items = require(Shared.Items)
 local Net = require(Shared.Net)
 local InventoryModel = require(Shared.Logic.InventoryModel)
@@ -37,45 +36,54 @@ function Storage.Render()
 	if not s or not s.Items then
 		return
 	end
-	local total = 0
-	for _, n in s.Items do
-		total += n
-	end
+	local meta = s.Meta or {}
+	local used = meta.SlotsUsed or InventoryModel.SlotsUsedBy(s.Items)
 	local owner = s.Mode == "Owner"
-	UI.text(if owner then "Your clan's shared storage. Anyone on your team can use it to build and upgrade." else "ENEMY STORAGE — pick a resource to steal. Hold still: taking damage interrupts the theft.", { LayoutOrder = 1, TextSize = 14, TextColor3 = if owner then C.TextDim else C.Warn, Size = UDim2.new(1, -8, 0, 36), Parent = body })
+	local loot = s.Mode == "Loot"
+	local intro = if owner
+		then (if meta.Breached then "⚠ BREACHED — enemies can take from it. Hold R at the storage to resecure it." else "Your storage. Everything here can be used to build and upgrade.")
+		elseif loot then "BREACHED ENEMY STORAGE — take what fits in your pack."
+		else "Locked. Breach it first (hold G at the storage)."
+	UI.text((meta.Name or "Storage") .. "  ·  " .. intro, { LayoutOrder = 1, TextSize = 14, TextColor3 = if owner and not meta.Breached then C.TextDim else C.Warn, Size = UDim2.new(1, -8, 0, 40), Parent = body })
 	local _, setBar = UI.bar({ LayoutOrder = 2, Size = UDim2.new(1, -8, 0, 20), Parent = body }, C.Info)
-	setBar(total / math.max(1, s.Capacity), string.format("Stored %d / %d", total, s.Capacity))
+	setBar(used / math.max(1, s.Capacity), string.format("%d / %d stack slots", used, s.Capacity))
 	if owner then
 		UI.button("Deposit everything I carry", { LayoutOrder = 3, Size = UDim2.new(1, -8, 0, 48), BackgroundColor3 = C.AccentDark, Parent = body }, function()
 			act("DepositAll")
+		end)
+	elseif loot then
+		UI.button("Take everything that fits", { LayoutOrder = 3, Size = UDim2.new(1, -8, 0, 48), BackgroundColor3 = Color3.fromRGB(120, 60, 30), Parent = body }, function()
+			act("TakeAll")
 		end)
 	end
 	for i, id in RES do
 		local def = Items[id]
 		local have = s.Items[id] or 0
 		local carry = inv and inv.Resources[id] or 0
+		if not owner and have <= 0 then
+			continue
+		end
+		if owner and have <= 0 and carry <= 0 then
+			continue
+		end
 		local r = UI.new("Frame", { LayoutOrder = 10 + i, Size = UDim2.new(1, -8, 0, 54), BackgroundColor3 = C.PanelLight, BorderSizePixel = 0, Parent = body }, { UI.corner(UDim.new(0, 8)) })
 		local ic = UI.icon(def.Icon.Glyph, def.Icon.Color, 40, "Square")
 		ic.Position = UDim2.fromOffset(6, 7)
 		ic.Parent = r
 		UI.text(string.format("%s   stored %d   ·   you carry %d", def.Name, have, carry), { Position = UDim2.fromOffset(54, 16), Size = UDim2.new(1, -330, 0, 22), TextSize = 15, Font = Theme.FontBold, Parent = r })
 		if owner then
-			UI.button("Put 5", { Size = UDim2.fromOffset(70, 40), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -234, 0.5, 0), TextSize = 13, Parent = r }, function()
-				act("Deposit", id, 5)
-			end)
 			UI.button("Put all", { Size = UDim2.fromOffset(70, 40), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -158, 0.5, 0), TextSize = 13, Parent = r }, function()
 				act("Deposit", id, math.max(1, carry))
 			end)
-			UI.button("Take 5", { Size = UDim2.fromOffset(70, 40), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -82, 0.5, 0), TextSize = 13, BackgroundColor3 = Color3.fromRGB(50, 80, 110), Parent = r }, function()
-				act("Withdraw", id, 5)
+			UI.button("Take 10", { Size = UDim2.fromOffset(70, 40), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -82, 0.5, 0), TextSize = 13, BackgroundColor3 = Color3.fromRGB(50, 80, 110), Parent = r }, function()
+				act("Withdraw", id, 10)
 			end)
 			UI.button("Take 1", { Size = UDim2.fromOffset(70, 40), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), TextSize = 13, BackgroundColor3 = Color3.fromRGB(50, 80, 110), Parent = r }, function()
 				act("Withdraw", id, 1)
 			end)
-		elseif have > 0 then
-			UI.button("Steal (" .. Config.Storage.StealDuration .. "s)", { Size = UDim2.fromOffset(130, 42), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), TextSize = 14, BackgroundColor3 = Color3.fromRGB(120, 60, 30), Parent = r }, function()
-				act("Steal", id)
-				Panels.Close()
+		elseif loot then
+			UI.button("Take all", { Size = UDim2.fromOffset(110, 42), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), TextSize = 14, BackgroundColor3 = Color3.fromRGB(120, 60, 30), Parent = r }, function()
+				act("Withdraw", id, have)
 			end)
 		end
 	end

@@ -181,8 +181,9 @@ local function refreshVitals()
 		for _, n in inv.Resources do
 			total += n
 		end
-		packLabel.Text = string.format("Pack %d/%d   ", total, inv.Capacity) .. (if total >= inv.Capacity then "FULL" else "")
-		packLabel.TextColor3 = if total >= inv.Capacity then C.Warn else C.Text
+		local used = inv.SlotsUsed or 0
+		packLabel.Text = string.format("Pack %d/%d slots   ", used, inv.Capacity) .. (if used >= inv.Capacity then "FULL" else "")
+		packLabel.TextColor3 = if used >= inv.Capacity then C.Warn else C.Text
 		pouchLabel.Text = string.format("✚ Bandages %d (H)   🏹 %d   • %d", inv.Bandages, inv.Ammo.Arrow or 0, inv.Ammo.Bullet or 0)
 	end
 end
@@ -508,7 +509,13 @@ local function onMatchEvent(ev: any)
 		local dir = if d.Bearing then dirs[math.floor(((d.Bearing + 22.5) % 360) / 45) + 1] else nil
 		Hud.Announce("⚠ YOUR FIRE IS BEING SNUFFED!", (if dir then "Raider on the " .. dir .. " side — " else "") .. "hit them or make them move to stop it", C.Bad, 3)
 	elseif name == "StorageRaided" then
-		Hud.Announce("⚠ STORAGE RAID", "An enemy is stealing from your storage", C.Warn, 2.5)
+		local dirs = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" }
+		local dir = if d.Bearing then dirs[math.floor(((d.Bearing + 22.5) % 360) / 45) + 1] else nil
+		Hud.Announce("⚠ STORAGE RAID", "Someone is at your " .. tostring(d.Name or "storage") .. (if dir then " (" .. dir .. " side)" else ""), C.Warn, 2.5)
+	elseif name == "RaidNoise" then
+		pushFeed(if d.Loud then "💥 An explosion nearby — someone is raiding" else "🔨 Banging nearby — someone is breaching storage", C.TextDim)
+	elseif name == "TrapAlert" then
+		Hud.Announce("⚠ TRAP", tostring(d.Text), C.Warn, 3)
 	elseif name == "CampRevealed" then
 		local def = Config.Teams[d.Team]
 		pushFeed("🧭 " .. tostring(d.By) .. " found the " .. (def and def.Name or "?") .. " camp", C.Info)

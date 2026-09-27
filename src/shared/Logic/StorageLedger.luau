@@ -6,7 +6,7 @@
 
 local InventoryModel = require("./InventoryModel")
 
-export type Store = { Items: { [string]: number }, Capacity: number }
+export type Store = { Items: { [string]: number }, Capacity: number } -- Capacity = stacks (slots)
 
 local StorageLedger = {}
 
@@ -26,8 +26,13 @@ function StorageLedger.Total(store: Store): number
 	return t
 end
 
+-- Free stack slots.
 function StorageLedger.Free(store: Store): number
-	return math.max(0, store.Capacity - StorageLedger.Total(store))
+	return math.max(0, store.Capacity - InventoryModel.SlotsUsedBy(store.Items))
+end
+
+function StorageLedger.SlotsUsed(store: Store): number
+	return InventoryModel.SlotsUsedBy(store.Items)
 end
 
 -- Deposit up to `n` of `id` from inv into store. Returns moved amount.
@@ -35,7 +40,7 @@ function StorageLedger.Deposit(store: Store, inv: InventoryModel.Inventory, id: 
 	if not InventoryModel.IsResource(id) or n <= 0 or n ~= math.floor(n) then
 		return 0
 	end
-	local move = math.min(n, inv.Resources[id] or 0, StorageLedger.Free(store))
+	local move = math.min(n, inv.Resources[id] or 0, InventoryModel.RoomFor(store.Items, store.Capacity, id))
 	if move <= 0 then
 		return 0
 	end
@@ -49,7 +54,7 @@ function StorageLedger.Withdraw(store: Store, inv: InventoryModel.Inventory, id:
 	if not InventoryModel.IsResource(id) or n <= 0 or n ~= math.floor(n) then
 		return 0
 	end
-	local move = math.min(n, store.Items[id] or 0, InventoryModel.FreeSpace(inv))
+	local move = math.min(n, store.Items[id] or 0, InventoryModel.SpaceFor(inv, id))
 	if move <= 0 then
 		return 0
 	end

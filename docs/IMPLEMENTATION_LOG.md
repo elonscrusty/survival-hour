@@ -70,3 +70,25 @@ Also: the pre-existing `LayoutGen fair_resources` failure is fixed (the test use
 **Decisions:** D42 medium trees = 8 Wood with a Crude Axe; D43 First Aid / Medkit are pack items (drop on death like materials); bandages stay in the kept pouch; D44 Canteen stays Tier II.
 
 **Tests:** `Recipes.spec` rewritten for the tiers and spec costs; `ResourceRules.spec` gains `exact_yields_any_tool` and `tool_tiers`; skins suite adds Workbench IV/V, `LargeRockPile` and all tiered tool models (27 checks).
+
+## Phase 3: inventory slots, storage raids, building tiers, traps (done, not yet playtested)
+
+| Spec rule | Change | Where |
+|---|---|---|
+| ~6 starting slots; packs 10/16/24/32/40 | The resource pack is now **slots of stacks**: `Capacity` = slots (6), each slot holds one stack. 5 craftable backpacks (Fibre I → Expedition V) are worn like armour, set the slot count, and are kept on death. Swapping to a smaller pack drops the overflow in a bag. Bonus-slot hook for Strong Back / Scavenger. | `InventoryModel` (`StackSize`, `RoomFor`, `SpaceFor`, `TrimToCapacity`, `SetPackSlots`), `InventoryService`, `Items`, `Recipes` |
+| Stack targets Wood 32, Stone 24, Fibre 32, Scrap 20, Iron 16, Coal 20, Rare 5 | `InventoryModel.StackSize` (others: Stick 32, Leather/Rope 16, food 20, First Aid 5, Medkit 3, Charge 3) | `InventoryModel` |
+| Wooden Crate ~12 / Reinforced Chest ~20 / Metal Locker ~30 / Survival Safe ~40-50 | Storage capacity is in stack slots (`Items[id].Stacks` = 12/20/30/45); 4 storage structures (Tiers I–IV) | `Items`, `Structures`, `StorageLedger` |
+| Storage cap by Workbench I–V = 1/2/3/4/5 | `Config.Build.TierLimits.Storage`; `BuildService.LimitMax` | `BuildService` |
+| Breach unlocks (not deletes); owner repairs/resecures | Enemy **Hold: Breach** (G) → the storage is *unlocked*; any enemy can then open it and take what fits. Owner **Hold: Resecure** (R, 4 s + a few materials). The old 3 s "steal 10" is gone. | `StorageService` (rewritten), `Storage` (client) |
+| Breaching progression: tools → Crowbar → Sledgehammer → Breaching Charge | Breach 14/24/36/50 s by tier with an axe/pickaxe; Crowbar ×0.6 (needed for lockers), Sledgehammer ×0.4 (needed for safes), Breaching Charge 5 s on anything (60 damage in 10 studs). Raider-class hook `BreachSpeedMult`. | `Config.Storage`, `Items`, `Recipes` |
+| Raiding expensive and loud | Banging every ~2 s: players within 180 studs get a "someone is breaching" feed line; the owner gets the storage name + compass side. Charges explode. | `StorageService`, `Hud` |
+| Build only in own camp; no river/cave blocking; no map spam | Existing camp radius + caps; new stream clearance check (9 studs + half the footprint from any stream centre line) and a `map.NoBuild` list (caves/POIs in Phase 5) | `BuildService.Validate` |
+| Tier I wall/door/floor/spikes | Wooden Door (was Tier II Gate), new Wooden Floor, Spike Barricade (now a trap) | `Items`, `Recipes`, `Structures` |
+| Tier II reinforced wall/door/window/basic traps | Reinforced Wall (moved from III), Reinforced Door, Window Wall (procedural, real window gap in the collider), Tripwire Alarm, Snare | same |
+| Tier III scrap defences/stronger traps/watch platform | Scrap Wall, Bear Trap, Watchtower | same |
+| Tier IV/V heavy defences/gates/advanced traps | Metal Wall, Heavy Gate (IV); Advanced Alarm (V) | same |
+| Traps; no turrets; cap I–V = 2/3/4/5/6 | Tripwire (alarm + compass side, 8 s cooldown), Snare (2.5 s hold, spent), Bear Trap (35 dmg + 3.5 s hold, spent), Advanced Alarm (16-stud sensor: tells you *who* and which side, no position), Spike Barricade. All share the `Trap` cap by tier. Held players can't move (`HeldUntil`). | `BuildService`, `Config.Build.TierLimits.Trap` |
+
+**Decisions:** D45 First Aid / Medkit / Breaching Charges are pack items (drop on death). D46 Breaching needs the tool in your tool/weapon slots (not equipped). D47 Survival Safe is Tier IV. D48 tiered doors and the window wall use the procedural look (new `Skins.Unskin`), since the pack meshes don't match their shape.
+
+**Tests:** slot/stack cases in `InventoryModel.spec` and `StorageLedger.spec`; `Recipes.spec` checks every tier's unlocks; the skins suite builds every new structure, checks door opening, the breach tag and trap triggers (28 checks).

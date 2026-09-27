@@ -166,6 +166,14 @@ builders.Medkit = function(m)
 	piece(m, { Name = "Cross", Size = Vector3.new(0.6, 0.12, 0.6), CFrame = CFrame.new(0, 0.46, 0), Color = Color3.fromRGB(240, 240, 240), Material = Enum.Material.SmoothPlastic })
 end
 
+for _, packId in { "FibrePack", "HidePack", "FramePack", "IronPack", "ExpeditionPack" } do
+	builders[packId] = function(m)
+		handle(m, Vector3.new(1.8, 2.2, 0.9), if packId == "FibrePack" then Color3.fromRGB(150, 170, 110) else LEATHER, Enum.Material.Fabric)
+		piece(m, { Name = "Flap", Size = Vector3.new(1.9, 0.8, 1), CFrame = CFrame.new(0, 0.9, 0), Color = Color3.fromRGB(100, 70, 50), Material = Enum.Material.Fabric })
+		piece(m, { Name = "Roll", Size = Vector3.new(2, 0.6, 0.6), CFrame = CFrame.new(0, 1.35, 0.2), Color = ROPE, Material = Enum.Material.Fabric })
+	end
+end
+
 builders.RepairHammer = function(m)
 	handle(m, Vector3.new(0.35, 0.35, 1), WOOD_DARK, Enum.Material.Wood)
 	piece(m, { Name = "Haft", Size = Vector3.new(0.3, 0.3, 2.6), CFrame = CFrame.new(0, 0, -1.1), Color = WOOD, Material = Enum.Material.Wood })

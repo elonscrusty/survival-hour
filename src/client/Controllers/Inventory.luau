@@ -18,7 +18,7 @@ local Inventory = {}
 local player = Players.LocalPlayer
 local body: ScrollingFrame
 local C = Theme.Colors
-local SLOT_LABEL = { Weapon1 = "Weapon 1", Weapon2 = "Weapon 2", Tool = "Tool 1", Tool2 = "Tool 2", Utility = "Utility", Armor = "Armor (worn)" }
+local SLOT_LABEL = { Weapon1 = "Weapon 1", Weapon2 = "Weapon 2", Tool = "Tool 1", Tool2 = "Tool 2", Utility = "Utility", Armor = "Armor (worn)", Backpack = "Backpack (worn)" }
 local RES = InventoryModel.ResourceIds
 
 local function section(title: string, order: number)
@@ -45,8 +45,8 @@ function Inventory.Render()
 	end
 	section("Equipment", 1)
 	local order = 2
-	for _, slot in { "Weapon1", "Weapon2", "Tool", "Tool2", "Utility", "Armor" } do
-		local stack = if slot == "Armor" then inv.Armor else inv.Slots[slot]
+	for _, slot in { "Weapon1", "Weapon2", "Tool", "Tool2", "Utility", "Armor", "Backpack" } do
+		local stack = if slot == "Armor" then inv.Armor elseif slot == "Backpack" then inv.Backpack else inv.Slots[slot]
 		local r = row(order)
 		order += 1
 		UI.text(SLOT_LABEL[slot], { Position = UDim2.fromOffset(62, 4), Size = UDim2.new(0.5, 0, 0, 16), TextSize = 12, TextColor3 = C.TextDim, Parent = r })
@@ -63,7 +63,10 @@ function Inventory.Render()
 				extra = if stack.Filled then "  ·  FULL" else "  ·  empty"
 			end
 			UI.text(def.Name .. extra, { Position = UDim2.fromOffset(62, 20), Size = UDim2.new(1, -250, 0, 22), TextSize = 16, Font = Theme.FontBold, Parent = r })
-			if slot ~= "Armor" then
+			if def.Slots then
+				extra = "  ·  " .. def.Slots .. " slots"
+			end
+			if slot ~= "Armor" and slot ~= "Backpack" then
 				UI.button(if inv.Equipped == slot then "Equipped" else "Equip", { Size = UDim2.fromOffset(92, 40), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -104, 0.5, 0), TextSize = 14, BackgroundColor3 = if inv.Equipped == slot then C.AccentDark else C.PanelLighter, Parent = r }, function()
 					Net.Event("Equip"):FireServer(slot)
 				end)
@@ -90,11 +93,12 @@ function Inventory.Render()
 		Net.Event("UseBandage"):FireServer()
 	end)
 
-	section(string.format("Resource pack  %d / %d", total, inv.Capacity), order)
+	local used = inv.SlotsUsed or 0
+	section(string.format("Pack  %d / %d slots  (%d items)", used, inv.Capacity, total), order)
 	order += 1
-	local _, setCap = UI.bar({ Size = UDim2.new(1, -8, 0, 14), LayoutOrder = order, Parent = body }, if total >= inv.Capacity then C.Warn else C.Good)
+	local _, setCap = UI.bar({ Size = UDim2.new(1, -8, 0, 14), LayoutOrder = order, Parent = body }, if used >= inv.Capacity then C.Warn else C.Good)
 	order += 1
-	setCap(total / inv.Capacity)
+	setCap(used / math.max(1, inv.Capacity))
 	for _, id in RES do
 		local n = inv.Resources[id] or 0
 		local def = Items[id]

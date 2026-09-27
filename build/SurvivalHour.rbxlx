@@ -117,7 +117,7 @@ Config.Stamina = {
 }
 
 Config.Inventory = {
-	ResourceCapacity = 30,
+	PackSlots = 6, -- spec: ~6 starting slots; backpacks give 10/16/24/32/40
 	BandageMax = 3,
 	AmmoMax = { Arrow = 30, Bullet = 24 },
 	DropDespawn = 180,
@@ -156,17 +156,33 @@ Config.Build = {
 	SpawnClearance = 6,
 	MaxPlaceDistance = 28, -- from the builder's character
 	MaxSlope = 0.35, -- (1 - normal.Y) tolerated on terrain
-	Limits = { Wall = 40, Spikes = 12, Watchtower = 2, Storage = 2 },
-	-- "Wall" limit counts WoodWall, ReinforcedWall and Gate together.
+	Limits = { Wall = 40, Spikes = 12, Watchtower = 2, Storage = 2, Floor = 30, Trap = 6 },
+	-- "Wall" limit counts every wall/door/gate together.
+	-- Spec caps by Workbench tier I..V (override Limits for these keys):
+	TierLimits = {
+		Storage = { 1, 2, 3, 4, 5 },
+		Trap = { 2, 3, 4, 5, 6 },
+	} :: { [string]: { number } },
 	RotateStep = 15,
 	GridSnap = 0.5,
 }
 
 Config.Storage = {
-	Capacity = 200,
-	StealDuration = 3,
-	StealAmount = 10,
+	Capacity = 12, -- fallback stack slots (each storage item sets Items[id].Stacks)
+	StealDuration = 3, -- legacy
+	StealAmount = 10, -- legacy
 	InteractRange = 10,
+	-- Breaching unlocks (never deletes). Seconds with a normal tool (axe/pickaxe) by storage tier.
+	BreachTimes = { 14, 24, 36, 50 },
+	BreachToolMult = { Crowbar = 0.6, Sledgehammer = 0.4 },
+	-- Minimum breaching tool by tier (nil = any axe/pickaxe/breaching tool)
+	BreachNeeds = { [3] = "Crowbar", [4] = "Sledgehammer" } :: { [number]: string },
+	ChargeTime = 5, -- Breaching Charge: any tier
+	ChargeDamage = 60, -- to players within ChargeRadius (not the raider's structures)
+	ChargeRadius = 10,
+	NoiseRadius = 180, -- everyone this close hears the breach alert (raids are loud)
+	ResecureTime = 4,
+	ResecureCost = { Wood = { Wood = 4 }, Scrap = { Scrap = 3 }, Iron = { Iron = 2 } } :: { [string]: { [string]: number } },
 }
 
 Config.Gather = {
@@ -359,6 +375,11 @@ export type ItemDef = {
 	UseTime: number?, -- seconds to apply (interrupted by damage)
 	Slots: number?, -- backpacks: pack slots
 	Tier: number?, -- general tier (armor, backpacks, storage)
+	Stacks: number?, -- storage: stack slots
+	BreachTool: string?, -- tools: "Crowbar" | "Sledgehammer" (storage breaching)
+	Door: boolean?, -- structures: has an owner-only door
+	Hold: number?, -- traps: seconds the victim is held in place
+	Detect: number?, -- alarms: detection radius (studs)
 	Food: boolean?, -- resource that can be eaten (heal values in Resources.Food)
 	BlockReduction: number?, -- shield
 	DamageReduction: number?, -- armor
@@ -380,6 +401,7 @@ local LEATHER = Color3.fromRGB(150, 92, 60)
 local STEEL = Color3.fromRGB(190, 198, 210)
 local RED = Color3.fromRGB(210, 70, 70)
 local BLUE = Color3.fromRGB(80, 150, 220)
+local ROPE_COLOR = Color3.fromRGB(205, 180, 120)
 
 local Items: { [string]: ItemDef } = {}
 
@@ -472,11 +494,36 @@ for tier = 1, 4 do
 		ToolPower = TIER_POWER[tier], StructureMult = 1.25 + tier * 0.25, AnimalMult = 1,
 	})
 end
+-- Breaching tools (spec progression: normal tools -> Crowbar -> Sledgehammer -> Breaching Charge)
+add({
+	Id = "Crowbar", Name = "Crowbar", Kind = "Tool", Description = "Breaches storage faster. Opens Metal Lockers.",
+	Icon = icon("⌐", Color3.fromRGB(150, 60, 50)),
+	Damage = 12, Cooldown = 0.75, Range = 6, Durability = 120, BreachTool = "Crowbar", StructureMult = 1.2, AnimalMult = 1,
+})
+add({
+	Id = "Sledgehammer", Name = "Sledgehammer", Kind = "Tool", Description = "Breaches any storage, including Survival Safes. Heavy against walls.",
+	Icon = icon("⚒", Color3.fromRGB(110, 110, 116)),
+	Damage = 20, Cooldown = 1.2, Range = 6.5, Durability = 200, BreachTool = "Sledgehammer", StructureMult = 3, AnimalMult = 1,
+})
+add({ Id = "BreachingCharge", Name = "Breaching Charge", Kind = "Resource", Description = "Blows any storage open in 5 s. Very loud; damages what's around it.", Icon = icon("✹", Color3.fromRGB(220, 120, 40), "Square") })
+
 add({
 	Id = "RepairHammer", Name = "Repair Hammer", Kind = "Tool", Description = "Repairs your team's structures using resources.",
 	Icon = icon("⚒", STONE),
 	Damage = 7, Cooldown = 0.8, Range = 7, Durability = 200, StructureMult = 0.3, AnimalMult = 1,
 })
+
+-- Backpacks (worn, kept on death): pack slots 10 / 16 / 24 / 32 / 40 by tier.
+local PACKS: { { Id: string, Name: string, Slots: number, Color: Color3 } } = {
+	{ Id = "FibrePack", Name = "Fibre Pack", Slots = 10, Color = Color3.fromRGB(150, 170, 110) },
+	{ Id = "HidePack", Name = "Hide Pack", Slots = 16, Color = LEATHER },
+	{ Id = "FramePack", Name = "Scrap-Frame Pack", Slots = 24, Color = Color3.fromRGB(140, 120, 100) },
+	{ Id = "IronPack", Name = "Iron-Frame Pack", Slots = 32, Color = Color3.fromRGB(150, 110, 96) },
+	{ Id = "ExpeditionPack", Name = "Expedition Pack", Slots = 40, Color = Color3.fromRGB(80, 110, 90) },
+}
+for tier, pack in PACKS do
+	add({ Id = pack.Id, Name = pack.Name, Kind = "Backpack", Description = string.format("Worn. %d pack slots. Kept when you die.", pack.Slots), Icon = icon("🎒", pack.Color), Slots = pack.Slots, Tier = tier })
+end
 
 -- Utility / worn / pouches ---------------------------------------------------------
 add({ Id = "Canteen", Name = "Canteen", Kind = "Utility", Description = "Fill at a stream. Pour on an enemy fire at night.", Icon = icon("💧", BLUE) })
@@ -489,26 +536,80 @@ add({ Id = "Arrow", Name = "Arrows", Kind = "Ammo", Description = "Ammunition fo
 add({ Id = "Bullet", Name = "Bullets", Kind = "Ammo", Description = "Ammunition for guns.", Icon = icon("•", Color3.fromRGB(200, 170, 90)) })
 
 -- Structures -------------------------------------------------------------------
+-- Storage (spec): Wooden Crate I ~12 stacks, Reinforced Chest II ~20, Metal Locker III ~30,
+-- Survival Safe (high tier) ~45. Enemies breach it to unlock it; the owner can resecure.
 add({
-	Id = "StorageBox", Name = "Storage Box", Kind = "Structure", Description = "Shared team storage (200 units). Enemies can steal from it.",
-	Icon = icon("▤", WOOD, "Square"), Health = 400, Size = Vector3.new(6, 4, 4), Material = "Wood", Limit = "Storage",
+	Id = "StorageBox", Name = "Wooden Crate", Kind = "Structure", Description = "12 stack slots. Enemies can breach it with any tool.",
+	Icon = icon("▤", WOOD, "Square"), Health = 400, Size = Vector3.new(6, 4, 4), Material = "Wood", Limit = "Storage", Tier = 1, Stacks = 12,
+})
+add({
+	Id = "ReinforcedChest", Name = "Reinforced Chest", Kind = "Structure", Description = "20 stack slots. Iron-banded; slower to breach.",
+	Icon = icon("▤", Color3.fromRGB(120, 96, 70), "Square"), Health = 800, Size = Vector3.new(6, 4.4, 4), Material = "Wood", Limit = "Storage", Tier = 2, Stacks = 20,
+})
+add({
+	Id = "MetalLocker", Name = "Metal Locker", Kind = "Structure", Description = "30 stack slots. Needs a Crowbar or better to breach.",
+	Icon = icon("▯", Color3.fromRGB(120, 130, 140), "Square"), Health = 1400, Size = Vector3.new(4, 7, 3), Material = "Scrap", Limit = "Storage", Tier = 3, Stacks = 30,
+})
+add({
+	Id = "SurvivalSafe", Name = "Survival Safe", Kind = "Structure", Description = "45 stack slots. Needs a Sledgehammer or a Breaching Charge.",
+	Icon = icon("▣", Color3.fromRGB(70, 74, 80), "Square"), Health = 2400, Size = Vector3.new(4.5, 5, 4.5), Material = "Iron", Limit = "Storage", Tier = 4, Stacks = 45,
 })
 add({
 	Id = "WoodWall", Name = "Wooden Wall", Kind = "Structure", Description = "Palisade wall section.",
 	Icon = icon("▥", WOOD, "Square"), Health = 250, Size = Vector3.new(10, 9, 1.6), Material = "Wood", Limit = "Wall",
 })
 add({
-	Id = "Gate", Name = "Gate", Kind = "Structure", Description = "Opens for your team only.",
-	Icon = icon("Π", WOOD, "Square"), Health = 300, Size = Vector3.new(10, 9, 1.6), Material = "Wood", Limit = "Wall",
+	Id = "Gate", Name = "Wooden Door", Kind = "Structure", Description = "Opens for you only.",
+	Icon = icon("Π", WOOD, "Square"), Health = 300, Size = Vector3.new(10, 9, 1.6), Material = "Wood", Limit = "Wall", Door = true,
 })
 add({
-	Id = "Spikes", Name = "Spikes", Kind = "Structure", Description = "Damages enemies who touch it (15 per second).",
-	Icon = icon("▲", WOOD, "Square"), Health = 120, Size = Vector3.new(8, 3, 3), Material = "Wood", Limit = "Spikes",
+	Id = "WoodFloor", Name = "Wooden Floor", Kind = "Structure", Description = "10×10 platform. Level uneven ground or build a raised base.",
+	Icon = icon("▭", WOOD, "Square"), Health = 300, Size = Vector3.new(10, 1, 10), Material = "Wood", Limit = "Floor",
+})
+add({
+	Id = "Spikes", Name = "Spike Barricade", Kind = "Structure", Description = "Damages enemies who touch it (15 per second). Counts as a trap.",
+	Icon = icon("▲", WOOD, "Square"), Health = 120, Size = Vector3.new(8, 3, 3), Material = "Wood", Limit = "Trap",
 	Damage = 15,
 })
 add({
 	Id = "ReinforcedWall", Name = "Reinforced Wall", Kind = "Structure", Description = "Stone-faced wall. Very tough.",
 	Icon = icon("▦", STONE, "Square"), Health = 700, Size = Vector3.new(10, 10, 2.4), Material = "Stone", Limit = "Wall",
+})
+add({
+	Id = "ReinforcedDoor", Name = "Reinforced Door", Kind = "Structure", Description = "Iron-strapped door. Opens for you only.",
+	Icon = icon("Π", Color3.fromRGB(110, 84, 58), "Square"), Health = 700, Size = Vector3.new(10, 9, 1.6), Material = "Stone", Limit = "Wall", Door = true,
+})
+add({
+	Id = "WindowWall", Name = "Window Wall", Kind = "Structure", Description = "Reinforced wall with a shooting window.",
+	Icon = icon("▣", STONE, "Square"), Health = 600, Size = Vector3.new(10, 10, 2.4), Material = "Stone", Limit = "Wall",
+})
+add({
+	Id = "TripwireAlarm", Name = "Tripwire Alarm", Kind = "Structure", Description = "Rattles and warns you (with a direction) when an enemy walks through.",
+	Icon = icon("〰", ROPE_COLOR, "Square"), Health = 60, Size = Vector3.new(8, 1.5, 1), Material = "Wood", Limit = "Trap",
+})
+add({
+	Id = "Snare", Name = "Snare", Kind = "Structure", Description = "Holds an enemy in place for 2.5 s. Used up when it catches someone.",
+	Icon = icon("◎", ROPE_COLOR, "Square"), Health = 50, Size = Vector3.new(3, 1, 3), Material = "Wood", Limit = "Trap", Hold = 2.5,
+})
+add({
+	Id = "ScrapWall", Name = "Scrap Wall", Kind = "Structure", Description = "Salvaged metal sheets. Much tougher than stone.",
+	Icon = icon("▥", Color3.fromRGB(128, 112, 96), "Square"), Health = 1200, Size = Vector3.new(10, 10, 2), Material = "Scrap", Limit = "Wall",
+})
+add({
+	Id = "BearTrap", Name = "Bear Trap", Kind = "Structure", Description = "Steel jaws: 35 damage and a 3.5 s hold. Used up when it bites.",
+	Icon = icon("✶", Color3.fromRGB(120, 124, 130), "Square"), Health = 150, Size = Vector3.new(3, 1, 3), Material = "Scrap", Limit = "Trap", Damage = 35, Hold = 3.5,
+})
+add({
+	Id = "MetalWall", Name = "Metal Wall", Kind = "Structure", Description = "Heavy riveted plates. Raiding it takes serious tools.",
+	Icon = icon("▦", Color3.fromRGB(92, 96, 104), "Square"), Health = 2200, Size = Vector3.new(10, 11, 2.6), Material = "Iron", Limit = "Wall",
+})
+add({
+	Id = "HeavyGate", Name = "Heavy Gate", Kind = "Structure", Description = "Iron-plated gate. Opens for you only.",
+	Icon = icon("Π", Color3.fromRGB(92, 96, 104), "Square"), Health = 1800, Size = Vector3.new(10, 9, 1.6), Material = "Iron", Limit = "Wall", Door = true,
+})
+add({
+	Id = "AdvancedAlarm", Name = "Advanced Alarm", Kind = "Structure", Description = "Motion sensor: tells you who is near your base and from which side (no wallhack).",
+	Icon = icon("◉", Color3.fromRGB(120, 220, 120), "Square"), Health = 200, Size = Vector3.new(1.5, 5, 1.5), Material = "Iron", Limit = "Trap", Detect = 16,
 })
 add({
 	Id = "Watchtower", Name = "Watchtower", Kind = "Structure", Description = "Raised platform with a ladder. See further, shoot down.",
@@ -767,9 +868,12 @@ export type Stack = { Id: string, Durability: number?, Filled: boolean? }
 
 export type Inventory = {
 	Resources: { [string]: number },
-	Capacity: number,
+	Capacity: number, -- pack SLOTS (spec: ~6 to start; backpacks 10/16/24/32/40)
 	Slots: { [string]: Stack? },
 	Armor: Stack?,
+	Backpack: Stack?, -- worn; sets Capacity (kept on death)
+	BaseSlots: number, -- slots without a backpack
+	BonusSlots: number, -- class / power-up extra slots
 	Bandages: number,
 	BandageMax: number,
 	Ammo: { [string]: number },
@@ -779,8 +883,53 @@ export type Inventory = {
 
 local InventoryModel = {}
 
-InventoryModel.ResourceIds = { "Stick", "Stone", "Wood", "Plant", "Leather", "Rope", "Berries", "Mushroom", "Scrap", "Iron", "Coal", "RareComponent", "FirstAid", "Medkit" }
+InventoryModel.ResourceIds = { "Stick", "Stone", "Wood", "Plant", "Leather", "Rope", "Berries", "Mushroom", "Scrap", "Iron", "Coal", "RareComponent", "FirstAid", "Medkit", "BreachingCharge" }
 InventoryModel.SlotNames = { "Weapon1", "Weapon2", "Tool", "Tool2", "Utility" }
+
+-- Spec stack targets (Wood 32, Stone 24, Fibre 32, Scrap 20, Iron 16, Coal 20, Rare 5).
+-- Every resource stacks; a slot holds one stack of one resource.
+InventoryModel.StackSize = {
+	Stick = 32,
+	Stone = 24,
+	Wood = 32,
+	Plant = 32,
+	Leather = 16,
+	Rope = 16,
+	Berries = 20,
+	Mushroom = 20,
+	Scrap = 20,
+	Iron = 16,
+	Coal = 20,
+	RareComponent = 5,
+	FirstAid = 5,
+	Medkit = 3,
+	BreachingCharge = 3,
+} :: { [string]: number }
+
+function InventoryModel.Stack(id: string): number
+	return InventoryModel.StackSize[id] or 20
+end
+
+-- Slots used by a set of counts.
+function InventoryModel.SlotsUsedBy(items: { [string]: number }): number
+	local used = 0
+	for id, n in items do
+		if n > 0 then
+			used += math.ceil(n / InventoryModel.Stack(id))
+		end
+	end
+	return used
+end
+
+-- How many more of `id` fit in `capacity` slots already holding `items`:
+-- free slots × stack size, plus the room left in the last partial stack.
+function InventoryModel.RoomFor(items: { [string]: number }, capacity: number, id: string): number
+	local s = InventoryModel.Stack(id)
+	local n = items[id] or 0
+	local partial = if n > 0 then math.ceil(n / s) * s - n else 0
+	local free = math.max(0, capacity - InventoryModel.SlotsUsedBy(items))
+	return free * s + partial
+end
 
 local RESOURCE_SET = {}
 for _, id in InventoryModel.ResourceIds do
@@ -803,8 +952,11 @@ function InventoryModel.New(capacity: number, bandageMax: number, ammoMax: { [st
 	return {
 		Resources = res,
 		Capacity = capacity,
+		BaseSlots = capacity,
+		BonusSlots = 0,
 		Slots = {},
 		Armor = nil,
+		Backpack = nil,
 		Bandages = 0,
 		BandageMax = bandageMax,
 		Ammo = ammo,
@@ -821,8 +973,43 @@ function InventoryModel.ResourceTotal(inv: Inventory): number
 	return t
 end
 
+-- Free pack SLOTS.
 function InventoryModel.FreeSpace(inv: Inventory): number
-	return math.max(0, inv.Capacity - InventoryModel.ResourceTotal(inv))
+	return math.max(0, inv.Capacity - InventoryModel.SlotsUsedBy(inv.Resources))
+end
+
+function InventoryModel.SlotsUsed(inv: Inventory): number
+	return InventoryModel.SlotsUsedBy(inv.Resources)
+end
+
+-- How many more of one resource the pack can take.
+function InventoryModel.SpaceFor(inv: Inventory, id: string): number
+	return InventoryModel.RoomFor(inv.Resources, inv.Capacity, id)
+end
+
+-- Removes whatever no longer fits after the pack shrank (e.g. a smaller backpack);
+-- returns the overflow so the caller can drop it.
+function InventoryModel.TrimToCapacity(inv: Inventory): { [string]: number }
+	local out = {}
+	while InventoryModel.SlotsUsedBy(inv.Resources) > inv.Capacity do
+		-- drop the smallest partial stack first
+		local best, bestN = nil, math.huge
+		for id, n in inv.Resources do
+			if n > 0 then
+				local part = n % InventoryModel.Stack(id)
+				local k = if part == 0 then InventoryModel.Stack(id) else part
+				if k < bestN then
+					best, bestN = id, k
+				end
+			end
+		end
+		if not best then
+			break
+		end
+		inv.Resources[best] -= bestN
+		out[best] = (out[best] or 0) + bestN
+	end
+	return out
 end
 
 -- Adds up to `n`; returns how many were actually added.
@@ -830,7 +1017,7 @@ function InventoryModel.AddResource(inv: Inventory, id: string, n: number): numb
 	if not RESOURCE_SET[id] or n <= 0 or n ~= math.floor(n) then
 		return 0
 	end
-	local add = math.min(n, InventoryModel.FreeSpace(inv))
+	local add = math.min(n, InventoryModel.SpaceFor(inv, id))
 	inv.Resources[id] += add
 	return add
 end
@@ -897,6 +1084,10 @@ function InventoryModel.AddEquipment(inv: Inventory, kind: string, stack: Stack,
 		local old = inv.Armor
 		inv.Armor = stack
 		return "Armor", old
+	elseif kind == "Backpack" then
+		local old = inv.Backpack
+		inv.Backpack = stack
+		return "Backpack", old
 	end
 	local slots = InventoryModel.SlotsForKind(kind)
 	if #slots == 0 then
@@ -917,10 +1108,19 @@ function InventoryModel.AddEquipment(inv: Inventory, kind: string, stack: Stack,
 	return target, old
 end
 
+-- Recomputes pack slots from the worn backpack (`packSlots` = its Slots) + bonus.
+function InventoryModel.SetPackSlots(inv: Inventory, packSlots: number?)
+	inv.Capacity = (packSlots or inv.BaseSlots) + inv.BonusSlots
+end
+
 function InventoryModel.RemoveSlot(inv: Inventory, slot: string): Stack?
 	if slot == "Armor" then
 		local old = inv.Armor
 		inv.Armor = nil
+		return old
+	elseif slot == "Backpack" then
+		local old = inv.Backpack
+		inv.Backpack = nil
 		return old
 	end
 	local old = inv.Slots[slot]
@@ -1020,6 +1220,8 @@ function InventoryModel.Snapshot(inv: Inventory)
 		Capacity = inv.Capacity,
 		Slots = slots,
 		Armor = if inv.Armor then table.clone(inv.Armor) else false,
+		Backpack = if inv.Backpack then table.clone(inv.Backpack) else false,
+		SlotsUsed = InventoryModel.SlotsUsedBy(inv.Resources),
 		Bandages = inv.Bandages,
 		Ammo = table.clone(inv.Ammo),
 		Equipped = inv.Equipped or false,
@@ -2808,7 +3010,7 @@ return Rng
 
 local InventoryModel = require("./InventoryModel")
 
-export type Store = { Items: { [string]: number }, Capacity: number }
+export type Store = { Items: { [string]: number }, Capacity: number } -- Capacity = stacks (slots)
 
 local StorageLedger = {}
 
@@ -2828,8 +3030,13 @@ function StorageLedger.Total(store: Store): number
 	return t
 end
 
+-- Free stack slots.
 function StorageLedger.Free(store: Store): number
-	return math.max(0, store.Capacity - StorageLedger.Total(store))
+	return math.max(0, store.Capacity - InventoryModel.SlotsUsedBy(store.Items))
+end
+
+function StorageLedger.SlotsUsed(store: Store): number
+	return InventoryModel.SlotsUsedBy(store.Items)
 end
 
 -- Deposit up to `n` of `id` from inv into store. Returns moved amount.
@@ -2837,7 +3044,7 @@ function StorageLedger.Deposit(store: Store, inv: InventoryModel.Inventory, id: 
 	if not InventoryModel.IsResource(id) or n <= 0 or n ~= math.floor(n) then
 		return 0
 	end
-	local move = math.min(n, inv.Resources[id] or 0, StorageLedger.Free(store))
+	local move = math.min(n, inv.Resources[id] or 0, InventoryModel.RoomFor(store.Items, store.Capacity, id))
 	if move <= 0 then
 		return 0
 	end
@@ -2851,7 +3058,7 @@ function StorageLedger.Withdraw(store: Store, inv: InventoryModel.Inventory, id:
 	if not InventoryModel.IsResource(id) or n <= 0 or n ~= math.floor(n) then
 		return 0
 	end
-	local move = math.min(n, store.Items[id] or 0, InventoryModel.FreeSpace(inv))
+	local move = math.min(n, store.Items[id] or 0, InventoryModel.SpaceFor(inv, id))
 	if move <= 0 then
 		return 0
 	end
@@ -5265,6 +5472,14 @@ builders.Medkit = function(m)
 	piece(m, { Name = "Cross", Size = Vector3.new(0.6, 0.12, 0.6), CFrame = CFrame.new(0, 0.46, 0), Color = Color3.fromRGB(240, 240, 240), Material = Enum.Material.SmoothPlastic })
 end
 
+for _, packId in { "FibrePack", "HidePack", "FramePack", "IronPack", "ExpeditionPack" } do
+	builders[packId] = function(m)
+		handle(m, Vector3.new(1.8, 2.2, 0.9), if packId == "FibrePack" then Color3.fromRGB(150, 170, 110) else LEATHER, Enum.Material.Fabric)
+		piece(m, { Name = "Flap", Size = Vector3.new(1.9, 0.8, 1), CFrame = CFrame.new(0, 0.9, 0), Color = Color3.fromRGB(100, 70, 50), Material = Enum.Material.Fabric })
+		piece(m, { Name = "Roll", Size = Vector3.new(2, 0.6, 0.6), CFrame = CFrame.new(0, 1.35, 0.2), Color = ROPE, Material = Enum.Material.Fabric })
+	end
+end
+
 builders.RepairHammer = function(m)
 	handle(m, Vector3.new(0.35, 0.35, 1), WOOD_DARK, Enum.Material.Wood)
 	piece(m, { Name = "Haft", Size = Vector3.new(0.3, 0.3, 2.6), CFrame = CFrame.new(0, 0, -1.1), Color = WOOD, Material = Enum.Material.Wood })
@@ -5947,6 +6162,7 @@ function Skins.Hide(model: Instance, keep: { [string]: boolean }?)
 	for _, d in model:GetDescendants() do
 		if d:IsA("BasePart") and not d:GetAttribute("Skin") then
 			if d.Transparency < 1 and not d:GetAttribute("TeamTint") and not (keep and keep[d.Name]) then
+				d:SetAttribute("SkinT", d.Transparency)
 				d.Transparency = 1
 				d.CastShadow = false
 				d:SetAttribute("SkinHidden", true)
@@ -6027,6 +6243,30 @@ function Skins.Strip(target: Instance, name: string?)
 		if d:IsA("BasePart") and d:GetAttribute("Skin") and (name == nil or d:GetAttribute("SkinOf") == name) then
 			d:Destroy()
 		end
+	end
+end
+
+-- Removes every mesh skin and shows the procedural parts again (for variants whose
+-- shape no longer matches the pack mesh, e.g. a wall with a window cut in it).
+function Skins.Unskin(target: Instance)
+	Skins.Strip(target)
+	for _, d in target:GetDescendants() do
+		if d:IsA("BasePart") and d:GetAttribute("SkinHidden") then
+			d.Transparency = d:GetAttribute("SkinT") or 0
+			d.CastShadow = true
+			d:SetAttribute("SkinHidden", nil)
+			for _, g in d:GetChildren() do
+				if g:IsA("SurfaceGui") then
+					g.Enabled = true
+				elseif g:IsA("Decal") or g:IsA("Texture") then
+					(g :: any).Transparency = 0
+				end
+			end
+		end
+	end
+	if target:IsA("Model") then
+		target:SetAttribute("SkinName", nil)
+		target:SetAttribute("SkinBase", nil)
 	end
 end
 
@@ -6263,9 +6503,10 @@ function Structures.StorageBox(cf: CFrame, teamColor: Color3, parent: Instance?)
 	end
 	local plate = Build.Decor({ Name = "Crest", Size = Vector3.new(1.4, 1.4, 0.1), CFrame = CFrame.new(0, 1.8, -2.06), Color = teamColor, Material = Enum.Material.SmoothPlastic, Parent = m })
 	plate:SetAttribute("TeamTint", true)
+	Build.Decor({ Name = "Lock", Size = Vector3.new(0.6, 0.7, 0.2), CFrame = CFrame.new(0, 3.0, -2.2), Color = Color3.fromRGB(200, 180, 90), Material = Enum.Material.Metal, Parent = m })
 	place(m, cf, parent)
 	if Skins.Enabled() then
-		Skins.Dress(m, "SM_StorageBox", { scale = 1.9 })
+		Skins.Dress(m, "SM_StorageBox", { scale = 1.9, keep = { Lock = true } })
 	end
 	return m
 end
@@ -6320,19 +6561,267 @@ function Structures.Watchtower(cf: CFrame, teamColor: Color3, parent: Instance?)
 	return m
 end
 
+-- Survival Wars building tiers -------------------------------------------------------------
+
+local SCRAP = Color3.fromRGB(128, 112, 96)
+local IRON = Color3.fromRGB(92, 96, 104)
+
+-- Wooden floor / platform (Tier I). Walkable; 10x10 so it tiles with walls.
+function Structures.WoodFloor(cf: CFrame, parent: Instance?): Model
+	local m = Build.Model("WoodFloor")
+	root(m, Vector3.new(10, 1, 10))
+	for i = 0, 7 do
+		Build.Part({ Name = "Plank", Size = Vector3.new(10, 0.5, 1.2), CFrame = CFrame.new(0, 0.75, -4.4 + i * 1.26), Color = if i % 2 == 0 then WOOD else Build.Tint(WOOD, 0.9), Material = Enum.Material.WoodPlanks, Parent = m, CanCollide = false })
+	end
+	for _, x in { -4.4, 4.4 } do
+		Build.Part({ Name = "Joist", Size = Vector3.new(0.6, 0.6, 10), CFrame = CFrame.new(x, 0.3, 0), Color = WOOD_DARK, Material = Enum.Material.Wood, Parent = m, CanCollide = false })
+	end
+	Build.Part({ Name = "Collider", Size = Vector3.new(10, 1, 10), CFrame = CFrame.new(0, 0.5, 0), Transparency = 1, Parent = m })
+	return place(m, cf, parent)
+end
+
+-- Stone-and-timber wall with a shooting window (Tier II).
+function Structures.WindowWall(cf: CFrame, parent: Instance?): Model
+	local m = Structures.ReinforcedWall(CFrame.new(), nil)
+	Skins.Unskin(m) -- the pack wall is solid; show the procedural wall with its window
+	m.Name = "WindowWall"
+	-- carve the window: replace the single collider with four around a 3x1.6 gap
+	local col = m:FindFirstChild("Collider")
+	if col then
+		col:Destroy()
+	end
+	local gy, gh, gw = 6.6, 1.6, 3
+	for _, c in {
+		{ Vector3.new(10, gy - gh / 2, 2.4), Vector3.new(0, (gy - gh / 2) / 2, 0) },
+		{ Vector3.new(10, 10 - (gy + gh / 2), 2.4), Vector3.new(0, (10 + gy + gh / 2) / 2, 0) },
+		{ Vector3.new((10 - gw) / 2, gh, 2.4), Vector3.new(-(gw / 2 + (10 - gw) / 4), gy, 0) },
+		{ Vector3.new((10 - gw) / 2, gh, 2.4), Vector3.new(gw / 2 + (10 - gw) / 4, gy, 0) },
+	} do
+		Build.Part({ Name = "Collider", Size = c[1], CFrame = CFrame.new(c[2]), Transparency = 1, Parent = m })
+	end
+	for _, d in m:GetChildren() do
+		if d:IsA("BasePart") and d.Name == "Stake" and math.abs(d.Position.X) < gw / 2 + 0.6 then
+			d:Destroy()
+		end
+	end
+	Build.Part({ Name = "Sill", Size = Vector3.new(gw + 0.6, 0.4, 2.8), CFrame = CFrame.new(0, gy - gh / 2 - 0.2, 0), Color = WOOD_DARK, Material = Enum.Material.Wood, Parent = m, CanCollide = false })
+	Build.Part({ Name = "Lintel", Size = Vector3.new(gw + 0.6, 0.4, 2.8), CFrame = CFrame.new(0, gy + gh / 2 + 0.2, 0), Color = WOOD_DARK, Material = Enum.Material.Wood, Parent = m, CanCollide = false })
+	return place(m, cf, parent)
+end
+
+-- Scrap wall (Tier III): corrugated sheets on a timber frame.
+function Structures.ScrapWall(cf: CFrame, parent: Instance?): Model
+	local m = Build.Model("ScrapWall")
+	root(m, Vector3.new(10, 10, 2))
+	for _, x in { -4.6, 0, 4.6 } do
+		Build.Part({ Name = "Post", Size = Vector3.new(0.8, 10.4, 0.8), CFrame = CFrame.new(x, 5.2, 0.6), Color = WOOD_DARK, Material = Enum.Material.Wood, Parent = m, CanCollide = false })
+	end
+	for i = 0, 4 do
+		local col = if i % 2 == 0 then SCRAP else Build.Tint(SCRAP, 0.8)
+		Build.Part({ Name = "Sheet", Size = Vector3.new(2.3, 9.4, 0.3), CFrame = CFrame.new(-4 + i * 2, 5, -0.2) * CFrame.Angles(0, 0, math.rad((i % 3 - 1) * 2)), Color = col, Material = Enum.Material.CorrodedMetal, Parent = m, CanCollide = false })
+	end
+	Build.Part({ Name = "Rail", Size = Vector3.new(10.2, 0.5, 0.5), CFrame = CFrame.new(0, 8.6, 0.6), Color = WOOD_DARK, Material = Enum.Material.Wood, Parent = m, CanCollide = false })
+	Build.Part({ Name = "Collider", Size = Vector3.new(10, 10, 2), CFrame = CFrame.new(0, 5, 0), Transparency = 1, Parent = m })
+	return place(m, cf, parent)
+end
+
+-- Metal wall (Tier IV): riveted plates.
+function Structures.MetalWall(cf: CFrame, parent: Instance?): Model
+	local m = Build.Model("MetalWall")
+	root(m, Vector3.new(10, 11, 2.6))
+	for row = 0, 2 do
+		for i = 0, 1 do
+			Build.Part({ Name = "Plate", Size = Vector3.new(4.9, 3.5, 1.6), CFrame = CFrame.new(-2.5 + i * 5, 1.9 + row * 3.6, 0), Color = if (row + i) % 2 == 0 then IRON else Build.Tint(IRON, 0.85), Material = Enum.Material.DiamondPlate, Parent = m, CanCollide = false })
+		end
+	end
+	for _, x in { -5, 5 } do
+		Build.Part({ Name = "Beam", Size = Vector3.new(0.8, 11, 2.6), CFrame = CFrame.new(x, 5.5, 0), Color = Color3.fromRGB(60, 62, 68), Material = Enum.Material.Metal, Parent = m, CanCollide = false })
+	end
+	Build.Part({ Name = "Collider", Size = Vector3.new(10, 11, 2.6), CFrame = CFrame.new(0, 5.5, 0), Transparency = 1, Parent = m })
+	return place(m, cf, parent)
+end
+
+-- Door/gate variants reuse the Gate model (a "Door" sub-model the server moves).
+local function recolorDoor(m: Model, color: Color3, material: Enum.Material)
+	Skins.Unskin(m) -- tiered doors use the procedural look in their own materials
+	local door = m:FindFirstChild("Door")
+	if door then
+		for _, d in door:GetDescendants() do
+			if d:IsA("BasePart") and d.Name == "Panel" then
+				d.Color = color
+				d.Material = material
+			end
+		end
+	end
+end
+
+function Structures.ReinforcedDoor(cf: CFrame, teamColor: Color3, parent: Instance?): Model
+	local m = Structures.Gate(CFrame.new(), teamColor, nil)
+	m.Name = "ReinforcedDoor"
+	recolorDoor(m, Color3.fromRGB(110, 84, 58), Enum.Material.WoodPlanks)
+	local door = m:FindFirstChild("Door")
+	if door then
+		for _, y in { 2, 6.6 } do
+			Build.Part({ Name = "Strap", Size = Vector3.new(7.8, 0.5, 1.1), CFrame = CFrame.new(0, y, 0), Color = IRON, Material = Enum.Material.Metal, Parent = door, CanCollide = false })
+		end
+	end
+	return place(m, cf, parent)
+end
+
+function Structures.HeavyGate(cf: CFrame, teamColor: Color3, parent: Instance?): Model
+	local m = Structures.Gate(CFrame.new(), teamColor, nil)
+	m.Name = "HeavyGate"
+	recolorDoor(m, IRON, Enum.Material.DiamondPlate)
+	return place(m, cf, parent)
+end
+
+-- Storage tiers (Wooden Crate = StorageBox) ----------------------------------------------
+
+local function chest(name: string, size: Vector3, body: Color3, lid: Color3, mat: Enum.Material, teamColor: Color3, bands: number): Model
+	local m = Build.Model(name)
+	root(m, size)
+	Build.Part({ Name = "Chest", Size = Vector3.new(size.X, size.Y * 0.72, size.Z), CFrame = CFrame.new(0, size.Y * 0.36, 0), Color = body, Material = mat, Parent = m })
+	Build.Part({ Name = "Lid", Size = Vector3.new(size.X + 0.2, size.Y * 0.24, size.Z + 0.2), CFrame = CFrame.new(0, size.Y * 0.84, 0), Color = lid, Material = mat, Parent = m })
+	for i = 1, bands do
+		local x = -size.X / 2 + i * size.X / (bands + 1)
+		Build.Decor({ Name = "Band", Size = Vector3.new(0.4, size.Y * 0.98, size.Z + 0.3), CFrame = CFrame.new(x, size.Y * 0.49, 0), Color = Color3.fromRGB(70, 72, 78), Material = Enum.Material.Metal, Parent = m })
+	end
+	local plate = Build.Decor({ Name = "Crest", Size = Vector3.new(1.2, 1.2, 0.1), CFrame = CFrame.new(0, size.Y * 0.45, -size.Z / 2 - 0.06), Color = teamColor, Material = Enum.Material.SmoothPlastic, Parent = m })
+	plate:SetAttribute("TeamTint", true)
+	Build.Decor({ Name = "Lock", Size = Vector3.new(0.6, 0.7, 0.2), CFrame = CFrame.new(0, size.Y * 0.72, -size.Z / 2 - 0.12), Color = Color3.fromRGB(200, 180, 90), Material = Enum.Material.Metal, Parent = m })
+	return m
+end
+
+function Structures.ReinforcedChest(cf: CFrame, teamColor: Color3, parent: Instance?): Model
+	local m = chest("ReinforcedChest", Vector3.new(6, 4.4, 4), Color3.fromRGB(120, 90, 62), Color3.fromRGB(90, 66, 44), Enum.Material.WoodPlanks, teamColor, 3)
+	return place(m, cf, parent)
+end
+
+function Structures.MetalLocker(cf: CFrame, teamColor: Color3, parent: Instance?): Model
+	local m = Build.Model("MetalLocker")
+	root(m, Vector3.new(4, 7, 3))
+	Build.Part({ Name = "Chest", Size = Vector3.new(4, 7, 3), CFrame = CFrame.new(0, 3.5, 0), Color = Color3.fromRGB(96, 110, 104), Material = Enum.Material.Metal, Parent = m })
+	for i = 0, 2 do
+		Build.Decor({ Name = "Vent", Size = Vector3.new(2.4, 0.15, 0.1), CFrame = CFrame.new(0, 5.8 + i * 0.3, -1.55), Color = Color3.fromRGB(50, 56, 54), Material = Enum.Material.Metal, Parent = m })
+	end
+	local plate = Build.Decor({ Name = "Crest", Size = Vector3.new(1.2, 1.2, 0.1), CFrame = CFrame.new(0, 4, -1.56), Color = teamColor, Material = Enum.Material.SmoothPlastic, Parent = m })
+	plate:SetAttribute("TeamTint", true)
+	Build.Decor({ Name = "Lock", Size = Vector3.new(0.5, 0.9, 0.2), CFrame = CFrame.new(1.4, 3.5, -1.6), Color = Color3.fromRGB(200, 180, 90), Material = Enum.Material.Metal, Parent = m })
+	return place(m, cf, parent)
+end
+
+function Structures.SurvivalSafe(cf: CFrame, teamColor: Color3, parent: Instance?): Model
+	local m = Build.Model("SurvivalSafe")
+	root(m, Vector3.new(4.5, 5, 4.5))
+	Build.Part({ Name = "Chest", Size = Vector3.new(4.5, 5, 4.5), CFrame = CFrame.new(0, 2.5, 0), Color = Color3.fromRGB(58, 62, 68), Material = Enum.Material.DiamondPlate, Parent = m })
+	Build.Cyl("Dial", 0.3, 1.4, CFrame.new(0.8, 2.8, -2.35) * CFrame.Angles(0, math.rad(90), 0), Color3.fromRGB(200, 180, 90), Enum.Material.Metal, m, false)
+	Build.Decor({ Name = "Lock", Size = Vector3.new(0.4, 1.4, 0.3), CFrame = CFrame.new(-1.1, 2.6, -2.35), Color = Color3.fromRGB(170, 170, 176), Material = Enum.Material.Metal, Parent = m })
+	local plate = Build.Decor({ Name = "Crest", Size = Vector3.new(1, 1, 0.1), CFrame = CFrame.new(0, 4.1, -2.3), Color = teamColor, Material = Enum.Material.SmoothPlastic, Parent = m })
+	plate:SetAttribute("TeamTint", true)
+	return place(m, cf, parent)
+end
+
+-- Breached storage look: the lock hangs open and a red tag shows.
+function Structures.SetBreached(m: Model, breached: boolean)
+	m:SetAttribute("Breached", breached)
+	local lock = m:FindFirstChild("Lock", true) :: BasePart?
+	if lock then
+		lock.Color = if breached then Color3.fromRGB(200, 60, 50) else Color3.fromRGB(200, 180, 90)
+		lock.Transparency = 0
+	end
+	local tag = m:FindFirstChild("BreachTag")
+	if breached and not tag and m.PrimaryPart then
+		local r = m.PrimaryPart
+		Build.Decor({ Name = "BreachTag", Size = Vector3.new(r.Size.X * 0.6, 0.3, 0.1), CFrame = r.CFrame * CFrame.new(0, r.Size.Y * 0.2, -r.Size.Z / 2 - 0.15), Color = Color3.fromRGB(220, 60, 40), Material = Enum.Material.Neon, Parent = m, CastShadow = false })
+	elseif not breached and tag then
+		tag:Destroy()
+	end
+end
+
+-- Traps ------------------------------------------------------------------------------------
+
+local function trigger(m: Model, size: Vector3, y: number): BasePart
+	local t = Build.Part({ Name = "Trigger", Size = size, CFrame = CFrame.new(0, y, 0), Transparency = 1, CanCollide = false, Parent = m })
+	t.CanTouch = true
+	t.CanQuery = false
+	return t
+end
+
+-- Tripwire alarm: two stakes, a wire and a can rattle (Tier II).
+function Structures.TripwireAlarm(cf: CFrame, parent: Instance?): Model
+	local m = Build.Model("TripwireAlarm")
+	root(m, Vector3.new(8, 1.5, 1))
+	for _, x in { -3.8, 3.8 } do
+		Build.Part({ Name = "Stake", Size = Vector3.new(0.3, 1.4, 0.3), CFrame = CFrame.new(x, 0.7, 0), Color = WOOD_DARK, Material = Enum.Material.Wood, Parent = m, CanCollide = false })
+	end
+	Build.Decor({ Name = "Wire", Size = Vector3.new(7.6, 0.05, 0.05), CFrame = CFrame.new(0, 0.6, 0), Color = Color3.fromRGB(200, 200, 190), Material = Enum.Material.SmoothPlastic, Parent = m, CastShadow = false })
+	Build.Cyl("Can", 0.5, 0.35, CFrame.new(3.8, 1.2, 0), Color3.fromRGB(160, 160, 150), Enum.Material.Metal, m, false)
+	trigger(m, Vector3.new(7.6, 1.2, 1.2), 0.6)
+	return place(m, cf, parent)
+end
+
+-- Snare: a rope loop on a bent sapling; holds the victim briefly, then it's spent (Tier II).
+function Structures.Snare(cf: CFrame, parent: Instance?): Model
+	local m = Build.Model("Snare")
+	root(m, Vector3.new(3, 1, 3))
+	Build.Decor({ Name = "Loop", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.1, 2.4, 2.4), CFrame = CFrame.new(0, 0.08, 0) * CFrame.Angles(0, 0, math.rad(90)), Color = ROPE, Material = Enum.Material.Fabric, Parent = m, CastShadow = false })
+	Build.Part({ Name = "Sapling", Size = Vector3.new(0.25, 3.6, 0.25), CFrame = CFrame.new(1.4, 1.5, 0) * CFrame.Angles(0, 0, math.rad(-35)), Color = WOOD, Material = Enum.Material.Wood, Parent = m, CanCollide = false })
+	trigger(m, Vector3.new(2.6, 1.4, 2.6), 0.7)
+	return place(m, cf, parent)
+end
+
+-- Bear trap: steel jaws (Tier III). Heavy damage + hold; spent after one bite.
+function Structures.BearTrap(cf: CFrame, parent: Instance?): Model
+	local m = Build.Model("BearTrap")
+	root(m, Vector3.new(3, 1, 3))
+	Build.Decor({ Name = "Plate", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.2, 1.6, 1.6), CFrame = CFrame.new(0, 0.1, 0) * CFrame.Angles(0, 0, math.rad(90)), Color = IRON, Material = Enum.Material.Metal, Parent = m })
+	for _, dir in { -1, 1 } do
+		Build.Decor({ Name = "Jaw", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.2, 2.6, 2.6), CFrame = CFrame.new(0, 0.2, dir * 0.4) * CFrame.Angles(0, 0, math.rad(90)), Color = Color3.fromRGB(120, 124, 130), Material = Enum.Material.Metal, Parent = m, Transparency = 0.2 })
+	end
+	trigger(m, Vector3.new(2.4, 1.2, 2.4), 0.6)
+	return place(m, cf, parent)
+end
+
+-- Advanced alarm (Tier V): a motion-sensor post with a lamp; watches a radius.
+function Structures.AdvancedAlarm(cf: CFrame, teamColor: Color3, parent: Instance?): Model
+	local m = Build.Model("AdvancedAlarm")
+	root(m, Vector3.new(1.5, 5, 1.5))
+	Build.Part({ Name = "Post", Size = Vector3.new(0.6, 4.4, 0.6), CFrame = CFrame.new(0, 2.2, 0), Color = IRON, Material = Enum.Material.Metal, Parent = m })
+	local lamp = Build.Decor({ Name = "Lamp", Shape = Enum.PartType.Ball, Size = Vector3.new(1, 1, 1), CFrame = CFrame.new(0, 4.8, 0), Color = Color3.fromRGB(120, 220, 120), Material = Enum.Material.Neon, Parent = m })
+	lamp:SetAttribute("TeamTint", false)
+	local plate = Build.Decor({ Name = "Crest", Size = Vector3.new(0.7, 0.7, 0.1), CFrame = CFrame.new(0, 3.4, -0.36), Color = teamColor, Material = Enum.Material.SmoothPlastic, Parent = m })
+	plate:SetAttribute("TeamTint", true)
+	return place(m, cf, parent)
+end
+
 function Structures.Build(id: string, cf: CFrame, teamColor: Color3, parent: Instance?): Model
-	if id == "WoodWall" then
-		return Structures.WoodWall(cf, parent)
-	elseif id == "ReinforcedWall" then
-		return Structures.ReinforcedWall(cf, parent)
-	elseif id == "Gate" then
-		return Structures.Gate(cf, teamColor, parent)
-	elseif id == "Spikes" then
-		return Structures.Spikes(cf, parent)
-	elseif id == "StorageBox" then
-		return Structures.StorageBox(cf, teamColor, parent)
-	elseif id == "Watchtower" then
-		return Structures.Watchtower(cf, teamColor, parent)
+	local plain = {
+		WoodWall = Structures.WoodWall,
+		ReinforcedWall = Structures.ReinforcedWall,
+		Spikes = Structures.Spikes,
+		WoodFloor = Structures.WoodFloor,
+		WindowWall = Structures.WindowWall,
+		ScrapWall = Structures.ScrapWall,
+		MetalWall = Structures.MetalWall,
+		TripwireAlarm = Structures.TripwireAlarm,
+		Snare = Structures.Snare,
+		BearTrap = Structures.BearTrap,
+	}
+	local tinted = {
+		Gate = Structures.Gate,
+		ReinforcedDoor = Structures.ReinforcedDoor,
+		HeavyGate = Structures.HeavyGate,
+		StorageBox = Structures.StorageBox,
+		ReinforcedChest = Structures.ReinforcedChest,
+		MetalLocker = Structures.MetalLocker,
+		SurvivalSafe = Structures.SurvivalSafe,
+		Watchtower = Structures.Watchtower,
+		AdvancedAlarm = Structures.AdvancedAlarm,
+	}
+	if plain[id] then
+		return plain[id](cf, parent)
+	elseif tinted[id] then
+		return tinted[id](cf, teamColor, parent)
 	end
 	error("Unknown structure " .. id)
 end
@@ -6800,7 +7289,11 @@ Recipes.List = {
 	{ Id = "CrudePickaxe", Result = "CrudePickaxe", Count = 1, Level = 1, Kind = "Equipment", Cost = { Stick = 10, Stone = 5, Plant = 3 }, Order = 11 },
 	{ Id = "CrudeSpear", Result = "CrudeSpear", Count = 1, Level = 1, Kind = "Equipment", Cost = { Stick = 12, Stone = 3, Plant = 5 }, Order = 12 },
 	{ Id = "StorageBox", Result = "StorageBox", Count = 1, Level = 1, Kind = "Structure", Cost = { Wood = 20, Stone = 6 }, Order = 13 },
-	{ Id = "WoodWall", Result = "WoodWall", Count = 1, Level = 1, Kind = "Structure", Cost = { Wood = 12 }, Order = 14 },
+	{ Id = "FibrePack", Result = "FibrePack", Count = 1, Level = 1, Kind = "Equipment", Cost = { Plant = 20, Rope = 4, Stick = 8 }, Order = 16 },
+	{ Id = "WoodWall", Result = "WoodWall", Count = 1, Level = 1, Kind = "Structure", Cost = { Wood = 12 }, Order = 17 },
+	{ Id = "Gate", Result = "Gate", Count = 1, Level = 1, Kind = "Structure", Cost = { Wood = 20, Rope = 2 }, Order = 18 },
+	{ Id = "WoodFloor", Result = "WoodFloor", Count = 1, Level = 1, Kind = "Structure", Cost = { Wood = 10 }, Order = 19 },
+	{ Id = "Spikes", Result = "Spikes", Count = 1, Level = 1, Kind = "Structure", Cost = { Wood = 12, Stick = 8 }, Order = 19.5 },
 	{ Id = "RepairHammer", Result = "RepairHammer", Count = 1, Level = 1, Kind = "Equipment", Cost = { Wood = 6, Stone = 6 }, Order = 15 },
 
 	-- Tier II: stone tools, bows, gates, spikes, canteen
@@ -6810,24 +7303,41 @@ Recipes.List = {
 	{ Id = "Bow", Result = "Bow", Count = 1, Level = 2, Kind = "Equipment", Cost = { Wood = 16, Rope = 6 }, Order = 23 },
 	{ Id = "Arrows", Result = "Arrow", Count = 6, Level = 2, Kind = "Ammo", Cost = { Stick = 6, Stone = 3, Plant = 2 }, Order = 24 },
 	{ Id = "Canteen", Result = "Canteen", Count = 1, Level = 2, Kind = "Equipment", Cost = { Leather = 4, Rope = 2 }, Order = 25 },
-	{ Id = "Gate", Result = "Gate", Count = 1, Level = 2, Kind = "Structure", Cost = { Wood = 24, Rope = 3 }, Order = 26 },
-	{ Id = "Spikes", Result = "Spikes", Count = 1, Level = 2, Kind = "Structure", Cost = { Wood = 12, Stick = 8 }, Order = 27 },
+	{ Id = "ReinforcedWall", Result = "ReinforcedWall", Count = 1, Level = 2, Kind = "Structure", Cost = { Wood = 16, Stone = 24 }, Order = 26 },
+	{ Id = "ReinforcedDoor", Result = "ReinforcedDoor", Count = 1, Level = 2, Kind = "Structure", Cost = { Wood = 24, Stone = 12, Rope = 3 }, Order = 26.5 },
+	{ Id = "WindowWall", Result = "WindowWall", Count = 1, Level = 2, Kind = "Structure", Cost = { Wood = 16, Stone = 20 }, Order = 27 },
+	{ Id = "TripwireAlarm", Result = "TripwireAlarm", Count = 1, Level = 2, Kind = "Structure", Cost = { Stick = 6, Rope = 2, Stone = 2 }, Order = 27.2 },
+	{ Id = "Snare", Result = "Snare", Count = 1, Level = 2, Kind = "Structure", Cost = { Rope = 3, Stick = 4 }, Order = 27.4 },
+	{ Id = "ReinforcedChest", Result = "ReinforcedChest", Count = 1, Level = 2, Kind = "Structure", Cost = { Wood = 48, Stone = 24, Rope = 4 }, Order = 30 },
+	{ Id = "HidePack", Result = "HidePack", Count = 1, Level = 2, Kind = "Equipment", Cost = { Leather = 8, Rope = 6, Plant = 10 }, Order = 29 },
 	{ Id = "FirstAid", Result = "FirstAid", Count = 1, Level = 2, Kind = "Resource", Cost = { Plant = 8, Rope = 2, Mushroom = 2 }, Order = 28 },
 
 	-- Tier III: scrap-era weapons and defences
 	{ Id = "Sword", Result = "Sword", Count = 1, Level = 3, Kind = "Equipment", Cost = { Scrap = 12, Wood = 8, Leather = 2 }, Order = 30 },
 	{ Id = "Shield", Result = "Shield", Count = 1, Level = 3, Kind = "Equipment", Cost = { Wood = 20, Scrap = 6, Leather = 3 }, Order = 31 },
 	{ Id = "Armor", Result = "Armor", Count = 1, Level = 3, Kind = "Equipment", Cost = { Leather = 10, Rope = 4, Scrap = 4 }, Order = 32 },
-	{ Id = "ReinforcedWall", Result = "ReinforcedWall", Count = 1, Level = 3, Kind = "Structure", Cost = { Wood = 16, Stone = 24, Scrap = 2 }, Order = 33 },
+	{ Id = "ScrapWall", Result = "ScrapWall", Count = 1, Level = 3, Kind = "Structure", Cost = { Scrap = 16, Wood = 10 }, Order = 33.5 },
+	{ Id = "BearTrap", Result = "BearTrap", Count = 1, Level = 3, Kind = "Structure", Cost = { Scrap = 12, Rope = 2 }, Order = 33.7 },
+	{ Id = "MetalLocker", Result = "MetalLocker", Count = 1, Level = 3, Kind = "Structure", Cost = { Scrap = 30, Wood = 24 }, Order = 36 },
+	{ Id = "Crowbar", Result = "Crowbar", Count = 1, Level = 3, Kind = "Equipment", Cost = { Scrap = 12, Rope = 2 }, Order = 37 },
+	{ Id = "FramePack", Result = "FramePack", Count = 1, Level = 3, Kind = "Equipment", Cost = { Leather = 12, Scrap = 10, Rope = 8 }, Order = 35 },
 	{ Id = "Watchtower", Result = "Watchtower", Count = 1, Level = 3, Kind = "Structure", Cost = { Wood = 60, Stone = 20, Rope = 8, Scrap = 4 }, Order = 34 },
 
 	-- Tier IV: iron tools, medkits
 	{ Id = "IronAxe", Result = "IronAxe", Count = 1, Level = 4, Kind = "Equipment", Cost = { Wood = 20, Iron = 10, Scrap = 6 }, Order = 40 },
 	{ Id = "IronPickaxe", Result = "IronPickaxe", Count = 1, Level = 4, Kind = "Equipment", Cost = { Wood = 20, Iron = 12, Scrap = 6 }, Order = 41 },
+	{ Id = "MetalWall", Result = "MetalWall", Count = 1, Level = 4, Kind = "Structure", Cost = { Iron = 12, Scrap = 10 }, Order = 43.5 },
+	{ Id = "HeavyGate", Result = "HeavyGate", Count = 1, Level = 4, Kind = "Structure", Cost = { Iron = 16, Scrap = 12, Wood = 10 }, Order = 43.7 },
+	{ Id = "SurvivalSafe", Result = "SurvivalSafe", Count = 1, Level = 4, Kind = "Structure", Cost = { Iron = 24, Scrap = 40, Stone = 40 }, Order = 44 },
+	{ Id = "Sledgehammer", Result = "Sledgehammer", Count = 1, Level = 4, Kind = "Equipment", Cost = { Iron = 12, Wood = 16, Scrap = 8 }, Order = 45 },
+	{ Id = "IronPack", Result = "IronPack", Count = 1, Level = 4, Kind = "Equipment", Cost = { Leather = 16, Iron = 8, Scrap = 14, Rope = 8 }, Order = 43 },
 	{ Id = "Medkit", Result = "Medkit", Count = 1, Level = 4, Kind = "Resource", Cost = { Plant = 12, Scrap = 4, Iron = 2, Mushroom = 4 }, Order = 42 },
 
 	-- Tier V: steel (endgame)
 	{ Id = "SteelAxe", Result = "SteelAxe", Count = 1, Level = 5, Kind = "Equipment", Cost = { Wood = 30, Iron = 24, Coal = 16, Scrap = 12 }, Order = 50 },
+	{ Id = "AdvancedAlarm", Result = "AdvancedAlarm", Count = 1, Level = 5, Kind = "Structure", Cost = { Iron = 6, Scrap = 10, Coal = 4 }, Order = 52.5 },
+	{ Id = "BreachingCharge", Result = "BreachingCharge", Count = 1, Level = 5, Kind = "Resource", Cost = { Scrap = 16, Coal = 12, Iron = 6 }, Order = 53 },
+	{ Id = "ExpeditionPack", Result = "ExpeditionPack", Count = 1, Level = 5, Kind = "Equipment", Cost = { Leather = 24, Iron = 14, Scrap = 20, RareComponent = 1 }, Order = 52 },
 	{ Id = "SteelPickaxe", Result = "SteelPickaxe", Count = 1, Level = 5, Kind = "Equipment", Cost = { Wood = 30, Iron = 28, Coal = 16, Scrap = 12 }, Order = 51 },
 } :: { Recipe }
 
@@ -6857,7 +7367,7 @@ Recipes.MaxWorkbenchLevel = 5
 -- restores RepairFraction of max health.
 Recipes.Repair = {
 	RepairFraction = 0.1,
-	Cost = { Wood = { Wood = 1 }, Stone = { Stone = 1 } },
+	Cost = { Wood = { Wood = 1 }, Stone = { Stone = 1 }, Scrap = { Scrap = 1 }, Iron = { Iron = 1 } },
 }
 
 return Recipes
@@ -7147,6 +7657,10 @@ local Sounds: { [string]: Cue } = {
 	TreeFall = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 0.65, Pitch = 0.45 },
 	Eat = { Bundled = "rbxasset://sounds/action_footsteps_plastic.mp3", Volume = 0.5, Pitch = 1.8 },
 	ChestOpen = { Bundled = "rbxasset://sounds/action_get_up.mp3", Volume = 0.6, Pitch = 0.9 },
+	Alarm = { Bundled = "rbxasset://sounds/volume_slider.ogg", Volume = 0.9, Pitch = 0.5 },
+	TrapSnap = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 0.6, Pitch = 1.8 },
+	Breach = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 1.0, Pitch = 0.5 },
+	Explosion = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 1.0, Pitch = 0.7 },
 
 	-- Water / fire
 	Pour = { Bundled = "rbxasset://sounds/action_swim.mp3", Volume = 0.6, Pitch = 0.9, Looped = true },
@@ -57585,7 +58099,8 @@ end
             <string name="Name">BuildService</string>
             <string name="Source"><![CDATA[--!nonstrict
 -- Free-placement base building with server validation, structure health,
--- damage states, repair, gates and spikes.
+-- damage states, repair, doors, spikes and traps (tripwire, snare, bear trap,
+-- advanced alarm). Storage and trap counts are capped by Workbench tier.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -57619,7 +58134,9 @@ local ctx: any
 local structures: { [Model]: Structure } = {}
 local folder: Folder? = nil
 local spikeTouch: { [string]: number } = {}
+local alarmCooldown: { [string]: number } = {}
 local counter = 0
+local STREAM_CLEARANCE = 9 -- studs from a stream's centre line (don't dam rivers)
 
 function BuildService.Init(c)
 	ctx = c
@@ -57634,6 +58151,7 @@ function BuildService.Init(c)
 		structures = {}
 		folder = nil
 		spikeTouch = {}
+		alarmCooldown = {}
 	end)
 end
 
@@ -57659,6 +58177,15 @@ function BuildService.TeamStructures(team: number): { Structure }
 		end
 	end
 	return out
+end
+
+-- Cap for a limit key: Workbench-tier caps (spec: storage 1-5, traps 2-6) else a flat limit.
+function BuildService.LimitMax(team: number, limit: string): number
+	local tiers = Config.Build.TierLimits[limit]
+	if tiers then
+		return tiers[math.clamp(ctx.CampService.GetLevel(team), 1, #tiers)]
+	end
+	return Config.Build.Limits[limit] or 10
 end
 
 local function limitUsed(team: number, limit: string): number
@@ -57710,10 +58237,38 @@ function BuildService.Validate(p: Player, id: string, pos: Vector3, yaw: number)
 		Clearances = camp.Clearances,
 		Existing = existing,
 		LimitUsed = limitUsed(team, limitName),
-		LimitMax = Config.Build.Limits[limitName] or 10,
+		LimitMax = BuildService.LimitMax(team, limitName),
 	})
 	if not ok then
+		if why and string.find(why, "limit") and Config.Build.TierLimits[limitName] then
+			why = string.format("%s cap reached (%d at this Workbench tier)", limitName, BuildService.LimitMax(team, limitName))
+		end
 		return false, why
+	end
+	-- Rivers and streams stay open: no building across the water.
+	local map = ctx.MatchService.Map
+	if map and map.Layout and map.Layout.Streams then
+		local O = map.Origin
+		local px, pz = pos.X - O.X, pos.Z - O.Z
+		local reach = STREAM_CLEARANCE + math.max(size.X, size.Z) / 2
+		for _, st in map.Layout.Streams do
+			local pts = st.Points
+			for i = 1, #pts - 1 do
+				local a, b = pts[i], pts[i + 1]
+				local abx, abz = b.X - a.X, b.Z - a.Z
+				local len2 = abx * abx + abz * abz
+				local tt = if len2 > 0 then math.clamp(((px - a.X) * abx + (pz - a.Z) * abz) / len2, 0, 1) else 0
+				local dx, dz = px - (a.X + abx * tt), pz - (a.Z + abz * tt)
+				if dx * dx + dz * dz < reach * reach then
+					return false, "Too close to the stream (keep waterways open)"
+				end
+			end
+		end
+	end
+	for _, nb in (map and map.NoBuild) or {} do
+		if (Vector3.new(pos.X, 0, pos.Z) - Vector3.new(nb.X, 0, nb.Z)).Magnitude < nb.R then
+			return false, "You can't build here (" .. (nb.Label or "blocked") .. ")"
+		end
 	end
 	-- Terrain: sample the footprint corners; reject steep or water spots.
 	local heights = {}
@@ -57798,16 +58353,21 @@ function BuildService.Spawn(id: string, team: number, ground: Vector3, yaw: numb
 	model:SetAttribute("Health", s.Health)
 	model:SetAttribute("MaxHealth", s.Max)
 	ctx.Util.PlaySound("Build", model.PrimaryPart)
-	if id == "Gate" then
+	if def.Door then
 		local door = model:FindFirstChild("Door") :: Model
-		ctx.ChannelService.MakePrompt(door.PrimaryPart :: BasePart, "Gate", "Open / Close", "Gate", 10, "Team", team)
+		ctx.ChannelService.MakePrompt(door.PrimaryPart :: BasePart, "Gate", "Open / Close", def.Name, 10, "Team", team)
 	elseif id == "Spikes" then
 		local hurt = model:FindFirstChild("Hurt") :: BasePart
 		hurt.Touched:Connect(function(part)
 			BuildService._spikeTouch(s, part)
 		end)
-	elseif id == "StorageBox" then
+	elseif def.Limit == "Storage" then
 		ctx.StorageService.Register(s)
+	elseif id == "TripwireAlarm" or id == "Snare" or id == "BearTrap" then
+		local trig = model:FindFirstChild("Trigger") :: BasePart
+		trig.Touched:Connect(function(part)
+			BuildService._trapTouch(s, part)
+		end)
 	end
 	return s
 end
@@ -57845,7 +58405,7 @@ function BuildService.Destroy(s: Structure, by: Player?)
 	end
 	structures[s.Model] = nil
 	local pos = s.Model:GetPivot().Position
-	if s.Id == "StorageBox" then
+	if Items[s.Id].Limit == "Storage" then
 		ctx.StorageService.OnDestroyed(s, pos)
 	end
 	Net.FireAll("Fx", "StructureBreak", { Pos = pos, Id = s.Id })
@@ -57892,7 +58452,7 @@ end
 
 function BuildService._onGate(p: Player, prompt: ProximityPrompt)
 	local s = BuildService.FromPart(prompt)
-	if not s or s.Id ~= "Gate" or ctx.Util.Team(p) ~= s.Team or not ctx.Util.IsAlive(p) then
+	if not s or not Items[s.Id].Door or ctx.Util.Team(p) ~= s.Team or not ctx.Util.IsAlive(p) then
 		return
 	end
 	local open = not s.Model:GetAttribute("Open")
@@ -57945,6 +58505,99 @@ function BuildService._spikeTouch(s: Structure, part: BasePart)
 		end
 		spikeTouch[key] = t
 		ctx.WildlifeService.Damage(animal, Items.Spikes.Damage :: number, nil)
+	end
+end
+
+-- Traps -------------------------------------------------------------------------------------------
+
+-- Compass side (from `from` toward `to`) for warnings without positions.
+local function bearing(from: Vector3, to: Vector3): string
+	local d = (to - from) * Vector3.new(1, 0, 1)
+	if d.Magnitude < 0.1 then
+		return "near"
+	end
+	local deg = math.deg(math.atan2(d.X, -d.Z)) % 360
+	local dirs = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" }
+	return dirs[math.floor(((deg + 22.5) % 360) / 45) + 1]
+end
+
+local function warnOwner(s: Structure, text: string)
+	for _, p in ctx.Util.TeamPlayers(s.Team) do
+		Net.FireClient("MatchEvent", p, "TrapAlert", { Text = text, Trap = s.Id })
+	end
+end
+
+function BuildService._trapTouch(s: Structure, part: BasePart)
+	if not structures[s.Model] then
+		return
+	end
+	local victim = ctx.Util.PlayerFromPart(part)
+	if not victim or ctx.Util.Team(victim) == s.Team or not ctx.Util.IsAlive(victim) then
+		return
+	end
+	local def = Items[s.Id]
+	local fire = ctx.CampService.GetCamp(s.Team)
+	local side = if fire then bearing(fire.FirePos, s.Model:GetPivot().Position) else "?"
+	if s.Id == "TripwireAlarm" then
+		local t = os.clock()
+		if t - (alarmCooldown[s.Key] or 0) < 8 then
+			return
+		end
+		alarmCooldown[s.Key] = t
+		ctx.Util.PlaySound("Alarm", s.Model.PrimaryPart)
+		warnOwner(s, "⚠ Tripwire rattled on the " .. side .. " side of your camp!")
+		return
+	end
+	-- Snare / bear trap: bite once, hold, then the trap is spent.
+	local owner = Players:GetPlayerByUserId(s.Builder)
+	if def.Damage then
+		ctx.CombatService.DamagePlayer(victim, def.Damage, { Kind = "Trap", By = if owner and ctx.Util.Team(owner) == s.Team then owner else nil, Name = def.Name, Pos = s.Model:GetPivot().Position })
+	end
+	if def.Hold then
+		BuildService.HoldPlayer(victim, def.Hold)
+	end
+	ctx.Util.PlaySound(if s.Id == "BearTrap" then "TrapSnap" else "Gather", s.Model.PrimaryPart)
+	ctx.Util.Notify(victim, "Caught in a " .. def.Name .. "!", "danger")
+	warnOwner(s, "⚠ Your " .. def.Name .. " caught someone on the " .. side .. " side!")
+	BuildService.Destroy(s, nil)
+end
+
+-- Holds a player in place (traps). PowerupService's movement loop reads HeldUntil.
+function BuildService.HoldPlayer(p: Player, seconds: number)
+	local untilT = workspace:GetServerTimeNow() + seconds
+	local prev = p:GetAttribute("HeldUntil")
+	p:SetAttribute("HeldUntil", math.max(untilT, if type(prev) == "number" then prev else 0))
+	ctx.ChannelService.CancelFor(p, "Caught in a trap")
+end
+
+function BuildService.IsHeld(p: Player): boolean
+	local t = p:GetAttribute("HeldUntil")
+	return type(t) == "number" and workspace:GetServerTimeNow() < t
+end
+
+-- Advanced alarms watch a radius (checked a few times a second).
+function BuildService.Start()
+	while true do
+		task.wait(0.5)
+		if ctx.MatchService.Active then
+			local t = os.clock()
+			for _, s in structures do
+				local detect = Items[s.Id].Detect
+				if detect and t - (alarmCooldown[s.Key] or 0) >= 6 then
+					local pos = s.Model:GetPivot().Position
+					for _, p in ctx.Util.MatchPlayers() do
+						if ctx.Util.Team(p) ~= s.Team and ctx.Util.IsAlive(p) and ctx.Util.DistTo(p, pos) <= detect then
+							alarmCooldown[s.Key] = t
+							local fire = ctx.CampService.GetCamp(s.Team)
+							local side = if fire then bearing(fire.FirePos, pos) else "?"
+							ctx.Util.PlaySound("Alarm", s.Model.PrimaryPart)
+							warnOwner(s, "🚨 Advanced alarm: " .. p.DisplayName .. " is at the " .. side .. " side of your camp!")
+							break
+						end
+					end
+				end
+			end
+		end
 	end
 end
 
@@ -60149,9 +60802,17 @@ function GatherService._apply(p: Player, n: Node, toolType: string?, power: numb
 		return false
 	end
 	local inv = ctx.InventoryService.Get(p)
-	if inv and InventoryModel.FreeSpace(inv) <= 0 then
-		ctx.Util.Notify(p, "Your pack is full. Deposit at your storage or eat some food.", "warn")
-		return false
+	if inv then
+		local room = false
+		for id in def.Yield or def.PerHit do
+			if InventoryModel.SpaceFor(inv, id) > 0 then
+				room = true
+			end
+		end
+		if not room then
+			ctx.Util.Notify(p, "Your pack is full. Deposit at your storage or craft a bigger backpack.", "warn")
+			return false
+		end
 	end
 	local r = ResourceRules.Hit(def, n.S, toolType, power, os.clock(), rng, tier)
 	if not r.Ok then
@@ -60315,7 +60976,10 @@ end
 function InventoryService.Init(c)
 	ctx = c
 	ctx.MatchService.On("PlayerJoinedMatch", function(p: Player)
-		invs[p] = InventoryModel.New(Config.Inventory.ResourceCapacity, Config.Inventory.BandageMax, Config.Inventory.AmmoMax)
+		local inv = InventoryModel.New(Config.Inventory.PackSlots, Config.Inventory.BandageMax, Config.Inventory.AmmoMax)
+		inv.BonusSlots = ctx.PowerupService.BonusSlots(p)
+		InventoryModel.SetPackSlots(inv, nil)
+		invs[p] = inv
 		InventoryService._deliverBandageCredits(p)
 		InventoryService.Sync(p)
 	end)
@@ -60432,7 +61096,7 @@ function InventoryService.AddResource(p: Player, id: string, n: number): number
 	end
 	local added = InventoryModel.AddResource(inv, id, n)
 	if added < n then
-		Net.FireClient("Notify", p, "Your pack is full (" .. inv.Capacity .. "/" .. inv.Capacity .. "). Deposit at your storage.", "warn")
+		Net.FireClient("Notify", p, "Your pack is full (" .. inv.Capacity .. " slots). Deposit at your storage or craft a bigger backpack.", "warn")
 	end
 	if added > 0 then
 		InventoryService.Sync(p)
@@ -60455,6 +61119,19 @@ function InventoryService.Give(p: Player, id: string, count: number, stack: any?
 		taken = InventoryModel.AddAmmo(inv, id, count)
 	elseif def.Kind == "Consumable" then
 		taken = InventoryModel.AddBandages(inv, count)
+	elseif def.Kind == "Backpack" then
+		local old
+		_, old = InventoryModel.AddEquipment(inv, "Backpack", stack or { Id = id })
+		displaced = old
+		taken = 1
+		InventoryModel.SetPackSlots(inv, def.Slots)
+		local overflow = InventoryModel.TrimToCapacity(inv)
+		if next(overflow) then
+			local root = ctx.Util.Root(p)
+			if root then
+				InventoryService.SpawnBag(overflow, root.Position + root.CFrame.LookVector * 3, Color3.fromRGB(150, 120, 80), "Overflow")
+			end
+		end
 	elseif def.Kind == "Weapon" or def.Kind == "Tool" or def.Kind == "Utility" or def.Kind == "Armor" then
 		local st = stack or { Id = id, Durability = def.Durability }
 		if st.Id == "Canteen" and st.Filled == nil then
@@ -60625,13 +61302,20 @@ function InventoryService._onDrop(p: Player, req: any)
 		return
 	end
 	local dropPos = root.Position + root.CFrame.LookVector * 3
-	if type(req.Slot) == "string" and (table.find(InventoryModel.SlotNames, req.Slot) or req.Slot == "Armor") then
+	if type(req.Slot) == "string" and (table.find(InventoryModel.SlotNames, req.Slot) or req.Slot == "Armor" or req.Slot == "Backpack") then
 		if ctx.ChannelService.IsBusy(p) then
 			return
 		end
 		local st = InventoryModel.RemoveSlot(inv, req.Slot)
 		if st then
 			InventoryService.SpawnPickup(st.Id, 1, dropPos, st)
+			if req.Slot == "Backpack" then
+				InventoryModel.SetPackSlots(inv, nil)
+				local overflow = InventoryModel.TrimToCapacity(inv)
+				if next(overflow) then
+					InventoryService.SpawnBag(overflow, dropPos + Vector3.new(0, 0, 2), Color3.fromRGB(150, 120, 80), "Overflow")
+				end
+			end
 			InventoryService.Sync(p)
 		end
 	elseif type(req.Resource) == "string" and ctx.Util.IsInt(req.Count, 1, 100) then
@@ -63031,7 +63715,7 @@ function PowerupService.Start()
 							end
 						end
 					end
-					hum.WalkSpeed = speed * ctx.StaminaService.SpeedMult(p) * (if ctx.ChannelService.IsBusy(p, "Heal") then Config.Healing.MoveSlow else 1)
+					hum.WalkSpeed = if ctx.BuildService.IsHeld(p) then 0 else speed * ctx.StaminaService.SpeedMult(p) * (if ctx.ChannelService.IsBusy(p, "Heal") then Config.Healing.MoveSlow else 1)
 					-- Distance challenge (sampled once per second)
 					local t = os.clock()
 					if t - st.LastSample >= 1 then
@@ -63088,6 +63772,16 @@ end
 -- Chop/mine power multiplier for a tool class ("Axe" | "Pickaxe"). Classes (Phase 6) hook in here.
 function PowerupService.ToolSpeedMult(p: Player, toolType: string): number
 	return 1
+end
+
+-- Storage breaching speed (Raider class).
+function PowerupService.BreachSpeedMult(p: Player): number
+	return 1
+end
+
+-- Extra pack slots (Strong Back power-up, Scavenger class).
+function PowerupService.BonusSlots(p: Player): number
+	return 0
 end
 
 function PowerupService.HealSpeedMult(p: Player): number
@@ -63734,52 +64428,81 @@ return StaminaService
           <Properties>
             <string name="Name">StorageService</string>
             <string name="Source"><![CDATA[--!nonstrict
--- Shared team storage built by players. Teammates deposit/withdraw; enemies
--- can steal (3 s channel, interrupted by damage). All transfers go through
--- StorageLedger, which validates and moves resources in one synchronous step.
+-- Player-built storage (Wooden Crate I, Reinforced Chest II, Metal Locker III,
+-- Survival Safe IV). Capacity is in stack slots (Items[id].Stacks).
+--
+-- Raids (spec): enemies BREACH a storage to unlock it. Breaching never deletes
+-- anything: once breached, any enemy can open it and take what fits in their pack.
+-- The owner can RESECURE it (short hold + a few materials). Breach time depends on
+-- the storage tier and the tool: any axe/pickaxe on low tiers, a Crowbar for Metal
+-- Lockers, a Sledgehammer for Survival Safes, or a Breaching Charge on anything.
+-- Breaches are loud: players nearby get a warning, the owner gets a direction.
+-- All transfers go through StorageLedger (validated, single synchronous step).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
+local Items = require(Shared:WaitForChild("Items"))
 local Net = require(Shared:WaitForChild("Net"))
 local Logic = Shared:WaitForChild("Logic")
 local StorageLedger = require(Logic:WaitForChild("StorageLedger"))
 local InventoryModel = require(Logic:WaitForChild("InventoryModel"))
+local Models = Shared:WaitForChild("Models")
+local Structures = require(Models:WaitForChild("Structures"))
 
 local StorageService = {}
 
-type Entry = { Store: StorageLedger.Store, Structure: any, Key: string }
+type Entry = { Store: StorageLedger.Store, Structure: any, Key: string, Tier: number, Breached: boolean }
 
 local ctx: any
 local byKey: { [string]: Entry } = {}
 local viewers: { [Player]: string } = {} -- player -> storage key they have open
-local lastTheftAlert: { [string]: number } = {}
+local lastAlert: { [string]: number } = {}
+local S = Config.Storage
 
 function StorageService.Init(c)
 	ctx = c
 	ctx.Util.Connect("StorageAction", "Interact", StorageService._onAction)
 	ctx.ChannelService.OnPrompt("StorageOpen", StorageService._onOpen)
-	ctx.ChannelService.OnPrompt("StorageSteal", StorageService._onOpen)
+	ctx.ChannelService.OnPrompt("StorageSteal", StorageService._onEnemyPrompt)
+	ctx.ChannelService.OnPrompt("StorageResecure", StorageService._onResecure)
 	ctx.MatchService.On("MatchCleanup", function()
 		byKey = {}
 		viewers = {}
+		lastAlert = {}
 	end)
 	ctx.Util.OnPlayerRemoving(function(p)
 		viewers[p] = nil
 	end)
 end
 
+local function roman(n: number): string
+	return ({ "I", "II", "III", "IV", "V" })[n] or tostring(n)
+end
+
 function StorageService.Register(s: any)
-	local e: Entry = { Store = StorageLedger.New(Config.Storage.Capacity), Structure = s, Key = s.Key }
+	local def = Items[s.Id]
+	local e: Entry = {
+		Store = StorageLedger.New(def.Stacks or S.Capacity),
+		Structure = s,
+		Key = s.Key,
+		Tier = def.Tier or 1,
+		Breached = false,
+	}
 	byKey[s.Key] = e
 	s.Model:SetAttribute("StorageKey", s.Key)
 	local root = s.Model.PrimaryPart
-	local open = ctx.ChannelService.MakePrompt(root, "StorageOpen", "Open", "Team Storage", Config.Storage.InteractRange, "Team", s.Team)
+	local open = ctx.ChannelService.MakePrompt(root, "StorageOpen", "Open", def.Name, S.InteractRange, "Team", s.Team)
 	open:SetAttribute("StorageKey", s.Key)
-	local steal = ctx.ChannelService.MakePrompt(root, "StorageSteal", "Steal", "Enemy Storage", Config.Storage.InteractRange, "Enemy", s.Team)
-	steal:SetAttribute("StorageKey", s.Key)
-	steal.KeyboardKeyCode = Enum.KeyCode.G
+	local enemy = ctx.ChannelService.MakePrompt(root, "StorageSteal", "Hold: Breach", "Enemy " .. def.Name, S.InteractRange, "Enemy", s.Team)
+	enemy:SetAttribute("StorageKey", s.Key)
+	enemy.KeyboardKeyCode = Enum.KeyCode.G
+	local resecure = ctx.ChannelService.MakePrompt(root, "StorageResecure", "Hold: Resecure", def.Name, S.InteractRange, "Team", s.Team)
+	resecure:SetAttribute("StorageKey", s.Key)
+	resecure.KeyboardKeyCode = Enum.KeyCode.R
+	resecure.UIOffset = Vector2.new(0, 72)
+	resecure.Enabled = false
 end
 
 function StorageService.TeamStores(team: number): { StorageLedger.Store }
@@ -63805,9 +64528,28 @@ function StorageService.TeamTotals(team: number): { [string]: number }
 	return totals
 end
 
+local function mode(p: Player, e: Entry): string
+	if ctx.Util.Team(p) == e.Structure.Team then
+		return "Owner"
+	end
+	return if e.Breached then "Loot" else "Locked"
+end
+
 local function send(p: Player, e: Entry)
-	local mode = if ctx.Util.Team(p) == e.Structure.Team then "Owner" else "Steal"
-	Net.FireClient("StorageSync", p, e.Key, e.Store.Items, mode, e.Store.Capacity)
+	Net.FireClient("StorageSync", p, e.Key, e.Store.Items, mode(p, e), e.Store.Capacity, {
+		Name = Items[e.Structure.Id].Name,
+		Tier = e.Tier,
+		Breached = e.Breached,
+		SlotsUsed = StorageLedger.SlotsUsed(e.Store),
+	})
+end
+
+local function refreshViewers(e: Entry)
+	for p, key in viewers do
+		if key == e.Key and p.Parent then
+			send(p, e)
+		end
+	end
 end
 
 function StorageService.SyncTeam(team: number)
@@ -63822,26 +64564,232 @@ function StorageService.SyncTeam(team: number)
 	end
 end
 
+local function setBreached(e: Entry, breached: boolean)
+	e.Breached = breached
+	Structures.SetBreached(e.Structure.Model, breached)
+	local resecure = e.Structure.Model.PrimaryPart:FindFirstChild("StorageResecurePrompt")
+	if resecure then
+		resecure.Enabled = breached
+	end
+	local enemy = e.Structure.Model.PrimaryPart:FindFirstChild("StorageStealPrompt")
+	if enemy then
+		enemy.ActionText = if breached then "Loot" else "Hold: Breach"
+	end
+	refreshViewers(e)
+end
+
+function StorageService.IsBreached(key: string): boolean
+	local e = byKey[key]
+	return e ~= nil and e.Breached
+end
+
+-- Opening ------------------------------------------------------------------------------------
+
 function StorageService._onOpen(p: Player, prompt: ProximityPrompt)
 	local key = prompt:GetAttribute("StorageKey") :: string?
 	local e = key and byKey[key]
-	if not e or not ctx.Util.IsAlive(p) then
-		return
-	end
-	local isOwner = ctx.Util.Team(p) == e.Structure.Team
-	if prompt:GetAttribute("Action") == "StorageSteal" and isOwner then
-		return
-	end
-	if prompt:GetAttribute("Action") == "StorageOpen" and not isOwner then
+	if not e or not ctx.Util.IsAlive(p) or ctx.Util.Team(p) ~= e.Structure.Team then
 		return
 	end
 	viewers[p] = e.Key
 	send(p, e)
 end
 
+-- Enemy prompt: loot if breached, else start breaching.
+function StorageService._onEnemyPrompt(p: Player, prompt: ProximityPrompt)
+	local key = prompt:GetAttribute("StorageKey") :: string?
+	local e = key and byKey[key]
+	if not e or not ctx.Util.IsAlive(p) or ctx.Util.Team(p) == e.Structure.Team then
+		return
+	end
+	if e.Breached then
+		viewers[p] = e.Key
+		send(p, e)
+		return
+	end
+	StorageService._beginBreach(p, e, prompt)
+end
+
+-- Breach method for the player's gear: returns seconds, a label and whether a charge is used.
+function StorageService.BreachPlan(p: Player, tier: number): (number?, string, boolean)
+	local inv = ctx.InventoryService.Get(p)
+	if not inv then
+		return nil, "", false
+	end
+	if (inv.Resources.BreachingCharge or 0) > 0 then
+		return S.ChargeTime, "Breaching Charge", true
+	end
+	local best, bestMult = nil, 1.01
+	local hasTool = false
+	for _, slot in InventoryModel.SlotNames do
+		local st = inv.Slots[slot]
+		local def = st and Items[st.Id]
+		if def and (def.BreachTool or def.ToolType) then
+			hasTool = true
+			local mult = if def.BreachTool then S.BreachToolMult[def.BreachTool] else 1
+			if mult < bestMult then
+				best, bestMult = def, mult
+			end
+		end
+	end
+	local need = S.BreachNeeds[tier]
+	if need == "Crowbar" and not (best and (best.BreachTool == "Crowbar" or best.BreachTool == "Sledgehammer")) then
+		return nil, "a Crowbar or better", false
+	elseif need == "Sledgehammer" and not (best and best.BreachTool == "Sledgehammer") then
+		return nil, "a Sledgehammer or a Breaching Charge", false
+	elseif not hasTool then
+		return nil, "an axe, pickaxe or breaching tool", false
+	end
+	local secs = S.BreachTimes[math.clamp(tier, 1, #S.BreachTimes)] * bestMult / ctx.PowerupService.BreachSpeedMult(p)
+	return secs, if best then best.Name else "tool", false
+end
+
+local function alertBreach(p: Player, e: Entry, loud: boolean)
+	local pos = e.Structure.Model:GetPivot().Position
+	local t = os.clock()
+	if t - (lastAlert[e.Key] or 0) < 6 and not loud then
+		return
+	end
+	lastAlert[e.Key] = t
+	local camp = ctx.CampService.GetCamp(e.Structure.Team)
+	local dir = if camp then (pos - camp.FirePos) * Vector3.new(1, 0, 1) else Vector3.zero
+	local bearingDeg = if dir.Magnitude > 0.1 then math.deg(math.atan2(dir.X, -dir.Z)) % 360 else nil
+	for _, mate in ctx.Util.TeamPlayers(e.Structure.Team) do
+		Net.FireClient("MatchEvent", mate, "StorageRaided", { Bearing = bearingDeg, Name = Items[e.Structure.Id].Name })
+	end
+	-- Raids are loud: anyone near hears it (no position, just that it's close).
+	for _, other in ctx.Util.MatchPlayers() do
+		if other ~= p and ctx.Util.Team(other) ~= e.Structure.Team and ctx.Util.DistTo(other, pos) <= S.NoiseRadius then
+			Net.FireClient("MatchEvent", other, "RaidNoise", { Loud = loud })
+		end
+	end
+	ctx.Util.PlaySound(if loud then "Explosion" else "Breach", e.Structure.Model.PrimaryPart)
+end
+
+function StorageService._beginBreach(p: Player, e: Entry, prompt: ProximityPrompt?)
+	local secs, how, useCharge = StorageService.BreachPlan(p, e.Tier)
+	local def = Items[e.Structure.Id]
+	if not secs then
+		ctx.Util.Notify(p, def.Name .. " (Tier " .. roman(e.Tier) .. ") needs " .. how .. " to breach.", "error")
+		return
+	end
+	local model = e.Structure.Model
+	local noise = 0
+	ctx.ChannelService.Begin(p, {
+		Kind = "Breach",
+		Label = string.format("Breaching the %s (%s)", def.Name, how),
+		Duration = secs,
+		Range = S.InteractRange,
+		Hold = true,
+		Prompt = prompt,
+		InterruptOnDamage = true,
+		MoveTolerance = 3,
+		Action = if useCharge then "Gather" else "Chop",
+		TargetKey = e.Key,
+		Position = function()
+			return if model.Parent and byKey[e.Key] then model:GetPivot().Position else nil
+		end,
+		CanContinue = function()
+			noise += 1
+			if noise % 20 == 0 then -- every ~2 s: banging on the lock
+				alertBreach(p, e, false)
+			end
+			if e.Breached then
+				return false, "Already breached."
+			end
+			return true
+		end,
+		OnComplete = function()
+			if not byKey[e.Key] or e.Breached then
+				return
+			end
+			local inv = ctx.InventoryService.Get(p)
+			if useCharge then
+				if not inv or InventoryModel.TakeResource(inv, "BreachingCharge", 1) ~= 1 then
+					return
+				end
+				ctx.InventoryService.Sync(p)
+				local pos = model:GetPivot().Position
+				Net.FireAll("Fx", "StructureBreak", { Pos = pos, Id = "Explosion" })
+				for _, other in ctx.Util.MatchPlayers() do
+					if other ~= p and ctx.Util.DistTo(other, pos) <= S.ChargeRadius then
+						ctx.CombatService.DamagePlayer(other, S.ChargeDamage, { Kind = "Explosion", By = p, Name = "Breaching Charge", Pos = pos })
+					end
+				end
+			else
+				local _, slot = ctx.InventoryService.EquippedItem(p)
+				if slot then
+					ctx.InventoryService.Wear(p, slot, 3 / ctx.PowerupService.BreachSpeedMult(p))
+				end
+			end
+			setBreached(e, true)
+			alertBreach(p, e, true)
+			ctx.Util.NotifyTeam(e.Structure.Team, "⚠ Your " .. def.Name .. " was BREACHED! Resecure it (hold R at the storage).", "danger")
+			ctx.Util.Notify(p, "Breached! Open it to loot.", "success")
+			viewers[p] = e.Key
+			send(p, e)
+		end,
+	})
+	alertBreach(p, e, useCharge)
+end
+
+-- Resecuring -----------------------------------------------------------------------------------
+
+function StorageService._onResecure(p: Player, prompt: ProximityPrompt)
+	local key = prompt:GetAttribute("StorageKey") :: string?
+	local e = key and byKey[key]
+	if not e or not e.Breached or ctx.Util.Team(p) ~= e.Structure.Team or not ctx.Util.IsAlive(p) then
+		return
+	end
+	local def = Items[e.Structure.Id]
+	local cost = S.ResecureCost[def.Material or "Wood"] or S.ResecureCost.Wood
+	local inv = ctx.InventoryService.Get(p)
+	if not inv or not StorageLedger.CanPayCombined(cost, inv, StorageService.TeamStores(e.Structure.Team)) then
+		local id, n = next(cost)
+		ctx.Util.Notify(p, string.format("Resecuring needs %d %s.", n, Items[id].Name), "warn")
+		return
+	end
+	local model = e.Structure.Model
+	ctx.ChannelService.Begin(p, {
+		Kind = "Resecure",
+		Label = "Resecuring the " .. def.Name,
+		Duration = S.ResecureTime,
+		Range = S.InteractRange,
+		Hold = true,
+		Prompt = prompt,
+		InterruptOnDamage = true,
+		Action = "Chop",
+		Position = function()
+			return if model.Parent and byKey[e.Key] then model:GetPivot().Position else nil
+		end,
+		OnComplete = function()
+			local invNow = ctx.InventoryService.Get(p)
+			if not byKey[e.Key] or not e.Breached or not invNow then
+				return
+			end
+			if not StorageLedger.PayCombined(cost, invNow, StorageService.TeamStores(e.Structure.Team)) then
+				return
+			end
+			ctx.InventoryService.Sync(p)
+			setBreached(e, false)
+			-- kick enemy viewers out
+			for viewer, vkey in viewers do
+				if vkey == e.Key and ctx.Util.Team(viewer) ~= e.Structure.Team then
+					viewers[viewer] = nil
+					Net.FireClient("StorageSync", viewer, e.Key, nil, "Closed", 0)
+				end
+			end
+			ctx.Util.Notify(p, "Storage resecured.", "success")
+			StorageService.SyncTeam(e.Structure.Team)
+		end,
+	})
+end
+
+-- Transfers -----------------------------------------------------------------------------------
+
 local function inRange(p: Player, e: Entry): boolean
 	local model = e.Structure.Model
-	return model.Parent ~= nil and ctx.Util.DistTo(p, model:GetPivot().Position) <= Config.Storage.InteractRange + 3
+	return model.Parent ~= nil and ctx.Util.DistTo(p, model:GetPivot().Position) <= S.InteractRange + 3
 end
 
 function StorageService._onAction(p: Player, req: any)
@@ -63854,21 +64802,17 @@ function StorageService._onAction(p: Player, req: any)
 		return
 	end
 	local isOwner = ctx.Util.Team(p) == e.Structure.Team
-	if req.Action == "Close" then
+	local action: string = req.Action
+	if action == "Close" then
 		viewers[p] = nil
 		return
 	end
-	if req.Action == "Steal" then
-		if isOwner or type(req.Resource) ~= "string" or not InventoryModel.IsResource(req.Resource) then
-			return
-		end
-		StorageService._beginSteal(p, e, req.Resource)
+	-- Enemies may only take from a breached storage.
+	local taking = action == "Withdraw" or action == "TakeAll"
+	if not isOwner and not (e.Breached and taking) then
 		return
 	end
-	if not isOwner then
-		return
-	end
-	if req.Action == "DepositAll" then
+	if action == "DepositAll" then
 		local moved = 0
 		for _, id in InventoryModel.ResourceIds do
 			moved += StorageLedger.Deposit(e.Store, inv, id, inv.Resources[id])
@@ -63876,16 +64820,24 @@ function StorageService._onAction(p: Player, req: any)
 		if moved == 0 then
 			ctx.Util.Notify(p, if StorageLedger.Free(e.Store) == 0 then "Storage is full." else "Nothing to deposit.", "info")
 		end
-	elseif req.Action == "Deposit" or req.Action == "Withdraw" then
-		if type(req.Resource) ~= "string" or not ctx.Util.IsInt(req.Count, 1, 200) then
+	elseif action == "TakeAll" then
+		local moved = 0
+		for _, id in InventoryModel.ResourceIds do
+			moved += StorageLedger.Withdraw(e.Store, inv, id, e.Store.Items[id] or 0)
+		end
+		if moved == 0 then
+			ctx.Util.Notify(p, "Your pack is full (or the storage is empty).", "info")
+		end
+	elseif action == "Deposit" or action == "Withdraw" then
+		if type(req.Resource) ~= "string" or not ctx.Util.IsInt(req.Count, 1, 999) then
 			return
 		end
 		local moved
-		if req.Action == "Deposit" then
+		if action == "Deposit" then
 			moved = StorageLedger.Deposit(e.Store, inv, req.Resource, req.Count)
 		else
 			moved = StorageLedger.Withdraw(e.Store, inv, req.Resource, req.Count)
-			if moved == 0 and InventoryModel.FreeSpace(inv) == 0 then
+			if moved == 0 and InventoryModel.SpaceFor(inv, req.Resource) == 0 then
 				ctx.Util.Notify(p, "Your pack is full.", "warn")
 			end
 		end
@@ -63893,52 +64845,11 @@ function StorageService._onAction(p: Player, req: any)
 		return
 	end
 	ctx.InventoryService.Sync(p)
+	if not isOwner then
+		alertBreach(p, e, false)
+	end
+	refreshViewers(e)
 	StorageService.SyncTeam(e.Structure.Team)
-end
-
-function StorageService._beginSteal(p: Player, e: Entry, resource: string)
-	if (e.Store.Items[resource] or 0) <= 0 then
-		ctx.Util.Notify(p, "There's none of that to steal.", "info")
-		return
-	end
-	local inv = ctx.InventoryService.Get(p)
-	if not inv or InventoryModel.FreeSpace(inv) <= 0 then
-		ctx.Util.Notify(p, "Your pack is full.", "warn")
-		return
-	end
-	local model = e.Structure.Model
-	ctx.ChannelService.Begin(p, {
-		Kind = "Steal",
-		Label = "Stealing " .. resource,
-		Duration = Config.Storage.StealDuration,
-		Range = Config.Storage.InteractRange,
-		InterruptOnDamage = true,
-		Action = "Steal",
-		TargetKey = e.Key,
-		Position = function()
-			return if model.Parent and byKey[e.Key] then model:GetPivot().Position else nil
-		end,
-		OnComplete = function()
-			local invNow = ctx.InventoryService.Get(p)
-			if not invNow or not byKey[e.Key] then
-				return
-			end
-			local got = StorageLedger.Withdraw(e.Store, invNow, resource, Config.Storage.StealAmount)
-			if got > 0 then
-				ctx.Util.Notify(p, string.format("Stole %d %s!", got, resource), "success")
-				ctx.InventoryService.Sync(p)
-				StorageService.SyncTeam(e.Structure.Team)
-				send(p, e)
-			end
-		end,
-	})
-	local t = os.clock()
-	if t - (lastTheftAlert[e.Key] or 0) > 8 then
-		lastTheftAlert[e.Key] = t
-		for _, mate in ctx.Util.TeamPlayers(e.Structure.Team) do
-			Net.FireClient("MatchEvent", mate, "StorageRaided", { Pos = model:GetPivot().Position, ByTeam = ctx.Util.Team(p) })
-		end
-	end
 end
 
 function StorageService.OnDestroyed(s: any, pos: Vector3)
@@ -65748,7 +66659,11 @@ local touchBar: Frame
 local statusLabel: TextLabel
 local conn: RBXScriptConnection? = nil
 
-local WALLS = { WoodWall = true, Gate = true, ReinforcedWall = true }
+-- Structures whose ends snap together (walls, doors, gates; floors snap edge to edge too).
+local WALLS = {
+	WoodWall = true, Gate = true, ReinforcedWall = true, ReinforcedDoor = true, WindowWall = true,
+	ScrapWall = true, MetalWall = true, HeavyGate = true, WoodFloor = true,
+}
 
 local function aimPoint(): Vector3?
 	local char = player.Character
@@ -65965,7 +66880,7 @@ local function renderPicker()
 			ic.Position = UDim2.new(0.5, 0, 0, 8)
 			ic.Parent = b
 			UI.text(def.Name, { Position = UDim2.fromOffset(0, 60), TextSize = 15, Font = Theme.FontBold, TextXAlignment = Enum.TextXAlignment.Center, Parent = b })
-			UI.text(if locked then "🔒 Workbench Lv " .. r.Level else ("HP " .. tostring(def.Health)), { Position = UDim2.fromOffset(0, 84), TextSize = 13, TextColor3 = Theme.Colors.TextDim, TextXAlignment = Enum.TextXAlignment.Center, Parent = b })
+			UI.text(if locked then "🔒 Workbench Tier " .. ({ "I", "II", "III", "IV", "V" })[r.Level] else ("HP " .. tostring(def.Health) .. (if def.Limit == "Trap" then " · trap" elseif def.Stacks then " · " .. def.Stacks .. " stacks" else "")), { Position = UDim2.fromOffset(0, 84), TextSize = 13, TextColor3 = Theme.Colors.TextDim, TextXAlignment = Enum.TextXAlignment.Center, Parent = b })
 		end
 	end
 end
@@ -67250,8 +68165,9 @@ local function refreshVitals()
 		for _, n in inv.Resources do
 			total += n
 		end
-		packLabel.Text = string.format("Pack %d/%d   ", total, inv.Capacity) .. (if total >= inv.Capacity then "FULL" else "")
-		packLabel.TextColor3 = if total >= inv.Capacity then C.Warn else C.Text
+		local used = inv.SlotsUsed or 0
+		packLabel.Text = string.format("Pack %d/%d slots   ", used, inv.Capacity) .. (if used >= inv.Capacity then "FULL" else "")
+		packLabel.TextColor3 = if used >= inv.Capacity then C.Warn else C.Text
 		pouchLabel.Text = string.format("✚ Bandages %d (H)   🏹 %d   • %d", inv.Bandages, inv.Ammo.Arrow or 0, inv.Ammo.Bullet or 0)
 	end
 end
@@ -67577,7 +68493,13 @@ local function onMatchEvent(ev: any)
 		local dir = if d.Bearing then dirs[math.floor(((d.Bearing + 22.5) % 360) / 45) + 1] else nil
 		Hud.Announce("⚠ YOUR FIRE IS BEING SNUFFED!", (if dir then "Raider on the " .. dir .. " side — " else "") .. "hit them or make them move to stop it", C.Bad, 3)
 	elseif name == "StorageRaided" then
-		Hud.Announce("⚠ STORAGE RAID", "An enemy is stealing from your storage", C.Warn, 2.5)
+		local dirs = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" }
+		local dir = if d.Bearing then dirs[math.floor(((d.Bearing + 22.5) % 360) / 45) + 1] else nil
+		Hud.Announce("⚠ STORAGE RAID", "Someone is at your " .. tostring(d.Name or "storage") .. (if dir then " (" .. dir .. " side)" else ""), C.Warn, 2.5)
+	elseif name == "RaidNoise" then
+		pushFeed(if d.Loud then "💥 An explosion nearby — someone is raiding" else "🔨 Banging nearby — someone is breaching storage", C.TextDim)
+	elseif name == "TrapAlert" then
+		Hud.Announce("⚠ TRAP", tostring(d.Text), C.Warn, 3)
 	elseif name == "CampRevealed" then
 		local def = Config.Teams[d.Team]
 		pushFeed("🧭 " .. tostring(d.By) .. " found the " .. (def and def.Name or "?") .. " camp", C.Info)
@@ -67935,7 +68857,7 @@ local Inventory = {}
 local player = Players.LocalPlayer
 local body: ScrollingFrame
 local C = Theme.Colors
-local SLOT_LABEL = { Weapon1 = "Weapon 1", Weapon2 = "Weapon 2", Tool = "Tool 1", Tool2 = "Tool 2", Utility = "Utility", Armor = "Armor (worn)" }
+local SLOT_LABEL = { Weapon1 = "Weapon 1", Weapon2 = "Weapon 2", Tool = "Tool 1", Tool2 = "Tool 2", Utility = "Utility", Armor = "Armor (worn)", Backpack = "Backpack (worn)" }
 local RES = InventoryModel.ResourceIds
 
 local function section(title: string, order: number)
@@ -67962,8 +68884,8 @@ function Inventory.Render()
 	end
 	section("Equipment", 1)
 	local order = 2
-	for _, slot in { "Weapon1", "Weapon2", "Tool", "Tool2", "Utility", "Armor" } do
-		local stack = if slot == "Armor" then inv.Armor else inv.Slots[slot]
+	for _, slot in { "Weapon1", "Weapon2", "Tool", "Tool2", "Utility", "Armor", "Backpack" } do
+		local stack = if slot == "Armor" then inv.Armor elseif slot == "Backpack" then inv.Backpack else inv.Slots[slot]
 		local r = row(order)
 		order += 1
 		UI.text(SLOT_LABEL[slot], { Position = UDim2.fromOffset(62, 4), Size = UDim2.new(0.5, 0, 0, 16), TextSize = 12, TextColor3 = C.TextDim, Parent = r })
@@ -67980,7 +68902,10 @@ function Inventory.Render()
 				extra = if stack.Filled then "  ·  FULL" else "  ·  empty"
 			end
 			UI.text(def.Name .. extra, { Position = UDim2.fromOffset(62, 20), Size = UDim2.new(1, -250, 0, 22), TextSize = 16, Font = Theme.FontBold, Parent = r })
-			if slot ~= "Armor" then
+			if def.Slots then
+				extra = "  ·  " .. def.Slots .. " slots"
+			end
+			if slot ~= "Armor" and slot ~= "Backpack" then
 				UI.button(if inv.Equipped == slot then "Equipped" else "Equip", { Size = UDim2.fromOffset(92, 40), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -104, 0.5, 0), TextSize = 14, BackgroundColor3 = if inv.Equipped == slot then C.AccentDark else C.PanelLighter, Parent = r }, function()
 					Net.Event("Equip"):FireServer(slot)
 				end)
@@ -68007,11 +68932,12 @@ function Inventory.Render()
 		Net.Event("UseBandage"):FireServer()
 	end)
 
-	section(string.format("Resource pack  %d / %d", total, inv.Capacity), order)
+	local used = inv.SlotsUsed or 0
+	section(string.format("Pack  %d / %d slots  (%d items)", used, inv.Capacity, total), order)
 	order += 1
-	local _, setCap = UI.bar({ Size = UDim2.new(1, -8, 0, 14), LayoutOrder = order, Parent = body }, if total >= inv.Capacity then C.Warn else C.Good)
+	local _, setCap = UI.bar({ Size = UDim2.new(1, -8, 0, 14), LayoutOrder = order, Parent = body }, if used >= inv.Capacity then C.Warn else C.Good)
 	order += 1
-	setCap(total / inv.Capacity)
+	setCap(used / math.max(1, inv.Capacity))
 	for _, id in RES do
 		local n = inv.Resources[id] or 0
 		local def = Items[id]
@@ -69428,14 +70354,13 @@ return Spectate
             <Properties>
               <string name="Name">Storage</string>
               <string name="Source"><![CDATA[--!nonstrict
--- Shared storage panel. Owners deposit/withdraw; enemies choose a resource to
--- steal (3 s, taking damage interrupts, takes up to 10 within pack space).
+-- Storage panel. Owners deposit/withdraw; enemies can take anything from a
+-- storage they have breached (StorageService).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage.Shared
-local Config = require(Shared.Config)
 local Items = require(Shared.Items)
 local Net = require(Shared.Net)
 local InventoryModel = require(Shared.Logic.InventoryModel)
@@ -69466,45 +70391,54 @@ function Storage.Render()
 	if not s or not s.Items then
 		return
 	end
-	local total = 0
-	for _, n in s.Items do
-		total += n
-	end
+	local meta = s.Meta or {}
+	local used = meta.SlotsUsed or InventoryModel.SlotsUsedBy(s.Items)
 	local owner = s.Mode == "Owner"
-	UI.text(if owner then "Your clan's shared storage. Anyone on your team can use it to build and upgrade." else "ENEMY STORAGE — pick a resource to steal. Hold still: taking damage interrupts the theft.", { LayoutOrder = 1, TextSize = 14, TextColor3 = if owner then C.TextDim else C.Warn, Size = UDim2.new(1, -8, 0, 36), Parent = body })
+	local loot = s.Mode == "Loot"
+	local intro = if owner
+		then (if meta.Breached then "⚠ BREACHED — enemies can take from it. Hold R at the storage to resecure it." else "Your storage. Everything here can be used to build and upgrade.")
+		elseif loot then "BREACHED ENEMY STORAGE — take what fits in your pack."
+		else "Locked. Breach it first (hold G at the storage)."
+	UI.text((meta.Name or "Storage") .. "  ·  " .. intro, { LayoutOrder = 1, TextSize = 14, TextColor3 = if owner and not meta.Breached then C.TextDim else C.Warn, Size = UDim2.new(1, -8, 0, 40), Parent = body })
 	local _, setBar = UI.bar({ LayoutOrder = 2, Size = UDim2.new(1, -8, 0, 20), Parent = body }, C.Info)
-	setBar(total / math.max(1, s.Capacity), string.format("Stored %d / %d", total, s.Capacity))
+	setBar(used / math.max(1, s.Capacity), string.format("%d / %d stack slots", used, s.Capacity))
 	if owner then
 		UI.button("Deposit everything I carry", { LayoutOrder = 3, Size = UDim2.new(1, -8, 0, 48), BackgroundColor3 = C.AccentDark, Parent = body }, function()
 			act("DepositAll")
+		end)
+	elseif loot then
+		UI.button("Take everything that fits", { LayoutOrder = 3, Size = UDim2.new(1, -8, 0, 48), BackgroundColor3 = Color3.fromRGB(120, 60, 30), Parent = body }, function()
+			act("TakeAll")
 		end)
 	end
 	for i, id in RES do
 		local def = Items[id]
 		local have = s.Items[id] or 0
 		local carry = inv and inv.Resources[id] or 0
+		if not owner and have <= 0 then
+			continue
+		end
+		if owner and have <= 0 and carry <= 0 then
+			continue
+		end
 		local r = UI.new("Frame", { LayoutOrder = 10 + i, Size = UDim2.new(1, -8, 0, 54), BackgroundColor3 = C.PanelLight, BorderSizePixel = 0, Parent = body }, { UI.corner(UDim.new(0, 8)) })
 		local ic = UI.icon(def.Icon.Glyph, def.Icon.Color, 40, "Square")
 		ic.Position = UDim2.fromOffset(6, 7)
 		ic.Parent = r
 		UI.text(string.format("%s   stored %d   ·   you carry %d", def.Name, have, carry), { Position = UDim2.fromOffset(54, 16), Size = UDim2.new(1, -330, 0, 22), TextSize = 15, Font = Theme.FontBold, Parent = r })
 		if owner then
-			UI.button("Put 5", { Size = UDim2.fromOffset(70, 40), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -234, 0.5, 0), TextSize = 13, Parent = r }, function()
-				act("Deposit", id, 5)
-			end)
 			UI.button("Put all", { Size = UDim2.fromOffset(70, 40), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -158, 0.5, 0), TextSize = 13, Parent = r }, function()
 				act("Deposit", id, math.max(1, carry))
 			end)
-			UI.button("Take 5", { Size = UDim2.fromOffset(70, 40), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -82, 0.5, 0), TextSize = 13, BackgroundColor3 = Color3.fromRGB(50, 80, 110), Parent = r }, function()
-				act("Withdraw", id, 5)
+			UI.button("Take 10", { Size = UDim2.fromOffset(70, 40), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -82, 0.5, 0), TextSize = 13, BackgroundColor3 = Color3.fromRGB(50, 80, 110), Parent = r }, function()
+				act("Withdraw", id, 10)
 			end)
 			UI.button("Take 1", { Size = UDim2.fromOffset(70, 40), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), TextSize = 13, BackgroundColor3 = Color3.fromRGB(50, 80, 110), Parent = r }, function()
 				act("Withdraw", id, 1)
 			end)
-		elseif have > 0 then
-			UI.button("Steal (" .. Config.Storage.StealDuration .. "s)", { Size = UDim2.fromOffset(130, 42), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), TextSize = 14, BackgroundColor3 = Color3.fromRGB(120, 60, 30), Parent = r }, function()
-				act("Steal", id)
-				Panels.Close()
+		elseif loot then
+			UI.button("Take all", { Size = UDim2.fromOffset(110, 42), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), TextSize = 14, BackgroundColor3 = Color3.fromRGB(120, 60, 30), Parent = r }, function()
+				act("Withdraw", id, have)
 			end)
 		end
 	end
@@ -69590,8 +70524,8 @@ end)
 Net.Event("MapData").OnClientEvent:Connect(function(data)
 	State.Set("Map", data)
 end)
-Net.Event("StorageSync").OnClientEvent:Connect(function(key, items, mode, capacity)
-	State.Set("Storage", { Key = key, Items = items, Mode = mode, Capacity = capacity })
+Net.Event("StorageSync").OnClientEvent:Connect(function(key, items, mode, capacity, meta)
+	State.Set("Storage", { Key = key, Items = items, Mode = mode, Capacity = capacity, Meta = meta or {} })
 end)
 Net.Event("ChannelState").OnClientEvent:Connect(function(s)
 	State.Emit("Channel", s)

@@ -78,7 +78,7 @@ Config.Stamina = {
 }
 
 Config.Inventory = {
-	ResourceCapacity = 30,
+	PackSlots = 6, -- spec: ~6 starting slots; backpacks give 10/16/24/32/40
 	BandageMax = 3,
 	AmmoMax = { Arrow = 30, Bullet = 24 },
 	DropDespawn = 180,
@@ -117,17 +117,33 @@ Config.Build = {
 	SpawnClearance = 6,
 	MaxPlaceDistance = 28, -- from the builder's character
 	MaxSlope = 0.35, -- (1 - normal.Y) tolerated on terrain
-	Limits = { Wall = 40, Spikes = 12, Watchtower = 2, Storage = 2 },
-	-- "Wall" limit counts WoodWall, ReinforcedWall and Gate together.
+	Limits = { Wall = 40, Spikes = 12, Watchtower = 2, Storage = 2, Floor = 30, Trap = 6 },
+	-- "Wall" limit counts every wall/door/gate together.
+	-- Spec caps by Workbench tier I..V (override Limits for these keys):
+	TierLimits = {
+		Storage = { 1, 2, 3, 4, 5 },
+		Trap = { 2, 3, 4, 5, 6 },
+	} :: { [string]: { number } },
 	RotateStep = 15,
 	GridSnap = 0.5,
 }
 
 Config.Storage = {
-	Capacity = 200,
-	StealDuration = 3,
-	StealAmount = 10,
+	Capacity = 12, -- fallback stack slots (each storage item sets Items[id].Stacks)
+	StealDuration = 3, -- legacy
+	StealAmount = 10, -- legacy
 	InteractRange = 10,
+	-- Breaching unlocks (never deletes). Seconds with a normal tool (axe/pickaxe) by storage tier.
+	BreachTimes = { 14, 24, 36, 50 },
+	BreachToolMult = { Crowbar = 0.6, Sledgehammer = 0.4 },
+	-- Minimum breaching tool by tier (nil = any axe/pickaxe/breaching tool)
+	BreachNeeds = { [3] = "Crowbar", [4] = "Sledgehammer" } :: { [number]: string },
+	ChargeTime = 5, -- Breaching Charge: any tier
+	ChargeDamage = 60, -- to players within ChargeRadius (not the raider's structures)
+	ChargeRadius = 10,
+	NoiseRadius = 180, -- everyone this close hears the breach alert (raids are loud)
+	ResecureTime = 4,
+	ResecureCost = { Wood = { Wood = 4 }, Scrap = { Scrap = 3 }, Iron = { Iron = 2 } } :: { [string]: { [string]: number } },
 }
 
 Config.Gather = {

@@ -113,7 +113,7 @@ function PowerupService.Start()
 							end
 						end
 					end
-					hum.WalkSpeed = speed * ctx.StaminaService.SpeedMult(p) * (if ctx.ChannelService.IsBusy(p, "Heal") then Config.Healing.MoveSlow else 1)
+					hum.WalkSpeed = if ctx.BuildService.IsHeld(p) then 0 else speed * ctx.StaminaService.SpeedMult(p) * (if ctx.ChannelService.IsBusy(p, "Heal") then Config.Healing.MoveSlow else 1)
 					-- Distance challenge (sampled once per second)
 					local t = os.clock()
 					if t - st.LastSample >= 1 then
@@ -170,6 +170,16 @@ end
 -- Chop/mine power multiplier for a tool class ("Axe" | "Pickaxe"). Classes (Phase 6) hook in here.
 function PowerupService.ToolSpeedMult(p: Player, toolType: string): number
 	return 1
+end
+
+-- Storage breaching speed (Raider class).
+function PowerupService.BreachSpeedMult(p: Player): number
+	return 1
+end
+
+-- Extra pack slots (Strong Back power-up, Scavenger class).
+function PowerupService.BonusSlots(p: Player): number
+	return 0
 end
 
 function PowerupService.HealSpeedMult(p: Player): number
