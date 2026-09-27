@@ -16,3 +16,9 @@ Docs:
 | [docs/SETUP.md](docs/SETUP.md) | Studio testing, publishing, product IDs, data stores, audio |
 | [docs/TESTING.md](docs/TESTING.md) | What was verified, and the Studio/live test plan |
 | [docs/STATUS.md](docs/STATUS.md) | Current state, known gaps, how to resume |
+
+## 3D asset pack
+
+The game's models (forest, camps, craftables, wildlife, lobby) are in this repo:
+[Docs/ASSET_PACK.md](Docs/ASSET_PACK.md) gives an overview, and [Docs/IMPORT.md](Docs/IMPORT.md)
+covers importing into Studio.
