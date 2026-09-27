@@ -17,6 +17,7 @@ local Logic = Shared:WaitForChild("Logic")
 local LivesRules = require(Logic:WaitForChild("LivesRules"))
 local ProfileRules = require(Logic:WaitForChild("ProfileRules"))
 local TeamAssignment = require(Logic:WaitForChild("TeamAssignment"))
+local FireRules = require(Logic:WaitForChild("FireRules"))
 
 local MatchService = {}
 
@@ -179,6 +180,7 @@ function MatchService.Begin(assignment: { [Player]: number }, matchId: string?)
 	MatchService.Participants = {}
 	state:SetAttribute("MatchId", MatchService.MatchId)
 	state:SetAttribute("Winner", 0)
+	state:SetAttribute("SnuffOpen", false)
 	MatchService._setPhase("Loading", 30)
 	Net.FireList("MatchEvent", (function()
 		local list = {}
@@ -269,7 +271,10 @@ end
 function MatchService._enterPhase(phase: string)
 	MatchService._setPhase(phase, phaseLength(phase))
 	ctx.WorldService.ApplyLighting(phase, false)
-	MatchService.Broadcast("Phase", { Phase = phase, Day = MatchService.Day })
+	local wasOpen = state:GetAttribute("SnuffOpen") == true
+	local open = FireRules.SnuffAllowed(phase, MatchService.Day, Config.Fire :: any)
+	state:SetAttribute("SnuffOpen", open)
+	MatchService.Broadcast("Phase", { Phase = phase, Day = MatchService.Day, SnuffOpen = open, ProtectionEnded = open and not wasOpen })
 	emit("PhaseChanged", phase, MatchService.Day)
 end
 
@@ -295,7 +300,7 @@ function MatchService.ExtinguishFire(team: number, byPlayer: Player?)
 	emit("FireOut", team, byPlayer)
 	local teamDef = Config.Teams[team]
 	MatchService.Broadcast("FireOut", { Team = team, By = if byPlayer then byPlayer.DisplayName else nil, ByTeam = if byPlayer then ctx.Util.Team(byPlayer) else nil })
-	ctx.Util.NotifyTeam(team, "Your fire is OUT. No more respawns — every life counts now!", "danger")
+	ctx.Util.NotifyTeam(team, "Your fire is OUT. You're on your FINAL LIFE — your next death eliminates you.", "danger")
 	print(string.format("[Match] %s fire extinguished%s", teamDef.Name, if byPlayer then " by " .. byPlayer.Name else ""))
 	MatchService.CheckOutcome()
 end

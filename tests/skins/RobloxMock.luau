@@ -208,7 +208,7 @@ local function new(class)
 	elseif class == "Model" then
 		raw._props.WorldPivot = cf(0, 0, 0)
 	end
-	if class == "SurfaceGui" then
+	if class == "SurfaceGui" or class == "Fire" or class == "PointLight" or class == "ParticleEmitter" or class == "Smoke" then
 		raw._props.Enabled = true
 	end
 	return setmetatable(raw, Inst)

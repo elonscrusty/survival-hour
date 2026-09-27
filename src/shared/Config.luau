@@ -27,26 +27,34 @@ Config.Dev = {
 	StudioPhaseLength = nil :: number?,
 }
 
+-- Survival Wars launches solo: every player is a "team" of one with their own camp
+-- (SPEC_AUDIT conflict 2). Raise MaxPerTeam to bring teams back.
 Config.Match = {
-	TeamCount = 4,
-	MaxPerTeam = 4,
-	MaxPlayers = 16,
-	MinPlayers = 8,
+	TeamCount = 4, -- camps on the map (LayoutGen places 4)
+	MaxPerTeam = 1,
+	MaxPlayers = 4,
+	MinPlayers = 4,
 	DayLength = 120,
 	NightLength = 120,
 	IntroLength = 12, -- countdown before the first day starts (players can look around)
 	ArrivalTimeout = 60, -- seconds a reserved server waits for manifest players
 	EndScreenLength = 15, -- seconds before players are returned to the lobby
-	WinDiamonds = 10,
+	WinDiamonds = 2, -- spec: a win awards EXACTLY 2 Diamonds
+	-- At each sunrise (from Day 2) players alive at that moment are invincible for this
+	-- long and cannot deal damage.
+	SunriseProtection = 15,
 }
 
 Config.Lives = {
-	FreeRespawns = 3,
-	RespawnDelay = 5,
+	-- Unlimited respawns while your fire burns (math.huge). The paid-revive path is
+	-- kept in code but off: with unlimited respawns the revive window never opens.
+	FreeRespawns = math.huge,
+	RespawnDelays = { 8, 12, 16, 20 }, -- 1st, 2nd, 3rd death, then capped at the last
+	RespawnDelay = 8, -- legacy single value (first entry of RespawnDelays)
 	ReviveWindow = 20, -- seconds a player may be paid-revived after running out of free respawns
 	PurchaseLockTime = 30, -- one in-flight revive purchase per target
 	MaxReviveTier = 4,
-	SpawnProtection = 3, -- seconds of damage immunity after (re)spawning
+	SpawnProtection = 3, -- seconds of damage immunity after (re)spawning; protected players can't deal damage
 }
 
 Config.Player = {
@@ -69,7 +77,23 @@ Config.Inventory = {
 
 Config.Fire = {
 	LightRadius = 45, -- animals avoid this radius around burning fires
-	PourDuration = 10,
+	PourDuration = 10, -- legacy; snuff time now comes from SnuffTimes by fire level
+	-- Fuel (0..1 of a full fire). 0 puts the fire out permanently, even on Nights 1-2.
+	StartFuel = 0.5,
+	FullFuelSeconds = { 480, 540, 600, 660, 720 }, -- L1..L5: a full fire lasts 8..12 min
+	FuelPerWood = 0.02, -- 1 Wood = +2% of a full fire
+	FuelWarning = 0.15, -- owner warned below this
+	-- Snuffing (hold, interrupted by damage/moving/release)
+	SnuffTimes = { 8, 10, 12, 15, 20 },
+	ProtectedNights = 2, -- no snuffing during Nights 1-2; from Night 3 fires are vulnerable day and night
+	-- Levels. Materials are contributed a bit at a time (a pack can't hold a full upgrade).
+	MaxLevel = 5,
+	Upgrades = {
+		[2] = { Wood = 32, Stone = 18 },
+		[3] = { Wood = 64, Stone = 36, Scrap = 15 },
+		[4] = { Wood = 128, Stone = 72, Scrap = 40, Iron = 12 },
+		[5] = { Wood = 256, Stone = 144, Scrap = 80, Iron = 32, RareComponent = 1 },
+	} :: { [number]: { [string]: number } },
 	PourRange = 12,
 	RevealRadius = 80, -- enemy camps are revealed to your team inside this range
 	AlertCooldown = 6,

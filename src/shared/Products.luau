@@ -70,6 +70,23 @@ function Products.IsConfigured(key: string): boolean
 	return p ~= nil and p.ProductId ~= 0
 end
 
+-- Survival Wars monetisation is non-pay-to-win: Robux may only buy Coins and
+-- cosmetics. Every product kind below affects gameplay, so none is on sale.
+-- Definitions stay so old receipts still resolve (PurchaseService grants them).
+Products.OffSaleKinds = {
+	Revive = true, -- paid respawns
+	CarePackage = true, -- paid loot
+	Bandage = true, -- paid healing
+	Diamonds = true, -- Diamonds buy classes/power-ups; earned through play
+	Unlock = true, -- powerup unlock
+	Upgrade = true, -- powerup upgrade skip
+} :: { [string]: boolean }
+
+function Products.OnSale(key: string): boolean
+	local p = Products.ByKey[key]
+	return p ~= nil and not Products.OffSaleKinds[p.Kind]
+end
+
 function Products.ReviveKey(tier: number): string
 	return "Revive" .. math.clamp(tier, 1, 4)
 end

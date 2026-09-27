@@ -5,6 +5,7 @@
 local specs = {
 	"./TeamAssignment.spec",
 	"./LivesRules.spec",
+	"./FireRules.spec",
 	"./InventoryModel.spec",
 	"./StorageLedger.spec",
 	"./RateLimiter.spec",

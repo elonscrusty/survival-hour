@@ -145,9 +145,11 @@ local function renderPowerups()
 			UI.button("Unlock " .. def.Price .. " ◆", { Size = UDim2.fromOffset(150, 44), BackgroundColor3 = if profile.Diamonds >= def.Price then Color3.fromRGB(40, 90, 120) else C.PanelLighter, Parent = buttons }, function()
 				send("BuyPowerup", { Id = def.Id })
 			end)
-			UI.button("Unlock " .. Hud.PriceText("Unlock_" .. def.Id), { Size = UDim2.fromOffset(170, 44), BackgroundColor3 = Color3.fromRGB(40, 110, 60), Parent = buttons }, function()
-				send("BuyRobux", { Key = "Unlock_" .. def.Id })
-			end)
+			if Products.OnSale("Unlock_" .. def.Id) then
+				UI.button("Unlock " .. Hud.PriceText("Unlock_" .. def.Id), { Size = UDim2.fromOffset(170, 44), BackgroundColor3 = Color3.fromRGB(40, 110, 60), Parent = buttons }, function()
+					send("BuyRobux", { Key = "Unlock_" .. def.Id })
+				end)
+			end
 		else
 			UI.button(if profile.Equipped == def.Id then "Equipped ✓" else "Equip", { Size = UDim2.fromOffset(120, 44), BackgroundColor3 = if profile.Equipped == def.Id then C.AccentDark else C.PanelLighter, Parent = buttons }, function()
 				send("EquipPowerup", { Id = if profile.Equipped == def.Id then nil else def.Id })
@@ -159,9 +161,11 @@ local function renderPowerups()
 				UI.button("Upgrade " .. price .. " ◆", { Size = UDim2.fromOffset(150, 44), BackgroundColor3 = if met and profile.Diamonds >= price then Color3.fromRGB(40, 90, 120) else C.PanelLighter, Parent = buttons }, function()
 					send("UpgradePowerup", { Id = def.Id })
 				end)
-				UI.button("Skip " .. Hud.PriceText("Upgrade_" .. def.Id .. "_" .. (lvl + 1)), { Size = UDim2.fromOffset(150, 44), BackgroundColor3 = Color3.fromRGB(40, 110, 60), Parent = buttons }, function()
-					send("BuyRobux", { Key = "Upgrade_" .. def.Id .. "_" .. (lvl + 1) })
-				end)
+				if Products.OnSale("Upgrade_" .. def.Id .. "_" .. (lvl + 1)) then
+					UI.button("Skip " .. Hud.PriceText("Upgrade_" .. def.Id .. "_" .. (lvl + 1)), { Size = UDim2.fromOffset(150, 44), BackgroundColor3 = Color3.fromRGB(40, 110, 60), Parent = buttons }, function()
+						send("BuyRobux", { Key = "Upgrade_" .. def.Id .. "_" .. (lvl + 1) })
+					end)
+				end
 				if ch and ch.Target then
 					local bar, set = UI.bar({ Position = UDim2.fromOffset(72, 82), Size = UDim2.new(1, -72, 0, 22), Parent = card }, color)
 					bar.Name = "Challenge"
@@ -179,8 +183,11 @@ end
 local function renderShop()
 	UI.clear(shopBody)
 	local profile = State.Get("Profile")
-	UI.text("Diamonds unlock and upgrade powerups. You also earn " .. Config.Match.WinDiamonds .. " ◆ per win.", { LayoutOrder = 0, TextSize = 14, TextColor3 = C.TextDim, Parent = shopBody })
+	UI.text("Diamonds are earned by playing: +" .. Config.Match.WinDiamonds .. " ◆ per win. Robux never buys gameplay power — Coin packs for cosmetics are coming soon.", { LayoutOrder = 0, TextSize = 14, TextColor3 = C.TextDim, Parent = shopBody })
 	for i, key in { "Diamonds100", "Diamonds300", "Diamonds800" } do
+		if not Products.OnSale(key) then
+			continue
+		end
 		local p = Products.ByKey[key]
 		local r = UI.new("Frame", { LayoutOrder = i, Size = UDim2.new(1, -8, 0, 70), BackgroundColor3 = C.PanelLight, BorderSizePixel = 0, Parent = shopBody }, { UI.corner(UDim.new(0, 8)), UI.padding(8) })
 		local ic = UI.icon("◆", C.Diamond, 52, "Round")

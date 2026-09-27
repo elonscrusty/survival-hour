@@ -87,6 +87,37 @@ function Camp.Campfire(cf: CFrame, teamColor: Color3, parent: Instance?): Model
 	return m
 end
 
+-- Burning look for a fire level (1-5) and fuel (0..1): higher levels are bigger,
+-- brighter and smokier; a nearly empty fire shrinks so owners can read it at a glance.
+function Camp.SetFire(m: Model, level: number, fuel: number)
+	local core = m:FindFirstChild("FireCore")
+	if not core then
+		return
+	end
+	local lv = math.clamp(level, 1, 5) - 1
+	local f = 0.45 + 0.55 * math.clamp(fuel / 0.3, 0, 1) -- full size above 30% fuel
+	local flame = core:FindFirstChild("Flame") :: Fire?
+	if flame and flame.Enabled then
+		flame.Size = (9 + lv * 2.2) * f
+		flame.Heat = 14 + lv * 3
+	end
+	local glow = core:FindFirstChild("Glow") :: PointLight?
+	if glow and glow.Enabled then
+		glow.Range = math.min(60, (40 + lv * 5) * (0.6 + 0.4 * f))
+		glow.Brightness = (2.2 + lv * 0.35) * f
+	end
+	local sparks = core:FindFirstChild("Sparks") :: ParticleEmitter?
+	if sparks and sparks.Enabled then
+		sparks.Rate = (8 + lv * 5) * f
+	end
+	local smoke = core:FindFirstChild("Smoke") :: Smoke?
+	if smoke then
+		smoke.Enabled = lv > 0
+		smoke.Opacity = 0.08 + lv * 0.05
+		smoke.Size = 2 + lv
+	end
+end
+
 -- Switches a campfire model to its extinguished look (permanent).
 function Camp.Extinguish(m: Model)
 	Skins.Swap(m, "SM_Campfire_Extinguished")

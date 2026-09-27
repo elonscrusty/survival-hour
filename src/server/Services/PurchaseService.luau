@@ -121,6 +121,9 @@ function PurchaseService.Prompt(player: Player, key: string, data: { [string]: a
 	if not product then
 		return false, "Unknown product"
 	end
+	if not Products.OnSale(key) then
+		return false, "That isn't sold — Survival Wars never sells gameplay advantages."
+	end
 	if product.Kind == "CarePackage" and not PurchaseService.PaidRandomAllowed(player) then
 		return false, "Paid care packages are not available in your region"
 	end

@@ -1,6 +1,10 @@
 --!nonstrict
--- Camps: campfires (pour-to-extinguish), workbench level + prompt, enemy camp
+-- Camps: campfires (fuel, levels, snuffing), workbench level + prompt, enemy camp
 -- discovery, healing near your own fire, and fire-light queries for wildlife.
+--
+-- Fire rules live in Shared/Logic/FireRules (unit-tested). Replicated state:
+--   MatchState.FireLevel<team>; owner player attributes FireFuel (0..1), FireLevel,
+--   FireNeeds ("Wood 12 · Stone 4" toward the next level, "" when maxed).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -10,6 +14,10 @@ local Config = require(Shared:WaitForChild("Config"))
 local Net = require(Shared:WaitForChild("Net"))
 local Models = Shared:WaitForChild("Models")
 local Camp = require(Models:WaitForChild("Camp"))
+local Logic = Shared:WaitForChild("Logic")
+local FireRules = require(Logic:WaitForChild("FireRules"))
+local InventoryModel = require(Logic:WaitForChild("InventoryModel"))
+local Items = require(Shared:WaitForChild("Items"))
 
 local CampService = {}
 
@@ -19,6 +27,9 @@ local levels: { [number]: number } = {}
 local revealed: { [number]: { [number]: boolean } } = {} -- team -> discovered camp teams
 local lastAlert: { [number]: number } = {}
 local lastHurt: { [Player]: number } = {}
+local fires: { [number]: FireRules.Fire } = {}
+local warned: { [number]: boolean } = {}
+local FIRE = Config.Fire :: any
 
 function CampService.Init(c)
 	ctx = c
@@ -31,14 +42,30 @@ function CampService.Init(c)
 			if prompt then
 				prompt.Enabled = false
 			end
+			for _, name in { "FeedPrompt", "FireUpgradePrompt" } do
+				local pr = camp.Fire:FindFirstChild(name, true) :: ProximityPrompt?
+				if pr then
+					pr.Enabled = false
+				end
+			end
 			ctx.Util.PlaySound("FireOut", camp.Fire.PrimaryPart)
+		end
+		local fire = fires[team]
+		if fire then
+			fire.Out = true
+			fire.Fuel = 0
+			CampService._syncFire(team)
 		end
 	end)
 	ctx.MatchService.On("MatchCleanup", function()
 		camps = {}
 		levels = {}
 		revealed = {}
+		fires = {}
+		warned = {}
 	end)
+	ctx.ChannelService.OnPrompt("Feed", CampService._onFeed)
+	ctx.ChannelService.OnPrompt("FireUpgrade", CampService._onFireUpgrade)
 	ctx.MatchService.On("PlayerJoinedMatch", function(p: Player)
 		task.delay(1, CampService.SendMapData, p)
 	end)
@@ -53,17 +80,158 @@ function CampService.Init(c)
 end
 
 function CampService.Start()
-	-- Discovery + healing loops
+	-- Discovery, healing and fuel loops
 	local tick = 0
+	local last = os.clock()
 	while true do
 		task.wait(0.5)
 		tick += 1
+		local t = os.clock()
+		local dt = t - last
+		last = t
 		if ctx.MatchService.Active and next(camps) then
 			CampService._discover()
 			if tick % 2 == 0 then
 				CampService._heal()
 			end
+			local phase = ctx.MatchService.Phase
+			if phase == "Day" or phase == "Night" then
+				CampService._burn(dt)
+			end
 		end
+	end
+end
+
+-- Fuel -------------------------------------------------------------------------------------
+
+function CampService._burn(dt: number)
+	for team, fire in fires do
+		if not fire.Out and ctx.MatchService.FireBurning(team) then
+			if FireRules.Burn(fire, dt, FIRE) then
+				ctx.Util.NotifyTeam(team, "Your fire ran out of fuel and died. You're on your FINAL LIFE.", "danger")
+				ctx.MatchService.ExtinguishFire(team, nil)
+			else
+				if fire.Fuel < FIRE.FuelWarning and not warned[team] then
+					warned[team] = true
+					ctx.Util.NotifyTeam(team, "Your fire is low on fuel! Add Wood before it dies for good.", "warn")
+				elseif fire.Fuel >= FIRE.FuelWarning + 0.05 then
+					warned[team] = false
+				end
+				CampService._syncFire(team)
+			end
+		end
+	end
+end
+
+local function needsText(fire: FireRules.Fire): string
+	local parts = {}
+	for id, n in FireRules.Remaining(fire, FIRE) do
+		local def = Items[id]
+		table.insert(parts, string.format("%s %d", if def then def.Name else id, n))
+	end
+	table.sort(parts)
+	return table.concat(parts, " · ")
+end
+
+function CampService._syncFire(team: number)
+	local fire = fires[team]
+	local camp = camps[team]
+	if not fire or not camp then
+		return
+	end
+	local fuel = math.floor(fire.Fuel * 200 + 0.5) / 200
+	ctx.MatchService.State:SetAttribute("FireLevel" .. team, fire.Level)
+	for _, p in ctx.Util.TeamPlayers(team) do
+		p:SetAttribute("FireFuel", fuel)
+		p:SetAttribute("FireLevel", fire.Level)
+		p:SetAttribute("FireNeeds", needsText(fire))
+	end
+	if not fire.Out then
+		Camp.SetFire(camp.Fire, fire.Level, fire.Fuel)
+		local feed = camp.Fire:FindFirstChild("FeedPrompt", true) :: ProximityPrompt?
+		if feed then
+			feed.ObjectText = string.format("Campfire L%d · fuel %d%% (%s)", fire.Level, math.floor(fire.Fuel * 100 + 0.5), string.format("%d:%02d left", FireRules.SecondsLeft(fire, FIRE) // 60, math.floor(FireRules.SecondsLeft(fire, FIRE)) % 60))
+		end
+		local up = camp.Fire:FindFirstChild("FireUpgradePrompt", true) :: ProximityPrompt?
+		if up then
+			up.Enabled = FireRules.CanUpgrade(fire, FIRE)
+			up.ActionText = "Upgrade Fire → L" .. (fire.Level + 1)
+			up.ObjectText = "Needs " .. needsText(fire)
+		end
+	end
+end
+
+function CampService.GetFire(team: number): FireRules.Fire?
+	return fires[team]
+end
+
+local function ownFire(player: Player, prompt: ProximityPrompt): (number?, FireRules.Fire?, any)
+	local team = prompt:GetAttribute("Team") :: number
+	if team ~= ctx.Util.Team(player) or not ctx.Util.IsAlive(player) or not ctx.MatchService.Active then
+		return nil, nil, nil
+	end
+	local fire = fires[team]
+	if not fire or fire.Out or not ctx.MatchService.FireBurning(team) then
+		return nil, nil, nil
+	end
+	if ctx.Util.DistTo(player, camps[team].FirePos) > Config.Fire.PourRange + 1 then
+		return nil, nil, nil
+	end
+	return team, fire, ctx.InventoryService.Get(player)
+end
+
+-- Adds as much Wood from the pack as the fire can take.
+function CampService._onFeed(player: Player, prompt: ProximityPrompt)
+	local team, fire, inv = ownFire(player, prompt)
+	if not team or not fire or not inv then
+		return
+	end
+	local have = inv.Resources.Wood or 0
+	if have <= 0 then
+		ctx.Util.Notify(player, "You have no Wood. Chop trees to fuel your fire.", "error")
+		return
+	end
+	local n = FireRules.WoodAccepted(fire, have, FIRE)
+	if n <= 0 then
+		ctx.Util.Notify(player, "Your fire is already full.", "info")
+		return
+	end
+	if InventoryModel.TakeResource(inv, "Wood", n) ~= n then
+		return
+	end
+	FireRules.AddWood(fire, n, FIRE)
+	ctx.InventoryService.Sync(player)
+	CampService._syncFire(team)
+	ctx.Util.Notify(player, string.format("Added %d Wood · fuel %d%%", n, math.floor(fire.Fuel * 100 + 0.5)), "success")
+end
+
+-- Contributes pack materials toward the next fire level.
+function CampService._onFireUpgrade(player: Player, prompt: ProximityPrompt)
+	local team, fire, inv = ownFire(player, prompt)
+	if not team or not fire or not inv or not FireRules.CanUpgrade(fire, FIRE) then
+		return
+	end
+	local have = {}
+	for id in FireRules.Remaining(fire, FIRE) do
+		have[id] = inv.Resources[id] or 0
+	end
+	local before = fire.Level
+	local taken, levelled = FireRules.Contribute(fire, have, FIRE)
+	if next(taken) == nil then
+		ctx.Util.Notify(player, "You don't carry anything this upgrade needs (" .. needsText(fire) .. ").", "error")
+		return
+	end
+	for id, n in taken do
+		InventoryModel.TakeResource(inv, id, n)
+	end
+	ctx.InventoryService.Sync(player)
+	CampService._syncFire(team)
+	if levelled then
+		ctx.Util.NotifyTeam(team, string.format("Campfire upgraded to Level %d! It burns longer and takes %d s to snuff.", fire.Level, FireRules.SnuffTime(fire, FIRE)), "success")
+		ctx.Util.PlaySound("Craft", camps[team].Fire.PrimaryPart)
+		print(string.format("[Camp] %s fire L%d -> L%d", Config.Teams[team].Name, before, fire.Level))
+	else
+		ctx.Util.Notify(player, "Added to the fire upgrade. Still needs " .. needsText(fire) .. ".", "info")
 	end
 end
 
@@ -72,10 +240,17 @@ function CampService._setup(map: any)
 	for team, camp in camps do
 		levels[team] = 1
 		revealed[team] = { [team] = true }
+		fires[team] = FireRules.New(FIRE)
+		warned[team] = false
 		local core = camp.Fire:FindFirstChild("FireCore") :: BasePart
-		local pour = ctx.ChannelService.MakePrompt(core, "Pour", "Hold: Pour Water", Config.Teams[team].Name .. " Campfire", Config.Fire.PourRange, "Enemy", team)
+		local pour = ctx.ChannelService.MakePrompt(core, "Pour", "Hold: Snuff Fire", Config.Teams[team].Name .. " Campfire", Config.Fire.PourRange, "Enemy", team)
 		pour.KeyboardKeyCode = Enum.KeyCode.E
-		pour:SetAttribute("Night", true)
+		pour:SetAttribute("Snuff", true)
+		local feed = ctx.ChannelService.MakePrompt(core, "Feed", "Add Wood", "Campfire", Config.Fire.PourRange, "Team", team)
+		feed.KeyboardKeyCode = Enum.KeyCode.E
+		local up = ctx.ChannelService.MakePrompt(core, "FireUpgrade", "Upgrade Fire", "Campfire", Config.Fire.PourRange, "Team", team)
+		up.KeyboardKeyCode = Enum.KeyCode.F
+		up.UIOffset = Vector2.new(0, 72)
 		local top = camp.Workbench.PrimaryPart :: BasePart
 		ctx.ChannelService.MakePrompt(top, "Workbench", "Craft", "Workbench", 10, "Team", team)
 		local sound = ctx.Util.MakeSound("FireCrackle", core)
@@ -208,8 +383,12 @@ function CampService._onPour(player: Player, prompt: ProximityPrompt)
 	if myTeam == fireTeam then
 		return fail("You can't put out your own fire.")
 	end
-	if not ctx.MatchService.IsNight() then
-		return fail("Fires can only be put out at night.")
+	if not FireRules.SnuffAllowed(ctx.MatchService.Phase, ctx.MatchService.Day, FIRE) then
+		return fail(string.format("Campfires are protected until Night %d.", FIRE.ProtectedNights + 1))
+	end
+	local fire = fires[fireTeam]
+	if not fire or fire.Out then
+		return fail("That fire is already out.")
 	end
 	if not ctx.MatchService.FireBurning(fireTeam) then
 		return fail("That fire is already out.")
@@ -227,11 +406,12 @@ function CampService._onPour(player: Player, prompt: ProximityPrompt)
 	ctx.InventoryService.EquipUtility(player)
 	ctx.ChannelService.Begin(player, {
 		Kind = "Pour",
-		Label = "Pouring water on the " .. Config.Teams[fireTeam].Name .. " fire",
-		Duration = Config.Fire.PourDuration,
+		Label = "Snuffing the " .. Config.Teams[fireTeam].Name .. " fire",
+		Duration = FireRules.SnuffTime(fire, FIRE),
 		Range = Config.Fire.PourRange,
 		Hold = true,
 		InterruptOnDamage = true,
+		MoveTolerance = 2.5,
 		Prompt = prompt,
 		TargetKey = fireTeam,
 		Action = "Pour",
@@ -239,8 +419,8 @@ function CampService._onPour(player: Player, prompt: ProximityPrompt)
 			return camp.FirePos
 		end,
 		CanContinue = function()
-			if not ctx.MatchService.IsNight() then
-				return false, "Dawn broke — the fire can't be put out now."
+			if not FireRules.SnuffAllowed(ctx.MatchService.Phase, ctx.MatchService.Day, FIRE) then
+				return false, "The fire can't be snuffed right now."
 			end
 			if not ctx.MatchService.FireBurning(fireTeam) then
 				return false, "The fire is already out."
@@ -261,8 +441,12 @@ function CampService._onPour(player: Player, prompt: ProximityPrompt)
 	local t = os.clock()
 	if t - (lastAlert[fireTeam] or 0) > Config.Fire.AlertCooldown then
 		lastAlert[fireTeam] = t
+		-- Direction only (from the fire toward the raider), never the raider's position.
+		local root = ctx.Util.Root(player)
+		local dir = if root then (root.Position - camp.FirePos) * Vector3.new(1, 0, 1) else Vector3.zero
+		local bearing = if dir.Magnitude > 0.1 then math.deg(math.atan2(dir.X, -dir.Z)) % 360 else nil
 		for _, mate in ctx.Util.TeamPlayers(fireTeam) do
-			Net.FireClient("MatchEvent", mate, "FireUnderAttack", { By = myTeam, Pos = camp.FirePos })
+			Net.FireClient("MatchEvent", mate, "FireUnderAttack", { By = myTeam, Pos = camp.FirePos, Bearing = bearing, Seconds = FireRules.SnuffTime(fire, FIRE) })
 		end
 	end
 	Net.FireAll("Fx", "PourStart", { Player = player, Pos = camp.FirePos })

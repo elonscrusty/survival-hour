@@ -31,7 +31,7 @@ local ready: { [Player]: string? } = {} -- "Button" | "Ring"
 local counter = 0
 local dirty = true
 
-local MAX_PARTY = 4
+local MAX_PARTY = Config.Match.MaxPerTeam -- solo launch: 1 (parties disabled)
 
 function LobbyService.Init(c)
 	ctx = c
@@ -158,7 +158,7 @@ function LobbyService._onAction(p: Player, req: any)
 			return
 		end
 		if #party.Members >= MAX_PARTY then
-			ctx.Util.Notify(p, "Your party is full (4).", "warn")
+			ctx.Util.Notify(p, if MAX_PARTY <= 1 then "Matches are solo for now — parties are disabled." else "Your party is full (" .. MAX_PARTY .. ").", "warn")
 			return
 		end
 		party.Invites[target.UserId] = os.clock() + 60
@@ -308,7 +308,7 @@ function LobbyService._robux(p: Player, key: any)
 		return
 	end
 	local product = Products.ByKey[key]
-	if not product or not (product.Kind == "Diamonds" or product.Kind == "Unlock" or product.Kind == "Upgrade") then
+	if not product or not Products.OnSale(key) or not (product.Kind == "Diamonds" or product.Kind == "Unlock" or product.Kind == "Upgrade") then
 		return
 	end
 	local session = ctx.DataService.Get(p)

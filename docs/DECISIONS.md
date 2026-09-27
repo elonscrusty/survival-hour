@@ -70,3 +70,10 @@ Anything **not** listed here is a fixed requirement from the brief. Tunable numb
 | D34 | Animations are **procedural** (Motor6D offsets driven by replicated action attributes, plus leg cycles for wildlife rigs). There are no uploaded KeyframeSequences. |
 | D35 | Audio uses Roblox's engine-bundled `rbxasset://sounds/*` files where they fit. All other cues are listed in `Sounds.luau` with an empty asset ID for you to fill with licensed Creator Store audio. Silence is the fallback; we never use a made-up ID. |
 | D36 | Icons are drawn in UI from primitives: a shaped badge, a colour and a glyph. |
+
+## Survival Wars continuation (see IMPLEMENTATION_LOG.md)
+- **D37** Snuffing a fire still needs a filled canteen.
+- **D38** 1 Wood = +2 % of fire capacity at every level.
+- **D39** A fire dying while its owner waits to respawn eliminates them.
+- **D40** Fuel only burns during Day/Night.
+- **D41** Fire fuel is replicated to its owner only.

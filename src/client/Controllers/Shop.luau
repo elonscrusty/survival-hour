@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage.Shared
 local Loot = require(Shared.Loot)
+local Products = require(Shared.Products)
 local Net = require(Shared.Net)
 local UI = require("../UI/UI")
 local Theme = require("../UI/Theme")
@@ -85,7 +86,8 @@ function Shop.Start()
 		Panels.Toggle("Shop")
 	end)
 	local function vis()
-		btn.Visible = player:GetAttribute("InMatch") == true
+		-- Nothing gameplay-affecting is sold (non-pay-to-win), so the in-match shop stays hidden.
+		btn.Visible = player:GetAttribute("InMatch") == true and (Products.OnSale("CarePackage") or Products.OnSale("Bandage"))
 	end
 	player:GetAttributeChangedSignal("InMatch"):Connect(vis)
 	vis()

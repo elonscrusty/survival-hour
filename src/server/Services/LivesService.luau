@@ -59,6 +59,7 @@ function LivesService.Init(c)
 		LivesService._sync(p)
 	end)
 	ctx.MatchService.On("FireOut", LivesService._onFireOut)
+	ctx.MatchService.On("PhaseChanged", LivesService._onPhase)
 	ctx.MatchService.On("MatchCleanup", function()
 		lives = {}
 	end)
@@ -113,7 +114,9 @@ function LivesService._sync(p: Player)
 		return
 	end
 	p:SetAttribute("LifeState", life.State)
-	p:SetAttribute("FreeRespawns", life.FreeRespawns)
+	-- -1 = unlimited while the fire burns (attributes can't carry math.huge reliably)
+	p:SetAttribute("FreeRespawns", if LivesRules.Unlimited(life) then -1 else life.FreeRespawns)
+	p:SetAttribute("Deaths", life.Deaths)
 	p:SetAttribute("PaidRevives", life.PaidRevives)
 	p:SetAttribute("WindowEnds", life.WindowEndsAt or 0)
 	p:SetAttribute("ReviveTier", LivesRules.ReviveTier(life, Config.Lives.MaxReviveTier))
@@ -157,8 +160,25 @@ function LivesService._load(p: Player)
 	end
 end
 
-local function protect(p: Player)
-	p:SetAttribute("ProtectedUntil", now() + Config.Lives.SpawnProtection)
+local function protect(p: Player, seconds: number?)
+	local untilT = now() + (seconds or Config.Lives.SpawnProtection)
+	local prev = p:GetAttribute("ProtectedUntil")
+	p:SetAttribute("ProtectedUntil", math.max(untilT, if type(prev) == "number" then prev else 0))
+end
+
+-- Sunrise (from Day 2): everyone alive at that moment is invincible for a short
+-- time and can't deal damage (CombatService / BuildService check IsProtected).
+function LivesService._onPhase(phase: string, day: number)
+	if phase ~= "Day" or day < 2 then
+		return
+	end
+	for uid, life in lives do
+		local p = Players:GetPlayerByUserId(uid)
+		if p and life.State == "Alive" and ctx.Util.IsAlive(p) then
+			protect(p, Config.Match.SunriseProtection)
+			ctx.Util.Notify(p, string.format("Sunrise! You're protected for %d s, and can't deal damage.", Config.Match.SunriseProtection), "info")
+		end
+	end
 end
 
 function LivesService.SpawnInLobby(p: Player)
@@ -263,8 +283,10 @@ function LivesService._onDied(p: Player, char: Model)
 	end
 
 	if action == "Respawn" then
-		Net.FireClient("MatchEvent", p, "Died", { Respawn = Config.Lives.RespawnDelay, Left = life.FreeRespawns, Cause = cause, Killer = if killer then killer.DisplayName else nil })
-		task.delay(Config.Lives.RespawnDelay, function()
+		local delay = LivesRules.RespawnDelay(life, Config.Lives.RespawnDelays)
+		p:SetAttribute("RespawnAt", now() + delay)
+		Net.FireClient("MatchEvent", p, "Died", { Respawn = delay, Left = if LivesRules.Unlimited(life) then -1 else life.FreeRespawns, Cause = cause, Killer = if killer then killer.DisplayName else nil })
+		task.delay(delay, function()
 			if p.Parent and life.State == "Respawning" and ctx.MatchService.Active and ctx.MatchService.FireBurning(team) then
 				LivesService.SpawnAtCamp(p)
 			end

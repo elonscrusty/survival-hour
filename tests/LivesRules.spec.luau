@@ -92,4 +92,23 @@ return {
 		b.State = "Eliminated"
 		t.no(L.TeamStanding({ a, b }))
 	end,
+	unlimited_respawns_while_burning = function(t)
+		local life = L.New(math.huge)
+		for i = 1, 50 do
+			t.eq(L.OnDeath(life, true, 0, 20), "Respawn", "death " .. i)
+			life.State = "Alive"
+		end
+		t.ok(L.Unlimited(life))
+		t.eq(L.OnDeath(life, false, 0, 20), "Eliminate", "fire out = final life")
+	end,
+	respawn_delay_escalates = function(t)
+		local life = L.New(math.huge)
+		local seen = {}
+		for _ = 1, 6 do
+			L.OnDeath(life, true, 0, 20)
+			table.insert(seen, L.RespawnDelay(life, { 8, 12, 16, 20 }))
+			life.State = "Alive"
+		end
+		t.eq(table.concat(seen, ","), "8,12,16,20,20,20")
+	end,
 }

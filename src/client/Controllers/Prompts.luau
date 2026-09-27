@@ -38,6 +38,9 @@ local function hint(prompt: ProximityPrompt): string?
 	if prompt:GetAttribute("Night") and state and state:GetAttribute("Phase") ~= "Night" then
 		return "Night only"
 	end
+	if prompt:GetAttribute("Snuff") and state and not state:GetAttribute("SnuffOpen") then
+		return "Protected until Night 3"
+	end
 	local inv = State.Get("Inventory")
 	if prompt:GetAttribute("NeedsCanteen") then
 		local util = inv and inv.Slots and inv.Slots.Utility

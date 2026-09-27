@@ -13,7 +13,8 @@ export type LifeState = "Alive" | "Respawning" | "AwaitingRevive" | "Eliminated"
 
 export type Life = {
 	State: LifeState,
-	FreeRespawns: number,
+	FreeRespawns: number, -- math.huge = unlimited while the fire burns
+	Deaths: number, -- deaths this match (drives the respawn delay)
 	PaidRevives: number, -- paid revives RECEIVED this match (drives the price tier)
 	WindowEndsAt: number?,
 	PurchaseLockUntil: number?,
@@ -23,7 +24,7 @@ export type Life = {
 local LivesRules = {}
 
 function LivesRules.New(freeRespawns: number): Life
-	return { State = "Alive", FreeRespawns = freeRespawns, PaidRevives = 0 }
+	return { State = "Alive", FreeRespawns = freeRespawns, Deaths = 0, PaidRevives = 0 }
 end
 
 -- Decides the outcome of a death. Every death while the fire burns spends a
@@ -33,6 +34,7 @@ function LivesRules.OnDeath(life: Life, fireBurning: boolean, now: number, reviv
 	if life.State ~= "Alive" then
 		return "Ignore"
 	end
+	life.Deaths += 1
 	if not fireBurning then
 		life.State = "Eliminated"
 		return "Eliminate"
@@ -47,6 +49,16 @@ function LivesRules.OnDeath(life: Life, fireBurning: boolean, now: number, reviv
 	life.PurchaseLockUntil = nil
 	life.PurchaseLockBy = nil
 	return "ReviveWindow"
+end
+
+-- Respawn delay for the death just recorded: delays[1] for the first death, then
+-- delays[2], ... capped at the last entry (spec: 8, 12, 16, then 20 s).
+function LivesRules.RespawnDelay(life: Life, delays: { number }): number
+	return delays[math.clamp(life.Deaths, 1, #delays)]
+end
+
+function LivesRules.Unlimited(life: Life): boolean
+	return life.FreeRespawns == math.huge
 end
 
 -- The fire just went out: nobody who is waiting may come back.

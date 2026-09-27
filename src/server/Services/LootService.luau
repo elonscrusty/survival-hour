@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
+local Products = require(Shared:WaitForChild("Products"))
 local Net = require(Shared:WaitForChild("Net"))
 local Loot = require(Shared:WaitForChild("Loot"))
 local Models = Shared:WaitForChild("Models")
@@ -237,6 +238,10 @@ end
 
 function LootService._onBuy(p: Player, req: any)
 	if type(req) ~= "table" or not p:GetAttribute("InMatch") or not ctx.MatchService.IsPlaying() then
+		return
+	end
+	if type(req.Kind) ~= "string" or not Products.OnSale(req.Kind) then
+		ctx.Util.Notify(p, "That isn't sold — Survival Wars never sells gameplay advantages.", "info")
 		return
 	end
 	if req.Kind == "CarePackage" then

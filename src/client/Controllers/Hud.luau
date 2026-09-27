@@ -155,12 +155,18 @@ local function refreshVitals()
 	local free = player:GetAttribute("FreeRespawns") or 0
 	local team = player:GetAttribute("Team") or 0
 	local fire = matchState:GetAttribute("Fire" .. team)
-	local flames = string.rep("🔥", free) .. string.rep("·", math.max(0, Config.Lives.FreeRespawns - free))
-	if fire then
+	if fire and free < 0 then
+		-- Unlimited respawns while the fire burns: show the fire's level and fuel instead.
+		local fuel = player:GetAttribute("FireFuel") or 0
+		local lvl = player:GetAttribute("FireLevel") or 1
+		livesLabel.Text = string.format("🔥 Fire L%d · fuel %d%%", lvl, math.floor(fuel * 100 + 0.5))
+		livesLabel.TextColor3 = if fuel < 0.15 then C.Warn else C.Text
+	elseif fire then
+		local flames = string.rep("🔥", math.min(free, 10))
 		livesLabel.Text = "Respawns: " .. flames .. "  (" .. free .. " left)"
 		livesLabel.TextColor3 = C.Text
 	else
-		livesLabel.Text = "✖ FIRE OUT — no respawns"
+		livesLabel.Text = "✖ FIRE OUT — FINAL LIFE"
 		livesLabel.TextColor3 = C.Bad
 	end
 	local inv = State.Get("Inventory")
@@ -382,7 +388,9 @@ local function refreshDeath()
 		if st == "Respawning" then
 			deathTitle.Text = "YOU DIED"
 			deathTitle.TextColor3 = C.Bad
-			deathSub.Text = "Respawning at your campfire… (" .. (player:GetAttribute("FreeRespawns") or 0) .. " free respawns left)"
+			local free = player:GetAttribute("FreeRespawns") or 0
+			local left = math.max(0, math.ceil((player:GetAttribute("RespawnAt") or 0) - now()))
+			deathSub.Text = if free < 0 then string.format("Respawning at your campfire in %d s…", left) else "Respawning at your campfire… (" .. free .. " free respawns left)"
 			reviveBtn.Visible = false
 		elseif st == "AwaitingRevive" then
 			local left = math.max(0, (player:GetAttribute("WindowEnds") or 0) - now())
@@ -465,10 +473,12 @@ local function onMatchEvent(ev: any)
 	local d = ev.Data or {}
 	local name = ev.Name
 	if name == "Phase" then
-		if d.Phase == "Night" then
-			Hud.Announce("🌙 NIGHTFALL", "Wildlife roams. Enemy fires can be put out.", C.Night)
+		if d.ProtectionEnded then
+			Hud.Announce("🔥 NIGHT " .. tostring(d.Day) .. " — FIRES EXPOSED", "Campfire protection is over. Fires can be snuffed day and night.", C.Bad, 5)
+		elseif d.Phase == "Night" then
+			Hud.Announce("🌙 NIGHT " .. tostring(d.Day), if d.SnuffOpen then "Wildlife roams. Enemy fires can be snuffed." else "Wildlife roams. Fires are protected until Night 3.", C.Night)
 		else
-			Hud.Announce("☀ DAY " .. tostring(d.Day), "Gather, build, and watch for the care package.", C.Day)
+			Hud.Announce("☀ DAY " .. tostring(d.Day), "Gather, build, and keep your fire fed.", C.Day)
 		end
 	elseif name == "Intro" then
 		Hud.Announce("SURVIVAL HOUR", "Protect your fire. Last clan with a flame wins.", C.Accent, 5)
@@ -488,7 +498,9 @@ local function onMatchEvent(ev: any)
 	elseif name == "TeammateNeedsRevive" then
 		pendingRevives[d.UserId] = { Name = d.Name, Ends = d.Ends }
 	elseif name == "FireUnderAttack" then
-		Hud.Announce("⚠ YOUR FIRE IS BEING DOUSED!", "Get back to camp — hit the raider to stop the pour", C.Bad, 3)
+		local dirs = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" }
+		local dir = if d.Bearing then dirs[math.floor(((d.Bearing + 22.5) % 360) / 45) + 1] else nil
+		Hud.Announce("⚠ YOUR FIRE IS BEING SNUFFED!", (if dir then "Raider on the " .. dir .. " side — " else "") .. "hit them or make them move to stop it", C.Bad, 3)
 	elseif name == "StorageRaided" then
 		Hud.Announce("⚠ STORAGE RAID", "An enemy is stealing from your storage", C.Warn, 2.5)
 	elseif name == "CampRevealed" then
@@ -503,7 +515,7 @@ local function onMatchEvent(ev: any)
 	elseif name == "MatchEnded" then
 		showEnd(d)
 	elseif name == "Eliminated" then
-		Hud.Announce("ELIMINATED", if d.Cause == "FireOut" then "Your fire went out while you were down." else "Spectating your clan.", C.Bad, 4)
+		Hud.Announce("ELIMINATED", if d.Cause == "FireOut" then "Your fire went out while you were down." else "Spectating.", C.Bad, 4)
 	elseif name == "ReturnedToLobby" then
 		pendingRevives = {}
 	end

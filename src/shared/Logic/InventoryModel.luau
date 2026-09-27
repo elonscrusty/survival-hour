@@ -19,7 +19,7 @@ export type Inventory = {
 
 local InventoryModel = {}
 
-InventoryModel.ResourceIds = { "Stick", "Stone", "Wood", "Plant", "Leather", "Rope", "Berries", "Mushroom" }
+InventoryModel.ResourceIds = { "Stick", "Stone", "Wood", "Plant", "Leather", "Rope", "Berries", "Mushroom", "Scrap", "Iron", "Coal", "RareComponent" }
 InventoryModel.SlotNames = { "Weapon1", "Weapon2", "Tool", "Utility" }
 
 local RESOURCE_SET = {}

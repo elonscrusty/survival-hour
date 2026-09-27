@@ -65,6 +65,9 @@ function CombatService.DamagePlayer(victim: Player, amount: number, source: Sour
 		if ctx.Util.Team(source.By) == ctx.Util.Team(victim) then
 			return 0 -- friendly fire off
 		end
+		if ctx.LivesService.IsProtected(source.By) then
+			return 0 -- spawn / sunrise protection: protected players can't deal damage
+		end
 	end
 	if ctx.LivesService.IsProtected(victim) then
 		return 0

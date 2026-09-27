@@ -64,6 +64,11 @@ add({ Id = "Plant", Name = "Plant Fibre", Kind = "Resource", Description = "Pick
 add({ Id = "Leather", Name = "Leather", Kind = "Resource", Description = "Dropped by animals killed at night.", Icon = icon("🐾", LEATHER, "Square") })
 add({ Id = "Rope", Name = "Rope", Kind = "Resource", Description = "Twisted from plant fibre.", Icon = icon("§", Color3.fromRGB(205, 180, 120), "Square") })
 add({ Id = "Berries", Name = "Berries", Kind = "Resource", Food = true, Description = "Picked from berry bushes. Eat to heal a little.", Icon = icon("●", Color3.fromRGB(190, 50, 90), "Square") })
+-- Advanced materials (fire / workbench upgrades). Sources arrive with POIs, caves and chests.
+add({ Id = "Scrap", Name = "Scrap", Kind = "Resource", Description = "Salvaged metal from ruins, vehicles and chests.", Icon = icon("⚙", Color3.fromRGB(150, 130, 110), "Square") })
+add({ Id = "Iron", Name = "Iron", Kind = "Resource", Description = "Mined from iron deposits in caves and mines.", Icon = icon("▣", Color3.fromRGB(170, 120, 100), "Square") })
+add({ Id = "Coal", Name = "Coal", Kind = "Resource", Description = "Mined in caves. Smelts iron.", Icon = icon("◼", Color3.fromRGB(50, 50, 55), "Square") })
+add({ Id = "RareComponent", Name = "Rare Component", Kind = "Resource", Description = "A rare mechanical part found in the best chests.", Icon = icon("✦", Color3.fromRGB(230, 190, 80), "Square") })
 add({ Id = "Mushroom", Name = "Mushroom", Kind = "Resource", Food = true, Description = "Found in the damp deep forest. Eat to heal.", Icon = icon("♣", Color3.fromRGB(214, 170, 120), "Square") })
 
 -- Weapons --------------------------------------------------------------------

@@ -163,6 +163,10 @@ local RESOURCE_LOOK = {
 	Plant = { Color3.fromRGB(110, 170, 80), Enum.Material.Grass, Vector3.new(1, 0.6, 1) },
 	Leather = { Color3.fromRGB(150, 92, 60), Enum.Material.Fabric, Vector3.new(1.4, 0.2, 1.2) },
 	Rope = { Color3.fromRGB(205, 180, 120), Enum.Material.Fabric, Vector3.new(1.2, 0.5, 1.2) },
+	Scrap = { Color3.fromRGB(150, 130, 110), Enum.Material.CorrodedMetal, Vector3.new(1.1, 0.4, 0.9) },
+	Iron = { Color3.fromRGB(170, 120, 100), Enum.Material.Metal, Vector3.new(0.9, 0.6, 0.9) },
+	Coal = { Color3.fromRGB(45, 45, 50), Enum.Material.Basalt, Vector3.new(0.8, 0.7, 0.8) },
+	RareComponent = { Color3.fromRGB(230, 190, 80), Enum.Material.Metal, Vector3.new(0.6, 0.6, 0.6) },
 }
 
 function ItemModels.HasModel(id: string): boolean

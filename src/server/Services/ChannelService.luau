@@ -31,9 +31,10 @@ export type Spec = {
 	OnCancel: ((string) -> ())?,
 	Action: string?, -- character "Action" attribute while channelling (drives animations)
 	TargetKey: any?, -- identifies the target for exclusivity checks (e.g. a fire's team)
+	MoveTolerance: number?, -- studs the player may drift from where they started (nil = any, within Range)
 }
 
-type Active = Spec & { Player: Player, Started: number, Id: number }
+type Active = Spec & { Player: Player, Started: number, Id: number, StartPos: Vector3? }
 
 local ChannelService = {}
 
@@ -104,6 +105,8 @@ function ChannelService.Start()
 					reason = "Target is gone"
 				elseif (root.Position - pos).Magnitude > a.Range + 2 then
 					reason = "Moved out of range"
+				elseif a.MoveTolerance and a.StartPos and ((root.Position - a.StartPos) * Vector3.new(1, 0, 1)).Magnitude > a.MoveTolerance then
+					reason = "You moved"
 				elseif a.CanContinue then
 					local ok, why = a.CanContinue()
 					if not ok then
@@ -160,6 +163,8 @@ function ChannelService.Begin(player: Player, spec: Spec): boolean
 	a.Player = player
 	a.Started = os.clock()
 	a.Id = nextId
+	local root = ctx.Util.Root(player)
+	a.StartPos = if root then root.Position else nil
 	active[player] = a
 	if spec.Action then
 		local char = player.Character

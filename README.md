@@ -17,6 +17,8 @@ Docs:
 | [docs/TESTING.md](docs/TESTING.md) | What was verified, and the Studio/live test plan |
 | [docs/STATUS.md](docs/STATUS.md) | Current state, known gaps, how to resume |
 | [docs/MESH_SKINS.md](docs/MESH_SKINS.md) | How the 3D asset pack meshes are wired into the game |
+| [docs/SPEC_AUDIT.md](docs/SPEC_AUDIT.md) | Survival Wars spec: what's done / partial / missing |
+| [docs/IMPLEMENTATION_LOG.md](docs/IMPLEMENTATION_LOG.md) | What changed in each Survival Wars phase |
 
 ## 3D asset pack
 

@@ -236,6 +236,9 @@ function BuildService.Damage(s: Structure, amount: number, attacker: Player?): b
 	if attacker and ctx.Util.Team(attacker) == s.Team then
 		return false -- friendly fire off for structures
 	end
+	if attacker and ctx.LivesService.IsProtected(attacker) then
+		return false -- protected players can't raid
+	end
 	local dealt = math.min(s.Health, amount)
 	s.Health -= dealt
 	s.EnemyDamage += dealt
