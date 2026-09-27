@@ -439,9 +439,25 @@ local function titleScreen()
 	while not done and os.clock() < deadline and not player:GetAttribute("InMatch") do
 		task.wait(0.1)
 	end
+	-- Don't hand the camera back until the character exists (the server may
+	-- still be starting up), otherwise the view looks frozen.
 	btn.Active = false
+	btn.Text = "LOADING THE FOREST…"
+	local waitUntil = os.clock() + 60
+	local hum: Humanoid? = nil
+	while os.clock() < waitUntil do
+		local char = player.Character
+		hum = char and char:FindFirstChildOfClass("Humanoid")
+		if hum and char:FindFirstChild("HumanoidRootPart") then
+			break
+		end
+		task.wait(0.2)
+	end
 	RunService:UnbindFromRenderStep("SurvivalHourTitle")
 	cam.CameraType = Enum.CameraType.Custom
+	if hum then
+		cam.CameraSubject = hum
+	end
 	TweenService:Create(shade, TweenInfo.new(0.6), { BackgroundTransparency = 1 }):Play()
 	for _, d in shade:GetDescendants() do
 		if d:IsA("TextLabel") or d:IsA("TextButton") then

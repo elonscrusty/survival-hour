@@ -26,6 +26,7 @@ return {
 		t.eq(f.Perm[3], 2, "local Z is world up")
 		t.eq(f.LocalSize[3], 20.41)
 		t.eq(det(AssetFit.Axes(f)), 1, "still a proper rotation")
+		t.eq(f.Sign[3], 1, "trees stay upright (up axis not flipped)")
 	end,
 	near_cubes_stay_put = function(t)
 		local f = AssetFit.Fit({ 3.4, 2.5, 2.4 }, { 3.4, 2.4, 2.47 })

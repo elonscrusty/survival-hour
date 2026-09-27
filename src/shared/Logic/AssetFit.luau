@@ -48,7 +48,16 @@ function AssetFit.Fit(mesh: { number }, target: { number }): Fit
 		end
 	end
 	local perm = PERMS[best]
-	local sign = { 1, 1, if ODD[best] then -1 else 1 }
+	-- An odd axis swap needs one flipped axis to stay a rotation: flip the one that
+	-- lands on world X (left/right) so up and forward keep their direction.
+	local sign = { 1, 1, 1 }
+	if ODD[best] then
+		for i = 1, 3 do
+			if perm[i] == 1 then
+				sign[i] = -1
+			end
+		end
+	end
 	local localSize = { target[perm[1]], target[perm[2]], target[perm[3]] }
 	return { Perm = perm, Sign = sign, LocalSize = localSize, Scale = bestK, Error = bestErr }
 end

@@ -9,7 +9,9 @@
 -- Each mesh is fitted to its catalog size (Logic/AssetFit), which also fixes
 -- uploads that came in with the wrong unit scale or a swapped up axis.
 --
--- Runs during Init so the library is complete before anything is built.
+-- Runs during Init and holds server start for at most BLOCK_FOR seconds (so the
+-- lobby usually gets the meshes); anything slower keeps loading in the background
+-- and is used by everything built afterwards (Skins re-indexes on AssetsVersion).
 -- Assets already in the library (e.g. the Studio-imported pack) are left alone.
 -- InsertService can only load assets owned by the experience's owner, so the
 -- place must be published by the same account that uploaded the models.
@@ -25,7 +27,8 @@ local AssetFit = require(Shared:WaitForChild("Logic"):WaitForChild("AssetFit"))
 local AssetLoaderService = {}
 
 local WORKERS = 6
-local TIMEOUT = 90
+local TIMEOUT = 120 -- give up on the rest after this long
+local BLOCK_FOR = 12 -- server start waits at most this long; the rest loads in the background
 
 AssetLoaderService.Loaded = 0
 AssetLoaderService.Failed = {} :: { string }
@@ -71,6 +74,9 @@ local function fit(mesh: MeshPart, size: { number }, offset: { number }, at: CFr
 	local rot = CFrame.fromMatrix(Vector3.zero, Vector3.new(c[1][1], c[1][2], c[1][3]), Vector3.new(c[2][1], c[2][2], c[2][3]), Vector3.new(c[3][1], c[3][2], c[3][3]))
 	mesh.Size = Vector3.new(f.LocalSize[1], f.LocalSize[2], f.LocalSize[3])
 	mesh.CFrame = at * CFrame.new(-offset[1], -offset[2], -offset[3]) * rot
+	-- The upload carries its own pivot offset (possibly in other units): replace it
+	-- so the part's pivot is exactly the authored pivot `at` (ground anchor, grip...).
+	mesh.PivotOffset = mesh.CFrame:ToObjectSpace(at)
 	mesh.Anchored = true
 	mesh.CanCollide = false
 	mesh.CanQuery = false
@@ -136,8 +142,6 @@ function AssetLoaderService.Init(_ctx)
 		return
 	end
 	table.sort(queue)
-	-- Clients' Skins wait for this flag before indexing the library.
-	ReplicatedStorage:SetAttribute("AssetsLoading", true)
 	local started = os.clock()
 	local nextIndex, running = 1, 0
 	for _ = 1, WORKERS do
@@ -157,6 +161,7 @@ function AssetLoaderService.Init(_ctx)
 					end
 					item.Parent = cat
 					AssetLoaderService.Loaded += 1
+					ReplicatedStorage:SetAttribute("AssetsVersion", (ReplicatedStorage:GetAttribute("AssetsVersion") or 0) + 1)
 				else
 					table.insert(AssetLoaderService.Failed, name .. ": " .. tostring(if ok then err else item))
 				end
@@ -164,11 +169,23 @@ function AssetLoaderService.Init(_ctx)
 			running -= 1
 		end)
 	end
-	while running > 0 and os.clock() - started < TIMEOUT + 5 do
+	while running > 0 and os.clock() - started < BLOCK_FOR do
 		task.wait(0.1)
 	end
-	ReplicatedStorage:SetAttribute("AssetsLoading", nil)
-	print(string.format("[AssetLoader] loaded %d/%d uploaded meshes in %.1fs", AssetLoaderService.Loaded, #queue, os.clock() - started))
+	if running > 0 then
+		task.spawn(function()
+			while running > 0 and os.clock() - started < TIMEOUT + 5 do
+				task.wait(0.5)
+			end
+			AssetLoaderService._report(#queue, started)
+		end)
+	else
+		AssetLoaderService._report(#queue, started)
+	end
+end
+
+function AssetLoaderService._report(total: number, started: number)
+	print(string.format("[AssetLoader] loaded %d/%d uploaded meshes in %.1fs", AssetLoaderService.Loaded, total, os.clock() - started))
 	if #AssetLoaderService.Failed > 0 then
 		warn("[AssetLoader] not loaded (they keep their procedural look): " .. table.concat(AssetLoaderService.Failed, "; ", 1, math.min(8, #AssetLoaderService.Failed)))
 	end

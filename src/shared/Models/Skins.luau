@@ -14,12 +14,14 @@ local Skins = {}
 
 local index: { [string]: Instance } = {}
 local looked = false
+local version: any = nil
 
 local function library(): boolean
-	-- The server may still be adding uploaded meshes (AssetLoaderService):
-	-- don't cache a partial library until it's done.
-	if ReplicatedStorage:GetAttribute("AssetsLoading") then
-		return false
+	-- AssetLoaderService bumps AssetsVersion as uploaded meshes arrive: re-index then.
+	local v = ReplicatedStorage:GetAttribute("AssetsVersion")
+	if v ~= version then
+		version = v
+		looked = false
 	end
 	if not looked then
 		looked = true
