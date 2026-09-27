@@ -272,7 +272,25 @@ end
 
 function MatchService._enterPhase(phase: string)
 	MatchService._setPhase(phase, phaseLength(phase))
-	ctx.WorldService.ApplyLighting(phase, false)
+	if phase == "Day" then
+		-- Dawn -> Day -> Sunset across the day (cancelled if the phase changes).
+		ctx.WorldService.ApplyLighting("Dawn", false)
+		local token = phaseToken
+		local len = phaseLength(phase)
+		task.delay(math.min(Config.Lighting.DawnTime, len * 0.2), function()
+			if token == phaseToken and MatchService.Phase == "Day" then
+				ctx.WorldService.ApplyLighting("Day", false)
+			end
+		end)
+		task.delay(len * Config.Lighting.SunsetAt, function()
+			if token == phaseToken and MatchService.Phase == "Day" then
+				ctx.WorldService.ApplyLighting("Sunset", false)
+				MatchService.Broadcast("Sunset", { Day = MatchService.Day })
+			end
+		end)
+	else
+		ctx.WorldService.ApplyLighting(phase, false)
+	end
 	local wasOpen = state:GetAttribute("SnuffOpen") == true
 	local open = FireRules.SnuffAllowed(phase, MatchService.Day, Config.Fire :: any)
 	state:SetAttribute("SnuffOpen", open)
@@ -425,7 +443,7 @@ function MatchService._teardown()
 	else
 		ctx.WorldService.ClearMatch()
 		MatchService.Map = nil
-		ctx.WorldService.ApplyLighting("Day", true)
+		ctx.WorldService.ApplyLighting(if ctx.Mode == "Lobby" then "Lobby" else "Day", true)
 		MatchService._setPhase("Idle", 0)
 		for _, p in players do
 			if p.Parent then

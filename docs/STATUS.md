@@ -1,50 +1,66 @@
 # Project Status
 
-_Last updated: 2026-09-26_
+_Last updated: 2026-09-27_
 
 ## Where things stand
 
-The whole game is implemented as source (Rojo project) and builds into `build/SurvivalHour.rbxlx`. Pure game logic is unit-tested (89 tests). All code passes syntax, reference and Roblox-API type checks. **No Roblox Studio or live-server playtest has happened yet.** Expect some tuning and runtime fixes during the first Studio session; see [TESTING.md](TESTING.md) §2.
+Survival Wars continuation, **all seven phases implemented** (see [IMPLEMENTATION_LOG.md](IMPLEMENTATION_LOG.md) and
+[SPEC_AUDIT.md](SPEC_AUDIT.md)). The game is source (a Rojo project) and builds into `build/SurvivalHour.rbxlx`.
 
-| Stage (from the brief) | Status |
+Checks:
+- Pure logic has **131 unit tests** (`tests/run.luau`).
+- Model builders and the lobby refuge are checked against a mocked Roblox API plus a fake mesh library
+  (**34 checks**, `tests/skins/bundle.py`).
+- Every service passes the Roblox-API type check with no new diagnostics.
+
+**No Roblox Studio or live-server playtest has happened yet.** Every tunable number (economy, yields, damage,
+XP and Coins) is a working target. Playtest before treating any of them as final.
+
+| Phase | Status |
 |---|---|
-| 1. Core match loop: 4 teams, day/night, campfires, lives, win detection | Implemented; rules unit-tested; not yet run in Studio |
-| 2. Gathering, inventory, crafting, workbenches, construction, storage | Implemented; inventory/storage/placement/recipes unit-tested |
-| 3. Combat, wildlife, healing, loot, campfire raids | Implemented; loot odds unit-tested |
-| 4. Lobby, parties, matchmaking, persistence, powerups, purchases | Implemented; team packing, receipts, challenges and profile rules unit-tested; MemoryStore/Teleport paths need a live test |
-| 5. Art, animation, audio, UI, optimisation | Procedural models + procedural animation + complete UI; audio uses engine-bundled sounds with slots for licensed assets |
+| 1. Core match rules: solo, fire fuel/levels, respawns, snuffing from Night 3, sunrise protection, non-pay-to-win | Implemented, rules tested |
+| 2. Workbench I–V, crude tools, exact yields, tool tiers, stamina, healing | Implemented, tested |
+| 3. Slot inventory / backpacks, storage tiers and breaching, traps, building tiers | Implemented, tested |
+| 4. Wildlife roles and night escalation, melee light/heavy/block, bows/crossbow/headshots, armour | Implemented, tested |
+| 5. POIs by rarity, caves, chests, ore/scrap, layered forest, Blender world kit (57 assets) | Implemented, tested (mock) |
+| 6. XP/levels, Coins/cosmetics, Diamonds, classes, power-ups, Coin packs, leaderboards | Implemented, tested |
+| 7. Forest-refuge lobby, title screen, dawn/sunset/moonlit lighting, audio hooks, docs | Implemented, lobby tested (mock) |
 
 ## Honest list of fallbacks and gaps
 
-- **Models** are built at runtime from Roblox primitives (`src/shared/Models`) and, when the mesh library is present, dressed with the uploaded 3D asset pack (`SurvivalHourAssets.rbxm`, see [MESH_SKINS.md](MESH_SKINS.md)). Wildlife, worn armour and a few landmarks are still procedural.
-- **Animations** are procedural joint offsets (`Controllers/Animation.luau`, `Controllers/Creatures.luau`), not authored KeyframeSequences. The joint axis conventions (R15 vs R6) were written from API knowledge and **need a visual check in Studio**. Swap signs in `raise()` if an arm moves the wrong way.
-- **Audio**: only Roblox's engine-bundled sounds are used (`rbxasset://sounds/...`: jump, landing, swim, splash, explosion, ouch/oof, slider). Crackle, ambience and plane-drone cues are silent until you add licensed asset IDs in `Sounds.luau`.
-- **Icons** are drawn with UI primitives (shaped badge + glyph). There are no image assets.
-- **Climber's passive climb bonus** is applied client-side while the humanoid is climbing (`Camera.luau`), because characters are client-simulated. It needs a feel check on the watchtower ladder.
-- **Queue priority** after a failed or empty match isn't implemented (teleport data can be forged, so it isn't trusted); players simply ready up again.
-- **Matchmaking status** in live lobbies counts queued players from the first 100 queue entries.
-- The pure logic has thorough tests; the Roblox-side services only have static checks.
+- **Meshes need a Studio import.** New meshes appear only after the FBX files are imported and
+  `SurvivalHourAssets.rbxm` is re-saved ([Docs/IMPORT.md](../Docs/IMPORT.md)). Until then everything shows its
+  procedural look.
+- **Animations** are procedural joint offsets, including emotes and victory poses. They need a visual check in Studio.
+- **Audio:** engine-bundled cues only. Ambience (lobby, day, night, cave), crackle and surface footsteps are silent
+  slots waiting for licensed asset IDs.
+- **Icons** are UI primitives and glyphs. There are no image assets.
+- **Leaderboards** only fill on live servers (or in Studio with `SaveInStudio`).
+- **Robux products** are all `ProductId = 0` until they're created in Creator Hub. Studio simulates purchases.
+- The Roblox-side services have static checks only; live MemoryStore/Teleport paths need a real test.
 
 ## How to resume work
 
 1. Read [GDD.md](GDD.md), [DECISIONS.md](DECISIONS.md) and this file.
-2. Tools: Rojo 7.7 (`rojo build` / `rojo serve`), the Luau CLI for `tests/run.luau`, and `python tools/check.py --luau <luau dir>` for static checks. `luau-lsp analyze` with the Roblox definitions gives API-aware type checks.
-3. Open the place in Studio and work through TESTING.md §2. Fix what breaks, then tune numbers in `Config.luau` / the data modules and regenerate the tuning tables with `luau tools/gen_tuning.luau`.
+2. Tools: Rojo 7.7 (`rojo build` / `rojo serve`), the Luau CLI for `tests/run.luau`, `python tests/skins/bundle.py` for the model/lobby mock checks, and `luau-lsp analyze` with the Roblox definitions gives API-aware type checks.
+3. Open the place in Studio and work through TESTING.md §2. Fix what breaks, then tune numbers in `Config.luau` / the data modules and regenerate the meta tuning tables with `luau tools/gen_meta_tuning.luau`.
 
 ## File map
 
 ```
 default.project.json        Rojo project (one place: lobby + match)
 src/shared/                 ReplicatedStorage.Shared
-  Config, Items, Recipes, Powerups, Loot, Products, Sounds, Net
+  Config, Items, Recipes, Resources, Loot, Products, Sounds, Net,
+  Classes, Perks, Cosmetics, Progression
   Logic/                    pure, unit-tested rules (team packing, lives, inventory, storage,
-                            placement, layout generator, profile/receipts, challenges, RNG, rate limits)
-  Models/                   procedural models (nature, camp, structures, items, loot, animals)
+                            placement, layout generator, profile/receipts, fire, wildlife, combat, RNG, rate limits)
+  Models/                   procedural models + mesh skins (nature, flora, decor, camp, structures,
+                            items, loot, animals, landmarks/POIs, lobby refuge)
 src/server/                 ServerScriptService.Server
   Main.server.luau          boot + mode selection
   Services/                 Data, Purchase, World, Lobby, Matchmaking, Match, Camp, Lives,
                             Inventory, Channel, Combat, Gather, Craft, Build, Storage,
-                            Wildlife, Loot, Powerup, Dev, Util
+                            Stamina, Wildlife, Loot, Cosmetic, Powerup (classes/perks/rewards), Dev, Util
 src/client/                 StarterPlayerScripts.Client
   Main.client.luau, State, UI/ (Theme, UI helpers)
   Controllers/              Input, Camera, Hud, Panels, Inventory, Craft, Build, Storage, Shop,
@@ -52,7 +68,7 @@ src/client/                 StarterPlayerScripts.Client
                             Spectate, Notifications, Sound, Dev
 src/character/Health        disables default health regen
 tests/                      Luau CLI unit tests (run.luau + *.spec.luau)
-tools/check.py              static checks; tools/gen_tuning.luau generates the tuning tables
+tools/gen_meta_tuning.luau  generates the class/power-up/progression/cosmetic/product tables
 docs/                       GDD, DECISIONS, TUNING, SETUP, TESTING, STATUS
 build/SurvivalHour.rbxlx    built place
 ```

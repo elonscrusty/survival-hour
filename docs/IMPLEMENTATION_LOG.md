@@ -158,3 +158,24 @@ MatchId at the end. The end screen shows place, XP, Coins, ◆ and level-ups.
 **Tests:** `ProfileRules.spec` rewritten (15 cases: receipts, bundles, v1 refund, classes, perks, cosmetics, XP/levels,
 placements once, daily streak, weekly), `Progression.spec` (8), `Cosmetics.spec` (6: bands, unique ids, bundles,
 class/perk prices and effect keys, Robux sells only Coins/bundles). 131 unit tests pass.
+
+## Phase 7: lobby refuge, UI, lighting, audio, docs (done, not yet playtested)
+
+| Spec rule | Change | Where |
+|---|---|---|
+| Aesthetic forest-refuge lobby with integrated stations | Lobby rebuilt as a golden-hour clearing: layered forest ring (canopy / mid / undergrowth via mesh-first `Decor`), Blender forest-floor and clearing sections (off the paths), gathering deck round the fire, Blender stalls for the **Trading Post** and new **Outfitter** (cosmetics, with a mannequin), party area, **Ready arch**, class stands at the **Class Shrine**, six signposts and 16 path lanterns. New **Hall of Fame** station with a live leaderboard board. All props sit over the procedural lobby, which keeps every collider, prompt and label (falls back cleanly without the pack). | `Models/Refuge.luau` (new), `WorldService.BuildLobby`, `LobbyService._board` |
+| Cinematic menu, cohesive UI | Title screen on first join: a slow camera orbit over the refuge fire with the title and "ENTER THE REFUGE". Lobby nav reorganised (Party · Class · Power-up · Locker · Profile · Shop · ?); the top bar shows level, ◆, Coins and loadout. | `Controllers/Lobby.luau` |
+| Day / sunset / moonlit night / fog | Lighting presets Dawn → Day → Sunset (from 72 % of the day, with a banner) → moonlit Night; each tunes fog, atmosphere density/haze/colour and colour grade. The lobby uses a golden-hour preset. | `Config.Lighting`, `WorldService.ApplyLighting`, `MatchService._enterPhase`, `Hud` |
+| Audio: ambience, surfaces | Context ambience (lobby / day / night / cave), sunset / reward / level-up / purchase / hurt-cue stingers, per-floor-material footstep slots that replace the default running sound once licensed clips are set. No asset ids invented. | `Sounds.luau`, `Controllers/Sound.luau` |
+| Docs | GDD rewritten for Survival Wars; STATUS, README, SETUP (Coin products, leaderboards, schema v2, audio slots), MESH_SKINS (lobby props placed), TUNING (lighting + generated meta tables via `tools/gen_meta_tuning.luau`) | `docs/` |
+
+**Tests:** skins suite +2 (refuge dressing with the pack: forest density, deck, ready arch, ground sections avoid
+paths, station props, class stands, six signs, board; and without the pack everything stays procedural) → 34
+checks. It caught a shadowed-local bug in the Hall of Fame board before commit.
+
+## Continuation notes
+
+- Every phase is implemented but **none has been playtested**. First Studio session: work through TESTING.md, import
+  the Survival Wars FBX set (Docs/IMPORT.md), then tune economy numbers (Progression, Cosmetics prices, yields).
+- Classes and power-ups live in `Shared/Classes` / `Shared/Perks`. The effect keys are consumed only in
+  `PowerupService` (the list of known keys is enforced by `tests/Cosmetics.spec.luau`).

@@ -94,6 +94,7 @@ local Structures = require("../../src/shared/Models/Structures")
 local ItemModels = require("../../src/shared/Models/ItemModels")
 local LootModels = require("../../src/shared/Models/LootModels")
 local Animals = require("../../src/shared/Models/Animals")
+local Refuge = require("../../src/shared/Models/Refuge")
 local Decor = require("../../src/shared/Models/Decor")
 local Landmarks = require("../../src/shared/Models/Landmarks")
 
@@ -433,6 +434,77 @@ test("Care package + parachute + land", function()
 	LootModels.Land(m)
 	check(m:FindFirstChild("Parachute") == nil and not skinOf(m, "SM_Parachute_Canopy"), "parachute removed on landing")
 	check(#skins(LootModels.ForestCrate(at, workspace)) >= 1, "forest crate")
+end)
+
+-- lobby refuge ----------------------------------------------------------------------
+local function lobbyStations(folder)
+	local O = Vector3.new(0, 0, 0)
+	local out = {}
+	for name, pos in { Shop = Vector3.new(40, 0, 0), Classes = Vector3.new(-40, 0, 0), Party = Vector3.new(0, 0, 40), Locker = Vector3.new(30, 0, 30), Profile = Vector3.new(-30, 0, 30) } do
+		local m = Instance.new("Model")
+		m.Name = name
+		local c = Instance.new("Part")
+		c.Name = "Counter"
+		c.Size = Vector3.new(10, 3.4, 3)
+		c.CFrame = CFrame.lookAt(pos + Vector3.new(0, 1.7, 0), O + Vector3.new(0, 1.7, 0))
+		c.Parent = m
+		m.PrimaryPart = c
+		if name == "Classes" then
+			for i = 1, 3 do
+				local ped = Instance.new("Part")
+				ped.Name = "Pedestal"
+				ped.Size = Vector3.new(2.4, 3, 2.4)
+				ped.CFrame = CFrame.new(pos + Vector3.new(i * 3, 1.5, 0))
+				ped.Parent = m
+			end
+		end
+		m.Parent = folder
+		out[name] = m
+	end
+	return out
+end
+test("Lobby refuge: forest, props, signs, board", function()
+	local folder = Instance.new("Folder")
+	folder.Parent = workspace
+	local st = lobbyStations(folder)
+	local board = Refuge.Dress(folder, Vector3.new(0, 0, 0), Vector3.new(0, 0, -38), st)
+	check(board ~= nil and board:IsA("TextLabel"), "hall of fame board label")
+	local forest = folder:FindFirstChild("Forest")
+	check(forest ~= nil, "forest folder")
+	local n, deck, ground, arch = 0, false, 0, false
+	for _, c in forest:GetChildren() do
+		n += 1
+		if c.Name == "GatheringDeck" then
+			deck = true
+		elseif c.Name == "GroundSection" then
+			ground += 1
+		elseif c.Name == "ReadyArch" then
+			arch = true
+		end
+	end
+	check(n > 60, "layered forest placed (" .. n .. ")")
+	check(deck and arch, "deck + ready arch")
+	check(ground == 5, "ground sections avoid the paths (" .. ground .. ")")
+	check(skinOf(st.Shop, "SM_Lobby_ShopDisplay") and skinOf(st.Party, "SM_Lobby_PartyArea"), "station props")
+	check(skinOf(st.Classes, "SM_Lobby_PowerupStand"), "class stands")
+	check(st.Shop.PrimaryPart.CanCollide ~= false, "counter keeps collision")
+	local signs = 0
+	for _, d in forest:GetDescendants() do
+		if d:IsA("SurfaceGui") then
+			signs += 1
+		end
+	end
+	check(signs == 6, "six signposts (" .. signs .. ")")
+end)
+test("Lobby refuge without the pack stays procedural", function()
+	RS:SetAttribute("MeshSkins", false)
+	local folder = Instance.new("Folder")
+	folder.Parent = workspace
+	local st = lobbyStations(folder)
+	local board = Refuge.Dress(folder, Vector3.new(0, 0, 0), Vector3.new(0, 0, -38), st)
+	check(board ~= nil, "board without pack")
+	check(#skins(st.Shop) == 0 and st.Shop.PrimaryPart.Transparency < 1, "shop stays procedural")
+	RS:SetAttribute("MeshSkins", nil)
 end)
 
 -- disabled library ------------------------------------------------------------------

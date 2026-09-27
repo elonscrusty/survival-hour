@@ -75,6 +75,25 @@ local Sounds: { [string]: Cue } = {
 	Stream = { Bundled = "rbxasset://sounds/action_swim.mp3", Volume = 0.15, Pitch = 0.5, Looped = true },
 	Dawn = { Bundled = "rbxasset://sounds/action_get_up.mp3", Volume = 0.5, Pitch = 0.9 },
 	Dusk = { Bundled = "rbxasset://sounds/action_falling.ogg", Volume = 0.4, Pitch = 0.5 },
+	Sunset = { Bundled = "rbxasset://sounds/action_falling.ogg", Volume = 0.3, Pitch = 0.7 },
+	AmbientLobby = { AssetId = nil, Volume = 0.3, Looped = true }, -- evening forest + distant fire
+	AmbientCave = { AssetId = nil, Volume = 0.35, Looped = true }, -- drips, low wind
+	Wind = { AssetId = nil, Volume = 0.2, Looped = true },
+
+	-- Progression
+	Reward = { Bundled = "rbxasset://sounds/volume_slider.ogg", Volume = 0.3, Pitch = 1.8 },
+	LevelUp = { Bundled = "rbxasset://sounds/action_get_up.mp3", Volume = 0.6, Pitch = 1.2 },
+	Purchase = { Bundled = "rbxasset://sounds/action_get_up.mp3", Volume = 0.5, Pitch = 1.5 },
+	HurtCue = { Bundled = "rbxasset://sounds/volume_slider.ogg", Volume = 0.3, Pitch = 0.8 },
+
+	-- Surface footsteps: replace the default running sound per floor material
+	-- once licensed clips are configured (silent fallback = Roblox default).
+	FootGrass = { AssetId = nil, Volume = 0.4 },
+	FootLeaves = { AssetId = nil, Volume = 0.4 },
+	FootMud = { AssetId = nil, Volume = 0.4 },
+	FootStone = { AssetId = nil, Volume = 0.4 },
+	FootWood = { AssetId = nil, Volume = 0.4 },
+	FootMetal = { AssetId = nil, Volume = 0.4 },
 }
 
 local SoundLib = {}

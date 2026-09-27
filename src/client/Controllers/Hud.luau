@@ -524,6 +524,8 @@ local function onMatchEvent(ev: any)
 		pushFeed("✚ " .. teamTag(d.ByTeam) .. tostring(d.By) .. " opened a care package", C.TextDim)
 	elseif name == "MatchEnded" then
 		showEnd(d)
+	elseif name == "Sunset" then
+		Hud.Announce("🌅 SUNSET", "Night falls soon — get back to your fire.", C.Warn, 3)
 	elseif name == "Reward" then
 		pushFeed(string.format("+%d XP%s  %s", d.XP or 0, if (d.Coins or 0) > 0 then "  +" .. d.Coins .. " Coins" else "", tostring(d.Line or "")), C.Accent)
 	elseif name == "HurtCue" then

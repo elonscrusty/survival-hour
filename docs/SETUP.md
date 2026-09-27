@@ -45,31 +45,33 @@ Useful `Config.Dev` switches (`src/shared/Config.luau`):
 
 ## 4. Developer products
 
-1. Creator Hub → your experience → **Monetization → Developer Products**. Create one product per row of the *Developer products* table in [TUNING.md](TUNING.md). The prices there are suggestions.
+1. Creator Hub → your experience → **Monetization → Developer Products**. Create one product for each row marked **On sale: yes** in the *Developer products* table in [TUNING.md](TUNING.md): the four Coin packs and the two cosmetic bundles. The prices there are suggestions. The legacy kinds (revives, care packages, bandages, Diamonds, powerup unlocks) are off sale under the non-pay-to-win rules, so they don't need products.
 2. Copy each product ID into `src/shared/Products.luau` (`ProductId = <id>`) for the matching `Key`. Leave any product you don't want at `0`; its button then shows "Unavailable" in live servers.
 3. Rebuild or re-sync, then publish.
-4. **Regional pricing** (optional): if you enable it for the revive products, keep `PurchaseService.EnforceGiftPriceLevels = true`. A teammate can then pay for a revive only when their price level is ≥ the receiver's. Displayed prices are always read live with `GetProductInfoAsync`, never hard-coded.
-5. **Paid random items**: care packages have random contents, so they're treated as paid random items. The shop shows the full odds before purchase, and players whose `PolicyService` says `ArePaidRandomItemsRestricted` can't buy them.
+4. Displayed prices are always read live with `GetProductInfoAsync` (regional pricing aware), never hard-coded.
+5. Bundles contain fixed items (no paid random items). If a player already owns an item from a bundle, it is refunded at its Coin price.
 
 How receipts are handled (no setup needed):
 
 - `ProcessReceipt` grants into the buyer's DataStore profile, idempotently by `PurchaseId`, and returns `PurchaseGranted` only after a successful save.
-- Revives, care packages and bandages that can't be used right away (target eliminated, fire out, match over, buyer left) become stored credits that are used automatically later.
+- Coin packs add Coins; bundles unlock their cosmetics. Legacy receipts (old Diamond packs, powerup unlocks, revives) still resolve, so no purchase is ever lost.
 
 ## 5. Data stores & matchmaking
 
 - DataStore name: `SurvivalHourProfiles_v1` (`Config.Data.StoreName`). Profiles are session-locked. A failed load means the session runs **without saving**, so a blank profile never overwrites real data.
+- Profile schema v2 (`ProfileRules.SchemaVersion`): the first time a v1 profile loads, the Diamonds spent on retired powerups are refunded.
+- Leaderboards: OrderedDataStores `SurvivalHourProfiles_v1_Board_Wins` and `…_Board_XP`, written after each match and read every 2 minutes by lobby servers. All calls are pcall-guarded. They stay empty in Studio unless `SaveInStudio` is on.
 - MemoryStore sorted maps: `SH_Queue_v1`, `SH_Assign_v1`, `SH_Manifest_v1`, `SH_MatchmakerLock_v1`. There's nothing to create: MemoryStore is on automatically for published experiences.
 - Match servers are reserved with `TeleportService:ReserveServer(game.PlaceId)`. A match server reads its team manifest from MemoryStore by `game.PrivateServerId`.
 
 ## 6. Audio (optional, recommended)
 
-The game plays engine-bundled sounds (`rbxasset://sounds/...`) where they fit. To add campfire crackle, ambience, a plane drone and richer SFX, open `src/shared/Sounds.luau` and fill `AssetId` for each cue with audio you have the rights to use: your own uploads, or Creator Store audio licensed for use in experiences. Cues with no asset stay silent. No asset IDs were invented.
+The game plays engine-bundled sounds (`rbxasset://sounds/...`) where they fit. Silent slots are waiting for licensed audio: `AmbientLobby`, `AmbientDay`, `AmbientNight`, `AmbientCave`, `Wind`, `FireCrackle`, `PlaneDrone`, and the surface footsteps `FootGrass`, `FootLeaves`, `FootMud`, `FootStone`, `FootWood` and `FootMetal`. A footstep slot, once set, replaces the default running sound on that floor material. To add campfire crackle, ambience, a plane drone and richer SFX, open `src/shared/Sounds.luau` and fill `AssetId` for each cue with audio you have the rights to use: your own uploads, or Creator Store audio licensed for use in experiences. Cues with no asset stay silent. No asset IDs were invented.
 
 ## 7. Remaining account-dependent steps
 
 - [ ] Publish the place and set Max Players ≥ 20.
-- [ ] Create the 27 developer products and paste their IDs into `Products.luau`.
+- [ ] Create the 6 on-sale developer products (4 Coin packs, 2 bundles) and paste their IDs into `Products.luau`.
 - [ ] (Optional) Enable Studio API access and set `SaveInStudio = true` for a persistence test.
 - [ ] (Optional) Choose licensed audio and set `AssetId`s.
 - [ ] Complete the experience questionnaire / maturity settings on Creator Hub.

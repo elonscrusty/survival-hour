@@ -16,6 +16,7 @@ local Camp = require(Models:WaitForChild("Camp"))
 local Flora = require(Models:WaitForChild("Flora"))
 local Decor = require(Models:WaitForChild("Decor"))
 local Landmarks = require(Models:WaitForChild("Landmarks"))
+local Refuge = require(Models:WaitForChild("Refuge"))
 
 local WorldService = {}
 
@@ -53,6 +54,7 @@ export type MapInfo = {
 
 WorldService.Map = nil :: MapInfo?
 WorldService.LobbySpawn = CFrame.new()
+WorldService.LobbyBoard = nil :: TextLabel?
 
 function WorldService.Init(c)
 	ctx = c
@@ -70,7 +72,7 @@ function WorldService.Start()
 	if ctx.Mode == "Lobby" then
 		WorldService.BuildLobby()
 	end
-	WorldService.ApplyLighting("Day", true)
+	WorldService.ApplyLighting(if ctx.Mode == "Lobby" then "Lobby" else "Day", true)
 end
 
 -- Height -------------------------------------------------------------------------------
@@ -108,8 +110,9 @@ end
 local atmosphere: Atmosphere? = nil
 local colorFx: ColorCorrectionEffect? = nil
 
-function WorldService.ApplyLighting(phase: string, instant: boolean?)
-	local L = if phase == "Night" then Config.Lighting.Night else Config.Lighting.Day
+-- `preset` is a Config.Lighting key: Dawn | Day | Sunset | Night | Lobby.
+function WorldService.ApplyLighting(preset: string, instant: boolean?)
+	local L = (Config.Lighting :: any)[preset] or Config.Lighting.Day
 	if not atmosphere then
 		local a = Instance.new("Atmosphere")
 		a.Density = 0.32
@@ -128,6 +131,7 @@ function WorldService.ApplyLighting(phase: string, instant: boolean?)
 		sun.Intensity = 0.04
 		sun.Parent = Lighting
 	end
+	Lighting:SetAttribute("Preset", preset)
 	local TweenService = game:GetService("TweenService")
 	local info = TweenInfo.new(if instant then 0 else Config.Lighting.TransitionTime, Enum.EasingStyle.Sine)
 	TweenService:Create(Lighting, info, {
@@ -141,18 +145,10 @@ function WorldService.ApplyLighting(phase: string, instant: boolean?)
 		ColorShift_Top = L.ColorShift,
 	}):Play()
 	if atmosphere then
-		TweenService:Create(atmosphere, info, {
-			Density = if phase == "Night" then 0.38 else 0.3,
-			Color = if phase == "Night" then Color3.fromRGB(70, 84, 120) else Color3.fromRGB(199, 214, 210),
-			Decay = if phase == "Night" then Color3.fromRGB(40, 44, 70) else Color3.fromRGB(120, 130, 110),
-		}):Play()
+		TweenService:Create(atmosphere, info, { Density = L.Density, Color = L.AtmoColor, Decay = L.Decay, Haze = L.Haze }):Play()
 	end
 	if colorFx then
-		TweenService:Create(colorFx, info, {
-			Saturation = if phase == "Night" then -0.15 else 0.08,
-			Contrast = if phase == "Night" then 0.08 else 0.05,
-			TintColor = if phase == "Night" then Color3.fromRGB(220, 228, 255) else Color3.fromRGB(255, 250, 240),
-		}):Play()
+		TweenService:Create(colorFx, info, { Saturation = L.Saturation, Contrast = L.Contrast, TintColor = L.Tint }):Play()
 	end
 end
 
@@ -760,7 +756,7 @@ function WorldService.BuildLobby()
 	folder:SetAttribute("ReadyCenter", readyCenter)
 	folder:SetAttribute("ReadyRadius", 11)
 
-	-- Stations: Shop (east), Class shrine (west), Party board (south)
+	-- Stations: Shop (east), Class shrine (west), Party board (south), Outfitter (SE), Hall of Fame (SW)
 	local function station(name: string, pos: Vector3, color: Color3, label: string, promptText: string)
 		local m = Build.Model(name, folder)
 		local counter = Build.Part({ Name = "Counter", Size = Vector3.new(10, 3.4, 3), CFrame = CFrame.lookAt(pos + Vector3.new(0, 1.7, 0), O + Vector3.new(0, 1.7, 0)), Color = Color3.fromRGB(120, 84, 54), Material = Enum.Material.WoodPlanks, Parent = m })
@@ -794,7 +790,16 @@ function WorldService.BuildLobby()
 		orb.CanQuery = false
 		Build.Label(ped, def.Glyph .. " " .. def.Name, Vector3.new(0, 5.4, 0), Color3.fromRGB(def.Color[1], def.Color[2], def.Color[3]), 60)
 	end
-	station("Party", O + Vector3.new(0, 0, 40), Color3.fromRGB(110, 150, 230), "PARTY BOARD", "Manage Party")
+	local party = station("Party", O + Vector3.new(0, 0, 40), Color3.fromRGB(110, 150, 230), "PARTY BOARD", "Manage Party")
+	local locker = station("Locker", O + Vector3.new(30, 0, 30), Color3.fromRGB(190, 110, 200), "OUTFITTER", "Open Locker")
+	local profile = station("Profile", O + Vector3.new(-30, 0, 30), Color3.fromRGB(240, 200, 90), "HALL OF FAME", "Profile & Rewards")
+	WorldService.LobbyBoard = Refuge.Dress(folder, O, readyCenter, {
+		Shop = folder:FindFirstChild("Shop") :: Model,
+		Classes = shrine,
+		Party = party,
+		Locker = locker,
+		Profile = profile,
+	})
 
 	-- Title
 	local title = Build.Part({ Name = "Title", Size = Vector3.new(1, 1, 1), CFrame = CFrame.new(O + Vector3.new(0, 26, -50)), Transparency = 1, CanCollide = false, Parent = folder })
@@ -804,6 +809,14 @@ function WorldService.BuildLobby()
 
 	WorldService.LobbySpawn = CFrame.new(O + Vector3.new(0, 4, 18)) * CFrame.Angles(0, math.rad(180), 0)
 	return folder
+end
+
+-- Updates the Hall of Fame board text (called by LobbyService).
+function WorldService.SetLobbyBoard(lines: { string })
+	local tl = WorldService.LobbyBoard
+	if tl and tl.Parent then
+		tl.Text = table.concat(lines, "\n")
+	end
 end
 
 return WorldService

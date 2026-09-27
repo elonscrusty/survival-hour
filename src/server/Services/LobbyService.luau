@@ -71,6 +71,7 @@ function LobbyService.Start()
 			acc = 0
 			dirty = false
 			LobbyService.PushAll()
+			LobbyService._board()
 		end
 	end
 end
@@ -388,6 +389,28 @@ function LobbyService.PushAll()
 				Boards = ctx.DataService.Boards(),
 			})
 		end
+	end
+end
+
+-- Hall of Fame board in the lobby (top 5 wins + top 5 levels).
+local lastBoard = ""
+function LobbyService._board()
+	local boards = ctx.DataService.Boards()
+	local lines = { "HALL OF FAME" }
+	for _, spec in { { "Wins", "Most wins" }, { "XP", "Most XP" } } do
+		table.insert(lines, "— " .. spec[2] .. " —")
+		local list = boards[spec[1]] or {}
+		if #list == 0 then
+			table.insert(lines, "(live servers only)")
+		end
+		for i = 1, math.min(5, #list) do
+			table.insert(lines, string.format("%d. %s  %d", i, list[i].Name, list[i].Value))
+		end
+	end
+	local text = table.concat(lines, "\n")
+	if text ~= lastBoard then
+		lastBoard = text
+		ctx.WorldService.SetLobbyBoard(lines)
 	end
 end
 

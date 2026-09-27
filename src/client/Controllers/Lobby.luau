@@ -5,6 +5,8 @@
 -- how-to-play page.
 
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage.Shared
@@ -400,7 +402,59 @@ local function showInvite(d: any)
 	end)
 end
 
+-- Title screen: a slow camera orbit over the refuge fire at golden hour,
+-- shown once per session in the lobby.
+local function titleScreen()
+	if workspace:GetAttribute("ServerMode") == "Match" or player:GetAttribute("InMatch") then
+		return
+	end
+	local lobbyFolder = workspace:WaitForChild("Lobby", 20)
+	local fire = lobbyFolder and lobbyFolder:WaitForChild("LobbyFire", 10) :: Model?
+	if not fire then
+		return
+	end
+	local center = fire:GetPivot().Position
+	local cam = workspace.CurrentCamera
+	local overlay = UI.new("ScreenGui", { Name = "TitleScreen", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 20, Parent = player:WaitForChild("PlayerGui") })
+	local shade = UI.new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.35, BorderSizePixel = 0, Parent = overlay }, {
+		UI.new("UIGradient", { Rotation = 90, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(0.5, 0.85), NumberSequenceKeypoint.new(1, 0.1) }) }),
+	})
+	local title = UI.text("SURVIVAL HOUR", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.36), Size = UDim2.new(0.9, 0, 0, 90), TextSize = 78, Font = Theme.FontBlack, TextColor3 = C.Accent, TextStrokeTransparency = 0.3, TextXAlignment = Enum.TextXAlignment.Center, TextTransparency = 1, Parent = shade })
+	local tag = UI.text("Keep your fire burning. Outlast every other survivor.", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.36, 64), Size = UDim2.new(0.9, 0, 0, 30), TextSize = 22, Font = Theme.FontBold, TextXAlignment = Enum.TextXAlignment.Center, TextTransparency = 1, Parent = shade })
+	local done = false
+	local btn = UI.button("ENTER THE REFUGE", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.7), Size = UDim2.fromOffset(300, 64), TextSize = 24, Font = Theme.FontBlack, BackgroundColor3 = C.AccentDark, Parent = shade }, function()
+		done = true
+	end)
+	TweenService:Create(title, TweenInfo.new(1.6), { TextTransparency = 0 }):Play()
+	TweenService:Create(tag, TweenInfo.new(2.4), { TextTransparency = 0 }):Play()
+	local t0 = os.clock()
+	cam.CameraType = Enum.CameraType.Scriptable
+	RunService:BindToRenderStep("SurvivalHourTitle", Enum.RenderPriority.Camera.Value + 2, function()
+		local a = (os.clock() - t0) * 0.08
+		local eye = center + Vector3.new(math.cos(a) * 46, 18 + math.sin(a * 0.7) * 3, math.sin(a) * 46)
+		cam.CFrame = CFrame.lookAt(eye, center + Vector3.new(0, 4, 0))
+	end)
+	-- Leave on the button, when a match starts, or after 45 s.
+	local deadline = os.clock() + 45
+	while not done and os.clock() < deadline and not player:GetAttribute("InMatch") do
+		task.wait(0.1)
+	end
+	btn.Active = false
+	RunService:UnbindFromRenderStep("SurvivalHourTitle")
+	cam.CameraType = Enum.CameraType.Custom
+	TweenService:Create(shade, TweenInfo.new(0.6), { BackgroundTransparency = 1 }):Play()
+	for _, d in shade:GetDescendants() do
+		if d:IsA("TextLabel") or d:IsA("TextButton") then
+			TweenService:Create(d, TweenInfo.new(0.5), { TextTransparency = 1, BackgroundTransparency = 1 }):Play()
+		end
+	end
+	task.delay(0.7, function()
+		overlay:Destroy()
+	end)
+end
+
 function Lobby.Start()
+	task.spawn(titleScreen)
 	gui = UI.new("ScreenGui", { Name = "LobbyHud", ResetOnSpawn = false, DisplayOrder = 3, Parent = player:WaitForChild("PlayerGui") })
 	local scale = UI.new("UIScale", { Parent = gui })
 	local function rescale()

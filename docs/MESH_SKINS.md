@@ -48,8 +48,10 @@ The meshes themselves never collide and can't be clicked, so gameplay rules are 
   accessory-equip path in InventoryService.
 - **Standing stones, ruins, spawn pads, banners, huts, flowers:** no matching mesh in the pack, or
   the procedural version carries team text and colours.
-- **Lobby props:** the lobby uses the skinned trees. The pack's lobby stands, shop and signs aren't
-  placed by LobbyService yet.
+- **Lobby props** are now placed (Phase 7, `Models/Refuge.luau`): the gathering deck, shop stalls
+  (Trading Post, Outfitter), party area, ready arch, class stands, signposts, the Hall of Fame board
+  and forest-floor ground sections. The emblems (`SM_Emblem_*`) belong to the retired powerups and
+  aren't used.
 
 ## Needs checking in Studio
 
@@ -59,3 +61,5 @@ first playtest:
 - **Watchtower:** check the hatch and ladder alignment with the invisible truss.
 - **Held-item angles:** axe, hammer and sword use a rotation correction; the shield is turned 90°.
 - **Tree scale:** compare the chop hit area (`Root`, `Stump`) with the visible trunk.
+- **Lobby refuge:** ground-section height (pivot at the walkable surface), the gathering deck around the
+  procedural fire, and the sign-panel text lining up with `SM_Sign_Post_Panel` / `SM_Sign_Board_Panel`.

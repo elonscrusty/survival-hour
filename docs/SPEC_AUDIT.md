@@ -107,13 +107,13 @@ Studio yet**.
 ## Lobby / UI / art / world / audio / performance
 | Requirement | Status | Current build | Phase |
 |---|---|---|---|
-| Aesthetic forest-refuge lobby with integrated play/shop/cosmetics/loadout/leaderboards | 🟡 | Functional lobby; pack has lobby props not yet placed | 7 |
-| Cohesive custom UI, cinematic menu | 🟡 | Complete functional UI (primitive icons) | 7 |
+| Aesthetic forest-refuge lobby with integrated play/shop/cosmetics/loadout/leaderboards | ✅ | Phase 7: layered forest ring, Blender ground sections and lobby props, Trading Post / Class Shrine / Outfitter / Hall of Fame (live leaderboard) / Party / Ready arch, signposts, lanterns | 7 |
+| Cohesive custom UI, cinematic menu | ✅ | Phase 7: cinematic title screen (camera orbit over the refuge), lobby panels for class / power-up / locker / profile / shop, HUD loadout badge, reward feed, end-screen summary. Icons are still glyph primitives | 7 |
 | Blender assets for important props | ✅ | 146-asset pack integrated via mesh skins | – |
 | **Blender modular forest ground/landscape** (rivers, cliffs, cave mouths, clearings) | 🟡 | Phase 5: Blender landscape kit (cliffs, cave kit, riverbanks, modular ground/clearing sections, trails) over per-match voxel terrain (D49) | 5 |
 | Lush varied forest (many variants) | ✅ | Phase 5: all layout layers built, mesh-first | 5 |
-| Lighting: day / sunset / moonlit night / fog | 🟡 | Day + night presets | 7 |
-| Audio (ambience, surfaces, …) | 🟡 | Engine sounds + empty slots | 7 |
+| Lighting: day / sunset / moonlit night / fog | ✅ | Phase 7: Dawn → Day → Sunset → moonlit Night presets with fog/atmosphere/grade; lobby golden hour | 7 |
+| Audio (ambience, surfaces, …) | 🟡 | Phase 7: context ambience (lobby/day/night/cave), sunset/reward/level-up/purchase stingers, per-surface footstep slots. Licensed clips still to be chosen (silent slots) | 7 |
 | Optimisation (streaming, LOD, collisions) | 🟡 | Atomic streaming, single-mesh decor, box colliders; LOD1 exported (Roblox auto-LOD at runtime); needs a mobile perf pass in Studio | 5 |
 
 ## Conflicts that change existing behaviour
