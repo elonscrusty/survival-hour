@@ -256,7 +256,7 @@ function CombatService._onAttack(p: Player, payload: any)
 		end
 	end
 	if worn and slot then
-		ctx.InventoryService.Wear(p, slot, 1)
+		ctx.InventoryService.Wear(p, slot, if def.ToolType then ctx.PowerupService.ToolWear(p, def.ToolType) else 1)
 	end
 	if hitPos and kind ~= "Node" then
 		Net.FireAll("Fx", "Impact", { Pos = hitPos, Kind = kind })
@@ -272,7 +272,7 @@ function CombatService._fireArrow(p: Player, def: any, payload: any, slot: strin
 		return
 	end
 	if (inv.Ammo.Arrow or 0) <= 0 then
-		ctx.Util.Notify(p, "No arrows! Craft them at Workbench level 2.", "warn")
+		ctx.Util.Notify(p, "No arrows! Craft them at Workbench Tier II.", "warn")
 		return
 	end
 	local t = os.clock()

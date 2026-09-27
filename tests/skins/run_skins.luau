@@ -244,6 +244,29 @@ test("Workbench levels", function()
 	end
 	check(skinOf(Camp.Lantern(at, Color3.new(1, 1, 1), workspace), "SM_Camp_Lantern"), "lantern")
 end)
+test("Workbench tiers IV-V keep their upgrades visible", function()
+	local m4 = Camp.Workbench(at, 4, Color3.new(0, 0, 1), workspace)
+	check(skinOf(m4, "SM_Workbench_Level03"), "tier 4 uses the level 3 mesh")
+	check(m4:FindFirstChild("Forge") and m4:FindFirstChild("Forge").Transparency == 0, "forge visible")
+	local m5 = Camp.Workbench(at, 5, Color3.new(0, 0, 1), workspace)
+	check(m5:FindFirstChild("SteelPlate") and m5:FindFirstChild("SteelPlate").Transparency == 0, "steel plate visible")
+end)
+test("LargeRockPile: bigger yield mesh", function()
+	local m = Flora.LargeRockPile(at, Random.new(5), workspace)
+	check(skinOf(m, "SM_StoneDeposit01"), "deposit mesh")
+	check(m.PrimaryPart.Size.X > 10, "double-size root")
+end)
+test("Tiered tools build (axes, pickaxes, crude spear, meds)", function()
+	for _, tn in { "Crude", "Stone", "Iron", "Steel" } do
+		for _, kind in { "Axe", "Pickaxe" } do
+			local m = ItemModels.Held(tn .. kind)
+			check(m and m.PrimaryPart and m.PrimaryPart.Name == "Handle", tn .. kind)
+		end
+	end
+	check(skinOf(ItemModels.Held("CrudeAxe"), "StoneAxe"), "crude axe uses the stone axe mesh")
+	check(ItemModels.Held("CrudeSpear"), "crude spear")
+	check(ItemModels.Pickup("Medkit", 1, at, workspace), "medkit pickup")
+end)
 
 -- structures -------------------------------------------------------------------------
 test("Structures dressed + collision intact", function()

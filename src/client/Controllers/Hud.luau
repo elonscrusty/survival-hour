@@ -131,19 +131,22 @@ end
 -- Bottom-left: vitals ------------------------------------------------------------------------------
 
 local healthSet: (number, string?) -> ()
+local staminaSet: (number, string?) -> ()
 local livesLabel: TextLabel
 local packLabel: TextLabel
 local pouchLabel: TextLabel
 local vitals: Frame
 
 local function buildVitals()
-	vitals = UI.panel({ Name = "Vitals", Size = UDim2.fromOffset(270, 112), Position = UDim2.new(0, 12, 1, -124), Parent = gui }, { UI.padding(8) })
-	local hb
+	vitals = UI.panel({ Name = "Vitals", Size = UDim2.fromOffset(270, 132), Position = UDim2.new(0, 12, 1, -144), Parent = gui }, { UI.padding(8) })
+	local hb, sb
 	hb, healthSet = UI.bar({ Size = UDim2.new(1, 0, 0, 24), Parent = vitals }, Color3.fromRGB(200, 70, 60))
 	hb.Name = "Health"
-	livesLabel = UI.text("", { Position = UDim2.fromOffset(0, 28), Size = UDim2.new(1, 0, 0, 22), Font = Theme.FontBold, TextSize = 16, Parent = vitals })
-	packLabel = UI.text("", { Position = UDim2.fromOffset(0, 50), Size = UDim2.new(1, 0, 0, 20), TextSize = 15, Parent = vitals })
-	pouchLabel = UI.text("", { Position = UDim2.fromOffset(0, 72), Size = UDim2.new(1, 0, 0, 20), TextSize = 15, TextColor3 = C.TextDim, Parent = vitals })
+	sb, staminaSet = UI.bar({ Position = UDim2.fromOffset(0, 28), Size = UDim2.new(1, 0, 0, 14), Parent = vitals }, Color3.fromRGB(90, 170, 90))
+	sb.Name = "Stamina"
+	livesLabel = UI.text("", { Position = UDim2.fromOffset(0, 46), Size = UDim2.new(1, 0, 0, 22), Font = Theme.FontBold, TextSize = 16, Parent = vitals })
+	packLabel = UI.text("", { Position = UDim2.fromOffset(0, 68), Size = UDim2.new(1, 0, 0, 20), TextSize = 15, Parent = vitals })
+	pouchLabel = UI.text("", { Position = UDim2.fromOffset(0, 90), Size = UDim2.new(1, 0, 0, 20), TextSize = 15, TextColor3 = C.TextDim, Parent = vitals })
 end
 
 local function refreshVitals()
@@ -152,6 +155,9 @@ local function refreshVitals()
 	if hum then
 		healthSet(hum.Health / math.max(1, hum.MaxHealth), string.format("♥ %d / %d", math.ceil(hum.Health), hum.MaxHealth))
 	end
+	local st = player:GetAttribute("Stamina") or 100
+	local stMax = player:GetAttribute("MaxStamina") or 100
+	staminaSet(st / math.max(1, stMax), if player:GetAttribute("Exhausted") then "EXHAUSTED" else "")
 	local free = player:GetAttribute("FreeRespawns") or 0
 	local team = player:GetAttribute("Team") or 0
 	local fire = matchState:GetAttribute("Fire" .. team)
@@ -184,10 +190,10 @@ end
 -- Hotbar -------------------------------------------------------------------------------------------
 
 local hotbar: Frame
-local SLOTS = { { "Fists", "`" }, { "Weapon1", "1" }, { "Weapon2", "2" }, { "Tool", "3" }, { "Utility", "4" } }
+local SLOTS = { { "Fists", "`" }, { "Weapon1", "1" }, { "Weapon2", "2" }, { "Tool", "3" }, { "Tool2", "4" }, { "Utility", "5" } }
 
 local function buildHotbar()
-	hotbar = UI.new("Frame", { Name = "Hotbar", BackgroundTransparency = 1, Size = UDim2.fromOffset(5 * 70, 78), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -8), Parent = gui }, { UI.list(Enum.FillDirection.Horizontal, 6, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Bottom) })
+	hotbar = UI.new("Frame", { Name = "Hotbar", BackgroundTransparency = 1, Size = UDim2.fromOffset(6 * 70, 78), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -8), Parent = gui }, { UI.list(Enum.FillDirection.Horizontal, 6, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Bottom) })
 end
 
 local function refreshHotbar()

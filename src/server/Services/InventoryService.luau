@@ -392,7 +392,7 @@ function InventoryService._onFillPrompt(p: Player, prompt: ProximityPrompt)
 		return
 	end
 	if not InventoryService.HasCanteen(p) then
-		ctx.Util.Notify(p, "You need a canteen (craft at Workbench level 2).", "error")
+		ctx.Util.Notify(p, "You need a canteen (craft at Workbench Tier II).", "error")
 		return
 	end
 	if InventoryService.HasFilledCanteen(p) then
@@ -426,8 +426,26 @@ end
 -- Bandages -------------------------------------------------------------------------------------
 
 function InventoryService._onBandage(p: Player)
+	InventoryService.Heal(p, "Bandage")
+end
+
+-- Timed, interruptible healing (spec: Bandage ~20, First Aid ~50, Medkit ~100).
+-- Bandages come from the pouch; First Aid kits and Medkits from the pack.
+function InventoryService.Heal(p: Player, itemId: string)
 	local inv = invs[p]
-	if not inv or inv.Bandages <= 0 or not ctx.Util.IsAlive(p) then
+	local spec = Config.Healing[itemId]
+	if not inv or not spec or not ctx.Util.IsAlive(p) then
+		return
+	end
+	local function have(): boolean
+		local cur = invs[p]
+		if not cur then
+			return false
+		end
+		return if itemId == "Bandage" then cur.Bandages > 0 else (cur.Resources[itemId] or 0) > 0
+	end
+	if not have() then
+		ctx.Util.Notify(p, "You don't have a " .. Items[itemId].Name .. ".", "info")
 		return
 	end
 	local hum = ctx.Util.Humanoid(p)
@@ -439,27 +457,31 @@ function InventoryService._onBandage(p: Player)
 	if not root then
 		return
 	end
+	local start = root.Position
 	ctx.ChannelService.Begin(p, {
-		Kind = "Bandage",
-		Label = "Applying bandage",
-		Duration = Config.Bandage.UseTime,
-		Range = 6,
+		Kind = "Heal",
+		Label = "Applying " .. Items[itemId].Name:lower(),
+		Duration = spec.UseTime / ctx.PowerupService.HealSpeedMult(p),
+		Range = 30, -- you can walk slowly while healing
 		InterruptOnDamage = true,
 		Action = "Bandage",
-		Position = (function()
-			local start = root.Position
-			return function()
-				return start
-			end
-		end)(),
+		Position = function()
+			return start
+		end,
 		OnComplete = function()
 			local h = ctx.Util.Humanoid(p)
-			if invs[p] and invs[p].Bandages > 0 and h and h.Health > 0 then
-				invs[p].Bandages -= 1
-				h.Health = math.min(h.MaxHealth, h.Health + Config.Bandage.Heal)
-				InventoryService.Sync(p)
-				ctx.Util.PlaySound("Heal", ctx.Util.Root(p))
+			local cur = invs[p]
+			if not cur or not have() or not h or h.Health <= 0 then
+				return
 			end
+			if itemId == "Bandage" then
+				cur.Bandages -= 1
+			else
+				InventoryModel.TakeResource(cur, itemId, 1)
+			end
+			h.Health = math.min(h.MaxHealth, h.Health + spec.Heal)
+			InventoryService.Sync(p)
+			ctx.Util.PlaySound("Heal", ctx.Util.Root(p))
 		end,
 	})
 end
@@ -486,6 +508,10 @@ function InventoryService._onEat(p: Player, id: any)
 			ctx.Util.Notify(p, "You have no food. Pick berries or mushrooms.", "info")
 			return
 		end
+	end
+	if type(id) == "string" and Config.Healing[id] and id ~= "Bandage" then
+		InventoryService.Heal(p, id)
+		return
 	end
 	local food = type(id) == "string" and Resources.Food[id]
 	if not food or (inv.Resources[id] or 0) <= 0 then

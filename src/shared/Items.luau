@@ -28,6 +28,11 @@ export type ItemDef = {
 	DrawTime: number?,
 	ToolType: string?, -- gathering tool class matched against Resources RequiredTool ("Axe")
 	ToolPower: number?, -- chop points removed per hit
+	ToolTier: number?, -- 1 Crude, 2 Stone, 3 Iron, 4 Steel (Resources MinTier)
+	Heal: number?, -- healing items
+	UseTime: number?, -- seconds to apply (interrupted by damage)
+	Slots: number?, -- backpacks: pack slots
+	Tier: number?, -- general tier (armor, backpacks, storage)
 	Food: boolean?, -- resource that can be eaten (heal values in Resources.Food)
 	BlockReduction: number?, -- shield
 	DamageReduction: number?, -- armor
@@ -78,9 +83,14 @@ add({
 	Damage = 8, Cooldown = 0.6, Range = 5.5, StructureMult = 0.25, AnimalMult = 1,
 })
 add({
-	Id = "Spear", Name = "Spear", Kind = "Weapon", Description = "Long reach. Good for keeping wolves at bay.",
+	Id = "CrudeSpear", Name = "Crude Spear", Kind = "Weapon", Description = "Sharpened stick with a stone tip. Long reach.",
+	Icon = icon("↗", Color3.fromRGB(170, 130, 90)),
+	Damage = 16, Cooldown = 0.9, Range = 9, Durability = 40, StructureMult = 0.4, AnimalMult = 1.15,
+})
+add({
+	Id = "Spear", Name = "Stone Spear", Kind = "Weapon", Description = "Long reach. Good for keeping wolves at bay.",
 	Icon = icon("↗", WOOD),
-	Damage = 22, Cooldown = 0.9, Range = 9.5, Durability = 90, StructureMult = 0.6, AnimalMult = 1.15,
+	Damage = 22, Cooldown = 0.9, Range = 9.5, Durability = 100, StructureMult = 0.6, AnimalMult = 1.15,
 })
 add({
 	Id = "Bow", Name = "Bow", Kind = "Weapon", Description = "Hold to draw, release to fire. Uses arrows.",
@@ -112,11 +122,30 @@ add({
 })
 
 -- Tools ----------------------------------------------------------------------
-add({
-	Id = "StoneAxe", Name = "Stone Axe", Kind = "Tool", Description = "Chops small trees. Decent against wooden walls.",
-	Icon = icon("🪓", STONE),
-	Damage = 12, Cooldown = 0.7, Range = 6.5, Durability = 150, ToolType = "Axe", ToolPower = 10, StructureMult = 2, AnimalMult = 1,
-})
+-- Tool tiers (spec): Crude ~40 hits, Stone ~100, Iron ~225, Steel ~450. Small trees and
+-- small stones need Crude+, large ones Stone+. Tools hurt players, weapons do it better.
+local TIER_NAMES = { "Crude", "Stone", "Iron", "Steel" }
+local TIER_COLORS = { Color3.fromRGB(170, 130, 90), STONE, Color3.fromRGB(170, 120, 100), STEEL }
+local TIER_DUR = { 40, 100, 225, 450 }
+local TIER_POWER = { 10, 15, 22, 30 }
+local TIER_DMG = { 10, 13, 16, 19 }
+for tier = 1, 4 do
+	local tn = TIER_NAMES[tier]
+	add({
+		Id = tn .. "Axe", Name = tn .. " Axe", Kind = "Tool",
+		Description = if tier == 1 then "Chops small trees." elseif tier == 2 then "Chops large trees too. Decent against wooden walls." else "Fast, durable chopping.",
+		Icon = icon("🪓", TIER_COLORS[tier]),
+		Damage = TIER_DMG[tier], Cooldown = 0.7, Range = 6.5, Durability = TIER_DUR[tier], ToolType = "Axe", ToolTier = tier,
+		ToolPower = TIER_POWER[tier], StructureMult = 1.5 + tier * 0.25, AnimalMult = 1,
+	})
+	add({
+		Id = tn .. "Pickaxe", Name = tn .. " Pickaxe", Kind = "Tool",
+		Description = if tier == 1 then "Breaks small stones." elseif tier == 2 then "Breaks large stones too." else "Fast, durable mining.",
+		Icon = icon("⛏", TIER_COLORS[tier]),
+		Damage = TIER_DMG[tier], Cooldown = 0.75, Range = 6.5, Durability = TIER_DUR[tier], ToolType = "Pickaxe", ToolTier = tier,
+		ToolPower = TIER_POWER[tier], StructureMult = 1.25 + tier * 0.25, AnimalMult = 1,
+	})
+end
 add({
 	Id = "RepairHammer", Name = "Repair Hammer", Kind = "Tool", Description = "Repairs your team's structures using resources.",
 	Icon = icon("⚒", STONE),
@@ -126,7 +155,10 @@ add({
 -- Utility / worn / pouches ---------------------------------------------------------
 add({ Id = "Canteen", Name = "Canteen", Kind = "Utility", Description = "Fill at a stream. Pour on an enemy fire at night.", Icon = icon("💧", BLUE) })
 add({ Id = "Armor", Name = "Leather Armor", Kind = "Armor", Description = "Worn. Reduces incoming damage by 25%.", Icon = icon("▣", LEATHER), Durability = 300, DamageReduction = 0.25 })
-add({ Id = "Bandage", Name = "Bandage", Kind = "Consumable", Description = "Heals 45 HP over a 3 s use. Interrupted by damage.", Icon = icon("✚", RED) })
+add({ Id = "Bandage", Name = "Bandage", Kind = "Consumable", Description = "Heals 20 HP over a 3 s use. Interrupted by damage.", Icon = icon("✚", RED), Heal = 20, UseTime = 3 })
+-- Stronger healing lives in the pack (stackable, dropped on death like materials).
+add({ Id = "FirstAid", Name = "First Aid Kit", Kind = "Resource", Description = "Heals 50 HP over a 5 s use. Interrupted by damage.", Icon = icon("✚", Color3.fromRGB(230, 230, 230), "Square"), Heal = 50, UseTime = 5 })
+add({ Id = "Medkit", Name = "Medkit", Kind = "Resource", Description = "Heals 100 HP over an 8 s use. Interrupted by damage.", Icon = icon("✚", Color3.fromRGB(80, 200, 120), "Square"), Heal = 100, UseTime = 8 })
 add({ Id = "Arrow", Name = "Arrows", Kind = "Ammo", Description = "Ammunition for bows.", Icon = icon("🏹", WOOD) })
 add({ Id = "Bullet", Name = "Bullets", Kind = "Ammo", Description = "Ammunition for guns.", Icon = icon("•", Color3.fromRGB(200, 170, 90)) })
 

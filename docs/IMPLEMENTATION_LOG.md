@@ -52,3 +52,21 @@ The requirement-by-requirement status is in [SPEC_AUDIT.md](SPEC_AUDIT.md). All 
 
 **Known follow-ups:** `docs/TUNING.md`, `GDD.md` and the lobby intro text still describe 4-player clans
 and paid revives. They'll be updated when the meta (Phase 6) and UI (Phase 7) are reworked.
+
+## Phase 2: progression, tools, stamina, healing (done, not yet playtested)
+
+| Spec rule | Change | Where |
+|---|---|---|
+| Workbench Tiers I–V with the spec costs | `Recipes.WorkbenchUpgrades[2..5]` = spec values; `MaxWorkbenchLevel = 5`. Paid from pack + your storage (unchanged mechanism). Tier IV adds a forge, Tier V a steel top; the plate reads I–V. Craft UI shows roman tiers. | `Recipes`, `Models/Camp`, `Craft` |
+| Start with nothing; Crude Axe / Pickaxe / Spear at spec costs | Tier I recipes: 8 Stick + 3 Stone + 3 Fibre, 10 + 5 + 3, 12 + 3 + 5 | `Recipes`, `Items` |
+| Small tree = EXACTLY 4 Wood (Crude Axe+), large = EXACTLY 16 (Stone Axe+) | New `Resources.Yield` + `MinTier`; `ResourceRules.YieldFor` spreads the exact total over the hits by damage, so any tool power gives exactly 4 / 16. Medium trees give 8 (Crude+). | `Resources`, `ResourceRules` |
+| Small stone = 3 Stone (Crude Pickaxe+), large = 12 (Stone Pickaxe+); loose → hands | `RockPile` is now the small deposit (pickaxe); new `LargeRockPile` node (double-size model) placed fairly in every sector; loose stones stay hand-gathered | `Resources`, `Flora`, `GatherService` |
+| Tool tiers Crude/Stone/Iron/Steel, ~40/100/225/450 hits, break at 0 | 8 tools generated from one tier table (`CrudeAxe` … `SteelPickaxe`) with `ToolTier`; wear 1 per successful hit (hooks for class/power-up modifiers). Second tool slot (`Tool2`, key 4; Utility moved to 5) so an axe and a pickaxe fit together. Prompts auto-equip the best matching tool. | `Items`, `InventoryModel`, `GatherService`, `Hud`, `Inventory`, `Input` |
+| Stamina 100 | New `StaminaService`: hold Shift / L3 (touch: RUN toggle) to sprint ×1.4, drains 12/s, regen 14/s after 1.2 s, exhausted until 20. `Spend`/`Drain` ready for melee/blocking (Phase 4). HUD stamina bar. | `StaminaService`, `Movement` (client), `Hud`, `Config.Stamina` |
+| No fast passive regen; timed interruptible healing 20/50/100 | Fire warmth 2 → 0.5 HP/s; food 5/8 HP. Bandage (pouch, craftable anywhere from 4 Fibre) +20 in 3 s; First Aid (Tier II) +50 in 5 s; Medkit (Tier IV) +100 in 8 s. One `InventoryService.Heal` channel, interrupted by damage, slows you while applying. | `Config.Healing`, `InventoryService`, `Recipes` |
+
+Also: the pre-existing `LayoutGen fair_resources` failure is fixed (the test used old node names), so all unit tests pass.
+
+**Decisions:** D42 medium trees = 8 Wood with a Crude Axe; D43 First Aid / Medkit are pack items (drop on death like materials); bandages stay in the kept pouch; D44 Canteen stays Tier II.
+
+**Tests:** `Recipes.spec` rewritten for the tiers and spec costs; `ResourceRules.spec` gains `exact_yields_any_tool` and `tool_tiers`; skins suite adds Workbench IV/V, `LargeRockPile` and all tiered tool models (27 checks).

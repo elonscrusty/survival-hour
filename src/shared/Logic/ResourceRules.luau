@@ -39,12 +39,34 @@ function ResourceRules.Available(s: State): boolean
 	return s.State == "Healthy" or s.State == "Damaged"
 end
 
--- Tool check. `toolType` is the equipped item's ToolType ("Axe") or nil for bare hands.
-function ResourceRules.ToolOk(def: Resources.Def, toolType: string?): boolean
+-- Tool check. `toolType` is the equipped item's ToolType ("Axe") or nil for bare hands;
+-- `tier` its ToolTier (1 Crude … 4 Steel).
+function ResourceRules.ToolOk(def: Resources.Def, toolType: string?, tier: number?): boolean
 	if def.RequiredTool == "Hand" then
 		return true
 	end
-	return toolType == def.RequiredTool
+	return toolType == def.RequiredTool and (tier or 1) >= (def.MinTier or 1)
+end
+
+-- Items for damage going from `before` to `after` health: the exact Yield is spread
+-- by cumulative damage, so the total is exact whatever the tool power.
+function ResourceRules.YieldFor(def: Resources.Def, maxHealth: number, before: number, after: number): { [string]: number }
+	local out = {}
+	local y = def.Yield
+	if not y then
+		for id, n in def.PerHit do
+			out[id] = n
+		end
+		return out
+	end
+	local d0, d1 = maxHealth - before, maxHealth - after
+	for id, total in y do
+		local n = math.floor(total * d1 / maxHealth + 1e-9) - math.floor(total * d0 / maxHealth + 1e-9)
+		if n > 0 then
+			out[id] = n
+		end
+	end
+	return out
 end
 
 function ResourceRules.RollDrops(def: Resources.Def, rng: Rng.Rng, into: { [string]: number }?): { [string]: number }
@@ -62,14 +84,14 @@ end
 
 -- One hit (tool swing or completed hand gather). `power` is the damage dealt:
 -- the tool's ToolPower for trees, Resources.HandPower (1) for hand nodes.
-function ResourceRules.Hit(def: Resources.Def, s: State, toolType: string?, power: number, now: number, rng: Rng.Rng): HitResult
+function ResourceRules.Hit(def: Resources.Def, s: State, toolType: string?, power: number, now: number, rng: Rng.Rng, tier: number?): HitResult
 	local res: HitResult = { Ok = false, Reason = nil, Dealt = 0, Items = {}, Finished = false }
 	if not ResourceRules.Available(s) then
 		res.Reason = "Unavailable"
 		return res
 	end
-	if not ResourceRules.ToolOk(def, toolType) then
-		res.Reason = "NeedTool"
+	if not ResourceRules.ToolOk(def, toolType, tier) then
+		res.Reason = if toolType == def.RequiredTool then "NeedTier" else "NeedTool"
 		return res
 	end
 	local dealt = math.min(s.Health, math.max(0, power))
@@ -77,10 +99,11 @@ function ResourceRules.Hit(def: Resources.Def, s: State, toolType: string?, powe
 		res.Reason = "NoDamage"
 		return res
 	end
+	local before = s.Health
 	s.Health -= dealt
 	res.Ok = true
 	res.Dealt = dealt
-	for id, n in def.PerHit do
+	for id, n in ResourceRules.YieldFor(def, s.Max, before, s.Health) do
 		res.Items[id] = (res.Items[id] or 0) + n
 	end
 	if s.Health <= 0 then

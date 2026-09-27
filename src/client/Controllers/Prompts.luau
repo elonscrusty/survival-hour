@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UI = require("../UI/UI")
 local Theme = require("../UI/Theme")
 local State = require("../State")
+local Items = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Items"))
 
 local Prompts = {}
 
@@ -56,10 +57,18 @@ local function hint(prompt: ProximityPrompt): string?
 			return "Canteen is empty"
 		end
 	end
-	if prompt:GetAttribute("NeedsAxe") then
-		local tool = inv and inv.Slots and inv.Slots.Tool
-		if not tool or tool.Id ~= "StoneAxe" then
-			return "Needs a stone axe"
+	local need = prompt:GetAttribute("NeedsTool")
+	if need then
+		local minTier = prompt:GetAttribute("MinTier") or 1
+		local ok = false
+		for _, st in (inv and inv.Slots or {}) do
+			local def = st and Items[st.Id]
+			if def and def.ToolType == need and (def.ToolTier or 1) >= minTier then
+				ok = true
+			end
+		end
+		if not ok then
+			return "Needs " .. ({ "Crude", "Stone", "Iron", "Steel" })[minTier] .. " " .. need .. "+"
 		end
 	end
 	return nil

@@ -19,8 +19,8 @@ export type Inventory = {
 
 local InventoryModel = {}
 
-InventoryModel.ResourceIds = { "Stick", "Stone", "Wood", "Plant", "Leather", "Rope", "Berries", "Mushroom", "Scrap", "Iron", "Coal", "RareComponent" }
-InventoryModel.SlotNames = { "Weapon1", "Weapon2", "Tool", "Utility" }
+InventoryModel.ResourceIds = { "Stick", "Stone", "Wood", "Plant", "Leather", "Rope", "Berries", "Mushroom", "Scrap", "Iron", "Coal", "RareComponent", "FirstAid", "Medkit" }
+InventoryModel.SlotNames = { "Weapon1", "Weapon2", "Tool", "Tool2", "Utility" }
 
 local RESOURCE_SET = {}
 for _, id in InventoryModel.ResourceIds do
@@ -121,7 +121,7 @@ function InventoryModel.SlotsForKind(kind: string): { string }
 	if kind == "Weapon" then
 		return { "Weapon1", "Weapon2" }
 	elseif kind == "Tool" then
-		return { "Tool" }
+		return { "Tool", "Tool2" }
 	elseif kind == "Utility" then
 		return { "Utility" }
 	end

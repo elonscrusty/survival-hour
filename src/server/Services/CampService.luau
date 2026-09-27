@@ -394,7 +394,7 @@ function CampService._onPour(player: Player, prompt: ProximityPrompt)
 		return fail("That fire is already out.")
 	end
 	if not ctx.InventoryService.HasFilledCanteen(player) then
-		return fail(if ctx.InventoryService.HasCanteen(player) then "Your canteen is empty. Fill it at a stream." else "You need a filled canteen (Workbench level 2).")
+		return fail(if ctx.InventoryService.HasCanteen(player) then "Your canteen is empty. Fill it at a stream." else "You need a filled canteen (Workbench Tier II).")
 	end
 	local other = ctx.ChannelService.AnyOnTarget("Pour", fireTeam)
 	if other and other ~= player then

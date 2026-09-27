@@ -39,8 +39,8 @@ function DevService._onCommand(p: Player, cmd: any, arg: any)
 	elseif cmd == "SkipPhase" then
 		M.SkipPhase()
 	elseif cmd == "GiveResources" then
-		for _, id in { "Stick", "Stone", "Wood", "Plant", "Leather", "Rope" } do
-			ctx.InventoryService.AddResource(p, id, 5)
+		for _, id in { "Stick", "Stone", "Wood", "Plant", "Leather", "Rope", "Scrap", "Iron", "Coal" } do
+			ctx.InventoryService.AddResource(p, id, 20)
 		end
 	elseif cmd == "GiveItem" and type(arg) == "string" and Items[arg] then
 		local def = Items[arg]
@@ -60,7 +60,7 @@ function DevService._onCommand(p: Player, cmd: any, arg: any)
 			ctx.InventoryService.Sync(p)
 		end
 	elseif cmd == "BenchLevel" and type(arg) == "number" then
-		ctx.CampService.SetLevel(ctx.Util.Team(p), math.clamp(math.floor(arg), 1, 3))
+		ctx.CampService.SetLevel(ctx.Util.Team(p), math.clamp(math.floor(arg), 1, 5))
 		ctx.CraftService.Push(p)
 	elseif cmd == "Extinguish" and type(arg) == "number" then
 		M.ExtinguishFire(math.clamp(math.floor(arg), 1, 4), nil)

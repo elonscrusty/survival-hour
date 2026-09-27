@@ -48,6 +48,7 @@ local order = {
 	"LivesService",
 	"InventoryService",
 	"ChannelService",
+	"StaminaService",
 	"CombatService",
 	"GatherService",
 	"CraftService",

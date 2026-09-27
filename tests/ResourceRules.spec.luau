@@ -2,7 +2,7 @@ local Resources = require("../src/shared/Resources")
 local RR = require("../src/shared/Logic/ResourceRules")
 local Rng = require("../src/shared/Logic/Rng")
 
-local AXE = 10 -- StoneAxe ToolPower
+local AXE = 10 -- CrudeAxe ToolPower
 
 return {
 	every_def_is_complete = function(t)
@@ -18,6 +18,9 @@ return {
 			t.ok(next(d.PerHit) ~= nil, id .. " yields something per hit")
 			for _, drop in d.Drops do
 				t.ok(drop.Min <= drop.Max, id .. " drop range")
+			end
+			for item in d.Yield or {} do
+				t.ok(d.PerHit[item] ~= nil or d.Kind == "Tree" or d.RequiredTool ~= "Hand", id .. " yield " .. item)
 			end
 			if d.Kind == "Tree" then
 				t.eq(d.RequiredTool, "Axe", id .. " trees need an axe")
@@ -53,7 +56,7 @@ return {
 		local r = RR.Hit(d, s, "Axe", AXE, 0, rng)
 		t.ok(r.Ok and not r.Finished, "first hit")
 		t.eq(s.State, "Damaged")
-		t.eq(r.Items.Wood, 1, "per-hit wood")
+		t.eq(r.Items.Wood, 1, "per-hit wood (40 hp, 4 wood, 10 per hit)")
 		local hits = 1
 		while not r.Finished do
 			r = RR.Hit(d, s, "Axe", AXE, 0, rng)
@@ -61,7 +64,7 @@ return {
 		end
 		t.eq(hits, RR.HitsToFinish(d, AXE), "hit count")
 		t.eq(s.State, "Felled")
-		t.ok((r.Items.Wood or 0) >= 1 + d.Drops[1].Min, "fell bonus wood")
+		t.eq(r.Items.Wood, 1, "last hit gives the last wood")
 		-- no more hits while felled
 		t.eq(RR.Hit(d, s, "Axe", AXE, 0.5, rng).Reason, "Unavailable")
 		t.eq(RR.Advance(d, s, d.FellTime - 0.01), nil)
@@ -114,9 +117,38 @@ return {
 		for seed = 1, 50 do
 			local a = RR.RollDrops(d, Rng.new(seed))
 			local b = RR.RollDrops(d, Rng.new(seed))
-			t.eq(a.Wood, b.Wood, "same seed, same drops")
-			t.ok(a.Wood >= d.Drops[1].Min and a.Wood <= d.Drops[1].Max, "wood in range")
+			t.eq(a.Stick, b.Stick, "same seed, same drops")
+			t.ok(a.Stick >= d.Drops[1].Min and a.Stick <= d.Drops[1].Max, "sticks in range")
 		end
+	end,
+
+	exact_yields_any_tool = function(t)
+		local cases = { { "TreeSmall", "Axe", "Wood", 4 }, { "TreeLarge", "Axe", "Wood", 16 }, { "RockPile", "Pickaxe", "Stone", 3 }, { "LargeRockPile", "Pickaxe", "Stone", 12 } }
+		for _, c in cases do
+			local d = Resources.Defs[c[1]]
+			for _, power in { 10, 15, 22, 30, 7 } do
+				local s = RR.New(d)
+				local total, guard = 0, 0
+				repeat
+					local r = RR.Hit(d, s, c[2], power, 0, Rng.new(3), 4)
+					total += r.Items[c[3]] or 0
+					guard += 1
+				until r.Finished or guard > 100
+				t.eq(total, c[4], c[1] .. " power " .. power)
+			end
+		end
+	end,
+
+	tool_tiers = function(t)
+		local large, small = Resources.Defs.TreeLarge, Resources.Defs.TreeSmall
+		t.no(RR.ToolOk(large, "Axe", 1), "crude axe can't fell a large tree")
+		t.ok(RR.ToolOk(large, "Axe", 2), "stone axe can")
+		t.ok(RR.ToolOk(small, "Axe", 1))
+		t.no(RR.ToolOk(Resources.Defs.RockPile, "Axe", 4), "axes don't mine")
+		t.no(RR.ToolOk(Resources.Defs.LargeRockPile, "Pickaxe", 1))
+		t.ok(RR.ToolOk(Resources.Defs.LooseStones, nil, nil), "loose stones by hand")
+		local s = RR.New(large)
+		t.eq(RR.Hit(large, s, "Axe", 10, 0, Rng.new(1), 1).Reason, "NeedTier")
 	end,
 
 	food_items_are_resources = function(t)

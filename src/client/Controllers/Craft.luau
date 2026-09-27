@@ -1,5 +1,5 @@
 --!nonstrict
--- Crafting panel: 3 workbench levels × 5 recipes, rope, and the shared
+-- Crafting panel: Workbench Tiers I–V, rope and bandages, and the
 -- workbench upgrade. Costs show what you carry (+ team storage for
 -- structures and upgrades, which may draw from storage).
 
@@ -58,6 +58,11 @@ local function costChips(parent: Instance, cost: { [string]: number }, useStorag
 	return okAll
 end
 
+local ROMAN = { "I", "II", "III", "IV", "V" }
+local function tier(n: number): string
+	return ROMAN[n] or tostring(n)
+end
+
 function Craft.Render()
 	if not body then
 		return
@@ -69,10 +74,10 @@ function Craft.Render()
 	local order = 1
 	local head = UI.new("Frame", { LayoutOrder = order, Size = UDim2.new(1, -8, 0, 96), BackgroundColor3 = C.PanelLight, BorderSizePixel = 0, Parent = body }, { UI.corner(UDim.new(0, 8)) })
 	order += 1
-	UI.text("Workbench level " .. level .. " / " .. Recipes.MaxWorkbenchLevel, { Position = UDim2.fromOffset(10, 6), TextSize = 20, Font = Theme.FontBlack, Parent = head })
+	UI.text("Workbench Tier " .. tier(level) .. " / " .. tier(Recipes.MaxWorkbenchLevel), { Position = UDim2.fromOffset(10, 6), TextSize = 20, Font = Theme.FontBlack, Parent = head })
 	if level < Recipes.MaxWorkbenchLevel then
 		local cost = Recipes.WorkbenchUpgrades[level + 1]
-		UI.text("Upgrade to " .. (level + 1) .. " (shared by your clan, uses pack + team storage):", { Position = UDim2.fromOffset(10, 32), TextSize = 13, TextColor3 = C.TextDim, Parent = head })
+		UI.text("Upgrade to Tier " .. tier(level + 1) .. " (uses your pack + your storage):", { Position = UDim2.fromOffset(10, 32), TextSize = 13, TextColor3 = C.TextDim, Parent = head })
 		local ok = costChips(head, cost, true, 10, 58)
 		UI.button("Upgrade", { Size = UDim2.fromOffset(116, 44), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0), BackgroundColor3 = if ok then C.AccentDark else C.PanelLighter, Parent = head }, function()
 			Net.Event("UpgradeWorkbench"):FireServer()
@@ -92,7 +97,7 @@ function Craft.Render()
 	for _, r in sorted do
 		if r.Level ~= lastLevel then
 			lastLevel = r.Level
-			UI.text(if r.Level == 0 then "Anywhere" else ("Level " .. r.Level .. (if r.Level > level then "  🔒" else "")), { LayoutOrder = order, TextSize = 17, Font = Theme.FontBlack, TextColor3 = if r.Level > level then C.TextDim else C.Accent, Parent = body })
+			UI.text(if r.Level == 0 then "Anywhere" else ("Tier " .. tier(r.Level) .. (if r.Level > level then "  🔒" else "")), { LayoutOrder = order, TextSize = 17, Font = Theme.FontBlack, TextColor3 = if r.Level > level then C.TextDim else C.Accent, Parent = body })
 			order += 1
 		end
 		local def = Items[r.Result]
@@ -105,7 +110,7 @@ function Craft.Render()
 		UI.text(def.Name .. (if r.Count > 1 then " ×" .. r.Count else "") .. (if r.Kind == "Structure" then "  (structure)" else ""), { Position = UDim2.fromOffset(62, 4), Size = UDim2.new(1, -200, 0, 20), TextSize = 16, Font = Theme.FontBold, Parent = card })
 		UI.text(def.Description, { Position = UDim2.fromOffset(62, 24), Size = UDim2.new(1, -200, 0, 18), TextSize = 12, TextColor3 = C.TextDim, TextTruncate = Enum.TextTruncate.AtEnd, TextWrapped = false, Parent = card })
 		local ok = costChips(card, r.Cost, r.Kind == "Structure", 62, 46)
-		local label = if locked then "Lv " .. r.Level elseif r.Kind == "Structure" then "Place" else "Craft"
+		local label = if locked then "Tier " .. tier(r.Level) elseif r.Kind == "Structure" then "Place" else "Craft"
 		UI.button(label, { Size = UDim2.fromOffset(110, 44), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0), BackgroundColor3 = if locked or not ok then C.PanelLighter else C.AccentDark, Parent = card }, function()
 			if locked then
 				return

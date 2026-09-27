@@ -20,6 +20,8 @@ local HELD_SKINS: { [string]: { string | CFrame } } = {
 	Pistol = { "Pistol", CFrame.new() },
 	Rifle = { "Rifle", CFrame.new() },
 	StoneAxe = { "StoneAxe", UP_TO_FORWARD },
+	CrudeAxe = { "StoneAxe", UP_TO_FORWARD },
+	CrudeSpear = { "Spear", CFrame.new() },
 	RepairHammer = { "RepairHammer", UP_TO_FORWARD },
 	Canteen = { "Canteen", CFrame.new() },
 	Bandage = { "Bandage_Held", CFrame.new() },
@@ -121,6 +123,47 @@ builders.StoneAxe = function(m)
 	piece(m, { Name = "Haft", Size = Vector3.new(0.32, 0.32, 3.4), CFrame = CFrame.new(0, 0, -1.4), Color = WOOD, Material = Enum.Material.Wood })
 	piece(m, { Name = "Head", Class = "WedgePart", Size = Vector3.new(0.5, 1.6, 1.3), CFrame = CFrame.new(0, 0.7, -2.9) * CFrame.Angles(0, 0, 0), Color = STONE, Material = Enum.Material.Slate })
 	piece(m, { Name = "Lash", Size = Vector3.new(0.45, 0.5, 0.6), CFrame = CFrame.new(0, 0.15, -2.9), Color = ROPE, Material = Enum.Material.Fabric })
+end
+
+-- Tiered axes and pickaxes (Crude / Stone / Iron / Steel). The pack has a stone axe
+-- mesh (used for Crude + Stone); pickaxes and metal heads are procedural until the
+-- Blender tool set covers them.
+local TIER_HEAD = {
+	Crude = { Color3.fromRGB(150, 146, 140), Enum.Material.Slate },
+	Stone = { STONE, Enum.Material.Slate },
+	Iron = { Color3.fromRGB(120, 110, 104), Enum.Material.Metal },
+	Steel = { STEEL, Enum.Material.Metal },
+}
+for tn, head in TIER_HEAD do
+	builders[tn .. "Axe"] = builders[tn .. "Axe"] or function(m)
+		handle(m, Vector3.new(0.35, 0.35, 1), WOOD_DARK, Enum.Material.Wood)
+		piece(m, { Name = "Haft", Size = Vector3.new(0.32, 0.32, 3.4), CFrame = CFrame.new(0, 0, -1.4), Color = WOOD, Material = Enum.Material.Wood })
+		piece(m, { Name = "Head", Class = "WedgePart", Size = Vector3.new(0.45, 1.6, 1.3), CFrame = CFrame.new(0, 0.7, -2.9), Color = head[1], Material = head[2] })
+		piece(m, { Name = "Lash", Size = Vector3.new(0.45, 0.5, 0.6), CFrame = CFrame.new(0, 0.15, -2.9), Color = if tn == "Crude" or tn == "Stone" then ROPE else Color3.fromRGB(70, 60, 50), Material = Enum.Material.Fabric })
+	end
+	builders[tn .. "Pickaxe"] = function(m)
+		handle(m, Vector3.new(0.35, 0.35, 1), WOOD_DARK, Enum.Material.Wood)
+		piece(m, { Name = "Haft", Size = Vector3.new(0.32, 0.32, 3.6), CFrame = CFrame.new(0, 0, -1.5), Color = WOOD, Material = Enum.Material.Wood })
+		piece(m, { Name = "Pick", Class = "WedgePart", Size = Vector3.new(0.4, 0.5, 1.6), CFrame = CFrame.new(0, 0.9, -3.1) * CFrame.Angles(0, math.rad(180), 0), Color = head[1], Material = head[2] })
+		piece(m, { Name = "Pick", Class = "WedgePart", Size = Vector3.new(0.4, 0.5, 1.6), CFrame = CFrame.new(0, -0.7, -3.1) * CFrame.Angles(math.rad(180), 0, 0), Color = head[1], Material = head[2] })
+		piece(m, { Name = "Collar", Size = Vector3.new(0.5, 0.5, 0.6), CFrame = CFrame.new(0, 0.1, -3.1), Color = if tn == "Crude" or tn == "Stone" then ROPE else Color3.fromRGB(70, 60, 50), Material = Enum.Material.Fabric })
+	end
+end
+builders.CrudeSpear = function(m)
+	builders.Spear(m)
+	for _, d in m:GetChildren() do
+		if d.Name == "Tip" and d:IsA("BasePart") then
+			d.Color = Color3.fromRGB(150, 146, 140)
+		end
+	end
+end
+builders.FirstAid = function(m)
+	handle(m, Vector3.new(1, 0.7, 0.8), Color3.fromRGB(235, 235, 235), Enum.Material.SmoothPlastic)
+	piece(m, { Name = "Cross", Size = Vector3.new(0.5, 0.12, 0.5), CFrame = CFrame.new(0, 0.36, 0), Color = Color3.fromRGB(210, 60, 60), Material = Enum.Material.SmoothPlastic })
+end
+builders.Medkit = function(m)
+	handle(m, Vector3.new(1.4, 0.9, 1), Color3.fromRGB(60, 150, 90), Enum.Material.SmoothPlastic)
+	piece(m, { Name = "Cross", Size = Vector3.new(0.6, 0.12, 0.6), CFrame = CFrame.new(0, 0.46, 0), Color = Color3.fromRGB(240, 240, 240), Material = Enum.Material.SmoothPlastic })
 end
 
 builders.RepairHammer = function(m)

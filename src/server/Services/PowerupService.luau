@@ -113,7 +113,7 @@ function PowerupService.Start()
 							end
 						end
 					end
-					hum.WalkSpeed = speed
+					hum.WalkSpeed = speed * ctx.StaminaService.SpeedMult(p) * (if ctx.ChannelService.IsBusy(p, "Heal") then Config.Healing.MoveSlow else 1)
 					-- Distance challenge (sampled once per second)
 					local t = os.clock()
 					if t - st.LastSample >= 1 then
@@ -166,6 +166,32 @@ function PowerupService.OnSpawn(p: Player)
 end
 
 -- Multipliers used by other services ------------------------------------------------------------
+
+-- Chop/mine power multiplier for a tool class ("Axe" | "Pickaxe"). Classes (Phase 6) hook in here.
+function PowerupService.ToolSpeedMult(p: Player, toolType: string): number
+	return 1
+end
+
+function PowerupService.HealSpeedMult(p: Player): number
+	return 1
+end
+
+function PowerupService.StaminaMaxMult(p: Player): number
+	return 1
+end
+
+function PowerupService.StaminaRegenMult(p: Player): number
+	return 1
+end
+
+function PowerupService.SprintMult(p: Player): number
+	return 1
+end
+
+-- Durability lost per successful tool hit (1 = one hit). Classes/power-ups reduce it.
+function PowerupService.ToolWear(p: Player, toolType: string): number
+	return 1
+end
 
 function PowerupService.GatherMult(p: Player): number
 	local id, _, lv = level(p)

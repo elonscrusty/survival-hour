@@ -100,9 +100,20 @@ Config.Player = {
 	MaxHealth = 100,
 	WalkSpeed = 16,
 	FireHealRadius = 24,
-	FireHealPerSecond = 2,
+	FireHealPerSecond = 0.5, -- spec: no fast passive regen (slow warmth at your own fire only)
 	FireHealDelayAfterDamage = 5,
 	FallDamageMinVelocity = 75,
+}
+
+-- Spec: Stamina 100. Sprinting drains it; melee and blocking spend it (Phase 4).
+Config.Stamina = {
+	Max = 100,
+	SprintMult = 1.4, -- walk speed while sprinting
+	SprintDrain = 12, -- per second
+	Regen = 14, -- per second after RegenDelay
+	RegenDelay = 1.2,
+	MinToSprint = 20, -- after emptying the bar, sprint again at this much
+	ExhaustedMult = 0.9, -- slight slow while exhausted
 }
 
 Config.Inventory = {
@@ -171,9 +182,16 @@ Config.Canteen = {
 	FillRange = 8, -- studs from a stream water point
 }
 
+-- Spec healing: Bandage ~20, First Aid ~50, Medkit ~100. Timed, interrupted by damage.
 Config.Bandage = {
 	UseTime = 3,
-	Heal = 45,
+	Heal = 20,
+}
+Config.Healing = {
+	Bandage = { Heal = 20, UseTime = 3 },
+	FirstAid = { Heal = 50, UseTime = 5 },
+	Medkit = { Heal = 100, UseTime = 8 },
+	MoveSlow = 0.6, -- walk speed multiplier while applying
 }
 
 Config.CarePackage = {
@@ -336,6 +354,11 @@ export type ItemDef = {
 	DrawTime: number?,
 	ToolType: string?, -- gathering tool class matched against Resources RequiredTool ("Axe")
 	ToolPower: number?, -- chop points removed per hit
+	ToolTier: number?, -- 1 Crude, 2 Stone, 3 Iron, 4 Steel (Resources MinTier)
+	Heal: number?, -- healing items
+	UseTime: number?, -- seconds to apply (interrupted by damage)
+	Slots: number?, -- backpacks: pack slots
+	Tier: number?, -- general tier (armor, backpacks, storage)
 	Food: boolean?, -- resource that can be eaten (heal values in Resources.Food)
 	BlockReduction: number?, -- shield
 	DamageReduction: number?, -- armor
@@ -386,9 +409,14 @@ add({
 	Damage = 8, Cooldown = 0.6, Range = 5.5, StructureMult = 0.25, AnimalMult = 1,
 })
 add({
-	Id = "Spear", Name = "Spear", Kind = "Weapon", Description = "Long reach. Good for keeping wolves at bay.",
+	Id = "CrudeSpear", Name = "Crude Spear", Kind = "Weapon", Description = "Sharpened stick with a stone tip. Long reach.",
+	Icon = icon("↗", Color3.fromRGB(170, 130, 90)),
+	Damage = 16, Cooldown = 0.9, Range = 9, Durability = 40, StructureMult = 0.4, AnimalMult = 1.15,
+})
+add({
+	Id = "Spear", Name = "Stone Spear", Kind = "Weapon", Description = "Long reach. Good for keeping wolves at bay.",
 	Icon = icon("↗", WOOD),
-	Damage = 22, Cooldown = 0.9, Range = 9.5, Durability = 90, StructureMult = 0.6, AnimalMult = 1.15,
+	Damage = 22, Cooldown = 0.9, Range = 9.5, Durability = 100, StructureMult = 0.6, AnimalMult = 1.15,
 })
 add({
 	Id = "Bow", Name = "Bow", Kind = "Weapon", Description = "Hold to draw, release to fire. Uses arrows.",
@@ -420,11 +448,30 @@ add({
 })
 
 -- Tools ----------------------------------------------------------------------
-add({
-	Id = "StoneAxe", Name = "Stone Axe", Kind = "Tool", Description = "Chops small trees. Decent against wooden walls.",
-	Icon = icon("🪓", STONE),
-	Damage = 12, Cooldown = 0.7, Range = 6.5, Durability = 150, ToolType = "Axe", ToolPower = 10, StructureMult = 2, AnimalMult = 1,
-})
+-- Tool tiers (spec): Crude ~40 hits, Stone ~100, Iron ~225, Steel ~450. Small trees and
+-- small stones need Crude+, large ones Stone+. Tools hurt players, weapons do it better.
+local TIER_NAMES = { "Crude", "Stone", "Iron", "Steel" }
+local TIER_COLORS = { Color3.fromRGB(170, 130, 90), STONE, Color3.fromRGB(170, 120, 100), STEEL }
+local TIER_DUR = { 40, 100, 225, 450 }
+local TIER_POWER = { 10, 15, 22, 30 }
+local TIER_DMG = { 10, 13, 16, 19 }
+for tier = 1, 4 do
+	local tn = TIER_NAMES[tier]
+	add({
+		Id = tn .. "Axe", Name = tn .. " Axe", Kind = "Tool",
+		Description = if tier == 1 then "Chops small trees." elseif tier == 2 then "Chops large trees too. Decent against wooden walls." else "Fast, durable chopping.",
+		Icon = icon("🪓", TIER_COLORS[tier]),
+		Damage = TIER_DMG[tier], Cooldown = 0.7, Range = 6.5, Durability = TIER_DUR[tier], ToolType = "Axe", ToolTier = tier,
+		ToolPower = TIER_POWER[tier], StructureMult = 1.5 + tier * 0.25, AnimalMult = 1,
+	})
+	add({
+		Id = tn .. "Pickaxe", Name = tn .. " Pickaxe", Kind = "Tool",
+		Description = if tier == 1 then "Breaks small stones." elseif tier == 2 then "Breaks large stones too." else "Fast, durable mining.",
+		Icon = icon("⛏", TIER_COLORS[tier]),
+		Damage = TIER_DMG[tier], Cooldown = 0.75, Range = 6.5, Durability = TIER_DUR[tier], ToolType = "Pickaxe", ToolTier = tier,
+		ToolPower = TIER_POWER[tier], StructureMult = 1.25 + tier * 0.25, AnimalMult = 1,
+	})
+end
 add({
 	Id = "RepairHammer", Name = "Repair Hammer", Kind = "Tool", Description = "Repairs your team's structures using resources.",
 	Icon = icon("⚒", STONE),
@@ -434,7 +481,10 @@ add({
 -- Utility / worn / pouches ---------------------------------------------------------
 add({ Id = "Canteen", Name = "Canteen", Kind = "Utility", Description = "Fill at a stream. Pour on an enemy fire at night.", Icon = icon("💧", BLUE) })
 add({ Id = "Armor", Name = "Leather Armor", Kind = "Armor", Description = "Worn. Reduces incoming damage by 25%.", Icon = icon("▣", LEATHER), Durability = 300, DamageReduction = 0.25 })
-add({ Id = "Bandage", Name = "Bandage", Kind = "Consumable", Description = "Heals 45 HP over a 3 s use. Interrupted by damage.", Icon = icon("✚", RED) })
+add({ Id = "Bandage", Name = "Bandage", Kind = "Consumable", Description = "Heals 20 HP over a 3 s use. Interrupted by damage.", Icon = icon("✚", RED), Heal = 20, UseTime = 3 })
+-- Stronger healing lives in the pack (stackable, dropped on death like materials).
+add({ Id = "FirstAid", Name = "First Aid Kit", Kind = "Resource", Description = "Heals 50 HP over a 5 s use. Interrupted by damage.", Icon = icon("✚", Color3.fromRGB(230, 230, 230), "Square"), Heal = 50, UseTime = 5 })
+add({ Id = "Medkit", Name = "Medkit", Kind = "Resource", Description = "Heals 100 HP over an 8 s use. Interrupted by damage.", Icon = icon("✚", Color3.fromRGB(80, 200, 120), "Square"), Heal = 100, UseTime = 8 })
 add({ Id = "Arrow", Name = "Arrows", Kind = "Ammo", Description = "Ammunition for bows.", Icon = icon("🏹", WOOD) })
 add({ Id = "Bullet", Name = "Bullets", Kind = "Ammo", Description = "Ammunition for guns.", Icon = icon("•", Color3.fromRGB(200, 170, 90)) })
 
@@ -729,8 +779,8 @@ export type Inventory = {
 
 local InventoryModel = {}
 
-InventoryModel.ResourceIds = { "Stick", "Stone", "Wood", "Plant", "Leather", "Rope", "Berries", "Mushroom", "Scrap", "Iron", "Coal", "RareComponent" }
-InventoryModel.SlotNames = { "Weapon1", "Weapon2", "Tool", "Utility" }
+InventoryModel.ResourceIds = { "Stick", "Stone", "Wood", "Plant", "Leather", "Rope", "Berries", "Mushroom", "Scrap", "Iron", "Coal", "RareComponent", "FirstAid", "Medkit" }
+InventoryModel.SlotNames = { "Weapon1", "Weapon2", "Tool", "Tool2", "Utility" }
 
 local RESOURCE_SET = {}
 for _, id in InventoryModel.ResourceIds do
@@ -831,7 +881,7 @@ function InventoryModel.SlotsForKind(kind: string): { string }
 	if kind == "Weapon" then
 		return { "Weapon1", "Weapon2" }
 	elseif kind == "Tool" then
-		return { "Tool" }
+		return { "Tool", "Tool2" }
 	elseif kind == "Utility" then
 		return { "Utility" }
 	end
@@ -2566,12 +2616,34 @@ function ResourceRules.Available(s: State): boolean
 	return s.State == "Healthy" or s.State == "Damaged"
 end
 
--- Tool check. `toolType` is the equipped item's ToolType ("Axe") or nil for bare hands.
-function ResourceRules.ToolOk(def: Resources.Def, toolType: string?): boolean
+-- Tool check. `toolType` is the equipped item's ToolType ("Axe") or nil for bare hands;
+-- `tier` its ToolTier (1 Crude … 4 Steel).
+function ResourceRules.ToolOk(def: Resources.Def, toolType: string?, tier: number?): boolean
 	if def.RequiredTool == "Hand" then
 		return true
 	end
-	return toolType == def.RequiredTool
+	return toolType == def.RequiredTool and (tier or 1) >= (def.MinTier or 1)
+end
+
+-- Items for damage going from `before` to `after` health: the exact Yield is spread
+-- by cumulative damage, so the total is exact whatever the tool power.
+function ResourceRules.YieldFor(def: Resources.Def, maxHealth: number, before: number, after: number): { [string]: number }
+	local out = {}
+	local y = def.Yield
+	if not y then
+		for id, n in def.PerHit do
+			out[id] = n
+		end
+		return out
+	end
+	local d0, d1 = maxHealth - before, maxHealth - after
+	for id, total in y do
+		local n = math.floor(total * d1 / maxHealth + 1e-9) - math.floor(total * d0 / maxHealth + 1e-9)
+		if n > 0 then
+			out[id] = n
+		end
+	end
+	return out
 end
 
 function ResourceRules.RollDrops(def: Resources.Def, rng: Rng.Rng, into: { [string]: number }?): { [string]: number }
@@ -2589,14 +2661,14 @@ end
 
 -- One hit (tool swing or completed hand gather). `power` is the damage dealt:
 -- the tool's ToolPower for trees, Resources.HandPower (1) for hand nodes.
-function ResourceRules.Hit(def: Resources.Def, s: State, toolType: string?, power: number, now: number, rng: Rng.Rng): HitResult
+function ResourceRules.Hit(def: Resources.Def, s: State, toolType: string?, power: number, now: number, rng: Rng.Rng, tier: number?): HitResult
 	local res: HitResult = { Ok = false, Reason = nil, Dealt = 0, Items = {}, Finished = false }
 	if not ResourceRules.Available(s) then
 		res.Reason = "Unavailable"
 		return res
 	end
-	if not ResourceRules.ToolOk(def, toolType) then
-		res.Reason = "NeedTool"
+	if not ResourceRules.ToolOk(def, toolType, tier) then
+		res.Reason = if toolType == def.RequiredTool then "NeedTier" else "NeedTool"
 		return res
 	end
 	local dealt = math.min(s.Health, math.max(0, power))
@@ -2604,10 +2676,11 @@ function ResourceRules.Hit(def: Resources.Def, s: State, toolType: string?, powe
 		res.Reason = "NoDamage"
 		return res
 	end
+	local before = s.Health
 	s.Health -= dealt
 	res.Ok = true
 	res.Dealt = dealt
-	for id, n in def.PerHit do
+	for id, n in ResourceRules.YieldFor(def, s.Max, before, s.Health) do
 		res.Items[id] = (res.Items[id] or 0) + n
 	end
 	if s.Health <= 0 then
@@ -3698,6 +3771,24 @@ function Camp.Workbench(cf: CFrame, level: number, teamColor: Color3, parent: In
 		Build.Part({ Name = "AnvilBase", Size = Vector3.new(1.2, 1.6, 1.2), CFrame = CFrame.new(5.6, 0.8, 0), Color = WOOD_DARK, Material = Enum.Material.Wood, Parent = m })
 		Build.Decor({ Name = "Pennant", Class = "WedgePart", Size = Vector3.new(0.1, 2.4, 3), CFrame = CFrame.new(-4.2, 7.6, 1.9) * CFrame.Angles(0, math.rad(90), math.rad(180)), Color = teamColor, Material = Enum.Material.Fabric, Parent = m })
 	end
+	if level >= 4 then
+		-- Tier IV: stone forge with glowing coals and a chimney
+		Build.Part({ Name = "Forge", Size = Vector3.new(3.4, 2.6, 3), CFrame = CFrame.new(-6.4, 1.3, 0.4), Color = Color3.fromRGB(96, 90, 86), Material = Enum.Material.Brick, Parent = m })
+		local coals = Build.Decor({ Name = "ForgeCoals", Size = Vector3.new(2.4, 0.3, 2), CFrame = CFrame.new(-6.4, 2.7, 0.4), Color = Color3.fromRGB(255, 110, 40), Material = Enum.Material.Neon, Parent = m })
+		local glow = Instance.new("PointLight")
+		glow.Color = Color3.fromRGB(255, 140, 70)
+		glow.Range = 12
+		glow.Brightness = 1.4
+		glow.Parent = coals
+		Build.Part({ Name = "ForgeChimney", Size = Vector3.new(1.4, 5, 1.4), CFrame = CFrame.new(-6.9, 5.2, 1.3), Color = Color3.fromRGB(80, 76, 72), Material = Enum.Material.Brick, Parent = m, CanCollide = false })
+	end
+	if level >= 5 then
+		-- Tier V: steel-plated top and a rack of steel tools
+		Build.Decor({ Name = "SteelPlate", Size = Vector3.new(8.1, 0.12, 4.1), CFrame = CFrame.new(0, 3.86, 0), Color = Color3.fromRGB(170, 176, 186), Material = Enum.Material.DiamondPlate, Parent = m })
+		for i = -1, 1 do
+			Build.Decor({ Name = "SteelTool", Size = Vector3.new(0.25, 2.6, 0.25), CFrame = CFrame.new(i * 1.6 + 0.5, 6.4, 1.62), Color = Color3.fromRGB(196, 202, 212), Material = Enum.Material.Metal, Parent = m })
+		end
+	end
 	local lvl = Build.Decor({ Name = "LevelPlate", Size = Vector3.new(2.4, 1, 0.1), CFrame = CFrame.new(0, 2.6, -2.05), Color = teamColor, Material = Enum.Material.SmoothPlastic, Parent = m })
 	local sg = Instance.new("SurfaceGui")
 	sg.Face = Enum.NormalId.Front
@@ -3705,7 +3796,7 @@ function Camp.Workbench(cf: CFrame, level: number, teamColor: Color3, parent: In
 	local tl = Instance.new("TextLabel")
 	tl.Size = UDim2.fromScale(1, 1)
 	tl.BackgroundTransparency = 1
-	tl.Text = "LV " .. level
+	tl.Text = ({ "I", "II", "III", "IV", "V" })[level] or ("LV " .. level)
 	tl.Font = Enum.Font.GothamBlack
 	tl.TextScaled = true
 	tl.TextColor3 = Color3.new(1, 1, 1)
@@ -3716,7 +3807,7 @@ function Camp.Workbench(cf: CFrame, level: number, teamColor: Color3, parent: In
 	if Skins.Enabled() then
 		local name = "SM_Workbench_Level0" .. math.clamp(level, 1, 3)
 		local scale = ({ 1.3, 1.12, 1.0 })[math.clamp(level, 1, 3)]
-		Skins.Dress(m, name, { scale = scale, keep = { Pennant = true } })
+		Skins.Dress(m, name, { scale = scale, keep = { Pennant = true, Forge = true, ForgeCoals = true, ForgeChimney = true, SteelPlate = true, SteelTool = true } })
 	end
 	return m
 end
@@ -4259,29 +4350,39 @@ end
 
 --- Rock pile: a colliding main boulder (+ optional side rock) that stays, with
 --- 4-6 small loose chunks marked Yield. Parts: <= 9.
-function Flora.RockPile(cf: CFrame, rng: Random, parent: Instance?): Model
-	local m = Build.Model("RockPile")
-	local root = makeRoot(m, 6, 3.5) -- 1
+local function rockPile(cf: CFrame, rng: Random, parent: Instance?, k: number, name: string): Model
+	local m = Build.Model(name)
+	local root = makeRoot(m, 6 * k, 3.5 * k) -- 1
 	local mat = if rng:NextNumber() < 0.5 then M.Rock else M.Slate
-	local main = Vector3.new(rng:NextNumber(3.6, 4.6), rng:NextNumber(2.4, 3.2), rng:NextNumber(3.2, 4.2))
+	local main = Vector3.new(rng:NextNumber(3.6, 4.6), rng:NextNumber(2.4, 3.2), rng:NextNumber(3.2, 4.2)) * k
 	solid("Boulder", main, CFrame.new(0, main.Y * 0.42, 0) * CFrame.Angles(rng:NextNumber(-0.15, 0.15), rng:NextNumber(0, TAU), rng:NextNumber(-0.15, 0.15)), shade(rng, ROCK, 0.08), mat, m) -- 2
-	if rng:NextNumber() < 0.6 then -- 3
-		local s = Vector3.new(rng:NextNumber(1.8, 2.4), rng:NextNumber(1.2, 1.8), rng:NextNumber(1.6, 2.2))
+	if rng:NextNumber() < 0.6 or k > 1 then -- 3
+		local s = Vector3.new(rng:NextNumber(1.8, 2.4), rng:NextNumber(1.2, 1.8), rng:NextNumber(1.6, 2.2)) * k
 		local a = rng:NextNumber(0, TAU)
-		solid("Rock", s, CFrame.new(math.cos(a) * 2.2, s.Y * 0.4, math.sin(a) * 2.2) * CFrame.Angles(rng:NextNumber(-0.3, 0.3), rng:NextNumber(0, TAU), rng:NextNumber(-0.3, 0.3)), shade(rng, ROCK, 0.08), mat, m)
+		solid("Rock", s, CFrame.new(math.cos(a) * 2.2 * k, s.Y * 0.4, math.sin(a) * 2.2 * k) * CFrame.Angles(rng:NextNumber(-0.3, 0.3), rng:NextNumber(0, TAU), rng:NextNumber(-0.3, 0.3)), shade(rng, ROCK, 0.08), mat, m)
 	end
 	local n = rng:NextInteger(4, 6)
 	local a0 = rng:NextNumber(0, TAU)
 	for i = 1, n do -- <= 9
 		local a = a0 + i * TAU / n + rng:NextNumber(-0.3, 0.3)
-		local dist = rng:NextNumber(2.2, 2.9)
-		local s = Vector3.new(rng:NextNumber(0.7, 1.2), rng:NextNumber(0.5, 0.9), rng:NextNumber(0.7, 1.1))
+		local dist = rng:NextNumber(2.2, 2.9) * k
+		local s = Vector3.new(rng:NextNumber(0.7, 1.2), rng:NextNumber(0.5, 0.9), rng:NextNumber(0.7, 1.1)) * math.sqrt(k)
 		markYield(block("Chunk", s, CFrame.new(math.cos(a) * dist, s.Y * 0.4, math.sin(a) * dist) * CFrame.Angles(rng:NextNumber(-0.4, 0.4), rng:NextNumber(0, TAU), rng:NextNumber(-0.4, 0.4)),
 			shade(rng, ROCK, 0.1), mat, m))
 	end
 	finish(m, root, cf, parent)
-	skinHarvest(m, "SM_StoneDeposit01", "SM_StoneDeposit01_Depleted", 1.05)
+	skinHarvest(m, "SM_StoneDeposit01", "SM_StoneDeposit01_Depleted", 1.05 * k)
 	return m
+end
+
+--- Small stone deposit (Crude Pickaxe+): boulder + chunks (Yield). Parts: <= 9.
+function Flora.RockPile(cf: CFrame, rng: Random, parent: Instance?): Model
+	return rockPile(cf, rng, parent, 1, "RockPile")
+end
+
+--- Large stone deposit (Stone Pickaxe+): the same pile at double size.
+function Flora.LargeRockPile(cf: CFrame, rng: Random, parent: Instance?): Model
+	return rockPile(cf, rng, parent, 2, "LargeRockPile")
 end
 
 --- Twig pile: a leaf-litter patch with 5-7 crossed twigs (Yield). Parts: <= 9.
@@ -5018,6 +5119,8 @@ local HELD_SKINS: { [string]: { string | CFrame } } = {
 	Pistol = { "Pistol", CFrame.new() },
 	Rifle = { "Rifle", CFrame.new() },
 	StoneAxe = { "StoneAxe", UP_TO_FORWARD },
+	CrudeAxe = { "StoneAxe", UP_TO_FORWARD },
+	CrudeSpear = { "Spear", CFrame.new() },
 	RepairHammer = { "RepairHammer", UP_TO_FORWARD },
 	Canteen = { "Canteen", CFrame.new() },
 	Bandage = { "Bandage_Held", CFrame.new() },
@@ -5119,6 +5222,47 @@ builders.StoneAxe = function(m)
 	piece(m, { Name = "Haft", Size = Vector3.new(0.32, 0.32, 3.4), CFrame = CFrame.new(0, 0, -1.4), Color = WOOD, Material = Enum.Material.Wood })
 	piece(m, { Name = "Head", Class = "WedgePart", Size = Vector3.new(0.5, 1.6, 1.3), CFrame = CFrame.new(0, 0.7, -2.9) * CFrame.Angles(0, 0, 0), Color = STONE, Material = Enum.Material.Slate })
 	piece(m, { Name = "Lash", Size = Vector3.new(0.45, 0.5, 0.6), CFrame = CFrame.new(0, 0.15, -2.9), Color = ROPE, Material = Enum.Material.Fabric })
+end
+
+-- Tiered axes and pickaxes (Crude / Stone / Iron / Steel). The pack has a stone axe
+-- mesh (used for Crude + Stone); pickaxes and metal heads are procedural until the
+-- Blender tool set covers them.
+local TIER_HEAD = {
+	Crude = { Color3.fromRGB(150, 146, 140), Enum.Material.Slate },
+	Stone = { STONE, Enum.Material.Slate },
+	Iron = { Color3.fromRGB(120, 110, 104), Enum.Material.Metal },
+	Steel = { STEEL, Enum.Material.Metal },
+}
+for tn, head in TIER_HEAD do
+	builders[tn .. "Axe"] = builders[tn .. "Axe"] or function(m)
+		handle(m, Vector3.new(0.35, 0.35, 1), WOOD_DARK, Enum.Material.Wood)
+		piece(m, { Name = "Haft", Size = Vector3.new(0.32, 0.32, 3.4), CFrame = CFrame.new(0, 0, -1.4), Color = WOOD, Material = Enum.Material.Wood })
+		piece(m, { Name = "Head", Class = "WedgePart", Size = Vector3.new(0.45, 1.6, 1.3), CFrame = CFrame.new(0, 0.7, -2.9), Color = head[1], Material = head[2] })
+		piece(m, { Name = "Lash", Size = Vector3.new(0.45, 0.5, 0.6), CFrame = CFrame.new(0, 0.15, -2.9), Color = if tn == "Crude" or tn == "Stone" then ROPE else Color3.fromRGB(70, 60, 50), Material = Enum.Material.Fabric })
+	end
+	builders[tn .. "Pickaxe"] = function(m)
+		handle(m, Vector3.new(0.35, 0.35, 1), WOOD_DARK, Enum.Material.Wood)
+		piece(m, { Name = "Haft", Size = Vector3.new(0.32, 0.32, 3.6), CFrame = CFrame.new(0, 0, -1.5), Color = WOOD, Material = Enum.Material.Wood })
+		piece(m, { Name = "Pick", Class = "WedgePart", Size = Vector3.new(0.4, 0.5, 1.6), CFrame = CFrame.new(0, 0.9, -3.1) * CFrame.Angles(0, math.rad(180), 0), Color = head[1], Material = head[2] })
+		piece(m, { Name = "Pick", Class = "WedgePart", Size = Vector3.new(0.4, 0.5, 1.6), CFrame = CFrame.new(0, -0.7, -3.1) * CFrame.Angles(math.rad(180), 0, 0), Color = head[1], Material = head[2] })
+		piece(m, { Name = "Collar", Size = Vector3.new(0.5, 0.5, 0.6), CFrame = CFrame.new(0, 0.1, -3.1), Color = if tn == "Crude" or tn == "Stone" then ROPE else Color3.fromRGB(70, 60, 50), Material = Enum.Material.Fabric })
+	end
+end
+builders.CrudeSpear = function(m)
+	builders.Spear(m)
+	for _, d in m:GetChildren() do
+		if d.Name == "Tip" and d:IsA("BasePart") then
+			d.Color = Color3.fromRGB(150, 146, 140)
+		end
+	end
+end
+builders.FirstAid = function(m)
+	handle(m, Vector3.new(1, 0.7, 0.8), Color3.fromRGB(235, 235, 235), Enum.Material.SmoothPlastic)
+	piece(m, { Name = "Cross", Size = Vector3.new(0.5, 0.12, 0.5), CFrame = CFrame.new(0, 0.36, 0), Color = Color3.fromRGB(210, 60, 60), Material = Enum.Material.SmoothPlastic })
+end
+builders.Medkit = function(m)
+	handle(m, Vector3.new(1.4, 0.9, 1), Color3.fromRGB(60, 150, 90), Enum.Material.SmoothPlastic)
+	piece(m, { Name = "Cross", Size = Vector3.new(0.6, 0.12, 0.6), CFrame = CFrame.new(0, 0.46, 0), Color = Color3.fromRGB(240, 240, 240), Material = Enum.Material.SmoothPlastic })
 end
 
 builders.RepairHammer = function(m)
@@ -6286,6 +6430,7 @@ Net.Events = {
 	"LobbyAction",
 	"DevCommand",
 	"ClientReady",
+	"Sprint", -- (bool) hold-to-sprint state
 }
 
 local folder: Folder
@@ -6642,30 +6787,48 @@ export type Recipe = {
 
 local Recipes = {}
 
+-- Survival Wars tiers (spec): the Workbench is pre-placed at Tier I and upgrades
+-- only unlock recipes. Costs are deliberately grindy; all numbers are tunable.
+-- Plant = Fiber. Tier III+ needs Scrap, IV+ Iron, V Rare Components (POIs/caves/chests).
 Recipes.List = {
-	-- Always available, anywhere (does NOT occupy a workbench unlock)
+	-- Anywhere (no workbench)
 	{ Id = "Rope", Result = "Rope", Count = 1, Level = 0, Kind = "Resource", Cost = { Plant = 3 }, Order = 0 },
+	{ Id = "Bandage", Result = "Bandage", Count = 1, Level = 0, Kind = "Consumable", Cost = { Plant = 4 }, Order = 1 },
 
-	-- Workbench level 1
-	{ Id = "StoneAxe", Result = "StoneAxe", Count = 1, Level = 1, Kind = "Equipment", Cost = { Stick = 1, Stone = 1 }, Order = 1 },
-	{ Id = "StorageBox", Result = "StorageBox", Count = 1, Level = 1, Kind = "Structure", Cost = { Wood = 10, Stone = 2 }, Order = 2 },
-	{ Id = "WoodWall", Result = "WoodWall", Count = 1, Level = 1, Kind = "Structure", Cost = { Wood = 4 }, Order = 3 },
-	{ Id = "Spear", Result = "Spear", Count = 1, Level = 1, Kind = "Equipment", Cost = { Stick = 3, Stone = 2 }, Order = 4 },
-	{ Id = "RepairHammer", Result = "RepairHammer", Count = 1, Level = 1, Kind = "Equipment", Cost = { Wood = 2, Stone = 2 }, Order = 5 },
+	-- Tier I: crude tools, first walls and storage
+	{ Id = "CrudeAxe", Result = "CrudeAxe", Count = 1, Level = 1, Kind = "Equipment", Cost = { Stick = 8, Stone = 3, Plant = 3 }, Order = 10 },
+	{ Id = "CrudePickaxe", Result = "CrudePickaxe", Count = 1, Level = 1, Kind = "Equipment", Cost = { Stick = 10, Stone = 5, Plant = 3 }, Order = 11 },
+	{ Id = "CrudeSpear", Result = "CrudeSpear", Count = 1, Level = 1, Kind = "Equipment", Cost = { Stick = 12, Stone = 3, Plant = 5 }, Order = 12 },
+	{ Id = "StorageBox", Result = "StorageBox", Count = 1, Level = 1, Kind = "Structure", Cost = { Wood = 20, Stone = 6 }, Order = 13 },
+	{ Id = "WoodWall", Result = "WoodWall", Count = 1, Level = 1, Kind = "Structure", Cost = { Wood = 12 }, Order = 14 },
+	{ Id = "RepairHammer", Result = "RepairHammer", Count = 1, Level = 1, Kind = "Equipment", Cost = { Wood = 6, Stone = 6 }, Order = 15 },
 
-	-- Workbench level 2
-	{ Id = "Canteen", Result = "Canteen", Count = 1, Level = 2, Kind = "Equipment", Cost = { Leather = 2, Rope = 1 }, Order = 6 },
-	{ Id = "Bow", Result = "Bow", Count = 1, Level = 2, Kind = "Equipment", Cost = { Wood = 3, Rope = 2 }, Order = 7 },
-	{ Id = "Arrows", Result = "Arrow", Count = 6, Level = 2, Kind = "Ammo", Cost = { Stick = 2, Stone = 1 }, Order = 8 },
-	{ Id = "Gate", Result = "Gate", Count = 1, Level = 2, Kind = "Structure", Cost = { Wood = 6, Rope = 1 }, Order = 9 },
-	{ Id = "Spikes", Result = "Spikes", Count = 1, Level = 2, Kind = "Structure", Cost = { Wood = 3, Stick = 2 }, Order = 10 },
+	-- Tier II: stone tools, bows, gates, spikes, canteen
+	{ Id = "StoneAxe", Result = "StoneAxe", Count = 1, Level = 2, Kind = "Equipment", Cost = { Wood = 12, Stone = 16, Rope = 3 }, Order = 20 },
+	{ Id = "StonePickaxe", Result = "StonePickaxe", Count = 1, Level = 2, Kind = "Equipment", Cost = { Wood = 12, Stone = 20, Rope = 3 }, Order = 21 },
+	{ Id = "Spear", Result = "Spear", Count = 1, Level = 2, Kind = "Equipment", Cost = { Wood = 10, Stone = 12, Rope = 2 }, Order = 22 },
+	{ Id = "Bow", Result = "Bow", Count = 1, Level = 2, Kind = "Equipment", Cost = { Wood = 16, Rope = 6 }, Order = 23 },
+	{ Id = "Arrows", Result = "Arrow", Count = 6, Level = 2, Kind = "Ammo", Cost = { Stick = 6, Stone = 3, Plant = 2 }, Order = 24 },
+	{ Id = "Canteen", Result = "Canteen", Count = 1, Level = 2, Kind = "Equipment", Cost = { Leather = 4, Rope = 2 }, Order = 25 },
+	{ Id = "Gate", Result = "Gate", Count = 1, Level = 2, Kind = "Structure", Cost = { Wood = 24, Rope = 3 }, Order = 26 },
+	{ Id = "Spikes", Result = "Spikes", Count = 1, Level = 2, Kind = "Structure", Cost = { Wood = 12, Stick = 8 }, Order = 27 },
+	{ Id = "FirstAid", Result = "FirstAid", Count = 1, Level = 2, Kind = "Resource", Cost = { Plant = 8, Rope = 2, Mushroom = 2 }, Order = 28 },
 
-	-- Workbench level 3
-	{ Id = "Armor", Result = "Armor", Count = 1, Level = 3, Kind = "Equipment", Cost = { Leather = 4, Rope = 2, Stone = 3 }, Order = 11 },
-	{ Id = "Sword", Result = "Sword", Count = 1, Level = 3, Kind = "Equipment", Cost = { Stone = 6, Wood = 2, Leather = 1 }, Order = 12 },
-	{ Id = "ReinforcedWall", Result = "ReinforcedWall", Count = 1, Level = 3, Kind = "Structure", Cost = { Wood = 4, Stone = 6 }, Order = 13 },
-	{ Id = "Watchtower", Result = "Watchtower", Count = 1, Level = 3, Kind = "Structure", Cost = { Wood = 12, Stone = 4, Rope = 4 }, Order = 14 },
-	{ Id = "Shield", Result = "Shield", Count = 1, Level = 3, Kind = "Equipment", Cost = { Wood = 5, Leather = 2, Rope = 1 }, Order = 15 },
+	-- Tier III: scrap-era weapons and defences
+	{ Id = "Sword", Result = "Sword", Count = 1, Level = 3, Kind = "Equipment", Cost = { Scrap = 12, Wood = 8, Leather = 2 }, Order = 30 },
+	{ Id = "Shield", Result = "Shield", Count = 1, Level = 3, Kind = "Equipment", Cost = { Wood = 20, Scrap = 6, Leather = 3 }, Order = 31 },
+	{ Id = "Armor", Result = "Armor", Count = 1, Level = 3, Kind = "Equipment", Cost = { Leather = 10, Rope = 4, Scrap = 4 }, Order = 32 },
+	{ Id = "ReinforcedWall", Result = "ReinforcedWall", Count = 1, Level = 3, Kind = "Structure", Cost = { Wood = 16, Stone = 24, Scrap = 2 }, Order = 33 },
+	{ Id = "Watchtower", Result = "Watchtower", Count = 1, Level = 3, Kind = "Structure", Cost = { Wood = 60, Stone = 20, Rope = 8, Scrap = 4 }, Order = 34 },
+
+	-- Tier IV: iron tools, medkits
+	{ Id = "IronAxe", Result = "IronAxe", Count = 1, Level = 4, Kind = "Equipment", Cost = { Wood = 20, Iron = 10, Scrap = 6 }, Order = 40 },
+	{ Id = "IronPickaxe", Result = "IronPickaxe", Count = 1, Level = 4, Kind = "Equipment", Cost = { Wood = 20, Iron = 12, Scrap = 6 }, Order = 41 },
+	{ Id = "Medkit", Result = "Medkit", Count = 1, Level = 4, Kind = "Resource", Cost = { Plant = 12, Scrap = 4, Iron = 2, Mushroom = 4 }, Order = 42 },
+
+	-- Tier V: steel (endgame)
+	{ Id = "SteelAxe", Result = "SteelAxe", Count = 1, Level = 5, Kind = "Equipment", Cost = { Wood = 30, Iron = 24, Coal = 16, Scrap = 12 }, Order = 50 },
+	{ Id = "SteelPickaxe", Result = "SteelPickaxe", Count = 1, Level = 5, Kind = "Equipment", Cost = { Wood = 30, Iron = 28, Coal = 16, Scrap = 12 }, Order = 51 },
 } :: { Recipe }
 
 Recipes.ById = {} :: { [string]: Recipe }
@@ -6680,12 +6843,15 @@ for _, r in Recipes.List do
 end
 
 -- Workbench upgrade costs: key = target level.
+-- Spec costs (paid from your pack + your storage).
 Recipes.WorkbenchUpgrades = {
-	[2] = { Wood = 20, Stone = 15, Leather = 3, Rope = 4 },
-	[3] = { Wood = 40, Stone = 30, Leather = 6, Rope = 8 },
+	[2] = { Wood = 64, Stone = 36, Plant = 10 },
+	[3] = { Wood = 192, Stone = 96, Scrap = 40 },
+	[4] = { Wood = 384, Stone = 192, Scrap = 100, Iron = 32 },
+	[5] = { Wood = 640, Stone = 300, Scrap = 200, Iron = 96, RareComponent = 3 },
 } :: { [number]: { [string]: number } }
 
-Recipes.MaxWorkbenchLevel = 3
+Recipes.MaxWorkbenchLevel = 5
 
 -- Repair costs: resource spent per hammer swing by structure material. Each swing
 -- restores RepairFraction of max health.
@@ -6713,7 +6879,10 @@ return Recipes
 --   Label           prompt / UI name
 --   Health          trees: chop points (a hit removes the tool's Power);
 --                   harvest nodes: number of gathers before exhaustion
---   RequiredTool    tool class (Items[..].ToolType) or "Hand"
+--   RequiredTool    tool class (Items[..].ToolType: "Axe" | "Pickaxe") or "Hand"
+--   MinTier         minimum Items[..].ToolTier (1 Crude, 2 Stone, 3 Iron, 4 Steel); nil = any
+--   Yield           exact total the node gives, spread over its hits by damage dealt
+--                   (spec: small tree = EXACTLY 4 Wood). Replaces PerHit when present.
 --   HarvestTime     seconds per hand/prompt gather (trees: seconds per prompt chop)
 --   PerHit          items granted on every successful hit/gather
 --   Drops           rolled once when the node is felled/exhausted:
@@ -6737,6 +6906,8 @@ export type Def = {
 	Label: string,
 	Health: number,
 	RequiredTool: string,
+	MinTier: number?,
+	Yield: { [string]: number }?,
 	HarvestTime: number,
 	PerHit: { [string]: number },
 	Drops: { Drop },
@@ -6760,15 +6931,16 @@ Resources.HandPower = 1
 -- The order resources are placed in (big blockers first).
 Resources.Order = {
 	"TreeLarge", "TreeMedium", "TreeSmall", "DeadTree",
-	"RockPile", "LooseStones", "Twigs", "FibrePlant", "BerryBush", "Mushrooms",
+	"LargeRockPile", "RockPile", "LooseStones", "Twigs", "FibrePlant", "BerryBush", "Mushrooms",
 }
 
 local defs: { [string]: Def } = {
 	TreeSmall = {
-		Id = "TreeSmall", Kind = "Tree", Label = "Young Tree",
-		Health = 30, RequiredTool = "Axe", HarvestTime = 0.7,
-		PerHit = { Wood = 1 },
-		Drops = { { Item = "Wood", Min = 1, Max = 2 }, { Item = "Stick", Min = 1, Max = 2, Chance = 0.6 } },
+		-- Spec: EXACTLY 4 Wood, Crude Axe or better.
+		Id = "TreeSmall", Kind = "Tree", Label = "Small Tree",
+		Health = 40, RequiredTool = "Axe", MinTier = 1, HarvestTime = 0.7,
+		PerHit = { Wood = 1 }, Yield = { Wood = 4 },
+		Drops = { { Item = "Stick", Min = 1, Max = 2, Chance = 0.6 } },
 		FellTime = 1.4, RespawnTime = 90, GrowTime = 4,
 		Range = 11, Rarity = "Common",
 		Placement = { PerSector = 22, NearCamp = 5, Radius = 3 },
@@ -6777,10 +6949,11 @@ local defs: { [string]: Def } = {
 		Model = "ResourceTree", ModelArgs = { "Small" },
 	},
 	TreeMedium = {
+		-- Between the spec's small (4) and large (16) trees: 8 Wood, Crude Axe or better.
 		Id = "TreeMedium", Kind = "Tree", Label = "Tree",
-		Health = 60, RequiredTool = "Axe", HarvestTime = 0.7,
-		PerHit = { Wood = 1 },
-		Drops = { { Item = "Wood", Min = 3, Max = 4 }, { Item = "Stick", Min = 1, Max = 3 } },
+		Health = 80, RequiredTool = "Axe", MinTier = 1, HarvestTime = 0.7,
+		PerHit = { Wood = 1 }, Yield = { Wood = 8 },
+		Drops = { { Item = "Stick", Min = 1, Max = 3 } },
 		FellTime = 1.6, RespawnTime = 150, GrowTime = 5,
 		Range = 12, Rarity = "Common",
 		Placement = { PerSector = 14, NearCamp = 2, MinCenterDist = 140, Radius = 4 },
@@ -6790,10 +6963,11 @@ local defs: { [string]: Def } = {
 	},
 	TreeLarge = {
 		-- Big yield, slow to fell (loud, exposed): found deeper in the forest.
-		Id = "TreeLarge", Kind = "Tree", Label = "Old Tree",
-		Health = 110, RequiredTool = "Axe", HarvestTime = 0.7,
-		PerHit = { Wood = 1 },
-		Drops = { { Item = "Wood", Min = 6, Max = 8 }, { Item = "Stick", Min = 2, Max = 4 } },
+		-- Spec: EXACTLY 16 Wood, Stone Axe or better.
+		Id = "TreeLarge", Kind = "Tree", Label = "Large Tree",
+		Health = 160, RequiredTool = "Axe", MinTier = 2, HarvestTime = 0.7,
+		PerHit = { Wood = 1 }, Yield = { Wood = 16 },
+		Drops = { { Item = "Stick", Min = 2, Max = 4 } },
 		FellTime = 2, RespawnTime = 240, GrowTime = 6,
 		Range = 13, Rarity = "Uncommon",
 		Placement = { PerSector = 6, NearCamp = 0, MaxCenterDist = 330, Radius = 6 },
@@ -6803,9 +6977,9 @@ local defs: { [string]: Def } = {
 	},
 	DeadTree = {
 		Id = "DeadTree", Kind = "Tree", Label = "Dead Tree",
-		Health = 40, RequiredTool = "Axe", HarvestTime = 0.7,
-		PerHit = { Stick = 1 },
-		Drops = { { Item = "Wood", Min = 2, Max = 3 }, { Item = "Stick", Min = 2, Max = 3 } },
+		Health = 40, RequiredTool = "Axe", MinTier = 1, HarvestTime = 0.7,
+		PerHit = { Stick = 1 }, Yield = { Wood = 3, Stick = 4 },
+		Drops = {},
 		FellTime = 1.4, RespawnTime = 180, GrowTime = 4,
 		Range = 11, Rarity = "Common",
 		Placement = { PerSector = 6, NearCamp = 1, Radius = 3 },
@@ -6814,9 +6988,10 @@ local defs: { [string]: Def } = {
 		Model = "DeadTree", ModelArgs = {},
 	},
 	RockPile = {
-		Id = "RockPile", Kind = "Harvest", Label = "Rock Pile",
-		Health = 3, RequiredTool = "Hand", HarvestTime = 1.0,
-		PerHit = { Stone = 2 },
+		-- Spec: small stone = 3 Stone, Crude Pickaxe or better.
+		Id = "RockPile", Kind = "Harvest", Label = "Small Stone",
+		Health = 30, RequiredTool = "Pickaxe", MinTier = 1, HarvestTime = 0.9,
+		PerHit = { Stone = 1 }, Yield = { Stone = 3 },
 		Drops = {},
 		FellTime = 0, RespawnTime = 90, GrowTime = 1,
 		Range = 10, Rarity = "Common",
@@ -6824,6 +6999,19 @@ local defs: { [string]: Def } = {
 		Sounds = { Hit = "Gather", Break = "Gather" },
 		Effects = { Hit = "Stone", Break = "Dust" },
 		Model = "RockPile", ModelArgs = {},
+	},
+	LargeRockPile = {
+		-- Spec: large stone = 12 Stone, Stone Pickaxe or better.
+		Id = "LargeRockPile", Kind = "Harvest", Label = "Large Stone",
+		Health = 120, RequiredTool = "Pickaxe", MinTier = 2, HarvestTime = 0.9,
+		PerHit = { Stone = 1 }, Yield = { Stone = 12 },
+		Drops = {},
+		FellTime = 0, RespawnTime = 180, GrowTime = 2,
+		Range = 12, Rarity = "Uncommon",
+		Placement = { PerSector = 4, NearCamp = 0, MinCenterDist = 120, Radius = 5 },
+		Sounds = { Hit = "Gather", Break = "Gather" },
+		Effects = { Hit = "Stone", Break = "Dust" },
+		Model = "LargeRockPile", ModelArgs = {},
 	},
 	LooseStones = {
 		Id = "LooseStones", Kind = "Harvest", Label = "Loose Stones",
@@ -6895,9 +7083,10 @@ function Resources.Get(id: string): Def?
 end
 
 -- Food: resource items that can be eaten from the pack.
+-- Spec: no fast passive regen; food is a small top-up.
 Resources.Food = {
-	Berries = { Heal = 10, Cooldown = 1 },
-	Mushroom = { Heal = 18, Cooldown = 1 },
+	Berries = { Heal = 5, Cooldown = 1.5 },
+	Mushroom = { Heal = 8, Cooldown = 1.5 },
 }
 
 -- Respawns wait until nothing stands on the spot.
@@ -57346,6 +57535,7 @@ local order = {
 	"LivesService",
 	"InventoryService",
 	"ChannelService",
+	"StaminaService",
 	"CombatService",
 	"GatherService",
 	"CraftService",
@@ -57495,7 +57685,7 @@ function BuildService.Validate(p: Player, id: string, pos: Vector3, yaw: number)
 		return false, "No camp"
 	end
 	if ctx.CampService.GetLevel(team) < recipe.Level then
-		return false, "Requires workbench level " .. recipe.Level
+		return false, "Requires Workbench Tier " .. ({ "I", "II", "III", "IV", "V" })[recipe.Level]
 	end
 	local root = ctx.Util.Root(p)
 	if not root then
@@ -58161,7 +58351,7 @@ function CampService._onPour(player: Player, prompt: ProximityPrompt)
 		return fail("That fire is already out.")
 	end
 	if not ctx.InventoryService.HasFilledCanteen(player) then
-		return fail(if ctx.InventoryService.HasCanteen(player) then "Your canteen is empty. Fill it at a stream." else "You need a filled canteen (Workbench level 2).")
+		return fail(if ctx.InventoryService.HasCanteen(player) then "Your canteen is empty. Fill it at a stream." else "You need a filled canteen (Workbench Tier II).")
 	end
 	local other = ctx.ChannelService.AnyOnTarget("Pour", fireTeam)
 	if other and other ~= player then
@@ -58794,7 +58984,7 @@ function CombatService._onAttack(p: Player, payload: any)
 		end
 	end
 	if worn and slot then
-		ctx.InventoryService.Wear(p, slot, 1)
+		ctx.InventoryService.Wear(p, slot, if def.ToolType then ctx.PowerupService.ToolWear(p, def.ToolType) else 1)
 	end
 	if hitPos and kind ~= "Node" then
 		Net.FireAll("Fx", "Impact", { Pos = hitPos, Kind = kind })
@@ -58810,7 +59000,7 @@ function CombatService._fireArrow(p: Player, def: any, payload: any, slot: strin
 		return
 	end
 	if (inv.Ammo.Arrow or 0) <= 0 then
-		ctx.Util.Notify(p, "No arrows! Craft them at Workbench level 2.", "warn")
+		ctx.Util.Notify(p, "No arrows! Craft them at Workbench Tier II.", "warn")
 		return
 	end
 	local t = os.clock()
@@ -58995,7 +59185,7 @@ function CraftService._onCraft(p: Player, recipeId: any)
 	end
 	if recipe.Level > 0 then
 		if ctx.CampService.GetLevel(team) < recipe.Level then
-			ctx.Util.Notify(p, "Requires workbench level " .. recipe.Level .. ".", "error")
+			ctx.Util.Notify(p, "Requires Workbench Tier " .. ({ "I", "II", "III", "IV", "V" })[recipe.Level] .. ".", "error")
 			return
 		end
 		if not nearWorkbench(p) then
@@ -59009,8 +59199,11 @@ function CraftService._onCraft(p: Player, recipeId: any)
 	end
 	local def = Items[recipe.Result]
 	-- Space checks before paying
-	if recipe.Kind == "Resource" then
-		-- rope: paying 3 plants frees 3 slots, result takes 1: always fits
+	if recipe.Kind == "Consumable" then
+		if inv.Bandages >= inv.BandageMax then
+			ctx.Util.Notify(p, "Your bandage pouch is full.", "warn")
+			return
+		end
 	elseif recipe.Kind == "Ammo" then
 		if (inv.Ammo[recipe.Result] or 0) >= (inv.AmmoMax[recipe.Result] or 0) then
 			ctx.Util.Notify(p, "Your ammo pouch is full.", "warn")
@@ -59021,7 +59214,14 @@ function CraftService._onCraft(p: Player, recipeId: any)
 		return
 	end
 	if recipe.Kind == "Resource" then
-		InventoryModel.AddResource(inv, recipe.Result, recipe.Count)
+		local added = InventoryModel.AddResource(inv, recipe.Result, recipe.Count)
+		local root = ctx.Util.Root(p)
+		if added < recipe.Count and root then
+			ctx.InventoryService.SpawnPickup(recipe.Result, recipe.Count - added, root.Position + root.CFrame.LookVector * 3)
+		end
+		ctx.InventoryService.Sync(p)
+	elseif recipe.Kind == "Consumable" then
+		InventoryModel.AddBandages(inv, recipe.Count)
 		ctx.InventoryService.Sync(p)
 	elseif recipe.Kind == "Ammo" then
 		InventoryModel.AddAmmo(inv, recipe.Result, recipe.Count)
@@ -59453,8 +59653,8 @@ function DevService._onCommand(p: Player, cmd: any, arg: any)
 	elseif cmd == "SkipPhase" then
 		M.SkipPhase()
 	elseif cmd == "GiveResources" then
-		for _, id in { "Stick", "Stone", "Wood", "Plant", "Leather", "Rope" } do
-			ctx.InventoryService.AddResource(p, id, 5)
+		for _, id in { "Stick", "Stone", "Wood", "Plant", "Leather", "Rope", "Scrap", "Iron", "Coal" } do
+			ctx.InventoryService.AddResource(p, id, 20)
 		end
 	elseif cmd == "GiveItem" and type(arg) == "string" and Items[arg] then
 		local def = Items[arg]
@@ -59474,7 +59674,7 @@ function DevService._onCommand(p: Player, cmd: any, arg: any)
 			ctx.InventoryService.Sync(p)
 		end
 	elseif cmd == "BenchLevel" and type(arg) == "number" then
-		ctx.CampService.SetLevel(ctx.Util.Team(p), math.clamp(math.floor(arg), 1, 3))
+		ctx.CampService.SetLevel(ctx.Util.Team(p), math.clamp(math.floor(arg), 1, 5))
 		ctx.CraftService.Push(p)
 	elseif cmd == "Extinguish" and type(arg) == "number" then
 		M.ExtinguishFire(math.clamp(math.floor(arg), 1, 4), nil)
@@ -59600,9 +59800,18 @@ end
 
 -- Building ---------------------------------------------------------------------------------
 
+local TIER_NAMES = { "Crude", "Stone", "Iron", "Steel" }
+
+-- "Stone Axe" style name of the weakest tool that works on a node.
+local function toolNeed(def: Resources.Def): string
+	return (TIER_NAMES[def.MinTier or 1] or "") .. " " .. def.RequiredTool
+end
+
 local function promptText(def: Resources.Def): (string, string)
 	if def.Kind == "Tree" then
-		return "Chop (axe)", def.Label
+		return "Chop (" .. toolNeed(def) .. "+)", def.Label
+	elseif def.RequiredTool == "Pickaxe" then
+		return "Mine (" .. toolNeed(def) .. "+)", def.Label
 	elseif def.PerHit.Berries or def.PerHit.Mushroom then
 		return "Pick", def.Label
 	end
@@ -59670,8 +59879,9 @@ function GatherService._build(map: any)
 		local action, object = promptText(def)
 		local p = ctx.ChannelService.MakePrompt(m.PrimaryPart, "Gather", action, object, def.Range)
 		if def.RequiredTool ~= "Hand" then
-			p:SetAttribute("NeedsAxe", true)
-			m:SetAttribute("NeedsAxe", true)
+			p:SetAttribute("NeedsTool", def.RequiredTool)
+			p:SetAttribute("MinTier", def.MinTier or 1)
+			m:SetAttribute("NeedsTool", def.RequiredTool)
 		end
 		p:SetAttribute("Rarity", def.Rarity)
 		node.Prompt = p
@@ -59932,10 +60142,10 @@ local function grant(p: Player, n: Node, items: { [string]: number }): { string 
 end
 
 -- Applies one hit/gather. `toolType`/`power` from the equipped item (hand = nil / HandPower).
-function GatherService._apply(p: Player, n: Node, toolType: string?, power: number): boolean
+function GatherService._apply(p: Player, n: Node, toolType: string?, power: number, tier: number?): boolean
 	local def = n.Def
-	if not ResourceRules.ToolOk(def, toolType) then
-		ctx.Util.Notify(p, "You need an axe to chop that (Workbench: 1 stick + 1 stone).", "warn")
+	if not ResourceRules.ToolOk(def, toolType, tier) then
+		ctx.Util.Notify(p, "You need a " .. toolNeed(def) .. " or better for that.", "warn")
 		return false
 	end
 	local inv = ctx.InventoryService.Get(p)
@@ -59943,7 +60153,7 @@ function GatherService._apply(p: Player, n: Node, toolType: string?, power: numb
 		ctx.Util.Notify(p, "Your pack is full. Deposit at your storage or eat some food.", "warn")
 		return false
 	end
-	local r = ResourceRules.Hit(def, n.S, toolType, power, os.clock(), rng)
+	local r = ResourceRules.Hit(def, n.S, toolType, power, os.clock(), rng, tier)
 	if not r.Ok then
 		return false
 	end
@@ -59974,28 +60184,45 @@ function GatherService._apply(p: Player, n: Node, toolType: string?, power: numb
 	return true
 end
 
-local function equippedTool(p: Player): (string?, number, string?, string?)
+local function equippedTool(p: Player): (string?, number, string?, string?, number?)
 	local id, slot = ctx.InventoryService.EquippedItem(p)
 	local def = id and Items[id]
 	if def and def.ToolType then
-		return def.ToolType, def.ToolPower or 1, id, slot
+		return def.ToolType, (def.ToolPower or 1) * ctx.PowerupService.ToolSpeedMult(p, def.ToolType), id, slot, def.ToolTier
 	end
-	return nil, Resources.HandPower, id, slot
+	return nil, Resources.HandPower, id, slot, nil
+end
+
+-- Best carried tool slot for a node (right type, high enough tier), or nil.
+local function bestToolSlot(p: Player, def: Resources.Def): string?
+	local inv = ctx.InventoryService.Get(p)
+	if not inv then
+		return nil
+	end
+	local best, bestTier = nil, 0
+	for _, slot in InventoryModel.SlotNames do
+		local st = inv.Slots[slot]
+		local tdef = st and Items[st.Id]
+		if tdef and tdef.ToolType == def.RequiredTool and (tdef.ToolTier or 1) >= (def.MinTier or 1) and (tdef.ToolTier or 1) > bestTier then
+			best, bestTier = slot, tdef.ToolTier or 1
+		end
+	end
+	return best
 end
 
 -- Melee swing on a node (from CombatService). Returns true if it counted (wears the tool).
 function GatherService.Hit(p: Player, n: Node, itemId: string): boolean
-	if not ResourceRules.Available(n.S) or n.Def.Kind ~= "Tree" then
+	if not ResourceRules.Available(n.S) or n.Def.RequiredTool == "Hand" then
 		return false -- hand nodes use their prompt
 	end
 	local def = Items[itemId]
 	local toolType = def and def.ToolType
-	local power = if toolType then def.ToolPower or 1 else 0
 	if not toolType then
-		ctx.Util.Notify(p, "You need an axe to chop trees.", "warn")
+		ctx.Util.Notify(p, "You need a " .. toolNeed(n.Def) .. " or better for that.", "warn")
 		return false
 	end
-	return GatherService._apply(p, n, toolType, power)
+	local power = (def.ToolPower or 1) * ctx.PowerupService.ToolSpeedMult(p, toolType)
+	return GatherService._apply(p, n, toolType, power, def.ToolTier)
 end
 
 function GatherService._onGatherPrompt(p: Player, prompt: ProximityPrompt)
@@ -60007,15 +60234,13 @@ function GatherService._onGatherPrompt(p: Player, prompt: ProximityPrompt)
 	local def = n.Def
 	if def.RequiredTool ~= "Hand" then
 		-- Prompt chopping: auto-equip a matching tool from the Tool slot, then channel one chop.
-		local toolType = equippedTool(p)
-		if toolType ~= def.RequiredTool then
-			local inv = ctx.InventoryService.Get(p)
-			local st = inv and inv.Slots.Tool
-			local tdef = st and Items[st.Id]
-			if tdef and tdef.ToolType == def.RequiredTool then
-				ctx.InventoryService._onEquip(p, "Tool")
+		local toolType, _, _, _, tier = equippedTool(p)
+		if not ResourceRules.ToolOk(def, toolType, tier) then
+			local slot = bestToolSlot(p, def)
+			if slot then
+				ctx.InventoryService._onEquip(p, slot)
 			else
-				ctx.Util.Notify(p, "You need an axe to chop that (Workbench: 1 stick + 1 stone).", "warn")
+				ctx.Util.Notify(p, "You need a " .. toolNeed(def) .. " or better for that.", "warn")
 				return
 			end
 		end
@@ -60023,7 +60248,7 @@ function GatherService._onGatherPrompt(p: Player, prompt: ProximityPrompt)
 	local duration = def.HarvestTime / ctx.PowerupService.GatherMult(p)
 	ctx.ChannelService.Begin(p, {
 		Kind = "Gather",
-		Label = if def.Kind == "Tree" then "Chopping" elseif def.PerHit.Berries or def.PerHit.Mushroom then "Picking" else "Gathering",
+		Label = if def.Kind == "Tree" then "Chopping" elseif def.RequiredTool == "Pickaxe" then "Mining" elseif def.PerHit.Berries or def.PerHit.Mushroom then "Picking" else "Gathering",
 		Duration = duration,
 		Range = def.Range,
 		InterruptOnDamage = true,
@@ -60035,12 +60260,12 @@ function GatherService._onGatherPrompt(p: Player, prompt: ProximityPrompt)
 			if not ResourceRules.Available(n.S) or not ctx.Util.IsAlive(p) then
 				return
 			end
-			local toolType, power, _, slot = equippedTool(p)
+			local toolType, power, _, slot, tier = equippedTool(p)
 			if def.RequiredTool == "Hand" then
-				toolType, power = nil, Resources.HandPower
+				toolType, power, tier = nil, Resources.HandPower, nil
 			end
-			if GatherService._apply(p, n, toolType, power) and def.RequiredTool ~= "Hand" and slot then
-				ctx.InventoryService.Wear(p, slot, 1)
+			if GatherService._apply(p, n, toolType, power, tier) and def.RequiredTool ~= "Hand" and slot then
+				ctx.InventoryService.Wear(p, slot, ctx.PowerupService.ToolWear(p, toolType))
 			end
 		end,
 	})
@@ -60447,7 +60672,7 @@ function InventoryService._onFillPrompt(p: Player, prompt: ProximityPrompt)
 		return
 	end
 	if not InventoryService.HasCanteen(p) then
-		ctx.Util.Notify(p, "You need a canteen (craft at Workbench level 2).", "error")
+		ctx.Util.Notify(p, "You need a canteen (craft at Workbench Tier II).", "error")
 		return
 	end
 	if InventoryService.HasFilledCanteen(p) then
@@ -60481,8 +60706,26 @@ end
 -- Bandages -------------------------------------------------------------------------------------
 
 function InventoryService._onBandage(p: Player)
+	InventoryService.Heal(p, "Bandage")
+end
+
+-- Timed, interruptible healing (spec: Bandage ~20, First Aid ~50, Medkit ~100).
+-- Bandages come from the pouch; First Aid kits and Medkits from the pack.
+function InventoryService.Heal(p: Player, itemId: string)
 	local inv = invs[p]
-	if not inv or inv.Bandages <= 0 or not ctx.Util.IsAlive(p) then
+	local spec = Config.Healing[itemId]
+	if not inv or not spec or not ctx.Util.IsAlive(p) then
+		return
+	end
+	local function have(): boolean
+		local cur = invs[p]
+		if not cur then
+			return false
+		end
+		return if itemId == "Bandage" then cur.Bandages > 0 else (cur.Resources[itemId] or 0) > 0
+	end
+	if not have() then
+		ctx.Util.Notify(p, "You don't have a " .. Items[itemId].Name .. ".", "info")
 		return
 	end
 	local hum = ctx.Util.Humanoid(p)
@@ -60494,27 +60737,31 @@ function InventoryService._onBandage(p: Player)
 	if not root then
 		return
 	end
+	local start = root.Position
 	ctx.ChannelService.Begin(p, {
-		Kind = "Bandage",
-		Label = "Applying bandage",
-		Duration = Config.Bandage.UseTime,
-		Range = 6,
+		Kind = "Heal",
+		Label = "Applying " .. Items[itemId].Name:lower(),
+		Duration = spec.UseTime / ctx.PowerupService.HealSpeedMult(p),
+		Range = 30, -- you can walk slowly while healing
 		InterruptOnDamage = true,
 		Action = "Bandage",
-		Position = (function()
-			local start = root.Position
-			return function()
-				return start
-			end
-		end)(),
+		Position = function()
+			return start
+		end,
 		OnComplete = function()
 			local h = ctx.Util.Humanoid(p)
-			if invs[p] and invs[p].Bandages > 0 and h and h.Health > 0 then
-				invs[p].Bandages -= 1
-				h.Health = math.min(h.MaxHealth, h.Health + Config.Bandage.Heal)
-				InventoryService.Sync(p)
-				ctx.Util.PlaySound("Heal", ctx.Util.Root(p))
+			local cur = invs[p]
+			if not cur or not have() or not h or h.Health <= 0 then
+				return
 			end
+			if itemId == "Bandage" then
+				cur.Bandages -= 1
+			else
+				InventoryModel.TakeResource(cur, itemId, 1)
+			end
+			h.Health = math.min(h.MaxHealth, h.Health + spec.Heal)
+			InventoryService.Sync(p)
+			ctx.Util.PlaySound("Heal", ctx.Util.Root(p))
 		end,
 	})
 end
@@ -60541,6 +60788,10 @@ function InventoryService._onEat(p: Player, id: any)
 			ctx.Util.Notify(p, "You have no food. Pick berries or mushrooms.", "info")
 			return
 		end
+	end
+	if type(id) == "string" and Config.Healing[id] and id ~= "Bandage" then
+		InventoryService.Heal(p, id)
+		return
 	end
 	local food = type(id) == "string" and Resources.Food[id]
 	if not food or (inv.Resources[id] or 0) <= 0 then
@@ -60878,6 +61129,7 @@ function LivesService.SpawnAtCamp(p: Player)
 	local pad = camp.SpawnPads[spawnIndex[team]]
 	char:PivotTo(CFrame.lookAt(pad.Position, camp.FirePos + Vector3.new(0, 3.5, 0)))
 	protect(p)
+	ctx.StaminaService.OnSpawn(p)
 	ctx.InventoryService.OnSpawn(p)
 	ctx.PowerupService.OnSpawn(p)
 	ctx.MatchService.CheckOutcome()
@@ -62779,7 +63031,7 @@ function PowerupService.Start()
 							end
 						end
 					end
-					hum.WalkSpeed = speed
+					hum.WalkSpeed = speed * ctx.StaminaService.SpeedMult(p) * (if ctx.ChannelService.IsBusy(p, "Heal") then Config.Healing.MoveSlow else 1)
 					-- Distance challenge (sampled once per second)
 					local t = os.clock()
 					if t - st.LastSample >= 1 then
@@ -62832,6 +63084,32 @@ function PowerupService.OnSpawn(p: Player)
 end
 
 -- Multipliers used by other services ------------------------------------------------------------
+
+-- Chop/mine power multiplier for a tool class ("Axe" | "Pickaxe"). Classes (Phase 6) hook in here.
+function PowerupService.ToolSpeedMult(p: Player, toolType: string): number
+	return 1
+end
+
+function PowerupService.HealSpeedMult(p: Player): number
+	return 1
+end
+
+function PowerupService.StaminaMaxMult(p: Player): number
+	return 1
+end
+
+function PowerupService.StaminaRegenMult(p: Player): number
+	return 1
+end
+
+function PowerupService.SprintMult(p: Player): number
+	return 1
+end
+
+-- Durability lost per successful tool hit (1 = one hit). Classes/power-ups reduce it.
+function PowerupService.ToolWear(p: Player, toolType: string): number
+	return 1
+end
 
 function PowerupService.GatherMult(p: Player): number
 	local id, _, lv = level(p)
@@ -63302,6 +63580,158 @@ return PurchaseService
         </Item>
         <Item class="ModuleScript" referent="878">
           <Properties>
+            <string name="Name">StaminaService</string>
+            <string name="Source"><![CDATA[--!nonstrict
+-- Stamina (spec: 100). Sprinting drains it, and melee/blocking spend it
+-- (CombatService calls Spend). It regenerates after a short pause. Movement speed
+-- is still applied by PowerupService's movement loop, which multiplies in SpeedMult.
+--
+-- Replicated player attributes: Stamina (0..MaxStamina), MaxStamina, Sprinting, Exhausted.
+
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+
+local StaminaService = {}
+
+type St = { Value: number, Want: boolean, Sprinting: boolean, Exhausted: boolean, LastSpend: number, Pushed: number }
+
+local ctx: any
+local states: { [Player]: St } = {}
+local S = Config.Stamina
+
+local function max(p: Player): number
+	return S.Max * ctx.PowerupService.StaminaMaxMult(p)
+end
+
+local function get(p: Player): St
+	local st = states[p]
+	if not st then
+		st = { Value = S.Max, Want = false, Sprinting = false, Exhausted = false, LastSpend = 0, Pushed = -1 }
+		states[p] = st
+	end
+	return st
+end
+
+function StaminaService.Init(c)
+	ctx = c
+	ctx.Util.Connect("Sprint", "Default", function(p: Player, want: any)
+		get(p).Want = want == true
+	end)
+	ctx.Util.OnPlayerRemoving(function(p)
+		states[p] = nil
+	end)
+end
+
+function StaminaService.Start()
+	local acc = 0
+	RunService.Heartbeat:Connect(function(dt)
+		acc += dt
+		if acc < 0.1 then
+			return
+		end
+		local step = acc
+		acc = 0
+		local t = os.clock()
+		for p, st in states do
+			local hum = ctx.Util.Humanoid(p)
+			if not hum or hum.Health <= 0 or not p:GetAttribute("InMatch") then
+				st.Sprinting = false
+				continue
+			end
+			local m = max(p)
+			local moving = hum.MoveDirection.Magnitude > 0.1
+			st.Sprinting = st.Want and moving and not st.Exhausted and st.Value > 0
+			if st.Sprinting then
+				st.Value = math.max(0, st.Value - S.SprintDrain * step)
+				st.LastSpend = t
+				if st.Value <= 0 then
+					st.Exhausted = true
+				end
+			elseif t - st.LastSpend >= S.RegenDelay then
+				st.Value = math.min(m, st.Value + S.Regen * ctx.PowerupService.StaminaRegenMult(p) * step)
+			end
+			if st.Exhausted and st.Value >= S.MinToSprint then
+				st.Exhausted = false
+			end
+			local shown = math.floor(st.Value + 0.5)
+			if shown ~= st.Pushed then
+				st.Pushed = shown
+				p:SetAttribute("Stamina", shown)
+				p:SetAttribute("MaxStamina", math.floor(m + 0.5))
+			end
+			if p:GetAttribute("Sprinting") ~= st.Sprinting then
+				p:SetAttribute("Sprinting", st.Sprinting)
+			end
+			if p:GetAttribute("Exhausted") ~= st.Exhausted then
+				p:SetAttribute("Exhausted", st.Exhausted)
+			end
+		end
+	end)
+end
+
+-- Movement speed multiplier (sprint, exhaustion).
+function StaminaService.SpeedMult(p: Player): number
+	local st = states[p]
+	if not st then
+		return 1
+	end
+	if st.Sprinting then
+		return S.SprintMult * ctx.PowerupService.SprintMult(p)
+	end
+	return if st.Exhausted then S.ExhaustedMult else 1
+end
+
+function StaminaService.Get(p: Player): number
+	return get(p).Value
+end
+
+-- Spends stamina for an action. Returns false (nothing spent) if there isn't enough.
+function StaminaService.Spend(p: Player, amount: number): boolean
+	local st = get(p)
+	if st.Value < amount then
+		return false
+	end
+	st.Value -= amount
+	st.LastSpend = os.clock()
+	return true
+end
+
+-- Drains up to `amount` (used by blocking); returns what was drained.
+function StaminaService.Drain(p: Player, amount: number): number
+	local st = get(p)
+	local d = math.min(st.Value, amount)
+	st.Value -= d
+	st.LastSpend = os.clock()
+	if st.Value <= 0 then
+		st.Exhausted = true
+	end
+	return d
+end
+
+-- Fresh bar on (re)spawn.
+function StaminaService.OnSpawn(p: Player)
+	local st = get(p)
+	st.Value = max(p)
+	st.Exhausted = false
+	st.Pushed = -1
+end
+
+-- Short boost (Second Wind).
+function StaminaService.Refill(p: Player, amount: number)
+	local st = get(p)
+	st.Value = math.min(max(p), st.Value + amount)
+	st.Exhausted = false
+end
+
+return StaminaService
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="879">
+          <Properties>
             <string name="Name">StorageService</string>
             <string name="Source"><![CDATA[--!nonstrict
 -- Shared team storage built by players. Teammates deposit/withdraw; enemies
@@ -63541,7 +63971,7 @@ return StorageService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="879">
+        <Item class="ModuleScript" referent="880">
           <Properties>
             <string name="Name">Util</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -63785,7 +64215,7 @@ return Util
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="880">
+        <Item class="ModuleScript" referent="881">
           <Properties>
             <string name="Name">WildlifeService</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -64352,7 +64782,7 @@ return WildlifeService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="881">
+        <Item class="ModuleScript" referent="882">
           <Properties>
             <string name="Name">WorldService</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -64971,19 +65401,19 @@ return WorldService
       </Item>
     </Item>
   </Item>
-  <Item class="SoundService" referent="882">
+  <Item class="SoundService" referent="883">
     <Properties>
       <string name="Name">SoundService</string>
       <bool name="RespectFilteringEnabled">true</bool>
     </Properties>
   </Item>
-  <Item class="StarterGui" referent="883">
+  <Item class="StarterGui" referent="884">
     <Properties>
       <string name="Name">StarterGui</string>
       <bool name="ResetPlayerGuiOnSpawn">false</bool>
     </Properties>
   </Item>
-  <Item class="StarterPlayer" referent="884">
+  <Item class="StarterPlayer" referent="885">
     <Properties>
       <string name="Name">StarterPlayer</string>
       <float name="CameraMaxZoomDistance">24</float>
@@ -64994,11 +65424,11 @@ return WorldService
       <bool name="EnableMouseLockOption">true</bool>
       <bool name="LoadCharacterAppearance">true</bool>
     </Properties>
-    <Item class="StarterCharacterScripts" referent="885">
+    <Item class="StarterCharacterScripts" referent="886">
       <Properties>
         <string name="Name">StarterCharacterScripts</string>
       </Properties>
-      <Item class="Script" referent="886">
+      <Item class="Script" referent="887">
         <Properties>
           <string name="Name">Health</string>
           <token name="RunContext">0</token>
@@ -65009,19 +65439,19 @@ return WorldService
         </Properties>
       </Item>
     </Item>
-    <Item class="StarterPlayerScripts" referent="887">
+    <Item class="StarterPlayerScripts" referent="888">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="888">
+      <Item class="Folder" referent="889">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="Folder" referent="889">
+        <Item class="Folder" referent="890">
           <Properties>
             <string name="Name">Controllers</string>
           </Properties>
-          <Item class="ModuleScript" referent="890">
+          <Item class="ModuleScript" referent="891">
             <Properties>
               <string name="Name">Animation</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -65149,7 +65579,7 @@ local function pose(rig: Rig, t: number): (CFrame, CFrame, CFrame, CFrame)
 
 	if action == "Attack" and elapsed < 0.45 then
 		local k = math.clamp(elapsed / 0.35, 0, 1)
-		if item == "Spear" then
+		if item == "Spear" or item == "CrudeSpear" then
 			-- thrust
 			local ext = math.sin(k * math.pi)
 			r = raise(70 + 20 * ext, 1)
@@ -65161,7 +65591,7 @@ local function pose(rig: Rig, t: number): (CFrame, CFrame, CFrame, CFrame)
 			local kick = math.max(0, 1 - k * 3)
 			r = raise(90 + 15 * kick, 1)
 			l = if item == "Rifle" then raise(80, -1) else ID
-		elseif item == "StoneAxe" or item == "RepairHammer" then
+		elseif string.find(item, "Axe$") or string.find(item, "Pickaxe$") or item == "RepairHammer" then
 			-- overhead chop
 			local a = if k < 0.3 then 150 * (k / 0.3) else 150 - 190 * ((k - 0.3) / 0.7)
 			r = raise(a, 1)
@@ -65275,7 +65705,7 @@ return Animation
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="891">
+          <Item class="ModuleScript" referent="892">
             <Properties>
               <string name="Name">Build</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -65599,7 +66029,7 @@ return Build
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="892">
+          <Item class="ModuleScript" referent="893">
             <Properties>
               <string name="Name">Camera</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -65763,7 +66193,7 @@ return CameraCtl
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="893">
+          <Item class="ModuleScript" referent="894">
             <Properties>
               <string name="Name">Combat</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -65909,7 +66339,7 @@ function Combat.Start()
 				end
 				local inv = State.Get("Inventory")
 				if not inv or (inv.Ammo.Arrow or 0) <= 0 then
-					State.Emit("Notify", { Text = "No arrows! Craft them at Workbench level 2.", Kind = "warn" })
+					State.Emit("Notify", { Text = "No arrows! Craft them at Workbench Tier II.", Kind = "warn" })
 					return
 				end
 				drawStart = os.clock()
@@ -65966,11 +66396,11 @@ return Combat
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="894">
+          <Item class="ModuleScript" referent="895">
             <Properties>
               <string name="Name">Craft</string>
               <string name="Source"><![CDATA[--!nonstrict
--- Crafting panel: 3 workbench levels × 5 recipes, rope, and the shared
+-- Crafting panel: Workbench Tiers I–V, rope and bandages, and the
 -- workbench upgrade. Costs show what you carry (+ team storage for
 -- structures and upgrades, which may draw from storage).
 
@@ -66029,6 +66459,11 @@ local function costChips(parent: Instance, cost: { [string]: number }, useStorag
 	return okAll
 end
 
+local ROMAN = { "I", "II", "III", "IV", "V" }
+local function tier(n: number): string
+	return ROMAN[n] or tostring(n)
+end
+
 function Craft.Render()
 	if not body then
 		return
@@ -66040,10 +66475,10 @@ function Craft.Render()
 	local order = 1
 	local head = UI.new("Frame", { LayoutOrder = order, Size = UDim2.new(1, -8, 0, 96), BackgroundColor3 = C.PanelLight, BorderSizePixel = 0, Parent = body }, { UI.corner(UDim.new(0, 8)) })
 	order += 1
-	UI.text("Workbench level " .. level .. " / " .. Recipes.MaxWorkbenchLevel, { Position = UDim2.fromOffset(10, 6), TextSize = 20, Font = Theme.FontBlack, Parent = head })
+	UI.text("Workbench Tier " .. tier(level) .. " / " .. tier(Recipes.MaxWorkbenchLevel), { Position = UDim2.fromOffset(10, 6), TextSize = 20, Font = Theme.FontBlack, Parent = head })
 	if level < Recipes.MaxWorkbenchLevel then
 		local cost = Recipes.WorkbenchUpgrades[level + 1]
-		UI.text("Upgrade to " .. (level + 1) .. " (shared by your clan, uses pack + team storage):", { Position = UDim2.fromOffset(10, 32), TextSize = 13, TextColor3 = C.TextDim, Parent = head })
+		UI.text("Upgrade to Tier " .. tier(level + 1) .. " (uses your pack + your storage):", { Position = UDim2.fromOffset(10, 32), TextSize = 13, TextColor3 = C.TextDim, Parent = head })
 		local ok = costChips(head, cost, true, 10, 58)
 		UI.button("Upgrade", { Size = UDim2.fromOffset(116, 44), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0), BackgroundColor3 = if ok then C.AccentDark else C.PanelLighter, Parent = head }, function()
 			Net.Event("UpgradeWorkbench"):FireServer()
@@ -66063,7 +66498,7 @@ function Craft.Render()
 	for _, r in sorted do
 		if r.Level ~= lastLevel then
 			lastLevel = r.Level
-			UI.text(if r.Level == 0 then "Anywhere" else ("Level " .. r.Level .. (if r.Level > level then "  🔒" else "")), { LayoutOrder = order, TextSize = 17, Font = Theme.FontBlack, TextColor3 = if r.Level > level then C.TextDim else C.Accent, Parent = body })
+			UI.text(if r.Level == 0 then "Anywhere" else ("Tier " .. tier(r.Level) .. (if r.Level > level then "  🔒" else "")), { LayoutOrder = order, TextSize = 17, Font = Theme.FontBlack, TextColor3 = if r.Level > level then C.TextDim else C.Accent, Parent = body })
 			order += 1
 		end
 		local def = Items[r.Result]
@@ -66076,7 +66511,7 @@ function Craft.Render()
 		UI.text(def.Name .. (if r.Count > 1 then " ×" .. r.Count else "") .. (if r.Kind == "Structure" then "  (structure)" else ""), { Position = UDim2.fromOffset(62, 4), Size = UDim2.new(1, -200, 0, 20), TextSize = 16, Font = Theme.FontBold, Parent = card })
 		UI.text(def.Description, { Position = UDim2.fromOffset(62, 24), Size = UDim2.new(1, -200, 0, 18), TextSize = 12, TextColor3 = C.TextDim, TextTruncate = Enum.TextTruncate.AtEnd, TextWrapped = false, Parent = card })
 		local ok = costChips(card, r.Cost, r.Kind == "Structure", 62, 46)
-		local label = if locked then "Lv " .. r.Level elseif r.Kind == "Structure" then "Place" else "Craft"
+		local label = if locked then "Tier " .. tier(r.Level) elseif r.Kind == "Structure" then "Place" else "Craft"
 		UI.button(label, { Size = UDim2.fromOffset(110, 44), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0), BackgroundColor3 = if locked or not ok then C.PanelLighter else C.AccentDark, Parent = card }, function()
 			if locked then
 				return
@@ -66117,7 +66552,7 @@ return Craft
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="895">
+          <Item class="ModuleScript" referent="896">
             <Properties>
               <string name="Name">Creatures</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -66288,7 +66723,7 @@ return Creatures
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="896">
+          <Item class="ModuleScript" referent="897">
             <Properties>
               <string name="Name">Dev</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -66320,8 +66755,9 @@ function Dev.Start()
 		{ "Start local match", "StartMatch" },
 		{ "Skip phase", "SkipPhase" },
 		{ "End match (my team wins)", "EndMatch" },
-		{ "+5 of every resource", "GiveResources" },
+		{ "+20 of every material", "GiveResources" },
 		{ "Give Stone Axe", "GiveItem", "StoneAxe" },
+		{ "Give Stone Pickaxe", "GiveItem", "StonePickaxe" },
 		{ "Give Canteen", "GiveItem", "Canteen" },
 		{ "Fill canteen", "FillCanteen" },
 		{ "Give Bow", "GiveItem", "Bow" },
@@ -66335,6 +66771,7 @@ function Dev.Start()
 		{ "Give Bandages", "GiveItem", "Bandage" },
 		{ "Workbench Lv 2", "BenchLevel", 2 },
 		{ "Workbench Lv 3", "BenchLevel", 3 },
+		{ "Workbench Lv 5", "BenchLevel", 5 },
 		{ "Spawn Wolf", "SpawnAnimal", "Wolf" },
 		{ "Spawn Bear", "SpawnAnimal", "Bear" },
 		{ "Spawn Bat", "SpawnAnimal", "Bat" },
@@ -66357,7 +66794,7 @@ return Dev
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="897">
+          <Item class="ModuleScript" referent="898">
             <Properties>
               <string name="Name">Effects</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -66627,7 +67064,7 @@ return Effects
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="898">
+          <Item class="ModuleScript" referent="899">
             <Properties>
               <string name="Name">Hud</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -66763,19 +67200,22 @@ end
 -- Bottom-left: vitals ------------------------------------------------------------------------------
 
 local healthSet: (number, string?) -> ()
+local staminaSet: (number, string?) -> ()
 local livesLabel: TextLabel
 local packLabel: TextLabel
 local pouchLabel: TextLabel
 local vitals: Frame
 
 local function buildVitals()
-	vitals = UI.panel({ Name = "Vitals", Size = UDim2.fromOffset(270, 112), Position = UDim2.new(0, 12, 1, -124), Parent = gui }, { UI.padding(8) })
-	local hb
+	vitals = UI.panel({ Name = "Vitals", Size = UDim2.fromOffset(270, 132), Position = UDim2.new(0, 12, 1, -144), Parent = gui }, { UI.padding(8) })
+	local hb, sb
 	hb, healthSet = UI.bar({ Size = UDim2.new(1, 0, 0, 24), Parent = vitals }, Color3.fromRGB(200, 70, 60))
 	hb.Name = "Health"
-	livesLabel = UI.text("", { Position = UDim2.fromOffset(0, 28), Size = UDim2.new(1, 0, 0, 22), Font = Theme.FontBold, TextSize = 16, Parent = vitals })
-	packLabel = UI.text("", { Position = UDim2.fromOffset(0, 50), Size = UDim2.new(1, 0, 0, 20), TextSize = 15, Parent = vitals })
-	pouchLabel = UI.text("", { Position = UDim2.fromOffset(0, 72), Size = UDim2.new(1, 0, 0, 20), TextSize = 15, TextColor3 = C.TextDim, Parent = vitals })
+	sb, staminaSet = UI.bar({ Position = UDim2.fromOffset(0, 28), Size = UDim2.new(1, 0, 0, 14), Parent = vitals }, Color3.fromRGB(90, 170, 90))
+	sb.Name = "Stamina"
+	livesLabel = UI.text("", { Position = UDim2.fromOffset(0, 46), Size = UDim2.new(1, 0, 0, 22), Font = Theme.FontBold, TextSize = 16, Parent = vitals })
+	packLabel = UI.text("", { Position = UDim2.fromOffset(0, 68), Size = UDim2.new(1, 0, 0, 20), TextSize = 15, Parent = vitals })
+	pouchLabel = UI.text("", { Position = UDim2.fromOffset(0, 90), Size = UDim2.new(1, 0, 0, 20), TextSize = 15, TextColor3 = C.TextDim, Parent = vitals })
 end
 
 local function refreshVitals()
@@ -66784,6 +67224,9 @@ local function refreshVitals()
 	if hum then
 		healthSet(hum.Health / math.max(1, hum.MaxHealth), string.format("♥ %d / %d", math.ceil(hum.Health), hum.MaxHealth))
 	end
+	local st = player:GetAttribute("Stamina") or 100
+	local stMax = player:GetAttribute("MaxStamina") or 100
+	staminaSet(st / math.max(1, stMax), if player:GetAttribute("Exhausted") then "EXHAUSTED" else "")
 	local free = player:GetAttribute("FreeRespawns") or 0
 	local team = player:GetAttribute("Team") or 0
 	local fire = matchState:GetAttribute("Fire" .. team)
@@ -66816,10 +67259,10 @@ end
 -- Hotbar -------------------------------------------------------------------------------------------
 
 local hotbar: Frame
-local SLOTS = { { "Fists", "`" }, { "Weapon1", "1" }, { "Weapon2", "2" }, { "Tool", "3" }, { "Utility", "4" } }
+local SLOTS = { { "Fists", "`" }, { "Weapon1", "1" }, { "Weapon2", "2" }, { "Tool", "3" }, { "Tool2", "4" }, { "Utility", "5" } }
 
 local function buildHotbar()
-	hotbar = UI.new("Frame", { Name = "Hotbar", BackgroundTransparency = 1, Size = UDim2.fromOffset(5 * 70, 78), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -8), Parent = gui }, { UI.list(Enum.FillDirection.Horizontal, 6, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Bottom) })
+	hotbar = UI.new("Frame", { Name = "Hotbar", BackgroundTransparency = 1, Size = UDim2.fromOffset(6 * 70, 78), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -8), Parent = gui }, { UI.list(Enum.FillDirection.Horizontal, 6, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Bottom) })
 end
 
 local function refreshHotbar()
@@ -67249,14 +67692,14 @@ return Hud
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="899">
+          <Item class="ModuleScript" referent="900">
             <Properties>
               <string name="Name">Input</string>
               <string name="Source"><![CDATA[--!nonstrict
 -- Unified input: keyboard/mouse, gamepad and on-screen touch controls all map
 -- to named actions, emitted as State "Action" events { Name, Down }.
 --
--- PC:      LMB attack/draw · RMB aim/block · 1-4 slots · ` fists · Q swap weapons
+-- PC:      LMB attack/draw · RMB aim/block · 1-5 slots · Shift sprint · ` fists · Q swap weapons
 --          X ability · H bandage · I inventory · C craft · B build · M map
 -- Gamepad: R2 attack · L2 aim/block · R1 swap · L1 bandage · Y ability
 --          DPad ←/→ cycle slots · Select map
@@ -67279,6 +67722,9 @@ local KEYS: { [Enum.KeyCode]: string } = {
 	[Enum.KeyCode.Two] = "Slot2",
 	[Enum.KeyCode.Three] = "Slot3",
 	[Enum.KeyCode.Four] = "Slot4",
+	[Enum.KeyCode.Five] = "Slot5",
+	[Enum.KeyCode.LeftShift] = "Sprint",
+	[Enum.KeyCode.ButtonL3] = "Sprint",
 	[Enum.KeyCode.Backquote] = "Fists",
 	[Enum.KeyCode.Q] = "Swap",
 	[Enum.KeyCode.X] = "Ability",
@@ -67466,7 +67912,7 @@ return Input
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="900">
+          <Item class="ModuleScript" referent="901">
             <Properties>
               <string name="Name">Inventory</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -67489,7 +67935,7 @@ local Inventory = {}
 local player = Players.LocalPlayer
 local body: ScrollingFrame
 local C = Theme.Colors
-local SLOT_LABEL = { Weapon1 = "Weapon 1", Weapon2 = "Weapon 2", Tool = "Tool", Utility = "Utility", Armor = "Armor (worn)" }
+local SLOT_LABEL = { Weapon1 = "Weapon 1", Weapon2 = "Weapon 2", Tool = "Tool 1", Tool2 = "Tool 2", Utility = "Utility", Armor = "Armor (worn)" }
 local RES = InventoryModel.ResourceIds
 
 local function section(title: string, order: number)
@@ -67516,7 +67962,7 @@ function Inventory.Render()
 	end
 	section("Equipment", 1)
 	local order = 2
-	for _, slot in { "Weapon1", "Weapon2", "Tool", "Utility", "Armor" } do
+	for _, slot in { "Weapon1", "Weapon2", "Tool", "Tool2", "Utility", "Armor" } do
 		local stack = if slot == "Armor" then inv.Armor else inv.Slots[slot]
 		local r = row(order)
 		order += 1
@@ -67583,8 +68029,8 @@ function Inventory.Render()
 				Net.Event("DropItem"):FireServer({ Resource = id, Count = n })
 			end)
 		end
-		if def.Food and n > 0 then
-			UI.button("Eat", { Size = UDim2.fromOffset(80, 38), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -184, 0.5, 0), TextSize = 13, BackgroundColor3 = Color3.fromRGB(60, 110, 60), Parent = r }, function()
+		if (def.Food or def.Heal) and n > 0 then
+			UI.button(if def.Heal then "Use" else "Eat", { Size = UDim2.fromOffset(80, 38), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -184, 0.5, 0), TextSize = 13, BackgroundColor3 = Color3.fromRGB(60, 110, 60), Parent = r }, function()
 				Net.Event("Eat"):FireServer(id)
 			end)
 		end
@@ -67594,10 +68040,10 @@ function Inventory.Render()
 			end)
 		end
 	end
-	UI.text("Carried resources drop on death. Equipment, ammo and bandages are kept.", { LayoutOrder = order, TextSize = 13, TextColor3 = C.TextDim, Parent = body })
+	UI.text("Carried materials drop on death. Tools, weapons, armour, ammo and bandages are kept.", { LayoutOrder = order, TextSize = 13, TextColor3 = C.TextDim, Parent = body })
 end
 
-local slotCycle = { "Fists", "Weapon1", "Weapon2", "Tool", "Utility" }
+local slotCycle = { "Fists", "Weapon1", "Weapon2", "Tool", "Tool2", "Utility" }
 
 local function equip(slot: string?)
 	Net.Event("Equip"):FireServer(slot)
@@ -67625,6 +68071,8 @@ function Inventory.Start()
 		elseif n == "Slot3" then
 			equip("Tool")
 		elseif n == "Slot4" then
+			equip("Tool2")
+		elseif n == "Slot5" then
 			equip("Utility")
 		elseif n == "Fists" then
 			equip(nil)
@@ -67656,7 +68104,7 @@ return Inventory
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="901">
+          <Item class="ModuleScript" referent="902">
             <Properties>
               <string name="Name">Lobby</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -67869,15 +68317,15 @@ local function renderShop()
 end
 
 local HELP = {
-	{ "Goal", "Four clans of up to four. Keep your campfire burning and be the last clan with a player alive or able to respawn." },
-	{ "Day & night", "Day and night each last 2 minutes and repeat until one clan wins. At night, wolves, bears and bats hunt anyone away from a burning fire, and enemy fires can be put out." },
-	{ "Lives", "Each death uses one of 3 free respawns (5 s) while your fire burns. That includes deaths to players, animals, spikes and resetting. After that, you or a teammate can buy a revive within 20 s. Once your fire is out, any death eliminates you." },
-	{ "Progression", "Gather sticks, stone and fibre by hand, craft a Stone Axe, chop wood, build walls and storage. Hunt at night for leather. Twist fibre into rope. Upgrade your workbench to level 2 and craft a Canteen." },
-	{ "Raiding", "Fill your canteen at any stream. At night, hold Pour at an enemy fire for 10 s. Getting hit stops the pour, and only one raider can pour on a fire at a time." },
-	{ "Storage", "Build a storage box and deposit resources your whole clan can build and upgrade with. Enemies can steal from it (3 s)." },
-	{ "Loot", "A free care package drops every day (3 random items, shown on the map). Hidden crates in the forest restock at dawn." },
-	{ "PC controls", "WASD move · Click attack / hold to draw a bow · Right-click aim or block · 1-4 slots · ` fists · Q swap · X ability · H bandage · I bag · C craft · B build · M map · E/F/G interact" },
-	{ "Mobile", "Use the on-screen buttons: ATTACK (hold for bows), AIM/BLOCK, ABILITY, HEAL, SWAP. Tap the prompt cards to interact. BAG, CRAFT, BUILD and MAP are at the top right." },
+	{ "Goal", "Solo survival. Every player has their own camp with a Campfire and a Tier I Workbench. PvP is on from the start. Be the last survivor." },
+	{ "Day & night", "Day and night each last exactly 2 minutes. At each sunrise, everyone alive gets 15 s of protection (and can't deal damage). At night predators roam." },
+	{ "Your fire", "While your fire burns you respawn (8 s, 12 s, 16 s, then 20 s). Feed it Wood (1 Wood = +2% fuel). At 0% it goes out for good and you're on your FINAL LIFE. Upgrade it (L2-L5) to burn longer and take longer to snuff." },
+	{ "Snuffing", "Fires are protected during Nights 1-2. From Night 3, enemy fires can be snuffed day or night with a filled canteen: hold 8-20 s by fire level. Taking damage, moving or letting go cancels it." },
+	{ "Progression", "Start with nothing. Gather sticks, loose stones, fibre and berries by hand, then craft a Crude Axe, Pickaxe and Spear. Small trees give 4 Wood, large trees 16 (Stone Axe). Upgrade your Workbench (Tiers I-V) with your pack + storage." },
+	{ "Health & stamina", "Health 100, stamina 100 (sprint with Shift). There's no fast regen: bandages (+20), First Aid kits (+50) and Medkits (+100) take time and are interrupted by damage." },
+	{ "Deaths", "Only materials drop, in one loot bag. You keep tools, weapons, armour, backpack and Workbench progress." },
+	{ "PC controls", "WASD move · Shift sprint · Click attack · Right-click aim/block · 1-5 slots · ` fists · Q swap · X ability · H bandage · I bag · C craft · B build · M map · E/F interact" },
+	{ "Mobile", "Use the on-screen buttons: ATTACK, AIM/BLOCK, ABILITY, HEAL, SWAP and RUN. Tap the prompt cards to interact. BAG, CRAFT, BUILD and MAP are at the top right." },
 }
 
 local function renderHelp()
@@ -67989,7 +68437,7 @@ return Lobby
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="902">
+          <Item class="ModuleScript" referent="903">
             <Properties>
               <string name="Name">Map</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -68235,7 +68683,78 @@ return MapCtl
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="903">
+          <Item class="ModuleScript" referent="904">
+            <Properties>
+              <string name="Name">Movement</string>
+              <string name="Source"><![CDATA[--!nonstrict
+-- Sprint input: hold Shift / L3 (PC, gamepad) or tap the on-screen RUN button (touch
+-- toggle). The server owns stamina and speed (StaminaService); this only reports intent.
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Net = require(ReplicatedStorage.Shared.Net)
+local State = require("../State")
+local UI = require("../UI/UI")
+local Theme = require("../UI/Theme")
+
+local Movement = {}
+
+local player = Players.LocalPlayer
+local sprinting = false
+
+local function set(want: boolean)
+	if want ~= sprinting then
+		sprinting = want
+		Net.Event("Sprint"):FireServer(want)
+		State.Set("SprintWanted", want)
+	end
+end
+
+function Movement.Start()
+	State.On("Action", function(a)
+		if a.Name == "Sprint" then
+			set(a.Down)
+		elseif a.Name == "SprintToggle" and a.Down then
+			set(not sprinting)
+		end
+	end)
+	-- Stop sprinting after death so the next life starts walking.
+	player:GetAttributeChangedSignal("LifeState"):Connect(function()
+		if player:GetAttribute("LifeState") ~= "Alive" then
+			set(false)
+		end
+	end)
+	-- Touch: a RUN toggle next to the jump button.
+	local gui = player:WaitForChild("PlayerGui"):WaitForChild("TouchControls", 5)
+	if gui then
+		local btn = UI.new("TextButton", {
+			Name = "Sprint",
+			Size = UDim2.fromOffset(58, 58),
+			Position = UDim2.new(1, -90, 1, -350),
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			BackgroundColor3 = Theme.Colors.Panel,
+			BackgroundTransparency = 0.25,
+			Text = "RUN",
+			Font = Theme.FontBlack,
+			TextScaled = true,
+			TextColor3 = Theme.Colors.Text,
+			Parent = gui,
+		}, { UI.corner(UDim.new(0.5, 0)), UI.stroke(Theme.Colors.Accent, 2, 0.3) })
+		btn.Activated:Connect(function()
+			State.Emit("Action", { Name = "SprintToggle", Down = true })
+		end)
+		State.On("SprintWanted", function(v)
+			btn.BackgroundColor3 = if v then Theme.Colors.AccentDark else Theme.Colors.Panel
+		end)
+	end
+end
+
+return Movement
+]]></string>
+            </Properties>
+          </Item>
+          <Item class="ModuleScript" referent="905">
             <Properties>
               <string name="Name">Notifications</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -68319,7 +68838,7 @@ return Notifications
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="904">
+          <Item class="ModuleScript" referent="906">
             <Properties>
               <string name="Name">Panels</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -68439,7 +68958,7 @@ return Panels
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="905">
+          <Item class="ModuleScript" referent="907">
             <Properties>
               <string name="Name">Prompts</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -68456,6 +68975,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UI = require("../UI/UI")
 local Theme = require("../UI/Theme")
 local State = require("../State")
+local Items = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Items"))
 
 local Prompts = {}
 
@@ -68500,10 +69020,18 @@ local function hint(prompt: ProximityPrompt): string?
 			return "Canteen is empty"
 		end
 	end
-	if prompt:GetAttribute("NeedsAxe") then
-		local tool = inv and inv.Slots and inv.Slots.Tool
-		if not tool or tool.Id ~= "StoneAxe" then
-			return "Needs a stone axe"
+	local need = prompt:GetAttribute("NeedsTool")
+	if need then
+		local minTier = prompt:GetAttribute("MinTier") or 1
+		local ok = false
+		for _, st in (inv and inv.Slots or {}) do
+			local def = st and Items[st.Id]
+			if def and def.ToolType == need and (def.ToolTier or 1) >= minTier then
+				ok = true
+			end
+		end
+		if not ok then
+			return "Needs " .. ({ "Crude", "Stone", "Iron", "Steel" })[minTier] .. " " .. need .. "+"
 		end
 	end
 	return nil
@@ -68610,7 +69138,7 @@ return Prompts
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="906">
+          <Item class="ModuleScript" referent="908">
             <Properties>
               <string name="Name">Shop</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -68722,7 +69250,7 @@ return Shop
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="907">
+          <Item class="ModuleScript" referent="909">
             <Properties>
               <string name="Name">Sound</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -68806,7 +69334,7 @@ return SoundCtl
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="908">
+          <Item class="ModuleScript" referent="910">
             <Properties>
               <string name="Name">Spectate</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -68896,7 +69424,7 @@ return Spectate
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="909">
+          <Item class="ModuleScript" referent="911">
             <Properties>
               <string name="Name">Storage</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -69012,7 +69540,7 @@ return Storage
             </Properties>
           </Item>
         </Item>
-        <Item class="LocalScript" referent="910">
+        <Item class="LocalScript" referent="912">
           <Properties>
             <string name="Name">Main</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -69089,6 +69617,7 @@ local order = {
 	"Sound",
 	"Camera",
 	"Input",
+	"Movement",
 	"Prompts",
 	"Hud",
 	"Notifications",
@@ -69130,7 +69659,7 @@ local _ = Players
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="911">
+        <Item class="ModuleScript" referent="913">
           <Properties>
             <string name="Name">State</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -69180,11 +69709,11 @@ return State
 ]]></string>
           </Properties>
         </Item>
-        <Item class="Folder" referent="912">
+        <Item class="Folder" referent="914">
           <Properties>
             <string name="Name">UI</string>
           </Properties>
-          <Item class="ModuleScript" referent="913">
+          <Item class="ModuleScript" referent="915">
             <Properties>
               <string name="Name">Theme</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -69245,7 +69774,7 @@ return Theme
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="914">
+          <Item class="ModuleScript" referent="916">
             <Properties>
               <string name="Name">UI</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -69460,7 +69989,7 @@ return UI
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="915">
+  <Item class="Workspace" referent="917">
     <Properties>
       <string name="Name">Workspace</string>
       <float name="Gravity">196.2</float>

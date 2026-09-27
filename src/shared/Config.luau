@@ -61,9 +61,20 @@ Config.Player = {
 	MaxHealth = 100,
 	WalkSpeed = 16,
 	FireHealRadius = 24,
-	FireHealPerSecond = 2,
+	FireHealPerSecond = 0.5, -- spec: no fast passive regen (slow warmth at your own fire only)
 	FireHealDelayAfterDamage = 5,
 	FallDamageMinVelocity = 75,
+}
+
+-- Spec: Stamina 100. Sprinting drains it; melee and blocking spend it (Phase 4).
+Config.Stamina = {
+	Max = 100,
+	SprintMult = 1.4, -- walk speed while sprinting
+	SprintDrain = 12, -- per second
+	Regen = 14, -- per second after RegenDelay
+	RegenDelay = 1.2,
+	MinToSprint = 20, -- after emptying the bar, sprint again at this much
+	ExhaustedMult = 0.9, -- slight slow while exhausted
 }
 
 Config.Inventory = {
@@ -132,9 +143,16 @@ Config.Canteen = {
 	FillRange = 8, -- studs from a stream water point
 }
 
+-- Spec healing: Bandage ~20, First Aid ~50, Medkit ~100. Timed, interrupted by damage.
 Config.Bandage = {
 	UseTime = 3,
-	Heal = 45,
+	Heal = 20,
+}
+Config.Healing = {
+	Bandage = { Heal = 20, UseTime = 3 },
+	FirstAid = { Heal = 50, UseTime = 5 },
+	Medkit = { Heal = 100, UseTime = 8 },
+	MoveSlow = 0.6, -- walk speed multiplier while applying
 }
 
 Config.CarePackage = {

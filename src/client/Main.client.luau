@@ -72,6 +72,7 @@ local order = {
 	"Sound",
 	"Camera",
 	"Input",
+	"Movement",
 	"Prompts",
 	"Hud",
 	"Notifications",

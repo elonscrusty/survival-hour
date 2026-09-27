@@ -2,7 +2,7 @@
 -- Unified input: keyboard/mouse, gamepad and on-screen touch controls all map
 -- to named actions, emitted as State "Action" events { Name, Down }.
 --
--- PC:      LMB attack/draw · RMB aim/block · 1-4 slots · ` fists · Q swap weapons
+-- PC:      LMB attack/draw · RMB aim/block · 1-5 slots · Shift sprint · ` fists · Q swap weapons
 --          X ability · H bandage · I inventory · C craft · B build · M map
 -- Gamepad: R2 attack · L2 aim/block · R1 swap · L1 bandage · Y ability
 --          DPad ←/→ cycle slots · Select map
@@ -25,6 +25,9 @@ local KEYS: { [Enum.KeyCode]: string } = {
 	[Enum.KeyCode.Two] = "Slot2",
 	[Enum.KeyCode.Three] = "Slot3",
 	[Enum.KeyCode.Four] = "Slot4",
+	[Enum.KeyCode.Five] = "Slot5",
+	[Enum.KeyCode.LeftShift] = "Sprint",
+	[Enum.KeyCode.ButtonL3] = "Sprint",
 	[Enum.KeyCode.Backquote] = "Fists",
 	[Enum.KeyCode.Q] = "Swap",
 	[Enum.KeyCode.X] = "Ability",

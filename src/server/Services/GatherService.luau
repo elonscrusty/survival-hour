@@ -78,9 +78,18 @@ end
 
 -- Building ---------------------------------------------------------------------------------
 
+local TIER_NAMES = { "Crude", "Stone", "Iron", "Steel" }
+
+-- "Stone Axe" style name of the weakest tool that works on a node.
+local function toolNeed(def: Resources.Def): string
+	return (TIER_NAMES[def.MinTier or 1] or "") .. " " .. def.RequiredTool
+end
+
 local function promptText(def: Resources.Def): (string, string)
 	if def.Kind == "Tree" then
-		return "Chop (axe)", def.Label
+		return "Chop (" .. toolNeed(def) .. "+)", def.Label
+	elseif def.RequiredTool == "Pickaxe" then
+		return "Mine (" .. toolNeed(def) .. "+)", def.Label
 	elseif def.PerHit.Berries or def.PerHit.Mushroom then
 		return "Pick", def.Label
 	end
@@ -148,8 +157,9 @@ function GatherService._build(map: any)
 		local action, object = promptText(def)
 		local p = ctx.ChannelService.MakePrompt(m.PrimaryPart, "Gather", action, object, def.Range)
 		if def.RequiredTool ~= "Hand" then
-			p:SetAttribute("NeedsAxe", true)
-			m:SetAttribute("NeedsAxe", true)
+			p:SetAttribute("NeedsTool", def.RequiredTool)
+			p:SetAttribute("MinTier", def.MinTier or 1)
+			m:SetAttribute("NeedsTool", def.RequiredTool)
 		end
 		p:SetAttribute("Rarity", def.Rarity)
 		node.Prompt = p
@@ -410,10 +420,10 @@ local function grant(p: Player, n: Node, items: { [string]: number }): { string 
 end
 
 -- Applies one hit/gather. `toolType`/`power` from the equipped item (hand = nil / HandPower).
-function GatherService._apply(p: Player, n: Node, toolType: string?, power: number): boolean
+function GatherService._apply(p: Player, n: Node, toolType: string?, power: number, tier: number?): boolean
 	local def = n.Def
-	if not ResourceRules.ToolOk(def, toolType) then
-		ctx.Util.Notify(p, "You need an axe to chop that (Workbench: 1 stick + 1 stone).", "warn")
+	if not ResourceRules.ToolOk(def, toolType, tier) then
+		ctx.Util.Notify(p, "You need a " .. toolNeed(def) .. " or better for that.", "warn")
 		return false
 	end
 	local inv = ctx.InventoryService.Get(p)
@@ -421,7 +431,7 @@ function GatherService._apply(p: Player, n: Node, toolType: string?, power: numb
 		ctx.Util.Notify(p, "Your pack is full. Deposit at your storage or eat some food.", "warn")
 		return false
 	end
-	local r = ResourceRules.Hit(def, n.S, toolType, power, os.clock(), rng)
+	local r = ResourceRules.Hit(def, n.S, toolType, power, os.clock(), rng, tier)
 	if not r.Ok then
 		return false
 	end
@@ -452,28 +462,45 @@ function GatherService._apply(p: Player, n: Node, toolType: string?, power: numb
 	return true
 end
 
-local function equippedTool(p: Player): (string?, number, string?, string?)
+local function equippedTool(p: Player): (string?, number, string?, string?, number?)
 	local id, slot = ctx.InventoryService.EquippedItem(p)
 	local def = id and Items[id]
 	if def and def.ToolType then
-		return def.ToolType, def.ToolPower or 1, id, slot
+		return def.ToolType, (def.ToolPower or 1) * ctx.PowerupService.ToolSpeedMult(p, def.ToolType), id, slot, def.ToolTier
 	end
-	return nil, Resources.HandPower, id, slot
+	return nil, Resources.HandPower, id, slot, nil
+end
+
+-- Best carried tool slot for a node (right type, high enough tier), or nil.
+local function bestToolSlot(p: Player, def: Resources.Def): string?
+	local inv = ctx.InventoryService.Get(p)
+	if not inv then
+		return nil
+	end
+	local best, bestTier = nil, 0
+	for _, slot in InventoryModel.SlotNames do
+		local st = inv.Slots[slot]
+		local tdef = st and Items[st.Id]
+		if tdef and tdef.ToolType == def.RequiredTool and (tdef.ToolTier or 1) >= (def.MinTier or 1) and (tdef.ToolTier or 1) > bestTier then
+			best, bestTier = slot, tdef.ToolTier or 1
+		end
+	end
+	return best
 end
 
 -- Melee swing on a node (from CombatService). Returns true if it counted (wears the tool).
 function GatherService.Hit(p: Player, n: Node, itemId: string): boolean
-	if not ResourceRules.Available(n.S) or n.Def.Kind ~= "Tree" then
+	if not ResourceRules.Available(n.S) or n.Def.RequiredTool == "Hand" then
 		return false -- hand nodes use their prompt
 	end
 	local def = Items[itemId]
 	local toolType = def and def.ToolType
-	local power = if toolType then def.ToolPower or 1 else 0
 	if not toolType then
-		ctx.Util.Notify(p, "You need an axe to chop trees.", "warn")
+		ctx.Util.Notify(p, "You need a " .. toolNeed(n.Def) .. " or better for that.", "warn")
 		return false
 	end
-	return GatherService._apply(p, n, toolType, power)
+	local power = (def.ToolPower or 1) * ctx.PowerupService.ToolSpeedMult(p, toolType)
+	return GatherService._apply(p, n, toolType, power, def.ToolTier)
 end
 
 function GatherService._onGatherPrompt(p: Player, prompt: ProximityPrompt)
@@ -485,15 +512,13 @@ function GatherService._onGatherPrompt(p: Player, prompt: ProximityPrompt)
 	local def = n.Def
 	if def.RequiredTool ~= "Hand" then
 		-- Prompt chopping: auto-equip a matching tool from the Tool slot, then channel one chop.
-		local toolType = equippedTool(p)
-		if toolType ~= def.RequiredTool then
-			local inv = ctx.InventoryService.Get(p)
-			local st = inv and inv.Slots.Tool
-			local tdef = st and Items[st.Id]
-			if tdef and tdef.ToolType == def.RequiredTool then
-				ctx.InventoryService._onEquip(p, "Tool")
+		local toolType, _, _, _, tier = equippedTool(p)
+		if not ResourceRules.ToolOk(def, toolType, tier) then
+			local slot = bestToolSlot(p, def)
+			if slot then
+				ctx.InventoryService._onEquip(p, slot)
 			else
-				ctx.Util.Notify(p, "You need an axe to chop that (Workbench: 1 stick + 1 stone).", "warn")
+				ctx.Util.Notify(p, "You need a " .. toolNeed(def) .. " or better for that.", "warn")
 				return
 			end
 		end
@@ -501,7 +526,7 @@ function GatherService._onGatherPrompt(p: Player, prompt: ProximityPrompt)
 	local duration = def.HarvestTime / ctx.PowerupService.GatherMult(p)
 	ctx.ChannelService.Begin(p, {
 		Kind = "Gather",
-		Label = if def.Kind == "Tree" then "Chopping" elseif def.PerHit.Berries or def.PerHit.Mushroom then "Picking" else "Gathering",
+		Label = if def.Kind == "Tree" then "Chopping" elseif def.RequiredTool == "Pickaxe" then "Mining" elseif def.PerHit.Berries or def.PerHit.Mushroom then "Picking" else "Gathering",
 		Duration = duration,
 		Range = def.Range,
 		InterruptOnDamage = true,
@@ -513,12 +538,12 @@ function GatherService._onGatherPrompt(p: Player, prompt: ProximityPrompt)
 			if not ResourceRules.Available(n.S) or not ctx.Util.IsAlive(p) then
 				return
 			end
-			local toolType, power, _, slot = equippedTool(p)
+			local toolType, power, _, slot, tier = equippedTool(p)
 			if def.RequiredTool == "Hand" then
-				toolType, power = nil, Resources.HandPower
+				toolType, power, tier = nil, Resources.HandPower, nil
 			end
-			if GatherService._apply(p, n, toolType, power) and def.RequiredTool ~= "Hand" and slot then
-				ctx.InventoryService.Wear(p, slot, 1)
+			if GatherService._apply(p, n, toolType, power, tier) and def.RequiredTool ~= "Hand" and slot then
+				ctx.InventoryService.Wear(p, slot, ctx.PowerupService.ToolWear(p, toolType))
 			end
 		end,
 	})

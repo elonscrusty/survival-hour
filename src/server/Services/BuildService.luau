@@ -100,7 +100,7 @@ function BuildService.Validate(p: Player, id: string, pos: Vector3, yaw: number)
 		return false, "No camp"
 	end
 	if ctx.CampService.GetLevel(team) < recipe.Level then
-		return false, "Requires workbench level " .. recipe.Level
+		return false, "Requires Workbench Tier " .. ({ "I", "II", "III", "IV", "V" })[recipe.Level]
 	end
 	local root = ctx.Util.Root(p)
 	if not root then

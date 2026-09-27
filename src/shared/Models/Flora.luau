@@ -440,29 +440,39 @@ end
 
 --- Rock pile: a colliding main boulder (+ optional side rock) that stays, with
 --- 4-6 small loose chunks marked Yield. Parts: <= 9.
-function Flora.RockPile(cf: CFrame, rng: Random, parent: Instance?): Model
-	local m = Build.Model("RockPile")
-	local root = makeRoot(m, 6, 3.5) -- 1
+local function rockPile(cf: CFrame, rng: Random, parent: Instance?, k: number, name: string): Model
+	local m = Build.Model(name)
+	local root = makeRoot(m, 6 * k, 3.5 * k) -- 1
 	local mat = if rng:NextNumber() < 0.5 then M.Rock else M.Slate
-	local main = Vector3.new(rng:NextNumber(3.6, 4.6), rng:NextNumber(2.4, 3.2), rng:NextNumber(3.2, 4.2))
+	local main = Vector3.new(rng:NextNumber(3.6, 4.6), rng:NextNumber(2.4, 3.2), rng:NextNumber(3.2, 4.2)) * k
 	solid("Boulder", main, CFrame.new(0, main.Y * 0.42, 0) * CFrame.Angles(rng:NextNumber(-0.15, 0.15), rng:NextNumber(0, TAU), rng:NextNumber(-0.15, 0.15)), shade(rng, ROCK, 0.08), mat, m) -- 2
-	if rng:NextNumber() < 0.6 then -- 3
-		local s = Vector3.new(rng:NextNumber(1.8, 2.4), rng:NextNumber(1.2, 1.8), rng:NextNumber(1.6, 2.2))
+	if rng:NextNumber() < 0.6 or k > 1 then -- 3
+		local s = Vector3.new(rng:NextNumber(1.8, 2.4), rng:NextNumber(1.2, 1.8), rng:NextNumber(1.6, 2.2)) * k
 		local a = rng:NextNumber(0, TAU)
-		solid("Rock", s, CFrame.new(math.cos(a) * 2.2, s.Y * 0.4, math.sin(a) * 2.2) * CFrame.Angles(rng:NextNumber(-0.3, 0.3), rng:NextNumber(0, TAU), rng:NextNumber(-0.3, 0.3)), shade(rng, ROCK, 0.08), mat, m)
+		solid("Rock", s, CFrame.new(math.cos(a) * 2.2 * k, s.Y * 0.4, math.sin(a) * 2.2 * k) * CFrame.Angles(rng:NextNumber(-0.3, 0.3), rng:NextNumber(0, TAU), rng:NextNumber(-0.3, 0.3)), shade(rng, ROCK, 0.08), mat, m)
 	end
 	local n = rng:NextInteger(4, 6)
 	local a0 = rng:NextNumber(0, TAU)
 	for i = 1, n do -- <= 9
 		local a = a0 + i * TAU / n + rng:NextNumber(-0.3, 0.3)
-		local dist = rng:NextNumber(2.2, 2.9)
-		local s = Vector3.new(rng:NextNumber(0.7, 1.2), rng:NextNumber(0.5, 0.9), rng:NextNumber(0.7, 1.1))
+		local dist = rng:NextNumber(2.2, 2.9) * k
+		local s = Vector3.new(rng:NextNumber(0.7, 1.2), rng:NextNumber(0.5, 0.9), rng:NextNumber(0.7, 1.1)) * math.sqrt(k)
 		markYield(block("Chunk", s, CFrame.new(math.cos(a) * dist, s.Y * 0.4, math.sin(a) * dist) * CFrame.Angles(rng:NextNumber(-0.4, 0.4), rng:NextNumber(0, TAU), rng:NextNumber(-0.4, 0.4)),
 			shade(rng, ROCK, 0.1), mat, m))
 	end
 	finish(m, root, cf, parent)
-	skinHarvest(m, "SM_StoneDeposit01", "SM_StoneDeposit01_Depleted", 1.05)
+	skinHarvest(m, "SM_StoneDeposit01", "SM_StoneDeposit01_Depleted", 1.05 * k)
 	return m
+end
+
+--- Small stone deposit (Crude Pickaxe+): boulder + chunks (Yield). Parts: <= 9.
+function Flora.RockPile(cf: CFrame, rng: Random, parent: Instance?): Model
+	return rockPile(cf, rng, parent, 1, "RockPile")
+end
+
+--- Large stone deposit (Stone Pickaxe+): the same pile at double size.
+function Flora.LargeRockPile(cf: CFrame, rng: Random, parent: Instance?): Model
+	return rockPile(cf, rng, parent, 2, "LargeRockPile")
 end
 
 --- Twig pile: a leaf-litter patch with 5-7 crossed twigs (Yield). Parts: <= 9.

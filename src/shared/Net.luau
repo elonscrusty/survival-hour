@@ -41,6 +41,7 @@ Net.Events = {
 	"LobbyAction",
 	"DevCommand",
 	"ClientReady",
+	"Sprint", -- (bool) hold-to-sprint state
 }
 
 local folder: Folder

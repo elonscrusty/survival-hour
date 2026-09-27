@@ -141,7 +141,7 @@ function Combat.Start()
 				end
 				local inv = State.Get("Inventory")
 				if not inv or (inv.Ammo.Arrow or 0) <= 0 then
-					State.Emit("Notify", { Text = "No arrows! Craft them at Workbench level 2.", Kind = "warn" })
+					State.Emit("Notify", { Text = "No arrows! Craft them at Workbench Tier II.", Kind = "warn" })
 					return
 				end
 				drawStart = os.clock()

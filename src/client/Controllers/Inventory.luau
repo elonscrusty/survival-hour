@@ -18,7 +18,7 @@ local Inventory = {}
 local player = Players.LocalPlayer
 local body: ScrollingFrame
 local C = Theme.Colors
-local SLOT_LABEL = { Weapon1 = "Weapon 1", Weapon2 = "Weapon 2", Tool = "Tool", Utility = "Utility", Armor = "Armor (worn)" }
+local SLOT_LABEL = { Weapon1 = "Weapon 1", Weapon2 = "Weapon 2", Tool = "Tool 1", Tool2 = "Tool 2", Utility = "Utility", Armor = "Armor (worn)" }
 local RES = InventoryModel.ResourceIds
 
 local function section(title: string, order: number)
@@ -45,7 +45,7 @@ function Inventory.Render()
 	end
 	section("Equipment", 1)
 	local order = 2
-	for _, slot in { "Weapon1", "Weapon2", "Tool", "Utility", "Armor" } do
+	for _, slot in { "Weapon1", "Weapon2", "Tool", "Tool2", "Utility", "Armor" } do
 		local stack = if slot == "Armor" then inv.Armor else inv.Slots[slot]
 		local r = row(order)
 		order += 1
@@ -112,8 +112,8 @@ function Inventory.Render()
 				Net.Event("DropItem"):FireServer({ Resource = id, Count = n })
 			end)
 		end
-		if def.Food and n > 0 then
-			UI.button("Eat", { Size = UDim2.fromOffset(80, 38), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -184, 0.5, 0), TextSize = 13, BackgroundColor3 = Color3.fromRGB(60, 110, 60), Parent = r }, function()
+		if (def.Food or def.Heal) and n > 0 then
+			UI.button(if def.Heal then "Use" else "Eat", { Size = UDim2.fromOffset(80, 38), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -184, 0.5, 0), TextSize = 13, BackgroundColor3 = Color3.fromRGB(60, 110, 60), Parent = r }, function()
 				Net.Event("Eat"):FireServer(id)
 			end)
 		end
@@ -123,10 +123,10 @@ function Inventory.Render()
 			end)
 		end
 	end
-	UI.text("Carried resources drop on death. Equipment, ammo and bandages are kept.", { LayoutOrder = order, TextSize = 13, TextColor3 = C.TextDim, Parent = body })
+	UI.text("Carried materials drop on death. Tools, weapons, armour, ammo and bandages are kept.", { LayoutOrder = order, TextSize = 13, TextColor3 = C.TextDim, Parent = body })
 end
 
-local slotCycle = { "Fists", "Weapon1", "Weapon2", "Tool", "Utility" }
+local slotCycle = { "Fists", "Weapon1", "Weapon2", "Tool", "Tool2", "Utility" }
 
 local function equip(slot: string?)
 	Net.Event("Equip"):FireServer(slot)
@@ -154,6 +154,8 @@ function Inventory.Start()
 		elseif n == "Slot3" then
 			equip("Tool")
 		elseif n == "Slot4" then
+			equip("Tool2")
+		elseif n == "Slot5" then
 			equip("Utility")
 		elseif n == "Fists" then
 			equip(nil)

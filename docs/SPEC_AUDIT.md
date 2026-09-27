@@ -17,7 +17,7 @@ Studio yet**.
 | Don't block future teams | ✅ | Team framework exists; solo = teams of one (config) | 1 |
 | PvP active immediately | ✅ | Combat on from match start (verify intro countdown) | 1 |
 | Last survivor wins | ✅ | Last team-of-one standing | 1 |
-| Grindy, costly progression | 🟡 | Costs are low (e.g. Stone Axe = 1 Stick + 1 Stone) | 2 |
+| Grindy, costly progression | ✅ | Phase 2 spec costs (tune after playtests) | 2 |
 | Centralised balance; server-authoritative damage/harvest/loot/fire/raids/currency/ownership | ✅ | `Config.luau` + data modules; services are server-side | – |
 
 ## Day / night
@@ -41,17 +41,17 @@ Studio yet**.
 ## Workbench
 | Requirement | Status | Current build | Phase |
 |---|---|---|---|
-| Pre-placed; can't be moved/damaged/destroyed/stolen/downgraded/used by enemies; usable after fire dies | 🟡 | Indestructible and team-only; verify "usable after fire dies" | 2 |
-| Tiers I–V with the spec costs; unlock recipes only; visual evolution; reset per match | 🟡 | 3 levels, low costs, shared team upgrade; meshes for L1–L3 only | 2 |
+| Pre-placed; can't be moved/damaged/destroyed/stolen/downgraded/used by enemies; usable after fire dies | ✅ | Indestructible, owner-only prompt, no fire check | – |
+| Tiers I–V with the spec costs; unlock recipes only; visual evolution; reset per match | ✅ | Phase 2 (Tier IV/V visuals procedural on the L3 mesh) | 2 |
 
 ## Start / resources / tools
 | Requirement | Status | Current build | Phase |
 |---|---|---|---|
 | Start with no axe/pickaxe/weapon; hand-gather sticks, loose stones, fibre, berries | ✅ | Hand gathering exists | – |
-| Crude Axe / Crude Pickaxe / Crude Spear recipes (sticks+stone+fibre) | 🟡 | Stone Axe + Spear (different costs); **no pickaxe** | 2 |
-| Small tree = exactly 4 Wood (Crude Axe+); Large = exactly 16 (Stone Axe+) | ❌ | Wood per hit until felled; health-based totals | 2 |
-| Small stone = 3 Stone (Crude Pickaxe+); Large = 12 (Stone Pickaxe+); loose → hands | ❌ | Rock piles are hand-gathered | 2 |
-| Tool tiers Crude/Stone/Iron/Steel with durability ≈ 40/100/225/450 hits; break at 0 | 🟡 | Durability exists per item; no tier ladder | 2 |
+| Crude Axe / Crude Pickaxe / Crude Spear recipes (sticks+stone+fibre) | ✅ | Phase 2 | 2 |
+| Small tree = exactly 4 Wood (Crude Axe+); Large = exactly 16 (Stone Axe+) | ✅ | Phase 2 | 2 |
+| Small stone = 3 Stone (Crude Pickaxe+); Large = 12 (Stone Pickaxe+); loose → hands | ✅ | Phase 2 | 2 |
+| Tool tiers Crude/Stone/Iron/Steel with durability ≈ 40/100/225/450 hits; break at 0 | ✅ | Phase 2 | 2 |
 | Renewable resources respawn | ✅ | `ResourceRules` respawn | – |
 
 ## Death / drops / elimination
@@ -81,8 +81,8 @@ Studio yet**.
 |---|---|---|---|
 | Deer, Bears, Rabbits, Boar, Wolves with distinct behaviour | 🟡 | Wolf, Bear, Bat (no deer/rabbit/boar) | 4 |
 | Night escalation (pressure, not HP inflation) | 🟡 | Spawn at night only | 4 |
-| Health 100 ✅; **Stamina 100** ❌; no fast regen (currently fire-side regen) | 🟡 | Health 100; slow regen near own fire | 2 |
-| Healing takes time, interruptible: Bandage ~20 / First Aid ~50 / Medkit ~100 | 🟡 | Bandage 3 s, +45 HP | 2 |
+| Health 100; Stamina 100; no fast regen | ✅ | Phase 2 (sprint uses stamina; melee costs come in Phase 4) | 2 |
+| Healing takes time, interruptible: Bandage ~20 / First Aid ~50 / Medkit ~100 | ✅ | Phase 2 | 2 |
 | Melee Light / Heavy / Block with stamina and guard break | ❌ | Single attack | 4 |
 | Ranged: Crude Bow II, Hunting Bow III, Crossbow III/IV; headshots | 🟡 | Bow + Pistol + Rifle; no headshots | 4 |
 | Armour Head/Chest/Legs, Hide → Tactical, ≤ 45–50 % full set | 🟡 | One "Leather Armor", 25 % | 4 |

@@ -217,6 +217,7 @@ function LivesService.SpawnAtCamp(p: Player)
 	local pad = camp.SpawnPads[spawnIndex[team]]
 	char:PivotTo(CFrame.lookAt(pad.Position, camp.FirePos + Vector3.new(0, 3.5, 0)))
 	protect(p)
+	ctx.StaminaService.OnSpawn(p)
 	ctx.InventoryService.OnSpawn(p)
 	ctx.PowerupService.OnSpawn(p)
 	ctx.MatchService.CheckOutcome()

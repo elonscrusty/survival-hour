@@ -123,7 +123,7 @@ local function pose(rig: Rig, t: number): (CFrame, CFrame, CFrame, CFrame)
 
 	if action == "Attack" and elapsed < 0.45 then
 		local k = math.clamp(elapsed / 0.35, 0, 1)
-		if item == "Spear" then
+		if item == "Spear" or item == "CrudeSpear" then
 			-- thrust
 			local ext = math.sin(k * math.pi)
 			r = raise(70 + 20 * ext, 1)
@@ -135,7 +135,7 @@ local function pose(rig: Rig, t: number): (CFrame, CFrame, CFrame, CFrame)
 			local kick = math.max(0, 1 - k * 3)
 			r = raise(90 + 15 * kick, 1)
 			l = if item == "Rifle" then raise(80, -1) else ID
-		elseif item == "StoneAxe" or item == "RepairHammer" then
+		elseif string.find(item, "Axe$") or string.find(item, "Pickaxe$") or item == "RepairHammer" then
 			-- overhead chop
 			local a = if k < 0.3 then 150 * (k / 0.3) else 150 - 190 * ((k - 0.3) / 0.7)
 			r = raise(a, 1)

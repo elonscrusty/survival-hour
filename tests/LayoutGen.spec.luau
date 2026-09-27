@@ -36,7 +36,7 @@ return {
 	end,
 	fair_resources = function(t)
 		local l = LG.Generate(77)
-		for _, typ in { "SmallTree", "Twigs", "Rock", "Plant" } do
+		for _, typ in { "TreeSmall", "Twigs", "RockPile", "FibrePlant", "LargeRockPile" } do
 			local n1 = countBy(l.Nodes, 1, typ)
 			t.ok(n1 > 0, typ .. " present")
 			for s = 2, 4 do

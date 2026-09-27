@@ -10,7 +10,10 @@
 --   Label           prompt / UI name
 --   Health          trees: chop points (a hit removes the tool's Power);
 --                   harvest nodes: number of gathers before exhaustion
---   RequiredTool    tool class (Items[..].ToolType) or "Hand"
+--   RequiredTool    tool class (Items[..].ToolType: "Axe" | "Pickaxe") or "Hand"
+--   MinTier         minimum Items[..].ToolTier (1 Crude, 2 Stone, 3 Iron, 4 Steel); nil = any
+--   Yield           exact total the node gives, spread over its hits by damage dealt
+--                   (spec: small tree = EXACTLY 4 Wood). Replaces PerHit when present.
 --   HarvestTime     seconds per hand/prompt gather (trees: seconds per prompt chop)
 --   PerHit          items granted on every successful hit/gather
 --   Drops           rolled once when the node is felled/exhausted:
@@ -34,6 +37,8 @@ export type Def = {
 	Label: string,
 	Health: number,
 	RequiredTool: string,
+	MinTier: number?,
+	Yield: { [string]: number }?,
 	HarvestTime: number,
 	PerHit: { [string]: number },
 	Drops: { Drop },
@@ -57,15 +62,16 @@ Resources.HandPower = 1
 -- The order resources are placed in (big blockers first).
 Resources.Order = {
 	"TreeLarge", "TreeMedium", "TreeSmall", "DeadTree",
-	"RockPile", "LooseStones", "Twigs", "FibrePlant", "BerryBush", "Mushrooms",
+	"LargeRockPile", "RockPile", "LooseStones", "Twigs", "FibrePlant", "BerryBush", "Mushrooms",
 }
 
 local defs: { [string]: Def } = {
 	TreeSmall = {
-		Id = "TreeSmall", Kind = "Tree", Label = "Young Tree",
-		Health = 30, RequiredTool = "Axe", HarvestTime = 0.7,
-		PerHit = { Wood = 1 },
-		Drops = { { Item = "Wood", Min = 1, Max = 2 }, { Item = "Stick", Min = 1, Max = 2, Chance = 0.6 } },
+		-- Spec: EXACTLY 4 Wood, Crude Axe or better.
+		Id = "TreeSmall", Kind = "Tree", Label = "Small Tree",
+		Health = 40, RequiredTool = "Axe", MinTier = 1, HarvestTime = 0.7,
+		PerHit = { Wood = 1 }, Yield = { Wood = 4 },
+		Drops = { { Item = "Stick", Min = 1, Max = 2, Chance = 0.6 } },
 		FellTime = 1.4, RespawnTime = 90, GrowTime = 4,
 		Range = 11, Rarity = "Common",
 		Placement = { PerSector = 22, NearCamp = 5, Radius = 3 },
@@ -74,10 +80,11 @@ local defs: { [string]: Def } = {
 		Model = "ResourceTree", ModelArgs = { "Small" },
 	},
 	TreeMedium = {
+		-- Between the spec's small (4) and large (16) trees: 8 Wood, Crude Axe or better.
 		Id = "TreeMedium", Kind = "Tree", Label = "Tree",
-		Health = 60, RequiredTool = "Axe", HarvestTime = 0.7,
-		PerHit = { Wood = 1 },
-		Drops = { { Item = "Wood", Min = 3, Max = 4 }, { Item = "Stick", Min = 1, Max = 3 } },
+		Health = 80, RequiredTool = "Axe", MinTier = 1, HarvestTime = 0.7,
+		PerHit = { Wood = 1 }, Yield = { Wood = 8 },
+		Drops = { { Item = "Stick", Min = 1, Max = 3 } },
 		FellTime = 1.6, RespawnTime = 150, GrowTime = 5,
 		Range = 12, Rarity = "Common",
 		Placement = { PerSector = 14, NearCamp = 2, MinCenterDist = 140, Radius = 4 },
@@ -87,10 +94,11 @@ local defs: { [string]: Def } = {
 	},
 	TreeLarge = {
 		-- Big yield, slow to fell (loud, exposed): found deeper in the forest.
-		Id = "TreeLarge", Kind = "Tree", Label = "Old Tree",
-		Health = 110, RequiredTool = "Axe", HarvestTime = 0.7,
-		PerHit = { Wood = 1 },
-		Drops = { { Item = "Wood", Min = 6, Max = 8 }, { Item = "Stick", Min = 2, Max = 4 } },
+		-- Spec: EXACTLY 16 Wood, Stone Axe or better.
+		Id = "TreeLarge", Kind = "Tree", Label = "Large Tree",
+		Health = 160, RequiredTool = "Axe", MinTier = 2, HarvestTime = 0.7,
+		PerHit = { Wood = 1 }, Yield = { Wood = 16 },
+		Drops = { { Item = "Stick", Min = 2, Max = 4 } },
 		FellTime = 2, RespawnTime = 240, GrowTime = 6,
 		Range = 13, Rarity = "Uncommon",
 		Placement = { PerSector = 6, NearCamp = 0, MaxCenterDist = 330, Radius = 6 },
@@ -100,9 +108,9 @@ local defs: { [string]: Def } = {
 	},
 	DeadTree = {
 		Id = "DeadTree", Kind = "Tree", Label = "Dead Tree",
-		Health = 40, RequiredTool = "Axe", HarvestTime = 0.7,
-		PerHit = { Stick = 1 },
-		Drops = { { Item = "Wood", Min = 2, Max = 3 }, { Item = "Stick", Min = 2, Max = 3 } },
+		Health = 40, RequiredTool = "Axe", MinTier = 1, HarvestTime = 0.7,
+		PerHit = { Stick = 1 }, Yield = { Wood = 3, Stick = 4 },
+		Drops = {},
 		FellTime = 1.4, RespawnTime = 180, GrowTime = 4,
 		Range = 11, Rarity = "Common",
 		Placement = { PerSector = 6, NearCamp = 1, Radius = 3 },
@@ -111,9 +119,10 @@ local defs: { [string]: Def } = {
 		Model = "DeadTree", ModelArgs = {},
 	},
 	RockPile = {
-		Id = "RockPile", Kind = "Harvest", Label = "Rock Pile",
-		Health = 3, RequiredTool = "Hand", HarvestTime = 1.0,
-		PerHit = { Stone = 2 },
+		-- Spec: small stone = 3 Stone, Crude Pickaxe or better.
+		Id = "RockPile", Kind = "Harvest", Label = "Small Stone",
+		Health = 30, RequiredTool = "Pickaxe", MinTier = 1, HarvestTime = 0.9,
+		PerHit = { Stone = 1 }, Yield = { Stone = 3 },
 		Drops = {},
 		FellTime = 0, RespawnTime = 90, GrowTime = 1,
 		Range = 10, Rarity = "Common",
@@ -121,6 +130,19 @@ local defs: { [string]: Def } = {
 		Sounds = { Hit = "Gather", Break = "Gather" },
 		Effects = { Hit = "Stone", Break = "Dust" },
 		Model = "RockPile", ModelArgs = {},
+	},
+	LargeRockPile = {
+		-- Spec: large stone = 12 Stone, Stone Pickaxe or better.
+		Id = "LargeRockPile", Kind = "Harvest", Label = "Large Stone",
+		Health = 120, RequiredTool = "Pickaxe", MinTier = 2, HarvestTime = 0.9,
+		PerHit = { Stone = 1 }, Yield = { Stone = 12 },
+		Drops = {},
+		FellTime = 0, RespawnTime = 180, GrowTime = 2,
+		Range = 12, Rarity = "Uncommon",
+		Placement = { PerSector = 4, NearCamp = 0, MinCenterDist = 120, Radius = 5 },
+		Sounds = { Hit = "Gather", Break = "Gather" },
+		Effects = { Hit = "Stone", Break = "Dust" },
+		Model = "LargeRockPile", ModelArgs = {},
 	},
 	LooseStones = {
 		Id = "LooseStones", Kind = "Harvest", Label = "Loose Stones",
@@ -192,9 +214,10 @@ function Resources.Get(id: string): Def?
 end
 
 -- Food: resource items that can be eaten from the pack.
+-- Spec: no fast passive regen; food is a small top-up.
 Resources.Food = {
-	Berries = { Heal = 10, Cooldown = 1 },
-	Mushroom = { Heal = 18, Cooldown = 1 },
+	Berries = { Heal = 5, Cooldown = 1.5 },
+	Mushroom = { Heal = 8, Cooldown = 1.5 },
 }
 
 -- Respawns wait until nothing stands on the spot.

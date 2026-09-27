@@ -36,6 +36,7 @@ return {
 		t.eq(slot, "Weapon2")
 		t.eq(old.Id, "Bow", "displaced item returned for dropping")
 		t.eq((I.AddEquipment(inv, "Tool", { Id = "StoneAxe" })), "Tool")
+		t.eq((I.AddEquipment(inv, "Tool", { Id = "StonePickaxe" })), "Tool2", "axe + pickaxe both fit")
 		local _, oldTool = I.AddEquipment(inv, "Tool", { Id = "RepairHammer" })
 		t.eq(oldTool.Id, "StoneAxe")
 		t.ok(I.Swap(inv, "Weapon1", "Weapon2"))

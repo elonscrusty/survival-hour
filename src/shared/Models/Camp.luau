@@ -182,6 +182,24 @@ function Camp.Workbench(cf: CFrame, level: number, teamColor: Color3, parent: In
 		Build.Part({ Name = "AnvilBase", Size = Vector3.new(1.2, 1.6, 1.2), CFrame = CFrame.new(5.6, 0.8, 0), Color = WOOD_DARK, Material = Enum.Material.Wood, Parent = m })
 		Build.Decor({ Name = "Pennant", Class = "WedgePart", Size = Vector3.new(0.1, 2.4, 3), CFrame = CFrame.new(-4.2, 7.6, 1.9) * CFrame.Angles(0, math.rad(90), math.rad(180)), Color = teamColor, Material = Enum.Material.Fabric, Parent = m })
 	end
+	if level >= 4 then
+		-- Tier IV: stone forge with glowing coals and a chimney
+		Build.Part({ Name = "Forge", Size = Vector3.new(3.4, 2.6, 3), CFrame = CFrame.new(-6.4, 1.3, 0.4), Color = Color3.fromRGB(96, 90, 86), Material = Enum.Material.Brick, Parent = m })
+		local coals = Build.Decor({ Name = "ForgeCoals", Size = Vector3.new(2.4, 0.3, 2), CFrame = CFrame.new(-6.4, 2.7, 0.4), Color = Color3.fromRGB(255, 110, 40), Material = Enum.Material.Neon, Parent = m })
+		local glow = Instance.new("PointLight")
+		glow.Color = Color3.fromRGB(255, 140, 70)
+		glow.Range = 12
+		glow.Brightness = 1.4
+		glow.Parent = coals
+		Build.Part({ Name = "ForgeChimney", Size = Vector3.new(1.4, 5, 1.4), CFrame = CFrame.new(-6.9, 5.2, 1.3), Color = Color3.fromRGB(80, 76, 72), Material = Enum.Material.Brick, Parent = m, CanCollide = false })
+	end
+	if level >= 5 then
+		-- Tier V: steel-plated top and a rack of steel tools
+		Build.Decor({ Name = "SteelPlate", Size = Vector3.new(8.1, 0.12, 4.1), CFrame = CFrame.new(0, 3.86, 0), Color = Color3.fromRGB(170, 176, 186), Material = Enum.Material.DiamondPlate, Parent = m })
+		for i = -1, 1 do
+			Build.Decor({ Name = "SteelTool", Size = Vector3.new(0.25, 2.6, 0.25), CFrame = CFrame.new(i * 1.6 + 0.5, 6.4, 1.62), Color = Color3.fromRGB(196, 202, 212), Material = Enum.Material.Metal, Parent = m })
+		end
+	end
 	local lvl = Build.Decor({ Name = "LevelPlate", Size = Vector3.new(2.4, 1, 0.1), CFrame = CFrame.new(0, 2.6, -2.05), Color = teamColor, Material = Enum.Material.SmoothPlastic, Parent = m })
 	local sg = Instance.new("SurfaceGui")
 	sg.Face = Enum.NormalId.Front
@@ -189,7 +207,7 @@ function Camp.Workbench(cf: CFrame, level: number, teamColor: Color3, parent: In
 	local tl = Instance.new("TextLabel")
 	tl.Size = UDim2.fromScale(1, 1)
 	tl.BackgroundTransparency = 1
-	tl.Text = "LV " .. level
+	tl.Text = ({ "I", "II", "III", "IV", "V" })[level] or ("LV " .. level)
 	tl.Font = Enum.Font.GothamBlack
 	tl.TextScaled = true
 	tl.TextColor3 = Color3.new(1, 1, 1)
@@ -200,7 +218,7 @@ function Camp.Workbench(cf: CFrame, level: number, teamColor: Color3, parent: In
 	if Skins.Enabled() then
 		local name = "SM_Workbench_Level0" .. math.clamp(level, 1, 3)
 		local scale = ({ 1.3, 1.12, 1.0 })[math.clamp(level, 1, 3)]
-		Skins.Dress(m, name, { scale = scale, keep = { Pennant = true } })
+		Skins.Dress(m, name, { scale = scale, keep = { Pennant = true, Forge = true, ForgeCoals = true, ForgeChimney = true, SteelPlate = true, SteelTool = true } })
 	end
 	return m
 end

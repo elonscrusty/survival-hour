@@ -65,7 +65,7 @@ function CraftService._onCraft(p: Player, recipeId: any)
 	end
 	if recipe.Level > 0 then
 		if ctx.CampService.GetLevel(team) < recipe.Level then
-			ctx.Util.Notify(p, "Requires workbench level " .. recipe.Level .. ".", "error")
+			ctx.Util.Notify(p, "Requires Workbench Tier " .. ({ "I", "II", "III", "IV", "V" })[recipe.Level] .. ".", "error")
 			return
 		end
 		if not nearWorkbench(p) then
@@ -79,8 +79,11 @@ function CraftService._onCraft(p: Player, recipeId: any)
 	end
 	local def = Items[recipe.Result]
 	-- Space checks before paying
-	if recipe.Kind == "Resource" then
-		-- rope: paying 3 plants frees 3 slots, result takes 1: always fits
+	if recipe.Kind == "Consumable" then
+		if inv.Bandages >= inv.BandageMax then
+			ctx.Util.Notify(p, "Your bandage pouch is full.", "warn")
+			return
+		end
 	elseif recipe.Kind == "Ammo" then
 		if (inv.Ammo[recipe.Result] or 0) >= (inv.AmmoMax[recipe.Result] or 0) then
 			ctx.Util.Notify(p, "Your ammo pouch is full.", "warn")
@@ -91,7 +94,14 @@ function CraftService._onCraft(p: Player, recipeId: any)
 		return
 	end
 	if recipe.Kind == "Resource" then
-		InventoryModel.AddResource(inv, recipe.Result, recipe.Count)
+		local added = InventoryModel.AddResource(inv, recipe.Result, recipe.Count)
+		local root = ctx.Util.Root(p)
+		if added < recipe.Count and root then
+			ctx.InventoryService.SpawnPickup(recipe.Result, recipe.Count - added, root.Position + root.CFrame.LookVector * 3)
+		end
+		ctx.InventoryService.Sync(p)
+	elseif recipe.Kind == "Consumable" then
+		InventoryModel.AddBandages(inv, recipe.Count)
 		ctx.InventoryService.Sync(p)
 	elseif recipe.Kind == "Ammo" then
 		InventoryModel.AddAmmo(inv, recipe.Result, recipe.Count)

@@ -208,15 +208,15 @@ local function renderShop()
 end
 
 local HELP = {
-	{ "Goal", "Four clans of up to four. Keep your campfire burning and be the last clan with a player alive or able to respawn." },
-	{ "Day & night", "Day and night each last 2 minutes and repeat until one clan wins. At night, wolves, bears and bats hunt anyone away from a burning fire, and enemy fires can be put out." },
-	{ "Lives", "Each death uses one of 3 free respawns (5 s) while your fire burns. That includes deaths to players, animals, spikes and resetting. After that, you or a teammate can buy a revive within 20 s. Once your fire is out, any death eliminates you." },
-	{ "Progression", "Gather sticks, stone and fibre by hand, craft a Stone Axe, chop wood, build walls and storage. Hunt at night for leather. Twist fibre into rope. Upgrade your workbench to level 2 and craft a Canteen." },
-	{ "Raiding", "Fill your canteen at any stream. At night, hold Pour at an enemy fire for 10 s. Getting hit stops the pour, and only one raider can pour on a fire at a time." },
-	{ "Storage", "Build a storage box and deposit resources your whole clan can build and upgrade with. Enemies can steal from it (3 s)." },
-	{ "Loot", "A free care package drops every day (3 random items, shown on the map). Hidden crates in the forest restock at dawn." },
-	{ "PC controls", "WASD move · Click attack / hold to draw a bow · Right-click aim or block · 1-4 slots · ` fists · Q swap · X ability · H bandage · I bag · C craft · B build · M map · E/F/G interact" },
-	{ "Mobile", "Use the on-screen buttons: ATTACK (hold for bows), AIM/BLOCK, ABILITY, HEAL, SWAP. Tap the prompt cards to interact. BAG, CRAFT, BUILD and MAP are at the top right." },
+	{ "Goal", "Solo survival. Every player has their own camp with a Campfire and a Tier I Workbench. PvP is on from the start. Be the last survivor." },
+	{ "Day & night", "Day and night each last exactly 2 minutes. At each sunrise, everyone alive gets 15 s of protection (and can't deal damage). At night predators roam." },
+	{ "Your fire", "While your fire burns you respawn (8 s, 12 s, 16 s, then 20 s). Feed it Wood (1 Wood = +2% fuel). At 0% it goes out for good and you're on your FINAL LIFE. Upgrade it (L2-L5) to burn longer and take longer to snuff." },
+	{ "Snuffing", "Fires are protected during Nights 1-2. From Night 3, enemy fires can be snuffed day or night with a filled canteen: hold 8-20 s by fire level. Taking damage, moving or letting go cancels it." },
+	{ "Progression", "Start with nothing. Gather sticks, loose stones, fibre and berries by hand, then craft a Crude Axe, Pickaxe and Spear. Small trees give 4 Wood, large trees 16 (Stone Axe). Upgrade your Workbench (Tiers I-V) with your pack + storage." },
+	{ "Health & stamina", "Health 100, stamina 100 (sprint with Shift). There's no fast regen: bandages (+20), First Aid kits (+50) and Medkits (+100) take time and are interrupted by damage." },
+	{ "Deaths", "Only materials drop, in one loot bag. You keep tools, weapons, armour, backpack and Workbench progress." },
+	{ "PC controls", "WASD move · Shift sprint · Click attack · Right-click aim/block · 1-5 slots · ` fists · Q swap · X ability · H bandage · I bag · C craft · B build · M map · E/F interact" },
+	{ "Mobile", "Use the on-screen buttons: ATTACK, AIM/BLOCK, ABILITY, HEAL, SWAP and RUN. Tap the prompt cards to interact. BAG, CRAFT, BUILD and MAP are at the top right." },
 }
 
 local function renderHelp()
