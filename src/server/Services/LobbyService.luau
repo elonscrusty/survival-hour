@@ -41,6 +41,20 @@ function LobbyService.Init(c)
 	ctx.Util.OnPlayerAdded(function(p)
 		LobbyService._solo(p)
 		dirty = true
+		-- Stream the lobby around its fire (not the character) while in the lobby: the
+		-- title screen shows the refuge before any character exists.
+		local focus
+		function focus()
+			local lobby = workspace:FindFirstChild("Lobby")
+			local fire = lobby and lobby:FindFirstChild("LobbyFire")
+			local part = fire and (fire:IsA("Model") and fire.PrimaryPart or fire:FindFirstChildWhichIsA("BasePart", true))
+			p.ReplicationFocus = if p:GetAttribute("InMatch") then nil else part
+			if not part and not p:GetAttribute("InMatch") and p.Parent then
+				task.delay(1, focus) -- lobby still being built
+			end
+		end
+		focus()
+		p:GetAttributeChangedSignal("InMatch"):Connect(focus)
 	end)
 	ctx.Util.OnPlayerRemoving(function(p)
 		LobbyService._leaveParty(p, true)

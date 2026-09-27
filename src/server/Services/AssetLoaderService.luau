@@ -28,7 +28,7 @@ local AssetLoaderService = {}
 
 local WORKERS = 6
 local TIMEOUT = 120 -- give up on the rest after this long
-local BLOCK_FOR = 12 -- server start waits at most this long; the rest loads in the background
+local BLOCK_FOR = 0 -- never hold up server start: meshes load in the background (the lobby has pack fallbacks)
 
 AssetLoaderService.Loaded = 0
 AssetLoaderService.Failed = {} :: { string }

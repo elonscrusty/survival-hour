@@ -38,6 +38,8 @@ local lockerBody: ScrollingFrame
 local profileBody: ScrollingFrame
 local shopBody: ScrollingFrame
 local lockerType = "Outfit"
+local titleUp = false -- lobby HUD stays hidden behind the title screen
+local refreshVis: () -> () = function() end
 local helpBody: ScrollingFrame
 
 local function send(action: string, extra: { [string]: any }?)
@@ -414,7 +416,13 @@ local function titleScreen()
 		return
 	end
 	local center = fire:GetPivot().Position
+	-- make sure the ground round the fire has streamed in before we look at it
+	pcall(function()
+		player:RequestStreamAroundAsync(center, 10)
+	end)
 	local cam = workspace.CurrentCamera
+	titleUp = true
+	refreshVis()
 	local overlay = UI.new("ScreenGui", { Name = "TitleScreen", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 20, Parent = player:WaitForChild("PlayerGui") })
 	local shade = UI.new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.35, BorderSizePixel = 0, Parent = overlay }, {
 		UI.new("UIGradient", { Rotation = 90, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(0.5, 0.85), NumberSequenceKeypoint.new(1, 0.1) }) }),
@@ -464,13 +472,27 @@ local function titleScreen()
 			TweenService:Create(d, TweenInfo.new(0.5), { TextTransparency = 1, BackgroundTransparency = 1 }):Play()
 		end
 	end
+	titleUp = false
+	refreshVis()
 	task.delay(0.7, function()
 		overlay:Destroy()
 	end)
 end
 
 function Lobby.Start()
-	task.spawn(titleScreen)
+	titleUp = workspace:GetAttribute("ServerMode") ~= "Match" and not player:GetAttribute("InMatch")
+	task.spawn(function()
+		local ok, err = pcall(titleScreen)
+		if not ok then
+			warn("[Lobby] title screen:", err)
+		end
+		titleUp = false -- whatever happened, give the lobby UI back and the camera
+		refreshVis()
+		RunService:UnbindFromRenderStep("SurvivalHourTitle")
+		if workspace.CurrentCamera.CameraType == Enum.CameraType.Scriptable then
+			workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
+		end
+	end)
 	gui = UI.new("ScreenGui", { Name = "LobbyHud", ResetOnSpawn = false, DisplayOrder = 3, Parent = player:WaitForChild("PlayerGui") })
 	local scale = UI.new("UIScale", { Parent = gui })
 	local function rescale()
@@ -545,8 +567,9 @@ function Lobby.Start()
 		end
 	end)
 	local function vis()
-		gui.Enabled = not player:GetAttribute("InMatch") and workspace:GetAttribute("ServerMode") ~= "Match"
+		gui.Enabled = not titleUp and not player:GetAttribute("InMatch") and workspace:GetAttribute("ServerMode") ~= "Match"
 	end
+	refreshVis = vis
 	player:GetAttributeChangedSignal("InMatch"):Connect(vis)
 	vis()
 end

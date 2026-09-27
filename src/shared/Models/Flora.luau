@@ -392,7 +392,8 @@ function Flora.BerryBush(cf: CFrame, rng: Random, parent: Instance?): Model
 	end
 	finish(m, root, cf, parent)
 	if Skins.Enabled() then
-		Skins.Dress(m, "SM_Bush01", { scale = 4.5 / 3.4, keep = { Berry = true } }) -- berries stay procedural (they are the yield)
+		-- sized to the procedural leaf balls so the berries sit on the bush, not in the air
+		Skins.Dress(m, "SM_Bush01", { scale = 1.6, keep = { Berry = true } }) -- berries stay procedural (they are the yield)
 	end
 	return m
 end

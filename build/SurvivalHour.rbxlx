@@ -5710,7 +5710,8 @@ function Flora.BerryBush(cf: CFrame, rng: Random, parent: Instance?): Model
 	end
 	finish(m, root, cf, parent)
 	if Skins.Enabled() then
-		Skins.Dress(m, "SM_Bush01", { scale = 4.5 / 3.4, keep = { Berry = true } }) -- berries stay procedural (they are the yield)
+		-- sized to the procedural leaf balls so the berries sit on the bush, not in the air
+		Skins.Dress(m, "SM_Bush01", { scale = 1.6, keep = { Berry = true } }) -- berries stay procedural (they are the yield)
 	end
 	return m
 end
@@ -7866,8 +7867,8 @@ return Nature
           <Properties>
             <string name="Name">Refuge</string>
             <string name="Source"><![CDATA[--!nonstrict
--- The lobby as a forest refuge: layered forest ring, Blender ground sections,
--- lobby props (gathering deck, stalls, party area, ready arch, class stands),
+-- The lobby as a forest refuge (over a voxel forest floor with a stream and
+-- ponds, built by WorldService): layered forest ring, lobby props (gathering deck, stalls, party area, ready arch, class stands),
 -- signposts, lanterns and the Hall of Fame board. Mesh-first over the
 -- procedural lobby, which keeps every collider, prompt and label.
 
@@ -7880,7 +7881,9 @@ local Refuge = {}
 -- Forest-refuge dressing for the lobby: layered forest ring, Blender ground
 -- sections, lobby props and signposts. Everything is mesh-first with the
 -- procedural lobby underneath (colliders, prompts and labels stay on it).
-function Refuge.Dress(folder: Instance, O: Vector3, readyCenter: Vector3, stations: { [string]: Model }): TextLabel?
+export type Water = { Ponds: { { X: number, Z: number, R: number } }, Stream: { { number } } }
+
+function Refuge.Dress(folder: Instance, O: Vector3, readyCenter: Vector3, stations: { [string]: Model }, water: Water?): TextLabel?
 	local board: TextLabel? = nil
 	local rng = Random.new(1207)
 	local deco = Instance.new("Folder")
@@ -7903,6 +7906,19 @@ function Refuge.Dress(folder: Instance, O: Vector3, readyCenter: Vector3, statio
 				return false
 			end
 		end
+		-- keep out of the water
+		if water then
+			for _, pd in water.Ponds do
+				if (pos - (O + Vector3.new(pd.X, 0, pd.Z))).Magnitude < pd.R + 4 then
+					return false
+				end
+			end
+			for _, pt in water.Stream do
+				if (pos - (O + Vector3.new(pt[1], 0, pt[2]))).Magnitude < 7 then
+					return false
+				end
+			end
+		end
 		-- keep the cross paths and the ready ring open
 		local d = pos - O
 		if math.abs(d.X) < 7 or math.abs(d.Z) < 7 then
@@ -7910,29 +7926,12 @@ function Refuge.Dress(folder: Instance, O: Vector3, readyCenter: Vector3, statio
 		end
 		return (pos - readyCenter).Magnitude > 16
 	end
-	-- Blender forest-floor sections (visual only; the island collider stays underneath)
-	if Skins.Has("SM_Ground_Forest01") then
-		for gx = -2, 2 do
-			for gz = -2, 2 do
-				local c = O + Vector3.new(gx * 32, 0, gz * 32)
-				-- skip the cross paths (except the centre clearing)
-				local onPath = (gx == 0) ~= (gz == 0)
-				if (c - O).Magnitude < 62 and not onPath then
-					local name = if gx == 0 and gz == 0 and Skins.Has("SM_Ground_Clearing01") then "SM_Ground_Clearing01" else "SM_Ground_Forest01"
-					local v = Skins.Visual(name)
-					if v then
-						-- the section's pivot sits at its walkable surface
-						v:PivotTo(CFrame.new(c + Vector3.new(0, 0.05, 0)) * CFrame.Angles(0, math.rad(90 * ((gx + gz) % 4)), 0))
-						v.Name = "GroundSection"
-						v.Parent = deco
-					end
-				end
-			end
-		end
-	end
 	-- Layered forest: tall canopy at the rim, a mid layer, then undergrowth.
 	for _ = 1, 26 do
 		local pos = ringSpot(56, 70)
+		if not clearOfStations(pos) then
+			continue
+		end
 		local kind = ({ "Spruce", "Spruce", "Aspen", "GiantTree" })[rng:NextInteger(1, 4)]
 		Decor.Place(kind, flatCF(pos), rng, rng:NextNumber(0.8, 1.15), deco)
 	end
@@ -60289,7 +60288,7 @@ local AssetLoaderService = {}
 
 local WORKERS = 6
 local TIMEOUT = 120 -- give up on the rest after this long
-local BLOCK_FOR = 12 -- server start waits at most this long; the rest loads in the background
+local BLOCK_FOR = 0 -- never hold up server start: meshes load in the background (the lobby has pack fallbacks)
 
 AssetLoaderService.Loaded = 0
 AssetLoaderService.Failed = {} :: { string }
@@ -64946,6 +64945,20 @@ function LobbyService.Init(c)
 	ctx.Util.OnPlayerAdded(function(p)
 		LobbyService._solo(p)
 		dirty = true
+		-- Stream the lobby around its fire (not the character) while in the lobby: the
+		-- title screen shows the refuge before any character exists.
+		local focus
+		function focus()
+			local lobby = workspace:FindFirstChild("Lobby")
+			local fire = lobby and lobby:FindFirstChild("LobbyFire")
+			local part = fire and (fire:IsA("Model") and fire.PrimaryPart or fire:FindFirstChildWhichIsA("BasePart", true))
+			p.ReplicationFocus = if p:GetAttribute("InMatch") then nil else part
+			if not part and not p:GetAttribute("InMatch") and p.Parent then
+				task.delay(1, focus) -- lobby still being built
+			end
+		end
+		focus()
+		p:GetAttributeChangedSignal("InMatch"):Connect(focus)
 	end)
 	ctx.Util.OnPlayerRemoving(function(p)
 		LobbyService._leaveParty(p, true)
@@ -69004,6 +69017,7 @@ export type MapInfo = {
 	NoBuild: { { X: number, Z: number, R: number, Label: string } },
 	Caves: { { CF: CFrame, Length: number, Width: number, FloorY: number, Size: string } },
 	Pois: { { Type: string, Tier: string, Pos: Vector3 } },
+	TerrainReady: boolean?, -- terrain written: GroundY snaps to the real surface
 }
 
 WorldService.Map = nil :: MapInfo?
@@ -69031,6 +69045,11 @@ end
 
 -- Height -------------------------------------------------------------------------------
 
+local terrainOnly = RaycastParams.new()
+terrainOnly.FilterType = Enum.RaycastFilterType.Include
+terrainOnly.FilterDescendantsInstances = { workspace.Terrain }
+terrainOnly.IgnoreWater = true
+
 function WorldService.GroundY(x: number, z: number): number
 	local map = WorldService.Map
 	if not map then
@@ -69043,7 +69062,16 @@ function WorldService.GroundY(x: number, z: number): number
 			return cave.FloorY
 		end
 	end
-	return map.Origin.Y + LayoutGen.Height(map.Layout, x - map.Origin.X, z - map.Origin.Z)
+	local h = map.Origin.Y + LayoutGen.Height(map.Layout, x - map.Origin.X, z - map.Origin.Z)
+	if map.TerrainReady then
+		-- Voxel terrain smooths the heightfield, so objects placed at `h` can end up
+		-- half-buried or floating: use the actual surface (water ignored).
+		local r = workspace:Raycast(Vector3.new(x, h + 24, z), Vector3.new(0, -48, 0), terrainOnly)
+		if r then
+			return r.Position.Y
+		end
+	end
+	return h
 end
 
 -- Raycast down onto terrain/geometry (used for dynamic spawns).
@@ -69363,16 +69391,21 @@ local function addChests(map: MapInfo, model: Model, f: any)
 	end
 end
 
+local POI_SCALE = 1.35
+
 function WorldService._buildPoi(map: MapInfo, f: any, cf: CFrame, rng: Random, parent: Instance)
 	local m = Landmarks.Build(f.Type, cf, rng, parent)
 	if not m then
 		return
 	end
+	-- Buildings were a bit small next to players: scale the whole POI (colliders,
+	-- meshes and chest mounts together) about its ground pivot.
+	m:ScaleTo(POI_SCALE)
 	m:SetAttribute("Poi", f.Type)
 	m:SetAttribute("Tier", f.Tier)
 	addChests(map, m, f)
 	local O = map.Origin
-	table.insert(map.NoBuild, { X = f.X + O.X, Z = f.Z + O.Z, R = f.R + 4, Label = "a " .. f.Type })
+	table.insert(map.NoBuild, { X = f.X + O.X, Z = f.Z + O.Z, R = f.R * POI_SCALE + 4, Label = "a " .. f.Type })
 	table.insert(map.Pois, { Type = f.Type, Tier = f.Tier or "Common", Pos = cf.Position })
 end
 
@@ -69447,6 +69480,7 @@ function WorldService.BuildMatch(seed: number): MapInfo
 
 	writeTerrain(map)
 	WorldService._carveCaves(map)
+	map.TerrainReady = true
 
 	local decor = Instance.new("Folder")
 	decor.Name = "Forest"
@@ -69649,21 +69683,19 @@ end
 
 function WorldService.BuildLobby()
 	local O = Config.Map.LobbyOrigin
-	local folder = Instance.new("Folder")
+	-- The lobby is small, so it's one Persistent model: sent whole on join, so the
+	-- title-screen camera never shows trees streamed in before the ground under them.
+	local folder = Instance.new("Model")
 	folder.Name = "Lobby"
+	folder.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
 	folder.Parent = workspace
 
-	-- Island base: layered cylinders with rock underside.
-	local top = Build.Cyl("Ground", 4, 150, CFrame.new(O + Vector3.new(0, -2, 0)), Color3.fromRGB(96, 150, 72), Enum.Material.Grass, folder)
-	top.Name = "LobbyGround"
-	Build.Cyl("Soil", 10, 146, CFrame.new(O + Vector3.new(0, -9, 0)), Color3.fromRGB(110, 84, 60), Enum.Material.Ground, folder)
+	-- Island base: voxel forest floor (grass, moss, leaf litter, dirt paths) with a
+	-- stream and two ponds, over a rocky underside.
+	WorldService._lobbyTerrain(O)
 	for i = 0, 15 do
 		local a = math.rad(i * 22.5)
 		Build.Part({ Name = "UnderRock", Size = Vector3.new(24, 30, 24), CFrame = CFrame.new(O + Vector3.new(math.cos(a) * 50, -26, math.sin(a) * 50)) * CFrame.Angles(0.3, a, 0.2), Color = Color3.fromRGB(104, 100, 96), Material = Enum.Material.Rock, Parent = folder, CanCollide = false })
-	end
-	-- Paths (cross)
-	for _, rot in { 0, 90 } do
-		Build.Part({ Name = "Path", Size = Vector3.new(10, 0.2, 130), CFrame = CFrame.new(O + Vector3.new(0, 0.05, 0)) * CFrame.Angles(0, math.rad(rot), 0), Color = Color3.fromRGB(150, 120, 86), Material = Enum.Material.Ground, Parent = folder, CanCollide = false })
 	end
 	-- Edge trees and rail
 	for i = 0, 27 do
@@ -69753,7 +69785,7 @@ function WorldService.BuildLobby()
 		Party = party,
 		Locker = locker,
 		Profile = profile,
-	})
+	}, WorldService.LobbyWater)
 
 	-- Title
 	local title = Build.Part({ Name = "Title", Size = Vector3.new(1, 1, 1), CFrame = CFrame.new(O + Vector3.new(0, 26, -50)), Transparency = 1, CanCollide = false, Parent = folder })
@@ -69763,6 +69795,69 @@ function WorldService.BuildLobby()
 
 	WorldService.LobbySpawn = CFrame.new(O + Vector3.new(0, 4, 18)) * CFrame.Angles(0, math.rad(180), 0)
 	return folder
+end
+
+-- Lobby water: shared with Refuge so decorations keep out of it.
+WorldService.LobbyWater = {
+	Ponds = { { X = 34, Z = -30, R = 9 }, { X = -36, Z = -26, R = 7 } },
+	Stream = { { 58, -46 }, { 50, -41 }, { 43, -35 }, { 37, -32 } }, -- from the NE rim into the NE pond
+}
+
+-- Voxel island for the lobby. Surface at O.Y (4-stud aligned), 12 studs thick,
+-- rock underneath; noise-picked forest-floor materials; dirt cross paths; a
+-- stream falling off the edge into a pond; a second quiet pond.
+function WorldService._lobbyTerrain(O: Vector3)
+	local R = 74
+	pcall(function()
+		terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(88, 122, 62))
+		terrain:SetMaterialColor(Enum.Material.LeafyGrass, Color3.fromRGB(70, 106, 52))
+		terrain:SetMaterialColor(Enum.Material.Ground, Color3.fromRGB(104, 84, 60))
+		terrain:SetMaterialColor(Enum.Material.Mud, Color3.fromRGB(74, 60, 46))
+	end)
+	-- body + rocky underside
+	terrain:FillCylinder(CFrame.new(O + Vector3.new(0, -8, 0)), 16, R, Enum.Material.Ground)
+	terrain:FillCylinder(CFrame.new(O + Vector3.new(0, -22, 0)), 12, R * 0.8, Enum.Material.Rock)
+	terrain:FillCylinder(CFrame.new(O + Vector3.new(0, -32, 0)), 8, R * 0.5, Enum.Material.Rock)
+	-- top layer: 4-stud cells, material from two noise fields
+	local STEP = 4
+	for x = -R, R, STEP do
+		for z = -R, R, STEP do
+			if x * x + z * z <= R * R then
+				local nA = math.noise(x / 26, z / 26, 3.7)
+				local nB = math.noise(x / 11 + 20, z / 11, 8.2)
+				local mat = if nA > 0.22 then Enum.Material.LeafyGrass
+					elseif nA < -0.3 then Enum.Material.Ground
+					elseif nB > 0.4 then Enum.Material.Mud
+					else Enum.Material.Grass
+				if math.abs(x) <= 5 or math.abs(z) <= 5 then
+					mat = Enum.Material.Ground -- cross paths
+				end
+				if x * x + z * z < 15 * 15 then
+					mat = Enum.Material.Ground -- packed earth round the fire
+				end
+				terrain:FillBlock(CFrame.new(O + Vector3.new(x, -2, z)), Vector3.new(STEP, 4, STEP), mat)
+			end
+		end
+	end
+	-- water: ponds and the stream (carved, then filled a little below the bank)
+	local W = WorldService.LobbyWater
+	for _, pd in W.Ponds do
+		local c = O + Vector3.new(pd.X, 0, pd.Z)
+		terrain:FillCylinder(CFrame.new(c + Vector3.new(0, -2.5, 0)), 5, pd.R + 2.5, Enum.Material.Mud)
+		terrain:FillCylinder(CFrame.new(c + Vector3.new(0, -2, 0)), 4, pd.R, Enum.Material.Air)
+		terrain:FillCylinder(CFrame.new(c + Vector3.new(0, -2.5, 0)), 3, pd.R, Enum.Material.Water)
+		terrain:FillCylinder(CFrame.new(c + Vector3.new(0, -5, 0)), 2, pd.R, Enum.Material.Sand)
+	end
+	for i = 1, #W.Stream - 1 do
+		local a = O + Vector3.new(W.Stream[i][1], 0, W.Stream[i][2])
+		local b = O + Vector3.new(W.Stream[i + 1][1], 0, W.Stream[i + 1][2])
+		local mid = (a + b) / 2
+		local len = (b - a).Magnitude + 3
+		local cf = CFrame.lookAt(mid, b)
+		terrain:FillBlock(cf * CFrame.new(0, -1.5, 0), Vector3.new(8, 3, len), Enum.Material.Mud)
+		terrain:FillBlock(cf * CFrame.new(0, -1, 0), Vector3.new(4.5, 2, len), Enum.Material.Air)
+		terrain:FillBlock(cf * CFrame.new(0, -1.5, 0), Vector3.new(4.5, 1.5, len), Enum.Material.Water)
+	end
 end
 
 -- Updates the Hall of Fame board text (called by LobbyService).
@@ -72617,6 +72712,8 @@ local lockerBody: ScrollingFrame
 local profileBody: ScrollingFrame
 local shopBody: ScrollingFrame
 local lockerType = "Outfit"
+local titleUp = false -- lobby HUD stays hidden behind the title screen
+local refreshVis: () -> () = function() end
 local helpBody: ScrollingFrame
 
 local function send(action: string, extra: { [string]: any }?)
@@ -72993,7 +73090,13 @@ local function titleScreen()
 		return
 	end
 	local center = fire:GetPivot().Position
+	-- make sure the ground round the fire has streamed in before we look at it
+	pcall(function()
+		player:RequestStreamAroundAsync(center, 10)
+	end)
 	local cam = workspace.CurrentCamera
+	titleUp = true
+	refreshVis()
 	local overlay = UI.new("ScreenGui", { Name = "TitleScreen", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 20, Parent = player:WaitForChild("PlayerGui") })
 	local shade = UI.new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.35, BorderSizePixel = 0, Parent = overlay }, {
 		UI.new("UIGradient", { Rotation = 90, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(0.5, 0.85), NumberSequenceKeypoint.new(1, 0.1) }) }),
@@ -73043,13 +73146,27 @@ local function titleScreen()
 			TweenService:Create(d, TweenInfo.new(0.5), { TextTransparency = 1, BackgroundTransparency = 1 }):Play()
 		end
 	end
+	titleUp = false
+	refreshVis()
 	task.delay(0.7, function()
 		overlay:Destroy()
 	end)
 end
 
 function Lobby.Start()
-	task.spawn(titleScreen)
+	titleUp = workspace:GetAttribute("ServerMode") ~= "Match" and not player:GetAttribute("InMatch")
+	task.spawn(function()
+		local ok, err = pcall(titleScreen)
+		if not ok then
+			warn("[Lobby] title screen:", err)
+		end
+		titleUp = false -- whatever happened, give the lobby UI back and the camera
+		refreshVis()
+		RunService:UnbindFromRenderStep("SurvivalHourTitle")
+		if workspace.CurrentCamera.CameraType == Enum.CameraType.Scriptable then
+			workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
+		end
+	end)
 	gui = UI.new("ScreenGui", { Name = "LobbyHud", ResetOnSpawn = false, DisplayOrder = 3, Parent = player:WaitForChild("PlayerGui") })
 	local scale = UI.new("UIScale", { Parent = gui })
 	local function rescale()
@@ -73124,8 +73241,9 @@ function Lobby.Start()
 		end
 	end)
 	local function vis()
-		gui.Enabled = not player:GetAttribute("InMatch") and workspace:GetAttribute("ServerMode") ~= "Match"
+		gui.Enabled = not titleUp and not player:GetAttribute("InMatch") and workspace:GetAttribute("ServerMode") ~= "Match"
 	end
+	refreshVis = vis
 	player:GetAttributeChangedSignal("InMatch"):Connect(vis)
 	vis()
 end

@@ -1,6 +1,6 @@
 --!nonstrict
--- The lobby as a forest refuge: layered forest ring, Blender ground sections,
--- lobby props (gathering deck, stalls, party area, ready arch, class stands),
+-- The lobby as a forest refuge (over a voxel forest floor with a stream and
+-- ponds, built by WorldService): layered forest ring, lobby props (gathering deck, stalls, party area, ready arch, class stands),
 -- signposts, lanterns and the Hall of Fame board. Mesh-first over the
 -- procedural lobby, which keeps every collider, prompt and label.
 
@@ -13,7 +13,9 @@ local Refuge = {}
 -- Forest-refuge dressing for the lobby: layered forest ring, Blender ground
 -- sections, lobby props and signposts. Everything is mesh-first with the
 -- procedural lobby underneath (colliders, prompts and labels stay on it).
-function Refuge.Dress(folder: Instance, O: Vector3, readyCenter: Vector3, stations: { [string]: Model }): TextLabel?
+export type Water = { Ponds: { { X: number, Z: number, R: number } }, Stream: { { number } } }
+
+function Refuge.Dress(folder: Instance, O: Vector3, readyCenter: Vector3, stations: { [string]: Model }, water: Water?): TextLabel?
 	local board: TextLabel? = nil
 	local rng = Random.new(1207)
 	local deco = Instance.new("Folder")
@@ -36,6 +38,19 @@ function Refuge.Dress(folder: Instance, O: Vector3, readyCenter: Vector3, statio
 				return false
 			end
 		end
+		-- keep out of the water
+		if water then
+			for _, pd in water.Ponds do
+				if (pos - (O + Vector3.new(pd.X, 0, pd.Z))).Magnitude < pd.R + 4 then
+					return false
+				end
+			end
+			for _, pt in water.Stream do
+				if (pos - (O + Vector3.new(pt[1], 0, pt[2]))).Magnitude < 7 then
+					return false
+				end
+			end
+		end
 		-- keep the cross paths and the ready ring open
 		local d = pos - O
 		if math.abs(d.X) < 7 or math.abs(d.Z) < 7 then
@@ -43,29 +58,12 @@ function Refuge.Dress(folder: Instance, O: Vector3, readyCenter: Vector3, statio
 		end
 		return (pos - readyCenter).Magnitude > 16
 	end
-	-- Blender forest-floor sections (visual only; the island collider stays underneath)
-	if Skins.Has("SM_Ground_Forest01") then
-		for gx = -2, 2 do
-			for gz = -2, 2 do
-				local c = O + Vector3.new(gx * 32, 0, gz * 32)
-				-- skip the cross paths (except the centre clearing)
-				local onPath = (gx == 0) ~= (gz == 0)
-				if (c - O).Magnitude < 62 and not onPath then
-					local name = if gx == 0 and gz == 0 and Skins.Has("SM_Ground_Clearing01") then "SM_Ground_Clearing01" else "SM_Ground_Forest01"
-					local v = Skins.Visual(name)
-					if v then
-						-- the section's pivot sits at its walkable surface
-						v:PivotTo(CFrame.new(c + Vector3.new(0, 0.05, 0)) * CFrame.Angles(0, math.rad(90 * ((gx + gz) % 4)), 0))
-						v.Name = "GroundSection"
-						v.Parent = deco
-					end
-				end
-			end
-		end
-	end
 	-- Layered forest: tall canopy at the rim, a mid layer, then undergrowth.
 	for _ = 1, 26 do
 		local pos = ringSpot(56, 70)
+		if not clearOfStations(pos) then
+			continue
+		end
 		local kind = ({ "Spruce", "Spruce", "Aspen", "GiantTree" })[rng:NextInteger(1, 4)]
 		Decor.Place(kind, flatCF(pos), rng, rng:NextNumber(0.8, 1.15), deco)
 	end

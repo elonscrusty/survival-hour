@@ -50,6 +50,7 @@ export type MapInfo = {
 	NoBuild: { { X: number, Z: number, R: number, Label: string } },
 	Caves: { { CF: CFrame, Length: number, Width: number, FloorY: number, Size: string } },
 	Pois: { { Type: string, Tier: string, Pos: Vector3 } },
+	TerrainReady: boolean?, -- terrain written: GroundY snaps to the real surface
 }
 
 WorldService.Map = nil :: MapInfo?
@@ -77,6 +78,11 @@ end
 
 -- Height -------------------------------------------------------------------------------
 
+local terrainOnly = RaycastParams.new()
+terrainOnly.FilterType = Enum.RaycastFilterType.Include
+terrainOnly.FilterDescendantsInstances = { workspace.Terrain }
+terrainOnly.IgnoreWater = true
+
 function WorldService.GroundY(x: number, z: number): number
 	local map = WorldService.Map
 	if not map then
@@ -89,7 +95,16 @@ function WorldService.GroundY(x: number, z: number): number
 			return cave.FloorY
 		end
 	end
-	return map.Origin.Y + LayoutGen.Height(map.Layout, x - map.Origin.X, z - map.Origin.Z)
+	local h = map.Origin.Y + LayoutGen.Height(map.Layout, x - map.Origin.X, z - map.Origin.Z)
+	if map.TerrainReady then
+		-- Voxel terrain smooths the heightfield, so objects placed at `h` can end up
+		-- half-buried or floating: use the actual surface (water ignored).
+		local r = workspace:Raycast(Vector3.new(x, h + 24, z), Vector3.new(0, -48, 0), terrainOnly)
+		if r then
+			return r.Position.Y
+		end
+	end
+	return h
 end
 
 -- Raycast down onto terrain/geometry (used for dynamic spawns).
@@ -409,16 +424,21 @@ local function addChests(map: MapInfo, model: Model, f: any)
 	end
 end
 
+local POI_SCALE = 1.35
+
 function WorldService._buildPoi(map: MapInfo, f: any, cf: CFrame, rng: Random, parent: Instance)
 	local m = Landmarks.Build(f.Type, cf, rng, parent)
 	if not m then
 		return
 	end
+	-- Buildings were a bit small next to players: scale the whole POI (colliders,
+	-- meshes and chest mounts together) about its ground pivot.
+	m:ScaleTo(POI_SCALE)
 	m:SetAttribute("Poi", f.Type)
 	m:SetAttribute("Tier", f.Tier)
 	addChests(map, m, f)
 	local O = map.Origin
-	table.insert(map.NoBuild, { X = f.X + O.X, Z = f.Z + O.Z, R = f.R + 4, Label = "a " .. f.Type })
+	table.insert(map.NoBuild, { X = f.X + O.X, Z = f.Z + O.Z, R = f.R * POI_SCALE + 4, Label = "a " .. f.Type })
 	table.insert(map.Pois, { Type = f.Type, Tier = f.Tier or "Common", Pos = cf.Position })
 end
 
@@ -493,6 +513,7 @@ function WorldService.BuildMatch(seed: number): MapInfo
 
 	writeTerrain(map)
 	WorldService._carveCaves(map)
+	map.TerrainReady = true
 
 	local decor = Instance.new("Folder")
 	decor.Name = "Forest"
@@ -695,21 +716,19 @@ end
 
 function WorldService.BuildLobby()
 	local O = Config.Map.LobbyOrigin
-	local folder = Instance.new("Folder")
+	-- The lobby is small, so it's one Persistent model: sent whole on join, so the
+	-- title-screen camera never shows trees streamed in before the ground under them.
+	local folder = Instance.new("Model")
 	folder.Name = "Lobby"
+	folder.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
 	folder.Parent = workspace
 
-	-- Island base: layered cylinders with rock underside.
-	local top = Build.Cyl("Ground", 4, 150, CFrame.new(O + Vector3.new(0, -2, 0)), Color3.fromRGB(96, 150, 72), Enum.Material.Grass, folder)
-	top.Name = "LobbyGround"
-	Build.Cyl("Soil", 10, 146, CFrame.new(O + Vector3.new(0, -9, 0)), Color3.fromRGB(110, 84, 60), Enum.Material.Ground, folder)
+	-- Island base: voxel forest floor (grass, moss, leaf litter, dirt paths) with a
+	-- stream and two ponds, over a rocky underside.
+	WorldService._lobbyTerrain(O)
 	for i = 0, 15 do
 		local a = math.rad(i * 22.5)
 		Build.Part({ Name = "UnderRock", Size = Vector3.new(24, 30, 24), CFrame = CFrame.new(O + Vector3.new(math.cos(a) * 50, -26, math.sin(a) * 50)) * CFrame.Angles(0.3, a, 0.2), Color = Color3.fromRGB(104, 100, 96), Material = Enum.Material.Rock, Parent = folder, CanCollide = false })
-	end
-	-- Paths (cross)
-	for _, rot in { 0, 90 } do
-		Build.Part({ Name = "Path", Size = Vector3.new(10, 0.2, 130), CFrame = CFrame.new(O + Vector3.new(0, 0.05, 0)) * CFrame.Angles(0, math.rad(rot), 0), Color = Color3.fromRGB(150, 120, 86), Material = Enum.Material.Ground, Parent = folder, CanCollide = false })
 	end
 	-- Edge trees and rail
 	for i = 0, 27 do
@@ -799,7 +818,7 @@ function WorldService.BuildLobby()
 		Party = party,
 		Locker = locker,
 		Profile = profile,
-	})
+	}, WorldService.LobbyWater)
 
 	-- Title
 	local title = Build.Part({ Name = "Title", Size = Vector3.new(1, 1, 1), CFrame = CFrame.new(O + Vector3.new(0, 26, -50)), Transparency = 1, CanCollide = false, Parent = folder })
@@ -809,6 +828,69 @@ function WorldService.BuildLobby()
 
 	WorldService.LobbySpawn = CFrame.new(O + Vector3.new(0, 4, 18)) * CFrame.Angles(0, math.rad(180), 0)
 	return folder
+end
+
+-- Lobby water: shared with Refuge so decorations keep out of it.
+WorldService.LobbyWater = {
+	Ponds = { { X = 34, Z = -30, R = 9 }, { X = -36, Z = -26, R = 7 } },
+	Stream = { { 58, -46 }, { 50, -41 }, { 43, -35 }, { 37, -32 } }, -- from the NE rim into the NE pond
+}
+
+-- Voxel island for the lobby. Surface at O.Y (4-stud aligned), 12 studs thick,
+-- rock underneath; noise-picked forest-floor materials; dirt cross paths; a
+-- stream falling off the edge into a pond; a second quiet pond.
+function WorldService._lobbyTerrain(O: Vector3)
+	local R = 74
+	pcall(function()
+		terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(88, 122, 62))
+		terrain:SetMaterialColor(Enum.Material.LeafyGrass, Color3.fromRGB(70, 106, 52))
+		terrain:SetMaterialColor(Enum.Material.Ground, Color3.fromRGB(104, 84, 60))
+		terrain:SetMaterialColor(Enum.Material.Mud, Color3.fromRGB(74, 60, 46))
+	end)
+	-- body + rocky underside
+	terrain:FillCylinder(CFrame.new(O + Vector3.new(0, -8, 0)), 16, R, Enum.Material.Ground)
+	terrain:FillCylinder(CFrame.new(O + Vector3.new(0, -22, 0)), 12, R * 0.8, Enum.Material.Rock)
+	terrain:FillCylinder(CFrame.new(O + Vector3.new(0, -32, 0)), 8, R * 0.5, Enum.Material.Rock)
+	-- top layer: 4-stud cells, material from two noise fields
+	local STEP = 4
+	for x = -R, R, STEP do
+		for z = -R, R, STEP do
+			if x * x + z * z <= R * R then
+				local nA = math.noise(x / 26, z / 26, 3.7)
+				local nB = math.noise(x / 11 + 20, z / 11, 8.2)
+				local mat = if nA > 0.22 then Enum.Material.LeafyGrass
+					elseif nA < -0.3 then Enum.Material.Ground
+					elseif nB > 0.4 then Enum.Material.Mud
+					else Enum.Material.Grass
+				if math.abs(x) <= 5 or math.abs(z) <= 5 then
+					mat = Enum.Material.Ground -- cross paths
+				end
+				if x * x + z * z < 15 * 15 then
+					mat = Enum.Material.Ground -- packed earth round the fire
+				end
+				terrain:FillBlock(CFrame.new(O + Vector3.new(x, -2, z)), Vector3.new(STEP, 4, STEP), mat)
+			end
+		end
+	end
+	-- water: ponds and the stream (carved, then filled a little below the bank)
+	local W = WorldService.LobbyWater
+	for _, pd in W.Ponds do
+		local c = O + Vector3.new(pd.X, 0, pd.Z)
+		terrain:FillCylinder(CFrame.new(c + Vector3.new(0, -2.5, 0)), 5, pd.R + 2.5, Enum.Material.Mud)
+		terrain:FillCylinder(CFrame.new(c + Vector3.new(0, -2, 0)), 4, pd.R, Enum.Material.Air)
+		terrain:FillCylinder(CFrame.new(c + Vector3.new(0, -2.5, 0)), 3, pd.R, Enum.Material.Water)
+		terrain:FillCylinder(CFrame.new(c + Vector3.new(0, -5, 0)), 2, pd.R, Enum.Material.Sand)
+	end
+	for i = 1, #W.Stream - 1 do
+		local a = O + Vector3.new(W.Stream[i][1], 0, W.Stream[i][2])
+		local b = O + Vector3.new(W.Stream[i + 1][1], 0, W.Stream[i + 1][2])
+		local mid = (a + b) / 2
+		local len = (b - a).Magnitude + 3
+		local cf = CFrame.lookAt(mid, b)
+		terrain:FillBlock(cf * CFrame.new(0, -1.5, 0), Vector3.new(8, 3, len), Enum.Material.Mud)
+		terrain:FillBlock(cf * CFrame.new(0, -1, 0), Vector3.new(4.5, 2, len), Enum.Material.Air)
+		terrain:FillBlock(cf * CFrame.new(0, -1.5, 0), Vector3.new(4.5, 1.5, len), Enum.Material.Water)
+	end
 end
 
 -- Updates the Hall of Fame board text (called by LobbyService).

@@ -467,24 +467,29 @@ test("Lobby refuge: forest, props, signs, board", function()
 	local folder = Instance.new("Folder")
 	folder.Parent = workspace
 	local st = lobbyStations(folder)
-	local board = Refuge.Dress(folder, Vector3.new(0, 0, 0), Vector3.new(0, 0, -38), st)
+	local water = { Ponds = { { X = 34, Z = -30, R = 9 } }, Stream = { { 50, -41 } } }
+	local board = Refuge.Dress(folder, Vector3.new(0, 0, 0), Vector3.new(0, 0, -38), st, water)
 	check(board ~= nil and board:IsA("TextLabel"), "hall of fame board label")
 	local forest = folder:FindFirstChild("Forest")
 	check(forest ~= nil, "forest folder")
-	local n, deck, ground, arch = 0, false, 0, false
+	local n, deck, arch, wet = 0, false, false, 0
 	for _, c in forest:GetChildren() do
 		n += 1
 		if c.Name == "GatheringDeck" then
 			deck = true
-		elseif c.Name == "GroundSection" then
-			ground += 1
 		elseif c.Name == "ReadyArch" then
 			arch = true
+		end
+		if c:IsA("Model") and c.Name ~= "GatheringDeck" and c.Name ~= "ReadyArch" then
+			local p = c:GetPivot().Position
+			if (p - Vector3.new(34, 0, -30)).Magnitude < 9 then
+				wet += 1
+			end
 		end
 	end
 	check(n > 60, "layered forest placed (" .. n .. ")")
 	check(deck and arch, "deck + ready arch")
-	check(ground == 5, "ground sections avoid the paths (" .. ground .. ")")
+	check(wet == 0, "no decoration placed in the pond (" .. wet .. ")")
 	check(skinOf(st.Shop, "SM_Lobby_ShopDisplay") and skinOf(st.Party, "SM_Lobby_PartyArea"), "station props")
 	check(skinOf(st.Classes, "SM_Lobby_PowerupStand"), "class stands")
 	check(st.Shop.PrimaryPart.CanCollide ~= false, "counter keeps collision")
