@@ -8,6 +8,9 @@ local function mkcf(x, y, z)
 	return setmetatable({ x = x or 0, y = y or 0, z = z or 0 }, CFrameMT)
 end
 CFrameMT.__mul = function(a, b)
+	if getmetatable(b) ~= CFrameMT then -- CFrame * Vector3
+		return { X = a.x + b.X, Y = a.y + b.Y, Z = a.z + b.Z }
+	end
 	return mkcf(a.x + b.x, a.y + b.y, a.z + b.z)
 end
 function CFrameMT:Inverse()
@@ -23,7 +26,30 @@ CFrame = {
 		assert(extra == 0 or extra == 9, "CFrame.new expects 3 or 12 numbers, got " .. (3 + extra))
 		return mkcf(x, y, z)
 	end,
+	Angles = function(rx, ry, rz)
+		return mkcf(0, 0, 0)
+	end,
 }
+local V2 = {}
+V2.__index = V2
+V2.__sub = function(a, b)
+	return setmetatable({ X = a.X - b.X, Y = a.Y - b.Y }, V2)
+end
+V2.__index = function(t, k)
+	if k == "Magnitude" then
+		return math.sqrt(rawget(t, "X") ^ 2 + rawget(t, "Y") ^ 2)
+	end
+	return nil
+end
+Vector2 = { new = function(x, y) return setmetatable({ X = x, Y = y }, V2) end }
+Random = { new = function(seed)
+	math.randomseed(seed)
+	return {
+		NextNumber = function(_, a, b) return a + (b - a) * math.random() end,
+		NextInteger = function(_, a, b) return math.random(a, b) end,
+	}
+end }
+RaycastParams = { new = function() return {} end }
 Vector3 = {
 	new = function(x, y, z)
 		return { X = x, Y = y, Z = z }
@@ -37,7 +63,8 @@ local function enumtab(name)
 		end,
 	})
 end
-Enum = { CollisionFidelity = enumtab("CollisionFidelity"), Material = enumtab("Material") }
+Enum = { CollisionFidelity = enumtab("CollisionFidelity"), Material = enumtab("Material"),
+	RaycastFilterType = enumtab("RaycastFilterType") }
 
 local CLASSES = {
 	MeshPart = { "BasePart", "Instance" },
@@ -55,6 +82,10 @@ local CLASSES = {
 	RigidConstraint = { "Instance" },
 	Workspace = { "Model", "Instance" },
 	Service = { "Instance" },
+	Fire = { "Instance" },
+	Smoke = { "Instance" },
+	PointLight = { "Instance" },
+	Atmosphere = { "Instance" },
 }
 local PROPS = { -- allowed writable properties per class (catches typos)
 	BasePart = { Anchored = 1, CanCollide = 1, CanQuery = 1, CanTouch = 1, CastShadow = 1, Transparency = 1,
@@ -65,6 +96,11 @@ local PROPS = { -- allowed writable properties per class (catches typos)
 	SurfaceAppearance = { ColorMap = 1, NormalMap = 1, RoughnessMap = 1, MetalnessMap = 1 },
 	WeldConstraint = { Part0 = 1, Part1 = 1 },
 	RigidConstraint = { Attachment0 = 1, Attachment1 = 1 },
+	Fire = { Size = 1, Heat = 1 },
+	Smoke = { Opacity = 1, RiseVelocity = 1, Size = 1 },
+	PointLight = { Color = 1, Range = 1, Brightness = 1, Shadows = 1 },
+	Atmosphere = { Density = 1, Haze = 1, Color = 1, Decay = 1 },
+	Service = { ClockTime = 1 },
 }
 
 local Inst = {}
@@ -203,8 +239,18 @@ end
 function Inst:SetAttribute(k, v)
 	rawget(self, "_attrs")[k] = v
 end
+function Inst:GetAttribute(k)
+	return rawget(self, "_attrs")[k]
+end
+function Inst:Raycast(origin, dir, params)
+	assert(origin and dir and params, "Raycast args")
+	return nil
+end
 function Inst:Clone()
 	local c = new(rawget(self, "ClassName"), self.Name)
+	for k, v in rawget(self, "_attrs") do
+		rawget(c, "_attrs")[k] = v
+	end
 	for _, ch in rawget(self, "_children") do
 		ch:Clone().Parent = c
 	end

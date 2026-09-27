@@ -6,7 +6,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 recs = [r for r in json.load(open(os.path.join(ROOT, "Roblox", "catalog.json"))) if r["category"] != "Scenes"]
 mock = open(os.path.join(ROOT, "blender", "tests", "mock_roblox.luau")).read()
 mock = mock[:mock.rindex("return {")]
-script = open(os.path.join(ROOT, "Roblox", "SurvivalHour_CommandBarSetup.lua")).read()
+script = open(os.path.join(ROOT, "Roblox", "SurvivalHour_Paste.lua")).read()
+mapscript = open(os.path.join(ROOT, "Roblox", "SurvivalHour_BuildMap.lua")).read()
 
 skip = {"SM_Pickup_Rope", "SM_Rifle"}  # deliberately 'not imported' on the first run
 def populate(r, lines):
@@ -70,6 +71,14 @@ assert(wall.SM_WoodenWall:FindFirstChild("SnapLeft"), "wall attachment not renam
 assert(workspace:FindFirstChild("SurvivalHour_Showcase"), "showcase missing")
 print("SMOKE: all checks passed")
 """
+mapcheck = """
+local map = workspace:FindFirstChild("SurvivalHourMap")
+assert(map and map:FindFirstChild("Camp_Red") and map:FindFirstChild("Forest"), "map not built")
+local camp = map.Camp_Red
+assert(camp:FindFirstChild("SM_Campfire_Burning") and camp:FindFirstChild("SM_Workbench_Level01"), "camp incomplete")
+local n = #map:GetDescendants()
+print("SMOKE: map built, " .. n .. " instances; forest items " .. #map.Forest:GetChildren())
+"""
 rerun = """
 local stock = #game:GetService("ServerStorage").SurvivalHour.Firearms:GetChildren()
 assert(stock == 2, "first run should have 2 firearms (rifle missing), got " .. stock)
@@ -80,7 +89,7 @@ assert(#game:GetService("ServerStorage").SurvivalHour.Crafting_L3:GetChildren() 
 print("SMOKE: rerun picked up the missing files without duplicates")
 """
 src = (mock + "\n" + "\n".join(pop) + "\ndo\n" + script + "\nend\n" + rerun + "\n".join(second)
-       + "\ndo\n" + script + "\nend\n" + recheck + checks)
+       + "\ndo\n" + script + "\nend\n" + recheck + checks + "\ndo\n" + mapscript + "\nend\n" + mapcheck)
 path = os.path.join(ROOT, "blender", "tests", "_smoke_run.luau")
 open(path, "w").write(src)
 luau = os.environ.get("LUAU", "luau")
