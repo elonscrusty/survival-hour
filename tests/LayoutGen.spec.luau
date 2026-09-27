@@ -100,4 +100,48 @@ return {
 		t.ok(math.abs(LG.Height(l, x, z) - h1) < 1e-6, "height rotates with sectors")
 		t.ok(math.abs(LG.Height(l, 0, -400) - l.Params.BaseHeight) < 1e-6, "camp flattened")
 	end,
+	pois_fair_and_tiered = function(t)
+		local seen = { Common = 0, Uncommon = 0, Rare = 0 }
+		for seed = 1, 12 do
+			local l = LG.Generate(seed * 101)
+			local perSector = {}
+			for _, f in l.Features do
+				if LG.LandmarkRadius[f.Type] and f.Type ~= "Waterfall" then
+					perSector[f.Sector] = (perSector[f.Sector] or 0) + 1
+					t.ok(f.Tier ~= nil, f.Type .. " has a tier")
+					t.ok(type(f.Chests) == "table", f.Type .. " has a chest list")
+					if f.Type ~= "Cave" then
+						seen[f.Tier] += 1
+					end
+				end
+			end
+			for s = 2, 4 do
+				t.eq(perSector[s], perSector[1], "same POI count per sector")
+			end
+			-- every sector gets the same POI nodes (rotated)
+			local poi = {}
+			for _, nd in l.Nodes do
+				if nd.Poi then
+					poi[nd.Sector] = (poi[nd.Sector] or 0) + 1
+				end
+			end
+			for s = 2, 4 do
+				t.eq(poi[s], poi[1], "same POI nodes per sector")
+			end
+		end
+		t.ok(seen.Common > 0 and seen.Uncommon > 0 and seen.Rare > 0, "all rarities appear across matches")
+	end,
+	landmark_yaw_follows_rotation = function(t)
+		-- A landmark's local +Z must point at its own camp in every sector.
+		local l = LG.Generate(7)
+		for _, f in l.Features do
+			if f.Type ~= "Cave" and f.Type ~= "Waterfall" and LG.LandmarkRadius[f.Type] then
+				local camp = l.Camps[f.Sector]
+				local fx, fz = LG.LocalToWorld(f.X, f.Z, f.Rot, 0, 10)
+				local before = math.sqrt((f.X - camp.X) ^ 2 + (f.Z - camp.Z) ^ 2)
+				local after = math.sqrt((fx - camp.X) ^ 2 + (fz - camp.Z) ^ 2)
+				t.ok(after < before, f.Type .. " in sector " .. f.Sector .. " faces its camp")
+			end
+		end
+	end,
 }

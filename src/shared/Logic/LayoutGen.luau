@@ -74,8 +74,71 @@ LayoutGen.MiddlePerSector = 90
 LayoutGen.UndergrowthPerSector = 420
 LayoutGen.GroundCoverPerSector = 380
 
--- Landmarks: type -> footprint radius. Chest tiers are assigned in WorldService.
-LayoutGen.LandmarkRadius = { Campsite = 13, Cabin = 15, AbandonedHouse = 17, Cave = 16, Waterfall = 14 }
+-- Landmarks / POIs: type -> footprint radius.
+LayoutGen.LandmarkRadius = {
+	-- common
+	Campsite = 13, Shed = 10, HuntingBlind = 9, BrokenVehicle = 11, SmallCabin = 13,
+	-- uncommon
+	Cabin = 15, RangerStation = 16, LoggingCamp = 17, AbandonedHouse = 17, MineEntrance = 14,
+	-- rare
+	Bunker = 15, Outpost = 18, IndustrialSite = 20, LargeMine = 16,
+	-- cliff features
+	Cave = 16, Waterfall = 14,
+}
+
+-- POI pools by rarity (spec: common / uncommon / rare). One near, one mid and one
+-- far slot per wedge; the far slot rolls rare (RareChance) before falling back.
+LayoutGen.PoiPools = {
+	Common = { "Campsite", "Shed", "HuntingBlind", "BrokenVehicle", "SmallCabin" },
+	Uncommon = { "Cabin", "RangerStation", "LoggingCamp", "AbandonedHouse", "MineEntrance" },
+	Rare = { "Bunker", "Outpost", "IndustrialSite", "LargeMine" },
+}
+LayoutGen.RareChance = 0.3
+-- Cave sizes (spec: small 0-1 chest stone/coal; medium 1-2 chests iron/coal + predators;
+-- large rare, multiple chambers, 2-4 chests, rare deposits).
+LayoutGen.CaveSizes = { { Name = "Small", Weight = 0.55 }, { Name = "Medium", Weight = 0.35 }, { Name = "Large", Weight = 0.10 } }
+LayoutGen.CaveLength = { Small = 22, Medium = 34, Large = 42 }
+
+-- Chest tiers per POI (min, max, tier weights). Best chests are one-time per match.
+type ChestSpec = { Min: number, Max: number, Weights: { [string]: number } }
+local POI_CHESTS: { [string]: ChestSpec } = {
+	Common = { Min = 1, Max = 1, Weights = { Common = 7, Uncommon = 3 } },
+	Uncommon = { Min = 1, Max = 2, Weights = { Uncommon = 7, Rare = 2.5, Common = 0.5 } },
+	Rare = { Min = 2, Max = 3, Weights = { Rare = 6, VeryRare = 2.5, Uncommon = 1.5 } },
+	CaveSmall = { Min = 0, Max = 1, Weights = { Common = 6, Uncommon = 4 } },
+	CaveMedium = { Min = 1, Max = 2, Weights = { Uncommon = 6, Rare = 4 } },
+	CaveLarge = { Min = 2, Max = 4, Weights = { Rare = 6, VeryRare = 4 } },
+}
+
+-- Extra resource nodes at POIs, as local offsets (x, z) in the landmark's frame.
+type NodeSpot = { Type: string, X: number, Z: number }
+local function spot(t: string, x: number, z: number): NodeSpot
+	return { Type = t, X = x, Z = z }
+end
+local POI_NODES: { [string]: { NodeSpot } } = {
+	BrokenVehicle = { spot("ScrapPile", 5, 3), spot("ScrapPile", -5, -2) },
+	LoggingCamp = { spot("ScrapPile", 8, 6) },
+	MineEntrance = { spot("IronDeposit", 6, 4), spot("CoalDeposit", -6, 4) },
+	Bunker = { spot("ScrapPile", 8, -6), spot("ScrapPile", -8, -6) },
+	Outpost = { spot("ScrapPile", 10, 8) },
+	IndustrialSite = { spot("ScrapPile", 9, 6), spot("ScrapPile", -9, 6), spot("ScrapPile", 0, -10) },
+	LargeMine = { spot("IronDeposit", 7, 5), spot("IronDeposit", -7, 5), spot("CoalDeposit", 0, 9), spot("RichIronDeposit", 0, -8) },
+}
+-- Cave nodes by size: X across the tunnel, Z = depth fraction (local +Z = into the cliff).
+local CAVE_NODES: { [string]: { NodeSpot } } = {
+	Small = { spot("LargeRockPile", 2.5, 0.5), spot("CoalDeposit", -2.5, 0.85) },
+	Medium = { spot("CoalDeposit", 3, 0.4), spot("IronDeposit", -3, 0.7), spot("IronDeposit", 3, 0.95) },
+	Large = { spot("CoalDeposit", 3, 0.3), spot("IronDeposit", -3, 0.55), spot("IronDeposit", 5, 0.95), spot("RichIronDeposit", -5, 1.0) },
+}
+LayoutGen.PoiNodes = POI_NODES
+LayoutGen.CaveNodes = CAVE_NODES
+
+-- Roblox CFrame.Angles(0, rot, 0) applied to a local (x, z) offset.
+local function localToWorld(x: number, z: number, rotDeg: number, lx: number, lz: number): (number, number)
+	local t = math.rad(rotDeg)
+	return x + lx * math.cos(t) + lz * math.sin(t), z - lx * math.sin(t) + lz * math.cos(t)
+end
+LayoutGen.LocalToWorld = localToWorld
 
 local FEATURE_POOL = { "Glade", "RockOutcrop", "Ruins", "Pond", "Thicket", "FallenGiant" }
 local FEATURE_RADIUS = { Glade = 26, RockOutcrop = 16, Ruins = 20, Pond = 15, Thicket = 18, FallenGiant = 14 }
@@ -396,10 +459,54 @@ local function makeWedge(rng: Rng.Rng, params: { [string]: number })
 		table.insert(pts, { X = ex, Z = ez })
 		table.insert(W.Paths, { Points = pts, Width = LayoutGen.TrailWidth, Kind = "Trail" })
 	end
-	local function addLandmark(ftype: string, x: number, z: number, rot: number)
+	local function rollChests(key: string): { string }
+		local spec = POI_CHESTS[key]
+		local out = {}
+		if not spec then
+			return out
+		end
+		local n = rng:Int(spec.Min, spec.Max)
+		local weights = spec.Weights
+		local names = {}
+		local total = 0
+		for name, w in weights do
+			table.insert(names, name)
+			total += w
+		end
+		table.sort(names)
+		for _ = 1, n do
+			local x = rng:Next() * total
+			for _, name in names do
+				x -= weights[name]
+				if x <= 0 then
+					table.insert(out, name)
+					break
+				end
+			end
+		end
+		return out
+	end
+	local function addLandmark(ftype: string, x: number, z: number, rot: number, extra: { [string]: any }?): { [string]: any }
 		local r = LayoutGen.LandmarkRadius[ftype]
-		table.insert(W.Features, { Type = ftype, X = x, Z = z, R = r, Rot = rot, Sector = 1 })
+		local f: { [string]: any } = { Type = ftype, X = x, Z = z, R = r, Rot = rot, Sector = 1 }
+		if extra then
+			for k, v in extra do
+				f[k] = v
+			end
+		end
+		table.insert(W.Features, f)
 		take(x, z, r)
+		return f
+	end
+	local function addPoiNodes(f: { [string]: any })
+		local list = POI_NODES[f.Type]
+		if not list then
+			return
+		end
+		for _, nd in list do
+			local nx, nz = localToWorld(f.X, f.Z, f.Rot, nd.X, nd.Z)
+			table.insert(W.Nodes, { Type = nd.Type, X = nx, Z = nz, Sector = 1, Poi = f.Type })
+		end
 	end
 
 	-- Cliff-side landmarks (same flank every wedge, so rotation keeps fairness).
@@ -408,7 +515,19 @@ local function makeWedge(rng: Rng.Rng, params: { [string]: number })
 		-- Cave: mouth at the foot of the rim, tunnel dug outward (-z).
 		local cx = caveSide * rng:Range(250, 320)
 		local cz = -(LayoutGen.RimStart - 3)
-		addLandmark("Cave", cx, cz, 180)
+		local roll, size = rng:Next(), "Small"
+		for _, cs in LayoutGen.CaveSizes do
+			roll -= cs.Weight
+			if roll <= 0 then
+				size = cs.Name
+				break
+			end
+		end
+		local cave = addLandmark("Cave", cx, cz, 180, { Size = size, Tier = if size == "Large" then "Rare" elseif size == "Medium" then "Uncommon" else "Common", Chests = rollChests("Cave" .. size), Length = LayoutGen.CaveLength[size] })
+		for _, nd in CAVE_NODES[size] do
+			local nx, nz = localToWorld(cx, cz, cave.Rot, nd.X, nd.Z * (cave.Length - 4))
+			table.insert(W.Nodes, { Type = nd.Type, X = nx, Z = nz, Sector = 1, Poi = "Cave", InCave = true })
+		end
 		table.insert(W.Blockers, { X = cx - 11, Z = cz - 4, R = 4 })
 		table.insert(W.Blockers, { X = cx + 11, Z = cz - 4, R = 4 })
 		trail(cx, cz + 8, 10)
@@ -432,25 +551,34 @@ local function makeWedge(rng: Rng.Rng, params: { [string]: number })
 	end
 
 	-- Inland landmarks: campsite (near), cabin (mid), abandoned house (far, toward a sector border).
-	local function placeLandmark(ftype: string, dMin: number, dMax: number, aMin: number, aMax: number): boolean
+	local function placeLandmark(ftype: string, tier: string, dMin: number, dMax: number, aMin: number, aMax: number): boolean
 		local r = LayoutGen.LandmarkRadius[ftype]
 		for _ = 1, 200 do
 			local a = math.rad(rng:Range(aMin, aMax))
 			local d = rng:Range(dMin, dMax)
 			local x, z = math.sin(a) * d, campZ + math.cos(a) * d
 			if spotOk(x, z, r + 6, 4) then
-				-- face roughly toward the camp so the entrance greets the trail
+				-- face the camp: local +Z points back along the trail
 				local rot = math.deg(math.atan2(-x, campZ - z))
-				addLandmark(ftype, x, z, rot)
+				local f = addLandmark(ftype, x, z, rot, { Tier = tier, Chests = rollChests(tier) })
+				addPoiNodes(f)
 				trail(x, z, r + 2)
 				return true
 			end
 		end
 		return false
 	end
-	placeLandmark("Campsite", 120, 175, -70, 70)
-	placeLandmark("Cabin", 185, 250, -80, 80)
-	placeLandmark("AbandonedHouse", 250, 320, -75, 75)
+	local function pickPoi(pool: { string }): string
+		return pool[rng:Int(1, #pool)]
+	end
+	-- Semi-random POIs by rarity: near = common, mid = uncommon, far = rare (sometimes).
+	placeLandmark(pickPoi(LayoutGen.PoiPools.Common), "Common", 120, 175, -70, 70)
+	placeLandmark(pickPoi(LayoutGen.PoiPools.Uncommon), "Uncommon", 185, 250, -80, 80)
+	if rng:Next() < LayoutGen.RareChance then
+		placeLandmark(pickPoi(LayoutGen.PoiPools.Rare), "Rare", 250, 320, -75, 75)
+	else
+		placeLandmark(pickPoi(LayoutGen.PoiPools.Uncommon), "Uncommon", 250, 320, -75, 75)
+	end
 
 	-- Classic features (2-3 per wedge, chosen per match).
 	local pool = table.clone(FEATURE_POOL)
@@ -701,7 +829,9 @@ local function rotateList(list: { any }, k: number, out: { any }, extra: ((any, 
 			c.Sector = k + 1
 		end
 		if c.Rot ~= nil then
-			c.Rot = (item.Rot + 90 * k) % 360
+			-- rotate() turns positions by -90° about Y in Roblox's CFrame.Angles convention,
+			-- so model yaws turn the same way (keeps landmark entrances facing their trails).
+			c.Rot = (item.Rot - 90 * k) % 360
 		end
 		if extra then
 			extra(item, c)

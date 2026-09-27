@@ -94,6 +94,8 @@ local Structures = require("../../src/shared/Models/Structures")
 local ItemModels = require("../../src/shared/Models/ItemModels")
 local LootModels = require("../../src/shared/Models/LootModels")
 local Animals = require("../../src/shared/Models/Animals")
+local Decor = require("../../src/shared/Models/Decor")
+local Landmarks = require("../../src/shared/Models/Landmarks")
 
 -- helpers -----------------------------------------------------------------------
 local passed, failed = 0, 0
@@ -256,6 +258,44 @@ test("LargeRockPile: bigger yield mesh", function()
 	local m = Flora.LargeRockPile(at, Random.new(5), workspace)
 	check(skinOf(m, "SM_StoneDeposit01"), "deposit mesh")
 	check(m.PrimaryPart.Size.X > 10, "double-size root")
+end)
+test("POIs: every landmark builds with a Root and chest mounts", function()
+	for _, kind in { "Campsite", "Shed", "HuntingBlind", "BrokenVehicle", "SmallCabin", "Cabin", "RangerStation", "LoggingCamp", "AbandonedHouse", "MineEntrance", "Bunker", "Outpost", "IndustrialSite", "LargeMine" } do
+		local m = Landmarks.Build(kind, at, Random.new(4), workspace)
+		check(m and m.PrimaryPart and m.PrimaryPart.Name == "Root", kind .. " root")
+		local mounts = 0
+		for _, d in m:GetDescendants() do
+			if d:IsA("Attachment") and d.Name == "ChestMount" then
+				mounts += 1
+			end
+		end
+		check(mounts >= 1, kind .. " chest mounts")
+	end
+	local cave = Landmarks.CaveEntrance(at, Random.new(2), 34, "Medium", workspace)
+	check(cave:FindFirstChild("Crystal") or cave:FindFirstChild("Lantern"), "cave lights")
+	for _, tier in { "Common", "Uncommon", "Rare", "VeryRare" } do
+		local c = Landmarks.Chest(at, tier, workspace)
+		check(c:FindFirstChild("Lid"), tier .. " chest lid")
+		Landmarks.OpenChest(c)
+		check(c:GetAttribute("Open"), tier .. " opens")
+	end
+end)
+test("Decor: mesh-first with colliders for solid kinds", function()
+	local log = Decor.Place("FallenLog", at, Random.new(1), 1, workspace)
+	check(log and log:FindFirstChild("Collider"), "log collider")
+	local fern = Decor.Place("Fern", at, Random.new(1), 1, workspace)
+	check(fern and not fern:FindFirstChild("Collider"), "fern is decor only")
+	check(Decor.Place("FlowerPatch", at, Random.new(1), 1, workspace), "procedural fallback when no mesh")
+	for _, id in { "ScrapPile", "CoalDeposit", "IronDeposit", "RichIronDeposit" } do
+		local m = Flora[id](at, Random.new(3), workspace)
+		local yields = 0
+		for _, d in m:GetDescendants() do
+			if d:GetAttribute("Yield") then
+				yields += 1
+			end
+		end
+		check(yields > 0, id .. " yield parts")
+	end
 end)
 test("Wildlife rigs: deer, rabbit, boar", function()
 	for _, sp in { "Deer", "Rabbit", "Boar", "Wolf", "Bear" } do

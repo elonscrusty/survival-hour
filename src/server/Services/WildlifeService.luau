@@ -72,6 +72,9 @@ function WildlifeService.Init(c)
 		folder.Parent = map.Folder
 	end)
 	ctx.MatchService.On("PhaseChanged", function(phase: string)
+		if phase == "Night" then
+			WildlifeService._denSpawns()
+		end
 		if phase == "Day" then
 			for _, a in animals do
 				if WildlifeService.Species[a.Species].NightOnly then
@@ -176,6 +179,34 @@ local function predatorCount(): number
 		end
 	end
 	return n
+end
+
+-- Medium caves hold a wolf den and large caves a bear at night (spec: predators).
+function WildlifeService._denSpawns()
+	local map = ctx.MatchService.Map
+	if not map or not map.Caves then
+		return
+	end
+	for _, cave in map.Caves do
+		local species = if cave.Size == "Large" then "Bear" elseif cave.Size == "Medium" then "Wolf" else nil
+		if species and count(species) < (Config.Wildlife.MaxPerSpecies[species] or 0) then
+			local inside = (cave.CF * CFrame.new(0, 1, cave.Length * 0.7)).Position
+			local occupied = false
+			for _, a in animals do
+				if not a.Dead and (a.Root.Position - inside).Magnitude < 25 then
+					occupied = true
+				end
+			end
+			if not occupied then
+				for i = 1, if species == "Wolf" then 2 else 1 do
+					local a = WildlifeService._spawn(species, inside + Vector3.new(i * 2, 0, 0))
+					if a then
+						a.Home = inside
+					end
+				end
+			end
+		end
+	end
 end
 
 function WildlifeService._trySpawn(pressure: WildlifeRules.Pressure)

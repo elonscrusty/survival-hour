@@ -47,7 +47,7 @@ export type Def = {
 	GrowTime: number,
 	Range: number,
 	Rarity: string,
-	Placement: { PerSector: number, NearCamp: number, MinCenterDist: number?, MaxCenterDist: number?, Radius: number },
+	Placement: { PerSector: number, NearCamp: number, MinCenterDist: number?, MaxCenterDist: number?, Radius: number, Poi: boolean? },
 	Sounds: { Hit: string, Break: string },
 	Effects: { Hit: string, Break: string },
 	Model: string,
@@ -65,7 +65,28 @@ Resources.Order = {
 	"LargeRockPile", "RockPile", "LooseStones", "Twigs", "FibrePlant", "BerryBush", "Mushrooms",
 }
 
+-- POI-only nodes (placed by LayoutGen at caves, mines, vehicles, industrial sites):
+-- Placement.Poi = true and they are not in Resources.Order.
+local function poiNode(id: string, label: string, tool: string, tier: number, health: number, yield: { [string]: number }, drops: { any }, model: string, respawn: number, rarity: string): Def
+	return {
+		Id = id, Kind = "Harvest", Label = label,
+		Health = health, RequiredTool = tool, MinTier = tier, HarvestTime = 1.0,
+		PerHit = {}, Yield = yield,
+		Drops = drops,
+		FellTime = 0, RespawnTime = respawn, GrowTime = 2,
+		Range = 11, Rarity = rarity,
+		Placement = { PerSector = 0, NearCamp = 0, Radius = 3, Poi = true },
+		Sounds = { Hit = "Gather", Break = "Gather" },
+		Effects = { Hit = "Stone", Break = "Dust" },
+		Model = model, ModelArgs = {},
+	}
+end
+
 local defs: { [string]: Def } = {
+	ScrapPile = poiNode("ScrapPile", "Scrap Pile", "Pickaxe", 1, 40, { Scrap = 4 }, {}, "ScrapPile", 180, "Uncommon"),
+	CoalDeposit = poiNode("CoalDeposit", "Coal Seam", "Pickaxe", 2, 90, { Coal = 6 }, {}, "CoalDeposit", 200, "Uncommon"),
+	IronDeposit = poiNode("IronDeposit", "Iron Deposit", "Pickaxe", 2, 110, { Iron = 5 }, {}, "IronDeposit", 240, "Rare"),
+	RichIronDeposit = poiNode("RichIronDeposit", "Rich Iron Vein", "Pickaxe", 3, 160, { Iron = 10 }, { { Item = "RareComponent", Min = 1, Max = 1, Chance = 0.15 } }, "RichIronDeposit", 420, "Rare"),
 	TreeSmall = {
 		-- Spec: EXACTLY 4 Wood, Crude Axe or better.
 		Id = "TreeSmall", Kind = "Tree", Label = "Small Tree",

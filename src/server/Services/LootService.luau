@@ -18,16 +18,22 @@ local Net = require(Shared:WaitForChild("Net"))
 local Loot = require(Shared:WaitForChild("Loot"))
 local Models = Shared:WaitForChild("Models")
 local LootModels = require(Models:WaitForChild("LootModels"))
+local Landmarks = require(Models:WaitForChild("Landmarks"))
 
 local LootService = {}
 
 type Package = { Id: number, Model: Model, Pos: Vector3, Landed: boolean, Opened: boolean, Source: string, Buyer: string? }
 type Crate = { Id: number, Model: Model, Pos: Vector3, Spot: number }
+type Chest = { Key: string, Model: Model, Pos: Vector3, Tier: string, Poi: string, Opened: boolean }
 
 local ctx: any
 local queue: { { Source: string, Buyer: string?, BuyerId: number? } } = {}
 local packages: { [number]: Package } = {}
 local crates: { [number]: Crate } = {}
+local chests: { [string]: Chest } = {}
+-- Spec: POI chests open once per match; better chests take longer to search.
+local CHEST_TIME = { Common = 2, Uncommon = 3, Rare = 4.5, VeryRare = 6 }
+local CHEST_NAME = { Common = "Common Chest", Uncommon = "Uncommon Chest", Rare = "Rare Chest", VeryRare = "Very Rare Chest" }
 local usedSpots: { [number]: boolean } = {}
 local lastSpots: { [number]: boolean } = {}
 local nextId = 0
@@ -46,7 +52,9 @@ function LootService.Init(c)
 		crates = {}
 		usedSpots = {}
 		lastSpots = {}
+		chests = {}
 		LootService._restockCrates()
+		LootService._spawnChests(map)
 	end)
 	ctx.MatchService.On("PhaseChanged", function(phase: string, day: number)
 		if phase == "Day" then
@@ -67,8 +75,10 @@ function LootService.Init(c)
 		queue = {}
 		packages = {}
 		crates = {}
+		chests = {}
 		folder = nil
 	end)
+	ctx.ChannelService.OnPrompt("OpenChest", LootService._onOpenChest)
 	ctx.ChannelService.OnPrompt("OpenPackage", LootService._onOpenPackage)
 	ctx.ChannelService.OnPrompt("OpenCrate", LootService._onOpenCrate)
 	ctx.Util.Connect("BuyInMatch", "Purchase", LootService._onBuy)
@@ -358,6 +368,74 @@ function LootService._onOpenCrate(p: Player, prompt: ProximityPrompt)
 			ctx.Util.PlaySound("Open", crate.Model.PrimaryPart)
 			crate.Model:Destroy()
 			ctx.PowerupService.OnCrateOpened(p, crate.Id)
+		end,
+	})
+end
+
+-- POI chests -----------------------------------------------------------------------------------------
+
+function LootService._spawnChests(map: any)
+	if not folder then
+		return
+	end
+	for _, spot in map.ChestSpots or {} do
+		local model = Landmarks.Chest(spot.CF, spot.Tier, folder)
+		model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
+		local prompt = ctx.ChannelService.MakePrompt(model.PrimaryPart, "OpenChest", "Search", CHEST_NAME[spot.Tier] or "Chest", Config.Crates.OpenRange)
+		prompt:SetAttribute("ChestKey", spot.Key)
+		prompt:SetAttribute("Rarity", spot.Tier)
+		chests[spot.Key] = { Key = spot.Key, Model = model, Pos = model:GetPivot().Position, Tier = spot.Tier, Poi = spot.Poi, Opened = false }
+	end
+end
+
+function LootService._onOpenChest(p: Player, prompt: ProximityPrompt)
+	local key = prompt:GetAttribute("ChestKey") :: string?
+	local chest = key and chests[key]
+	if not chest or chest.Opened or not ctx.Util.IsAlive(p) or not p:GetAttribute("InMatch") then
+		return
+	end
+	local other = ctx.ChannelService.AnyOnTarget("OpenChest", chest.Key)
+	if other and other ~= p then
+		ctx.Util.Notify(p, other.DisplayName .. " is already searching this chest.", "warn")
+		return
+	end
+	ctx.ChannelService.Begin(p, {
+		Kind = "OpenChest",
+		Label = "Searching the " .. (CHEST_NAME[chest.Tier] or "chest"):lower(),
+		Duration = (CHEST_TIME[chest.Tier] or 3) / ctx.PowerupService.SearchSpeedMult(p),
+		Range = Config.Crates.OpenRange,
+		InterruptOnDamage = true,
+		Action = "Open",
+		TargetKey = chest.Key,
+		Position = function()
+			return if chests[chest.Key] and not chest.Opened then chest.Pos else nil
+		end,
+		OnComplete = function()
+			if chest.Opened then
+				return
+			end
+			chest.Opened = true
+			prompt.Enabled = false
+			Landmarks.OpenChest(chest.Model)
+			local roll = Loot.RollChest(chest.Tier, function()
+				return rng:NextNumber()
+			end)
+			-- Scavenger: small chance of an extra common roll
+			if rng:NextNumber() < ctx.PowerupService.ExtraLootChance(p) then
+				table.insert(roll, Loot.Roll(Loot.Chest.Common, function()
+					return rng:NextNumber()
+				end))
+			end
+			local k = 0
+			for _, entry in roll do
+				for _, g in entry.Grants do
+					k += 1
+					local off = Vector3.new(math.cos(k * 1.9), 0, math.sin(k * 1.9)) * 2.2
+					ctx.InventoryService.SpawnPickup(g.Item, g.Count, chest.Pos + off + Vector3.new(0, 1.5, 0))
+				end
+			end
+			ctx.Util.PlaySound("ChestOpen", chest.Model.PrimaryPart)
+			ctx.PowerupService.OnChestOpened(p, chest.Tier, chest.Poi)
 		end,
 	})
 end

@@ -185,6 +185,18 @@ end
 -- XP/coin hook for wildlife kills (Phase 6).
 function PowerupService.OnWildlifeKill(p: Player, species: string, night: boolean) end
 
+-- Chest search speed (Scavenger class) and extra-loot chance.
+function PowerupService.SearchSpeedMult(p: Player): number
+	return 1
+end
+
+function PowerupService.ExtraLootChance(p: Player): number
+	return 0
+end
+
+-- XP/coin hook for chests (Phase 6).
+function PowerupService.OnChestOpened(p: Player, tier: string, poi: string) end
+
 -- Storage breaching speed (Raider class).
 function PowerupService.BreachSpeedMult(p: Player): number
 	return 1

@@ -398,6 +398,21 @@ function Inst:ScaleTo(s)
 end
 function Inst:GetScale() return self:GetAttribute("_scale") or 1 end
 function Inst:GetExtentsSize() return v3(4, 4, 4) end
+-- Axis-aligned bounds of the model's parts (enough for colliders in tests).
+function Inst:GetBoundingBox()
+	local lo, hi
+	for _, p in parts(self) do
+		local c, h = p.CFrame.p, p.Size * 0.5
+		local a = v3(c.X - h.X, c.Y - h.Y, c.Z - h.Z)
+		local b = v3(c.X + h.X, c.Y + h.Y, c.Z + h.Z)
+		lo = if lo then v3(math.min(lo.X, a.X), math.min(lo.Y, a.Y), math.min(lo.Z, a.Z)) else a
+		hi = if hi then v3(math.max(hi.X, b.X), math.max(hi.Y, b.Y), math.max(hi.Z, b.Z)) else b
+	end
+	if not lo then
+		return self:GetPivot(), v3(0, 0, 0)
+	end
+	return cf((lo.X + hi.X) / 2, (lo.Y + hi.Y) / 2, (lo.Z + hi.Z) / 2), v3(hi.X - lo.X, hi.Y - lo.Y, hi.Z - lo.Z)
+end
 function Inst:GetService(n)
 	return rawget(self, "_props")[n]
 end

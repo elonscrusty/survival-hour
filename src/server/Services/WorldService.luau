@@ -13,6 +13,9 @@ local Models = Shared:WaitForChild("Models")
 local Build = require(Models:WaitForChild("Build"))
 local Nature = require(Models:WaitForChild("Nature"))
 local Camp = require(Models:WaitForChild("Camp"))
+local Flora = require(Models:WaitForChild("Flora"))
+local Decor = require(Models:WaitForChild("Decor"))
+local Landmarks = require(Models:WaitForChild("Landmarks"))
 
 local WorldService = {}
 
@@ -41,6 +44,11 @@ export type MapInfo = {
 	WaterPoints: { { Pos: Vector3, Part: BasePart } },
 	DropPoints: { Vector3 },
 	Brush: { { Pos: Vector3, R: number } },
+	-- Survival Wars world layers
+	ChestSpots: { { CF: CFrame, Tier: string, Poi: string, Key: string } },
+	NoBuild: { { X: number, Z: number, R: number, Label: string } },
+	Caves: { { CF: CFrame, Length: number, Width: number, FloorY: number, Size: string } },
+	Pois: { { Type: string, Tier: string, Pos: Vector3 } },
 }
 
 WorldService.Map = nil :: MapInfo?
@@ -71,6 +79,13 @@ function WorldService.GroundY(x: number, z: number): number
 	local map = WorldService.Map
 	if not map then
 		return 0
+	end
+	-- inside a carved cave: the flat cave floor, not the cliff top above it
+	for _, cave in map.Caves or {} do
+		local l = cave.CF:PointToObjectSpace(Vector3.new(x, cave.FloorY, z))
+		if l.Z > -2 and l.Z < cave.Length + 6 and math.abs(l.X) < cave.Width / 2 + 6 then
+			return cave.FloorY
+		end
 	end
 	return map.Origin.Y + LayoutGen.Height(map.Layout, x - map.Origin.X, z - map.Origin.Z)
 end
@@ -148,7 +163,7 @@ local function writeTerrain(map: MapInfo)
 	local O = map.Origin
 	local H = layout.HalfSize + 24
 	local RES = 4
-	local YCELLS = 9 -- 36 studs of terrain column
+	local YCELLS = 12 -- 48 studs of terrain column (cliff rim tops out ~45)
 	local CHUNK = 16 -- cells per chunk side
 
 	local pathLists = layout.Paths
@@ -162,6 +177,16 @@ local function writeTerrain(map: MapInfo)
 			table.insert(glades, f)
 		end
 	end
+
+	-- Forest palette: mossy LeafyGrass, leaf-litter Ground, dark Mud, cool Slate.
+	pcall(function()
+		terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(88, 122, 62))
+		terrain:SetMaterialColor(Enum.Material.LeafyGrass, Color3.fromRGB(70, 106, 52))
+		terrain:SetMaterialColor(Enum.Material.Ground, Color3.fromRGB(104, 84, 60))
+		terrain:SetMaterialColor(Enum.Material.Mud, Color3.fromRGB(74, 60, 46))
+		terrain:SetMaterialColor(Enum.Material.Slate, Color3.fromRGB(96, 98, 102))
+		terrain:SetMaterialColor(Enum.Material.Rock, Color3.fromRGB(118, 114, 108))
+	end)
 
 	local total = math.ceil(2 * H / RES)
 	for cx0 = 0, total - 1, CHUNK do
@@ -183,7 +208,19 @@ local function writeTerrain(map: MapInfo)
 				for iz = 1, nz do
 					local wz = -H + (cz0 + iz - 0.5) * RES
 					local h = LayoutGen.Height(layout, wx, wz)
-					local surface = Enum.Material.Grass
+					-- Forest floor variety (spec: moss, leaf litter, dirt, grass patches; not one
+					-- stretched green): two noise fields pick the ground material.
+					local nA = math.noise(wx / 38, wz / 38, 5.3)
+					local nB = math.noise(wx / 17 + 40, wz / 17, 9.1)
+					local surface = if nA > 0.28 then Enum.Material.LeafyGrass
+						elseif nA < -0.3 then Enum.Material.Ground -- leaf litter / dirt
+						elseif nB > 0.35 then Enum.Material.Mud -- damp hollows
+						else Enum.Material.Grass
+					-- cliff rim: bare rock and slate on the slopes
+					local rim = LayoutGen.RimFactor(wx, wz)
+					if rim > 0.35 then
+						surface = if nB > 0 then Enum.Material.Rock else Enum.Material.Slate
+					end
 					-- camps: packed earth
 					for _, c in layout.Camps do
 						local d = math.sqrt((wx - c.X) ^ 2 + (wz - c.Z) ^ 2)
@@ -210,7 +247,7 @@ local function writeTerrain(map: MapInfo)
 							surface = Enum.Material.LeafyGrass
 						end
 					end
-					-- water carving
+					-- water carving (+ muddy, rocky banks: forest -> grass/moss -> mud/rock -> water)
 					local waterDepth = 0
 					for _, s in streams do
 						local d = LayoutGen.DistToPolyline(wx, wz, s.Points)
@@ -218,6 +255,10 @@ local function writeTerrain(map: MapInfo)
 						if d < half then
 							local t = d / half
 							waterDepth = math.max(waterDepth, s.Depth * (1 - t * t))
+						elseif d < half + 3 then
+							surface = if nB > 0.2 then Enum.Material.Rock else Enum.Material.Mud
+						elseif d < half + 7 and surface == Enum.Material.Grass then
+							surface = Enum.Material.LeafyGrass
 						end
 					end
 					for _, pd in ponds do
@@ -351,6 +392,86 @@ local function buildCamp(map: MapInfo, c: any): CampInfo
 	}
 end
 
+-- Points of interest ----------------------------------------------------------------------
+
+-- Chest spots come from the model's ChestMount attachments (in order), one per chest
+-- tier that LayoutGen rolled for this POI.
+local chestCounter = 0
+local function addChests(map: MapInfo, model: Model, f: any)
+	local mounts = {}
+	for _, d in model:GetDescendants() do
+		if d:IsA("Attachment") and d.Name == "ChestMount" then
+			table.insert(mounts, d)
+		end
+	end
+	for i, tier in f.Chests or {} do
+		local mnt = mounts[((i - 1) % math.max(1, #mounts)) + 1]
+		if mnt then
+			chestCounter += 1
+			table.insert(map.ChestSpots, { CF = mnt.WorldCFrame, Tier = tier, Poi = f.Type, Key = "C" .. chestCounter })
+		end
+	end
+end
+
+function WorldService._buildPoi(map: MapInfo, f: any, cf: CFrame, rng: Random, parent: Instance)
+	local m = Landmarks.Build(f.Type, cf, rng, parent)
+	if not m then
+		return
+	end
+	m:SetAttribute("Poi", f.Type)
+	m:SetAttribute("Tier", f.Tier)
+	addChests(map, m, f)
+	local O = map.Origin
+	table.insert(map.NoBuild, { X = f.X + O.X, Z = f.Z + O.Z, R = f.R + 4, Label = "a " .. f.Type })
+	table.insert(map.Pois, { Type = f.Type, Tier = f.Tier or "Common", Pos = cf.Position })
+end
+
+-- Caves: carve the tunnel (and chambers) into the cliff rim before anything is placed.
+local CAVE_WIDTH = { Small = 9, Medium = 11, Large = 13 }
+function WorldService._carveCaves(map: MapInfo)
+	local O = map.Origin
+	for _, f in map.Layout.Features do
+		if f.Type == "Cave" then
+			local floorY = O.Y + LayoutGen.Height(map.Layout, f.X, f.Z) - 0.2
+			local cf = CFrame.new(f.X + O.X, floorY, f.Z + O.Z) * CFrame.Angles(0, math.rad(f.Rot), 0)
+			local w = CAVE_WIDTH[f.Size] or 9
+			local len = f.Length or 22
+			for z = 0, len, 4 do
+				terrain:FillBlock(cf * CFrame.new(0, 5.2, z), Vector3.new(w, 10.4, 4.6), Enum.Material.Air)
+			end
+			terrain:FillBall((cf * CFrame.new(0, 5, len)).Position, w * 0.75, Enum.Material.Air)
+			if f.Size == "Large" then
+				-- side chambers
+				terrain:FillBall((cf * CFrame.new(-w * 0.8, 5, len * 0.6)).Position, w * 0.7, Enum.Material.Air)
+				terrain:FillBall((cf * CFrame.new(w * 0.8, 5, len * 0.85)).Position, w * 0.6, Enum.Material.Air)
+			end
+			-- flat slate floor all the way in
+			terrain:FillBlock(cf * CFrame.new(0, -1, len / 2), Vector3.new(w + 6, 2, len + 12), Enum.Material.Slate)
+			table.insert(map.Caves, { CF = cf, Length = len, Width = w + (if f.Size == "Large" then 10 else 0), FloorY = floorY, Size = f.Size or "Small" })
+		end
+	end
+end
+
+function WorldService._buildCave(map: MapInfo, f: any, rng: Random, parent: Instance)
+	local cave
+	for _, c in map.Caves do
+		local d = (c.CF.Position - Vector3.new(f.X + map.Origin.X, c.CF.Position.Y, f.Z + map.Origin.Z)).Magnitude
+		if d < 1 then
+			cave = c
+		end
+	end
+	if not cave then
+		return
+	end
+	local m = Landmarks.CaveEntrance(cave.CF, rng, cave.Length, cave.Size, parent)
+	m:SetAttribute("Poi", "Cave")
+	m:SetAttribute("Tier", f.Tier)
+	m:SetAttribute("CaveSize", cave.Size)
+	addChests(map, m, f)
+	table.insert(map.NoBuild, { X = f.X + map.Origin.X, Z = f.Z + map.Origin.Z, R = f.R + 6, Label = "the cave" })
+	table.insert(map.Pois, { Type = "Cave", Tier = f.Tier or "Common", Pos = cave.CF.Position })
+end
+
 function WorldService.BuildMatch(seed: number): MapInfo
 	WorldService.ClearMatch()
 	local layout = LayoutGen.Generate(seed)
@@ -367,10 +488,15 @@ function WorldService.BuildMatch(seed: number): MapInfo
 		WaterPoints = {},
 		DropPoints = {},
 		Brush = {},
+		ChestSpots = {},
+		NoBuild = {},
+		Caves = {},
+		Pois = {},
 	}
 	WorldService.Map = map
 
 	writeTerrain(map)
+	WorldService._carveCaves(map)
 
 	local decor = Instance.new("Folder")
 	decor.Name = "Forest"
@@ -380,6 +506,7 @@ function WorldService.BuildMatch(seed: number): MapInfo
 		return CFrame.new(x + O.X, WorldService.GroundY(x + O.X, z + O.Z) - 0.3, z + O.Z)
 	end
 
+	local drng = Random.new(seed)
 	for i, t in layout.Trees do
 		local cf = ground(t.X, t.Z) * CFrame.Angles(0, math.rad((i * 67) % 360), 0)
 		local m
@@ -387,11 +514,44 @@ function WorldService.BuildMatch(seed: number): MapInfo
 			m = Nature.Pine(cf, t.Scale, decor)
 		elseif t.Kind == "Oak" then
 			m = Nature.Oak(cf, t.Scale, decor)
-		else
+		elseif t.Kind == "Birch" then
 			m = Nature.Birch(cf, t.Scale, decor)
+		else
+			-- Spruce, Aspen, DeadSnag, GiantTree: more silhouettes (mesh-first, Flora fallback)
+			m = Decor.Place(t.Kind, cf, drng, t.Scale, decor)
 		end
-		atomic(m)
+		if m and m:IsA("Model") then
+			atomic(m)
+		end
 		if i % 60 == 0 then
+			task.wait()
+		end
+	end
+	-- Layered forest: middle (logs/boulders/stumps/roots), low (ferns/bushes/grass/saplings),
+	-- ground cover (litter/moss/flowers/mushrooms/pebbles/twigs). Mesh-first, cheap.
+	for i, d in layout.Middle do
+		Decor.Place(d.Kind, ground(d.X, d.Z) * CFrame.Angles(0, math.rad(d.Rot), 0), drng, d.Scale, decor)
+		if i % 80 == 0 then
+			task.wait()
+		end
+	end
+	for i, d in layout.Undergrowth do
+		Decor.Place(d.Kind, ground(d.X, d.Z) * CFrame.Angles(0, math.rad(d.Rot), 0), drng, d.Scale, decor)
+		if i % 150 == 0 then
+			task.wait()
+		end
+	end
+	for i, d in layout.GroundCover do
+		Decor.Place(d.Kind, ground(d.X, d.Z) * CFrame.Angles(0, math.rad(d.Rot), 0) + Vector3.new(0, 0.25, 0), drng, 1, decor)
+		if i % 200 == 0 then
+			task.wait()
+		end
+	end
+	-- Cliff rim faces
+	for i, c in layout.Cliffs do
+		local cf = ground(c.X, c.Z) * CFrame.Angles(0, math.rad(c.Rot), 0)
+		atomic(Flora.CliffRock(cf, drng, Vector3.new(c.W, c.H, 8), decor))
+		if i % 20 == 0 then
 			task.wait()
 		end
 	end
@@ -425,6 +585,12 @@ function WorldService.BuildMatch(seed: number): MapInfo
 			end
 		elseif f.Type == "Thicket" then
 			-- handled with brush below
+		elseif f.Type == "Waterfall" then
+			atomic(Flora.WaterfallRocks(cf, drng, LayoutGen.RimHeight * 0.7, decor))
+		elseif f.Type == "Cave" then
+			WorldService._buildCave(map, f, drng, decor)
+		elseif LayoutGen.LandmarkRadius[f.Type] then
+			WorldService._buildPoi(map, f, cf, drng, decor)
 		end
 	end
 	for _, b in layout.Brush do
@@ -491,7 +657,7 @@ function WorldService.ClearMatch()
 	if map then
 		local H = map.Layout.HalfSize + 32
 		local O = map.Origin
-		terrain:FillBlock(CFrame.new(O + Vector3.new(0, 20, 0)), Vector3.new(2 * H, 48, 2 * H), Enum.Material.Air)
+		terrain:FillBlock(CFrame.new(O + Vector3.new(0, 28, 0)), Vector3.new(2 * H, 64, 2 * H), Enum.Material.Air)
 	end
 	WorldService.Map = nil
 end

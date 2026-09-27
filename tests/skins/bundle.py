@@ -9,7 +9,7 @@ import os, re, subprocess, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 MODELS = os.path.join(ROOT, "src", "shared", "Models")
-ORDER = ["Build", "Skins", "Nature", "Flora", "Camp", "Structures", "ItemModels", "LootModels", "Animals"]
+ORDER = ["Build", "Skins", "Nature", "Flora", "Camp", "Structures", "ItemModels", "LootModels", "Animals", "Decor", "Landmarks"]
 
 
 def read(p):

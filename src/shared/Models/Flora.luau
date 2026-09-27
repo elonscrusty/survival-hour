@@ -475,6 +475,61 @@ function Flora.LargeRockPile(cf: CFrame, rng: Random, parent: Instance?): Model
 	return rockPile(cf, rng, parent, 2, "LargeRockPile")
 end
 
+--- Scrap pile (POI node, pickaxe): rusted sheets, a wheel rim and cans (Yield). Parts: <= 10.
+function Flora.ScrapPile(cf: CFrame, rng: Random, parent: Instance?): Model
+	local m = Build.Model("ScrapPile")
+	local root = makeRoot(m, 5, 2.5) -- 1
+	local rust = { Color3.fromRGB(128, 84, 58), Color3.fromRGB(110, 96, 84), Color3.fromRGB(90, 96, 104) }
+	block("Base", Vector3.new(4.4, 0.4, 3.8), CFrame.new(0, 0.2, 0) * spin(rng), Color3.fromRGB(70, 60, 52), M.Ground, m) -- 2
+	for i = 1, 6 do -- 8
+		local s = Vector3.new(rng:NextNumber(1.2, 2.4), rng:NextNumber(0.15, 0.5), rng:NextNumber(0.8, 1.8))
+		local a = rng:NextNumber(0, TAU)
+		markYield(block("Scrap", s, CFrame.new(math.cos(a) * rng:NextNumber(0, 1.4), 0.4 + i * 0.18, math.sin(a) * rng:NextNumber(0, 1.2)) * CFrame.Angles(rng:NextNumber(-0.6, 0.6), rng:NextNumber(0, TAU), rng:NextNumber(-0.6, 0.6)),
+			rust[(i % #rust) + 1], M.CorrodedMetal, m))
+	end
+	markYield(Build.Cyl("Rim", 0.4, 1.6, CFrame.new(1.2, 0.9, -0.6) * CFrame.Angles(0.4, 0, 1.2), Color3.fromRGB(60, 60, 64), M.Metal, m, false)) -- 9
+	finish(m, root, cf, parent)
+	return m
+end
+
+-- Ore deposits (POI / cave nodes, Stone Pickaxe+): a rock hump with coloured seams (Yield).
+local function oreDeposit(cf: CFrame, rng: Random, parent: Instance?, name: string, seam: Color3, seamMat: Enum.Material, k: number): Model
+	local m = Build.Model(name)
+	local root = makeRoot(m, 5 * k, 3.5 * k) -- 1
+	local main = Vector3.new(rng:NextNumber(3.8, 4.6), rng:NextNumber(2.6, 3.2), rng:NextNumber(3.2, 4)) * k
+	solid("Rock", main, CFrame.new(0, main.Y * 0.42, 0) * CFrame.Angles(rng:NextNumber(-0.15, 0.15), rng:NextNumber(0, TAU), 0), shade(rng, ROCK, 0.08), M.Slate, m) -- 2
+	for i = 1, 5 do -- 7
+		local a = i * TAU / 5 + rng:NextNumber(-0.3, 0.3)
+		local s = Vector3.new(rng:NextNumber(0.6, 1.1), rng:NextNumber(0.4, 0.8), rng:NextNumber(0.6, 1)) * k
+		markYield(block("Seam", s, CFrame.new(math.cos(a) * main.X * 0.42, main.Y * rng:NextNumber(0.35, 0.7), math.sin(a) * main.Z * 0.42) * CFrame.Angles(rng:NextNumber(0, 1), a, 0), seam, seamMat, m))
+	end
+	finish(m, root, cf, parent)
+	return m
+end
+
+function Flora.CoalDeposit(cf: CFrame, rng: Random, parent: Instance?): Model
+	return oreDeposit(cf, rng, parent, "CoalDeposit", Color3.fromRGB(34, 34, 38), M.Basalt, 1)
+end
+
+function Flora.IronDeposit(cf: CFrame, rng: Random, parent: Instance?): Model
+	return oreDeposit(cf, rng, parent, "IronDeposit", Color3.fromRGB(170, 104, 76), M.CorrodedMetal, 1)
+end
+
+function Flora.RichIronDeposit(cf: CFrame, rng: Random, parent: Instance?): Model
+	local m = oreDeposit(cf, rng, parent, "RichIronDeposit", Color3.fromRGB(200, 120, 80), M.CorrodedMetal, 1.3)
+	for _, d in m:GetDescendants() do
+		if d:IsA("BasePart") and d.Name == "Seam" then
+			local glow = Instance.new("PointLight")
+			glow.Color = Color3.fromRGB(255, 170, 110)
+			glow.Range = 6
+			glow.Brightness = 0.6
+			glow.Parent = d
+			break
+		end
+	end
+	return m
+end
+
 --- Twig pile: a leaf-litter patch with 5-7 crossed twigs (Yield). Parts: <= 9.
 function Flora.TwigPile(cf: CFrame, rng: Random, parent: Instance?): Model
 	local m = Build.Model("TwigPile")

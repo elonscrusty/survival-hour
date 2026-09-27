@@ -29,9 +29,9 @@ return {
 				end
 			end
 		end
-		-- P(at least one gun) = 1 - 0.88^3 ~= 31.9%
+		-- P(at least one gun) = 1 - 0.91^3 ~= 24.6%
 		local frac = withGun / total
-		t.ok(frac > 0.26 and frac < 0.38, "gun frequency " .. frac)
+		t.ok(frac > 0.19 and frac < 0.30, "gun frequency " .. frac)
 	end,
 	distribution_matches_weights = function(t)
 		local rng = Rng.new(99)
@@ -49,7 +49,7 @@ return {
 		end
 	end,
 	chest_tiers = function(t)
-		for _, tier in { "Common", "Uncommon", "Rare", "Epic" } do
+		for _, tier in { "Common", "Uncommon", "Rare", "VeryRare" } do
 			local tbl = Loot.Chest[tier]
 			t.ok(tbl ~= nil, tier .. " table")
 			t.eq(Loot.TotalWeight(tbl), 100, tier .. " odds")
@@ -62,13 +62,21 @@ return {
 					end
 				end
 			end
-			t.eq(gun, tier == "Rare" or tier == "Epic", tier .. " gun policy")
+			t.eq(gun, tier == "Rare" or tier == "VeryRare", tier .. " gun policy")
 		end
-		t.ok(Loot.ChestRolls.Epic > Loot.ChestRolls.Common, "epic chests give more")
+		t.ok(Loot.ChestRolls.VeryRare > Loot.ChestRolls.Common, "very rare chests give more")
 		local rng = Rng.new(3)
-		t.eq(#Loot.RollChest("Epic", function()
+		t.eq(#Loot.RollChest("VeryRare", function()
 			return rng:Next()
-		end), Loot.ChestRolls.Epic)
+		end), Loot.ChestRolls.VeryRare)
+		-- rare components only from Rare+ chests
+		for _, tier in { "Common", "Uncommon" } do
+			for _, e in Loot.Chest[tier] do
+				for _, g in e.Grants do
+					t.ok(g.Item ~= "RareComponent", tier .. " has no rare components")
+				end
+			end
+		end
 	end,
 	crates_have_no_guns = function(t)
 		for _, e in Loot.Crate do

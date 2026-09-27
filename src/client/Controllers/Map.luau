@@ -26,7 +26,13 @@ local packages: { [number]: { X: number, Z: number, Landed: boolean } } = {}
 local camps: { [number]: { X: number, Z: number } } = {}
 local reveals: { { Kind: string, Pos: Vector3, Until: number, Label: string } } = {}
 
-local LANDMARK_GLYPH = { Glade = "✿", RockOutcrop = "▲", Ruins = "Π", Pond = "≈", Thicket = "⁂", FallenGiant = "═" }
+local LANDMARK_GLYPH = {
+	Glade = "✿", RockOutcrop = "▲", Ruins = "Π", Pond = "≈", Thicket = "⁂", FallenGiant = "═",
+	-- Survival Wars POIs
+	Cave = "◖", Waterfall = "≋", Campsite = "⛺", Shed = "⌂", HuntingBlind = "⊼", BrokenVehicle = "⊟", SmallCabin = "⌂",
+	Cabin = "⌂", RangerStation = "⚑", LoggingCamp = "≡", AbandonedHouse = "⌂", MineEntrance = "⛏",
+	Bunker = "▣", Outpost = "⚑", IndustrialSite = "⚙", LargeMine = "⛏",
+}
 
 local function toMap(data: any, x: number, z: number): UDim2
 	local H = data.HalfSize

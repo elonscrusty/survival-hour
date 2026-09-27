@@ -15,7 +15,7 @@ return {
 			t.ok(d.Kind == "Tree" or d.Kind == "Harvest", id .. " kind")
 			t.ok(d.Health > 0 and d.RespawnTime > 0 and d.GrowTime > 0 and d.Range > 0, id .. " numbers")
 			t.ok(d.Placement.PerSector > 0 and d.Placement.NearCamp <= d.Placement.PerSector, id .. " placement")
-			t.ok(next(d.PerHit) ~= nil, id .. " yields something per hit")
+			t.ok(next(d.PerHit) ~= nil or d.Yield ~= nil, id .. " yields something per hit")
 			for _, drop in d.Drops do
 				t.ok(drop.Min <= drop.Max, id .. " drop range")
 			end
@@ -27,8 +27,8 @@ return {
 				t.ok(d.FellTime > 0, id .. " fell time")
 			end
 		end
-		for id in Resources.Defs do
-			t.ok(seen[id], id .. " missing from Resources.Order")
+		for id, d in Resources.Defs do
+			t.ok(seen[id] or d.Placement.Poi, id .. " missing from Resources.Order")
 		end
 	end,
 
@@ -157,6 +157,9 @@ return {
 			t.ok(IM.IsResource(id), id .. " must be a pack resource")
 		end
 		for _, d in Resources.Defs do
+			for id in d.Yield or {} do
+				t.ok(IM.IsResource(id), d.Id .. " yields unknown resource " .. id)
+			end
 			for id in d.PerHit do
 				t.ok(IM.IsResource(id), d.Id .. " yields unknown resource " .. id)
 			end
