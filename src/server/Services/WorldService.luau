@@ -343,7 +343,12 @@ local function writeTerrain(map: MapInfo)
 						local y0 = (iy - 1) * RES
 						local solidTop = if waterDepth > 0.3 then bed else h
 						local occ = math.clamp((solidTop - y0) / RES, 0, 1)
-						if occ > 0 then
+						if occ > 0 and occ < 1 and waterDepth > 0.3 and waterTop - y0 >= RES * 0.4 then
+							-- the bed and the water top share this voxel: a voxel can't be both, so
+							-- fill it with water (otherwise the river shows a dry sand gap here)
+							mats[ix][iy][iz] = Enum.Material.Water
+							occs[ix][iy][iz] = 1
+						elseif occ > 0 then
 							mats[ix][iy][iz] = if y0 + RES >= solidTop - 1 then surface elseif y0 < 4 then Enum.Material.Rock else Enum.Material.Ground
 							occs[ix][iy][iz] = occ
 						elseif waterDepth > 0.3 and y0 < waterTop then
@@ -405,17 +410,6 @@ local function buildCamp(map: MapInfo, c: any): CampInfo
 	for _, x in { -26, 26 } do
 		local lcf = origin * CFrame.new(x, 0, -22)
 		atomic(Camp.Lantern(CFrame.new(lcf.Position.X, WorldService.GroundY(lcf.Position.X, lcf.Position.Z), lcf.Position.Z) * origin.Rotation, team.Color, folder))
-	end
-
-	-- Build-zone boundary markers: short stakes with team-colour tips on the zone edge.
-	for i = 0, 23 do
-		local a = math.rad(i * 15)
-		local px = firePos.X + math.cos(a) * Config.Build.ZoneRadius
-		local pz = firePos.Z + math.sin(a) * Config.Build.ZoneRadius
-		local py = WorldService.GroundY(px, pz)
-		local stake = Build.Part({ Name = "ZoneStake", Size = Vector3.new(0.5, 2.2, 0.5), CFrame = CFrame.new(px, py + 1.1, pz), Color = Color3.fromRGB(110, 80, 50), Material = Enum.Material.Wood, CanCollide = false, CanQuery = false, Parent = folder })
-		stake.CastShadow = false
-		Build.Decor({ Name = "Tip", Size = Vector3.new(0.6, 0.5, 0.6), CFrame = CFrame.new(px, py + 2.4, pz), Color = team.Color, Material = Enum.Material.Neon, Parent = folder, CastShadow = false })
 	end
 
 	local function toLocal2D(cf: CFrame): (number, number)
@@ -730,34 +724,6 @@ function WorldService.BuildMatch(seed: number): MapInfo
 			atomic(Flora.CliffRock(cf, drng, Vector3.new(c.W, c.H, 8), decor))
 		end
 		if i % 20 == 0 then
-			task.wait()
-		end
-	end
-	-- Riverbank strips along both sides of every stream (grass -> mud -> rocks -> water).
-	if Skins.Has("SM_Riverbank_Straight") then
-		for _, st in layout.Streams do
-			local pts = st.Points
-			for i = 1, #pts - 1 do
-				local a, b = pts[i], pts[i + 1]
-				local dx, dz = b.X - a.X, b.Z - a.Z
-				local len = math.sqrt(dx * dx + dz * dz)
-				if len > 1 then
-					local nx, nz = -dz / len, dx / len
-					local steps = math.max(1, math.floor(len / 16 + 0.5))
-					for k = 0, steps - 1 do
-						local t = (k + 0.5) / steps
-						local cx, cz = a.X + dx * t, a.Z + dz * t
-						for _, side in { -1, 1 } do
-							local off = st.Width / 2 + 5
-							local px, pz = cx + nx * side * off, cz + nz * side * off
-							local g = ground(px, pz)
-							-- local -Z (the water edge) faces the stream centre line
-							local cf = CFrame.lookAt(g.Position, Vector3.new(cx + O.X, g.Position.Y, cz + O.Z))
-							Decor.Place("Riverbank", cf, drng, 1, decor)
-						end
-					end
-				end
-			end
 			task.wait()
 		end
 	end

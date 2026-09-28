@@ -285,7 +285,7 @@ local abilityFrame: Frame
 local abilityText: TextLabel
 
 local function buildAbility()
-	abilityFrame = UI.panel({ Name = "Ability", Size = UDim2.fromOffset(150, 60), AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0.5, 186, 1, -14), Parent = gui })
+	abilityFrame = UI.panel({ Name = "Ability", Size = UDim2.fromOffset(150, 60), AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0.5, 222, 1, -14), Parent = gui }) -- right of the 6-slot hotbar (414 wide)
 	abilityText = UI.text("", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, Font = Theme.FontBold, TextSize = 13, Parent = abilityFrame })
 	abilityText.ZIndex = 3
 end
