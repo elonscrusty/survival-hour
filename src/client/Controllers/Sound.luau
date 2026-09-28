@@ -89,6 +89,13 @@ function SoundCtl.Start()
 		if name == "Phase" then
 			SoundCtl.Play(if ev.Data.Phase == "Night" then "Dusk" else "Dawn")
 			setAmbient(if ev.Data.Phase == "Night" then "AmbientNight" else "AmbientDay")
+		elseif name == "FireUnderAttack" then
+			SoundCtl.Play("Alarm")
+		elseif name == "Upgraded" then
+			SoundCtl.Play("LevelUp")
+		elseif name == "LootReveal" then
+			local d = ev.Data or {}
+			SoundCtl.Play(if d.Tier == "Rare" or d.Tier == "VeryRare" then "LevelUp" else "Reward")
 		elseif name == "FireOut" then
 			SoundCtl.Play("FireOut")
 		elseif name == "MatchEnded" then
@@ -117,6 +124,7 @@ function SoundCtl.Start()
 		[Enum.Material.Metal] = "FootMetal", [Enum.Material.DiamondPlate] = "FootMetal",
 	}
 	local rainLoop: Sound? = nil
+	local nextHowl = os.clock() + 25
 	local defaultRun: { [Sound]: string } = setmetatable({}, { __mode = "k" }) :: any
 	local acc = 0
 	RunService.Heartbeat:Connect(function(dt)
@@ -132,6 +140,30 @@ function SoundCtl.Start()
 			setAmbient("AmbientCave")
 		else
 			setAmbient(if ms:GetAttribute("Phase") == "Night" then "AmbientNight" else "AmbientDay")
+		end
+		-- night soundscape: now and then a distant howl or growl from somewhere in the dark
+		-- (a random far bearing — atmosphere, never a real position, so it gives nothing away)
+		if inMatch and ms:GetAttribute("Phase") == "Night" and os.clock() > nextHowl then
+			nextHowl = os.clock() + math.random(20, 45)
+			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			local s = SoundLib.Make(if math.random() < 0.7 then "WolfGrowl" else "BearRoar")
+			if root and s then
+				local a = math.random() * math.pi * 2
+				local spot = Instance.new("Part")
+				spot.Anchored = true
+				spot.CanCollide = false
+				spot.CanQuery = false
+				spot.Transparency = 1
+				spot.Size = Vector3.one
+				spot.Position = root.Position + Vector3.new(math.cos(a) * 90, 10, math.sin(a) * 90)
+				spot.Parent = workspace.CurrentCamera
+				s.RollOffMaxDistance = 400
+				s.RollOffMinDistance = 60
+				s.Volume *= 0.7
+				s.Parent = spot
+				s:Play()
+				game:GetService("Debris"):AddItem(spot, 6)
+			end
 		end
 		-- rain loop layered over the ambience during showers
 		local wantRain = inMatch and ms:GetAttribute("Weather") == "Rain"

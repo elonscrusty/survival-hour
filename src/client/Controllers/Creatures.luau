@@ -144,6 +144,13 @@ local function animate(r: Rig, dt: number)
 	elseif tele == "Strike" and teleAge < 0.25 then
 		neck = CFrame.Angles(math.rad(-25), 0, 0)
 	end
+	-- startled: head up, body tense for a moment
+	local alertAge = workspace:GetServerTimeNow() - ((m:GetAttribute("AlertAt") :: number?) or 0)
+	if alertAge < 0.45 and tele ~= "Dead" then
+		local k = math.sin(math.clamp(alertAge / 0.45, 0, 1) * math.pi)
+		neck = CFrame.Angles(math.rad(35 * k), 0, 0)
+		body = CFrame.Angles(math.rad(6 * k), 0, 0) * body
+	end
 	-- hit flinch
 	local hitAge = workspace:GetServerTimeNow() - ((m:GetAttribute("HitAt") :: number?) or 0)
 	if hitAge < 0.25 and tele ~= "Dead" then

@@ -482,6 +482,39 @@ end
 
 local POI_SCALE = 1.35
 
+-- Distant cues that make players wonder "what's over there?": a thin smoke
+-- column over lived-in buildings by day, and a lantern glow at the bigger
+-- sites that reads through the trees at night. No map markers — just curiosity.
+local SMOKE_POIS = { Cabin = true, SmallCabin = true, RangerStation = true, AbandonedHouse = true, Campsite = true, LoggingCamp = true }
+local LIGHT_POIS = { RangerStation = true, Outpost = true, Bunker = true, IndustrialSite = true, LargeMine = true, MineEntrance = true, Campsite = true }
+
+function WorldService._poiBeacon(m: Model, kind: string)
+	local cf, size = m:GetBoundingBox()
+	if SMOKE_POIS[kind] then
+		local anchor = Build.Part({ Name = "BeaconSmoke", Size = Vector3.new(0.5, 0.5, 0.5), CFrame = cf * CFrame.new(size.X * 0.2, size.Y / 2 + 1, 0), Transparency = 1, CanCollide = false, CanQuery = false, Parent = m })
+		local pe = Instance.new("ParticleEmitter")
+		pe.Color = ColorSequence.new(Color3.fromRGB(200, 200, 205), Color3.fromRGB(150, 150, 160))
+		pe.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(1, 1) })
+		pe.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.5), NumberSequenceKeypoint.new(1, 7) })
+		pe.Lifetime = NumberRange.new(6, 9)
+		pe.Speed = NumberRange.new(3, 5)
+		pe.Rate = 2.5
+		pe.Acceleration = Vector3.new(1.2, 0.6, 0)
+		pe.SpreadAngle = Vector2.new(8, 8)
+		pe.LightInfluence = 1
+		pe.Parent = anchor
+	end
+	if LIGHT_POIS[kind] then
+		local lamp = Build.Part({ Name = "BeaconLamp", Size = Vector3.new(0.6, 0.8, 0.6), CFrame = cf * CFrame.new(0, size.Y * 0.1, -size.Z / 2 - 0.4), Color = Color3.fromRGB(255, 196, 120), Material = Enum.Material.Neon, CanCollide = false, CanQuery = false, Parent = m })
+		local light = Instance.new("PointLight")
+		light.Color = Color3.fromRGB(255, 180, 110)
+		light.Range = 22
+		light.Brightness = 1.4
+		light.Shadows = false
+		light.Parent = lamp
+	end
+end
+
 function WorldService._buildPoi(map: MapInfo, f: any, cf: CFrame, rng: Random, parent: Instance)
 	local m = Landmarks.Build(f.Type, cf, rng, parent)
 	if not m then
@@ -490,6 +523,7 @@ function WorldService._buildPoi(map: MapInfo, f: any, cf: CFrame, rng: Random, p
 	-- Buildings were a bit small next to players: scale the whole POI (colliders,
 	-- meshes and chest mounts together) about its ground pivot.
 	m:ScaleTo(POI_SCALE)
+	WorldService._poiBeacon(m, f.Type)
 	m:SetAttribute("Poi", f.Type)
 	m:SetAttribute("Tier", f.Tier)
 	addChests(map, m, f)

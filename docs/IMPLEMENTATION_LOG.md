@@ -204,3 +204,22 @@ reference's dark steel-slate; the equipped hotbar slot uses the gold "selected" 
 | Death / spectate | Eliminated players get a Return to Lobby button (server-validated `LeaveMatch`); spectate arrows use the kit | `Spectate`, `MatchService._onLeaveMatch` |
 | Wildlife | Hit flinch, idle breathing and look-around, prey grazing, topple-over death, impact effect | `Creatures`, `WildlifeService.Damage` |
 | Protection / victory | Golden shimmer while spawn or sunrise protected; slow orbit camera for the winner | `Effects`, `Camera.Victory` |
+
+## Polish + animation + fun pass
+
+**Inspected:** the full loop from title → lobby → match → end → lobby, looking at the moments that decide whether
+players keep playing: rewards, upgrades, the campfire, Final Life, exploration pull, night atmosphere and animation
+gaps. No locked numbers were changed.
+
+| Goal | Change | Where |
+|---|---|---|
+| Loot feels rewarding | Chest item reveal card, framed in the rarity colour; rare chests get a bolder frame, longer hold and a stronger sting. Rare chests also get a coloured flare | `LootService`, `Hud.LootReveal`, `Sound`, `Effects` |
+| Upgrades feel significant | Team banners for "⚒ WORKBENCH TIER III" and "🔥 CAMPFIRE LEVEL 3", a spark column when the fire upgrades, the upgrader's animation, and a level-up sting | `CraftService`, `CampService`, `Hud`, `Effects`, `Sound` |
+| Final hit satisfaction | The last chop or mine on a node throws 2.5× the chips plus a dust burst | `Effects` |
+| Campfire tension | Your fire going out: a dark-red flash plus a "YOUR FIRE IS OUT" banner. A snuff attempt: a red flash plus an alarm | `Hud.Flash`, `Sound` |
+| Final Life | A thin, slowly breathing red frame round the screen edge while alive on Final Life (never covers play) | `Hud` |
+| Tool break | Splinter and spark burst, a feed line, and the break sound | `InventoryService.Wear`, `Effects`, `Hud` |
+| Exploration pull | Smoke columns over lived-in POIs by day and lantern glow at the larger sites by night: things seen through the trees that make players wonder | `WorldService._poiBeacon` |
+| Night soundscape | Occasional distant howls and growls from a random far bearing (atmosphere, never a real position) | `Sound` |
+| Animation | Eating (hand to mouth), a weapon-ready idle (weapons carried forward, tools relaxed), crossbow reload after firing, and prey startle (head up) before bolting | `Animation`, `Creatures`, `WildlifeService` |
+

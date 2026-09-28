@@ -190,7 +190,12 @@ local function onFx(ev: any)
 	elseif name == "ResourceHit" then
 		-- chips fly back toward the swinger, like a real strike
 		local toward = if d.From then (d.From - d.Pos) * Vector3.new(1, 0, 1) + Vector3.new(0, 1.2, 0) else nil
-		emitAt(d.Kind or "Dust", d.Pos, if d.Kind == "Leaves" or d.Kind == "Spores" then 8 else 12, toward)
+		-- the final blow on a node is noticeably bigger than a normal hit
+		local mult = if d.Last then 2.5 else 1
+		emitAt(d.Kind or "Dust", d.Pos, math.floor((if d.Kind == "Leaves" or d.Kind == "Spores" then 8 else 12) * mult), toward)
+		if d.Last then
+			emitAt("Dust", d.Pos, 6)
+		end
 		if d.Kind == "Stone" then
 			emitAt("Dust", d.Pos, 3)
 			emitAt("Sparks", d.Pos, 4, toward)
@@ -213,6 +218,13 @@ local function onFx(ev: any)
 	elseif name == "Built" then
 		emitAt("Dust", d.Pos + Vector3.new(0, 1, 0), 8)
 		emitAt("Splinter", d.Pos + Vector3.new(0, 2, 0), 6)
+	elseif name == "ToolBroke" then
+		emitAt("Splinter", d.Pos, 14)
+		emitAt("Sparks", d.Pos, 6)
+	elseif name == "FireUpgraded" then
+		-- a column of sparks and a warm burst: the fire just grew
+		emitAt("Sparks", d.Pos + Vector3.new(0, 2, 0), 40)
+		burst(d.Pos + Vector3.new(0, 4, 0), Color3.fromRGB(255, 170, 70), 30, 12, 0.6)
 	elseif name == "Healed" then
 		-- soft green motes rising around the healed player
 		burst(d.Pos + Vector3.new(0, 1, 0), Color3.fromRGB(120, 240, 140), math.clamp((d.Amount or 20) // 4, 6, 25), 5, 0.35)

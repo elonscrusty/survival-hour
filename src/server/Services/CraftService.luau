@@ -201,6 +201,9 @@ function CraftService._onUpgrade(p: Player)
 	ctx.CampService.SetLevel(team, level + 1)
 	ctx.PowerupService.OnWorkbenchLevel(p, team, level + 1)
 	ctx.Util.SetAction(p, "Craft")
+	for _, mate in ctx.Util.TeamPlayers(team) do
+		Net.FireClient("MatchEvent", mate, "Upgraded", { What = "Workbench", Level = level + 1 })
+	end
 	Net.FireAll("Fx", "BenchUpgrade", { Pos = ctx.CampService.GetCamp(team).WorkbenchCF.Position, Level = level + 1 })
 	ctx.InventoryService.Sync(p)
 	ctx.StorageService.SyncTeam(team)

@@ -189,6 +189,21 @@ local function refreshVitals()
 		livesLabel.Text = "✖ FIRE OUT — FINAL LIFE"
 		livesLabel.TextColor3 = C.Bad
 	end
+	-- Final Life: a thin, slowly breathing red frame round the screen edge (never covers play)
+	local finalLife = not fire and player:GetAttribute("LifeState") == "Alive"
+	local edge = gui:FindFirstChild("FinalLifeEdge") :: Frame?
+	if finalLife and not edge then
+		edge = UI.new("Frame", { Name = "FinalLifeEdge", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Active = false, ZIndex = 40, Parent = gui }, {
+			UI.new("UIStroke", { Color = C.Bad, Thickness = 6, Transparency = 0.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+		})
+	end
+	if edge then
+		edge.Visible = finalLife
+		local stroke = edge:FindFirstChildOfClass("UIStroke")
+		if stroke then
+			stroke.Transparency = 0.45 + 0.35 * (0.5 + 0.5 * math.sin(os.clock() * 2.4))
+		end
+	end
 	local inv = State.Get("Inventory")
 	if inv then
 		local total = 0
@@ -460,6 +475,53 @@ end
 
 -- End screen ------------------------------------------------------------------------------------------------
 
+-- Brief full-screen colour flash (fire out, snuff alarm). Never blocks input.
+local flashFrame: Frame? = nil
+function Hud.Flash(color: Color3, from: number, duration: number)
+	if not flashFrame then
+		flashFrame = UI.new("Frame", { Name = "Flash", Size = UDim2.fromScale(1, 1), BorderSizePixel = 0, BackgroundTransparency = 1, Active = false, ZIndex = 50, Parent = gui })
+	end
+	local f = flashFrame :: Frame
+	f.BackgroundColor3 = color
+	f.BackgroundTransparency = from
+	TweenService:Create(f, TweenInfo.new(duration, Enum.EasingStyle.Quad), { BackgroundTransparency = 1 }):Play()
+end
+
+-- Chest item reveal: a small card listing what was found, framed in the chest's
+-- rarity colour. Common chests get a quiet card; rare ones a brighter frame.
+local RARITY = {
+	Common = Color3.fromRGB(190, 190, 190),
+	Uncommon = Color3.fromRGB(110, 200, 110),
+	Rare = Color3.fromRGB(90, 150, 240),
+	VeryRare = Color3.fromRGB(190, 120, 255),
+}
+function Hud.LootReveal(d: any)
+	local color = RARITY[d.Tier] or RARITY.Common
+	local rare = d.Tier == "Rare" or d.Tier == "VeryRare"
+	local n = #(d.Items or {})
+	local card = UI.panel({ Name = "LootReveal", Size = UDim2.fromOffset(300, 46 + 24 * n), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.58, 0), Parent = gui }, { UI.padding(10) })
+	local stroke = card:FindFirstChildOfClass("UIStroke")
+	if stroke then
+		stroke.Color = color
+		stroke.Thickness = if rare then 3 else 1.5
+	end
+	local label = ({ Common = "COMMON CHEST", Uncommon = "UNCOMMON CHEST", Rare = "RARE CHEST", VeryRare = "VERY RARE CHEST" })[d.Tier] or "CHEST"
+	UI.text(label, { Size = UDim2.new(1, 0, 0, 20), TextSize = 15, Font = Theme.FontBlack, TextColor3 = color, TextXAlignment = Enum.TextXAlignment.Center, Parent = card })
+	for i, it in d.Items or {} do
+		local def = Items[it.Id]
+		UI.text(string.format("%s%s", if (it.Count or 1) > 1 then it.Count .. "× " else "", if def then def.Name else tostring(it.Id)), {
+			Position = UDim2.fromOffset(0, 4 + 22 * i), Size = UDim2.new(1, 0, 0, 20), TextSize = 14, Font = Theme.FontBold, TextXAlignment = Enum.TextXAlignment.Center, Parent = card,
+		})
+	end
+	local pop = UI.new("UIScale", { Scale = 0.7, Parent = card })
+	TweenService:Create(pop, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	task.delay(if rare then 4 else 2.6, function()
+		if card.Parent then
+			card:Destroy()
+		end
+	end)
+end
+
 local function showEnd(data: any)
 	local won = data.Won
 	local winner = data.Winner
@@ -509,7 +571,13 @@ local function onMatchEvent(ev: any)
 	elseif name == "FireOut" then
 		local def = Config.Teams[d.Team]
 		local mine = d.Team == player:GetAttribute("Team")
-		Hud.Announce((def and def.Symbol or "") .. " " .. (def and def.Name or "?") .. " FIRE EXTINGUISHED", if mine then "No more respawns for your clan!" elseif d.By then "Put out by " .. d.By else nil, if mine then C.Bad else C.Warn, 4)
+		if mine then
+			-- this is the moment everything changes: a dark-red flash and a lingering banner
+			Hud.Announce("YOUR FIRE IS OUT", "No more respawns. One death and you're eliminated.", C.Bad, 6)
+			Hud.Flash(Color3.fromRGB(120, 0, 0), 0.35, 1.6)
+		else
+			Hud.Announce((def and def.Symbol or "") .. " " .. (def and def.Name or "?") .. " FIRE EXTINGUISHED", if d.By then "Put out by " .. d.By else nil, C.Warn, 4)
+		end
 		pushFeed("✖🔥 " .. teamTag(d.Team) .. (def and def.Name or "") .. " fire is out", C.Warn)
 	elseif name == "Death" then
 		local killer = if d.Killer then teamTag(d.KillerTeam) .. d.Killer else tostring(d.Cause)
@@ -523,6 +591,18 @@ local function onMatchEvent(ev: any)
 		local dirs = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" }
 		local dir = if d.Bearing then dirs[math.floor(((d.Bearing + 22.5) % 360) / 45) + 1] else nil
 		Hud.Announce("⚠ YOUR FIRE IS BEING SNUFFED!", (if dir then "Raider on the " .. dir .. " side — " else "") .. "hit them or make them move to stop it", C.Bad, 3)
+		Hud.Flash(Color3.fromRGB(200, 40, 20), 0.75, 0.6)
+	elseif name == "Upgraded" then
+		local roman = ({ "I", "II", "III", "IV", "V" })[d.Level or 1] or tostring(d.Level)
+		if d.What == "Workbench" then
+			Hud.Announce("⚒ WORKBENCH TIER " .. roman, "New recipes unlocked — open CRAFT", C.Good, 3.5)
+		else
+			Hud.Announce("🔥 CAMPFIRE LEVEL " .. tostring(d.Level), "Burns longer and takes longer to snuff", C.Accent, 3.5)
+		end
+	elseif name == "ToolBroke" then
+		pushFeed("⚒ " .. tostring(d.Name) .. " broke — craft a new one", C.Warn)
+	elseif name == "LootReveal" then
+		Hud.LootReveal(d)
 	elseif name == "StorageRaided" then
 		local dirs = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" }
 		local dir = if d.Bearing then dirs[math.floor(((d.Bearing + 22.5) % 360) / 45) + 1] else nil
@@ -624,7 +704,7 @@ function Hud.Start()
 		waiting.Visible = not inMatch and workspace:GetAttribute("ServerMode") == "Match"
 		for _, c in gui:GetChildren() do
 			if c:IsA("GuiObject") and c.Name ~= "Announce" and c.Name ~= "Sub" and c.Name ~= "EndScreen" then
-				if c.Name == "Death" or c.Name == "Channel" or c.Name == "Ability" or c.Name == "Waiting" then
+				if c.Name == "Death" or c.Name == "Channel" or c.Name == "Ability" or c.Name == "Waiting" or c.Name == "FinalLifeEdge" then
 					continue
 				end
 				c.Visible = inMatch
@@ -648,6 +728,10 @@ function Hud.Start()
 			deathFrame.Visible = false
 			abilityFrame.Visible = false
 			teamRevive.Visible = false
+			local edge = gui:FindFirstChild("FinalLifeEdge") :: GuiObject?
+			if edge then
+				edge.Visible = false
+			end
 		end
 		teamRevive.Visible = inMatch
 	end)

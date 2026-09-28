@@ -243,6 +243,11 @@ function CampService._onFireUpgrade(player: Player, prompt: ProximityPrompt)
 	if levelled then
 		ctx.Util.NotifyTeam(team, string.format("Campfire upgraded to Level %d! It burns longer and takes %d s to snuff.", fire.Level, FireRules.SnuffTime(fire, FIRE)), "success")
 		ctx.Util.PlaySound("Craft", camps[team].Fire.PrimaryPart)
+		ctx.Util.SetAction(player, "Feed")
+		Net.FireAll("Fx", "FireUpgraded", { Pos = camps[team].FirePos, Level = fire.Level })
+		for _, mate in ctx.Util.TeamPlayers(team) do
+			Net.FireClient("MatchEvent", mate, "Upgraded", { What = "Campfire", Level = fire.Level })
+		end
 		print(string.format("[Camp] %s fire L%d -> L%d", Config.Teams[team].Name, before, fire.Level))
 	else
 		ctx.Util.Notify(player, "Added to the fire upgrade. Still needs " .. needsText(fire) .. ".", "info")

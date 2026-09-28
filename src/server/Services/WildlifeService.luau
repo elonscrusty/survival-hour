@@ -438,6 +438,10 @@ function WildlifeService._think(a: Animal, dt: number)
 	if sp.Role == "Prey" then
 		local threat = nearestThreat(pos, (Config.Wildlife.FleeRange[a.Species] or 25) * WildlifeService.Pressure().AggroMult)
 		if threat then
+			if now >= a.FleeUntil then
+				-- startled: head snaps up (client) as it bolts
+				a.Model:SetAttribute("AlertAt", workspace:GetServerTimeNow())
+			end
 			a.FleeUntil = now + 3
 			a.FleeFrom = threat
 		end

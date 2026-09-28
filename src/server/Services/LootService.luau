@@ -426,6 +426,14 @@ function LootService._onOpenChest(p: Player, prompt: ProximityPrompt)
 					return rng:NextNumber()
 				end))
 			end
+			-- item reveal for the searcher (rarer chests get a richer card)
+			local found = {}
+			for _, entry in roll do
+				for _, g in entry.Grants do
+					table.insert(found, { Id = g.Item, Count = g.Count })
+				end
+			end
+			Net.FireClient("MatchEvent", p, "LootReveal", { Tier = chest.Tier, Items = found })
 			local k = 0
 			for _, entry in roll do
 				for _, g in entry.Grants do

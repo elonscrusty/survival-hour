@@ -558,6 +558,7 @@ function InventoryService._onEat(p: Player, id: any)
 	hum.Health = math.min(hum.MaxHealth, hum.Health + food.Heal)
 	InventoryService.Sync(p)
 	ctx.Util.PlaySound("Eat", ctx.Util.Root(p))
+	ctx.Util.SetAction(p, "Eat")
 	ctx.Util.Notify(p, string.format("Ate %s  +%d HP", Items[id].Name, food.Heal), "gain")
 end
 
@@ -574,6 +575,11 @@ function InventoryService.Wear(p: Player, slot: string, amount: number)
 	if InventoryModel.Wear(inv, slot, amount) then
 		ctx.Util.Notify(p, (name or "Item") .. " broke!", "warn")
 		ctx.Util.PlaySound("Break", ctx.Util.Root(p))
+		local br = ctx.Util.Root(p)
+		if br then
+			Net.FireAll("Fx", "ToolBroke", { Pos = br.Position + Vector3.new(0, 1.5, 0) })
+		end
+		Net.FireClient("MatchEvent", p, "ToolBroke", { Name = name or "Item" })
 	end
 	InventoryService.Sync(p)
 end

@@ -17,6 +17,7 @@ local RunService = game:GetService("RunService")
 
 local State = require("../State")
 local Input = require("./Input")
+local Items = require(game:GetService("ReplicatedStorage").Shared.Items)
 
 local Animation = {}
 
@@ -173,6 +174,22 @@ local function pose(rig: Rig, t: number): (CFrame, CFrame, CFrame, CFrame)
 		l = if held == "Pistol" then ID else raise(30, -1)
 	elseif isBow(held) then
 		l = raise(25, -1)
+	else
+		-- weapons are carried at the ready; tools hang relaxed
+		local hdef = Items[held]
+		if hdef and hdef.Kind == "Weapon" and not hdef.Ranged then
+			r = raise(28, 1) * CFrame.Angles(0, rad(15), 0)
+			l = raise(12, -1)
+		end
+	end
+	-- crossbow reload: after the shot, pull the string back down
+	if action == "Attack" and item == "Crossbow" and elapsed > 0.25 and elapsed < 1.3 then
+		local k = math.sin(math.clamp((elapsed - 0.25) / 1.05, 0, 1) * math.pi)
+		r = raise(45, 1)
+		l = raise(40 + 35 * k, -1) * CFrame.Angles(0, rad(-25 * k), 0)
+		w = CFrame.Angles(rad(-12 * k), 0, 0)
+		n = CFrame.Angles(rad(-18 * k), 0, 0)
+		return r, l, w, n
 	end
 
 	local swingLen = if heavy then 0.62 else 0.38
@@ -266,6 +283,11 @@ local function pose(rig: Rig, t: number): (CFrame, CFrame, CFrame, CFrame)
 		r = raise(a, 1)
 		l = raise(a, -1)
 		w = CFrame.Angles(rad(-20 * math.sin(k * math.pi)), 0, 0)
+	elseif action == "Eat" and elapsed < 0.9 then
+		-- hand to mouth twice
+		local k = (elapsed / 0.45) % 1
+		r = raise(95 + 25 * math.sin(k * math.pi), 1) * CFrame.Angles(0, rad(35), 0)
+		n = CFrame.Angles(rad(-8), 0, 0)
 	elseif action == "Open" or action == "Steal" then
 		w = CFrame.Angles(rad(-30), 0, 0)
 		r = raise(55 + 30 * math.sin(phase * 2), 1)
