@@ -29,6 +29,11 @@ function CameraCtl.Start()
 	player.CameraMaxZoomDistance = Config.Camera.MaxZoom
 	player.CameraMinZoomDistance = Config.Camera.MinZoom
 	CameraCtl._feel()
+	State.On("MatchEvent", function(ev)
+		if ev.Name == "MatchEnded" and ev.Data and ev.Data.Won then
+			CameraCtl.Victory(math.max(3, Config.Match.EndScreenLength - 1))
+		end
+	end)
 
 	local gui = UI.new("ScreenGui", { Name = "Crosshair", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 3, Parent = player:WaitForChild("PlayerGui") })
 	local ch = UI.new("Frame", { Size = UDim2.fromOffset(28, 28), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundTransparency = 1, Visible = false, Parent = gui })
@@ -108,6 +113,27 @@ function CameraCtl._feel()
 		cc.Saturation += (sat - cc.Saturation) * math.clamp(dt * 4, 0, 1)
 		local tint = if low then Color3.fromRGB(255, 225 + 15 * math.sin(os.clock() * 4), 225) else Color3.new(1, 1, 1)
 		cc.TintColor = cc.TintColor:Lerp(tint, math.clamp(dt * 4, 0, 1))
+	end)
+end
+
+-- Victory: a slow orbit around the winner for the end screen.
+function CameraCtl.Victory(duration: number)
+	local char = character()
+	local root = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not root then
+		return
+	end
+	local center = root.Position
+	local t0 = os.clock()
+	camera.CameraType = Enum.CameraType.Scriptable
+	RunService:BindToRenderStep("SurvivalHourVictory", Enum.RenderPriority.Camera.Value + 3, function()
+		local a = (os.clock() - t0) * 0.35
+		local eye = center + Vector3.new(math.cos(a) * 12, 5 + math.sin(a * 0.5), math.sin(a) * 12)
+		camera.CFrame = CFrame.lookAt(eye, center + Vector3.new(0, 2, 0))
+	end)
+	task.delay(duration, function()
+		RunService:UnbindFromRenderStep("SurvivalHourVictory")
+		camera.CameraType = Enum.CameraType.Custom
 	end)
 end
 

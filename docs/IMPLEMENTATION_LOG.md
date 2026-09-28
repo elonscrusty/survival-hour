@@ -201,3 +201,6 @@ reference's dark steel-slate; the equipped hotbar slot uses the gold "selected" 
 | Day / night | Afternoon lighting step | `Config.Lighting.Afternoon`, `MatchService` |
 | UI motion | Panel pop-in, button press squash, notification pop and fade, lobby profile card with count-up currencies | `Panels`, `UI/Buttons`, `Notifications`, `Lobby` |
 | Onboarding | Survival Guide objective tracker plus contextual one-off tips | `Controllers/Guide` |
+| Death / spectate | Eliminated players get a Return to Lobby button (server-validated `LeaveMatch`); spectate arrows use the kit | `Spectate`, `MatchService._onLeaveMatch` |
+| Wildlife | Hit flinch, idle breathing and look-around, prey grazing, topple-over death, impact effect | `Creatures`, `WildlifeService.Damage` |
+| Protection / victory | Golden shimmer while spawn or sunrise protected; slow orbit camera for the winner | `Effects`, `Camera.Victory` |

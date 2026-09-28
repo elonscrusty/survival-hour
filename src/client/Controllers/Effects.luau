@@ -368,6 +368,21 @@ function Effects.Start()
 					pe.Parent = root
 					Debris:AddItem(pe, math.max(0.2, (p:GetAttribute("Bursting") :: number) - now))
 				end
+				-- spawn / sunrise protection: a soft golden shimmer while it lasts
+				local prot = (p:GetAttribute("ProtectedUntil") or 0) > now
+				local shield = char:FindFirstChild("ProtectShimmer")
+				if prot and not shield then
+					local h = Instance.new("Highlight")
+					h.Name = "ProtectShimmer"
+					h.FillColor = Color3.fromRGB(255, 220, 130)
+					h.FillTransparency = 0.82
+					h.OutlineColor = Color3.fromRGB(255, 235, 170)
+					h.OutlineTransparency = 0.35
+					h.DepthMode = Enum.HighlightDepthMode.Occluded
+					h.Parent = char
+				elseif not prot and shield then
+					shield:Destroy()
+				end
 				local marked = p ~= player and p:GetAttribute("MarkedTeam") == myTeam and (p:GetAttribute("MarkedUntil") or 0) > now
 				if marked and not marks[p] then
 					local h = Instance.new("Highlight")

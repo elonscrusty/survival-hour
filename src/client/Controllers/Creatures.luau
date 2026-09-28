@@ -106,8 +106,22 @@ local function animate(r: Rig, dt: number)
 	end
 	local body = CFrame.identity
 	local neck = CFrame.Angles(math.sin(r.Phase * 2) * math.rad(3), 0, 0)
+	local t = os.clock()
+	if speed < 1 and not active then
+		-- idle life: breathing, looking around; prey graze with the head down
+		local seed = (m:GetAttribute("AnimalId") or 0) % 7
+		local look = math.sin(t * 0.7 + seed) * math.rad(20)
+		if (species == "Deer" or species == "Rabbit") and math.sin(t * 0.25 + seed) > 0.3 then
+			neck = CFrame.Angles(math.rad(-40), look * 0.3, 0)
+		else
+			neck = CFrame.Angles(math.sin(t * 1.6) * math.rad(3), look, 0)
+		end
+		body = CFrame.new(0, math.sin(t * 2.2 + seed) * 0.04, 0)
+	end
 	if tele == "Dead" then
-		body = CFrame.Angles(0, 0, math.rad(80))
+		-- topple over instead of snapping sideways
+		local k = math.clamp(teleAge / 0.6, 0, 1)
+		body = CFrame.Angles(0, 0, math.rad(85 * (1 - (1 - k) ^ 2)))
 	elseif active then
 		if tele == "Lunge" then
 			body = CFrame.Angles(math.rad(-10), 0, 0) * CFrame.new(0, -0.4, 0)
@@ -129,6 +143,13 @@ local function animate(r: Rig, dt: number)
 		end
 	elseif tele == "Strike" and teleAge < 0.25 then
 		neck = CFrame.Angles(math.rad(-25), 0, 0)
+	end
+	-- hit flinch
+	local hitAge = workspace:GetServerTimeNow() - ((m:GetAttribute("HitAt") :: number?) or 0)
+	if hitAge < 0.25 and tele ~= "Dead" then
+		local k = math.sin(hitAge / 0.25 * math.pi)
+		body = CFrame.Angles(math.rad(-6 * k), 0, math.rad(8 * k)) * body
+		neck = CFrame.Angles(math.rad(15 * k), 0, 0) * neck
 	end
 	if M.Body then
 		M.Body.Transform = body

@@ -9054,6 +9054,7 @@ Net.Events = {
 	"DevCommand",
 	"ClientReady",
 	"Sprint", -- (bool) hold-to-sprint state
+	"LeaveMatch", -- eliminated players go back to the lobby early
 }
 
 local folder: Folder
@@ -65935,6 +65936,7 @@ end
 
 function MatchService.Init(c)
 	ctx = c
+	ctx.Util.Connect("LeaveMatch", "Lobby", MatchService._onLeaveMatch)
 	state = Instance.new("Folder")
 	state.Name = "MatchState"
 	state.Parent = ReplicatedStorage
@@ -66368,6 +66370,21 @@ function MatchService.ReturnToLobby(players: { Player }, message: string?, prior
 	end
 	for _, p in players do
 		p:Kick("Match over — please rejoin Survival Hour.")
+	end
+end
+
+-- Eliminated players may leave early (their placement is already decided).
+function MatchService._onLeaveMatch(p: Player)
+	if not MatchService.Active or not p:GetAttribute("InMatch") or p:GetAttribute("LifeState") ~= "Eliminated" then
+		return
+	end
+	if ctx.Mode == "Match" then
+		MatchService.ReturnToLobby({ p }, nil)
+	else
+		p:SetAttribute("InMatch", false)
+		p:SetAttribute("Team", 0)
+		ctx.LivesService.SpawnInLobby(p)
+		Net.FireClient("MatchEvent", p, "ReturnedToLobby", {})
 	end
 end
 
@@ -68999,6 +69016,8 @@ function WildlifeService.Damage(a: Animal, amount: number, attacker: Player?): b
 		Net.FireClient("HitFeedback", attacker, "Animal", math.floor(amount + 0.5), a.Root.Position)
 	end
 	ctx.Util.PlaySound("AnimalHit", a.Root)
+	a.Model:SetAttribute("HitAt", workspace:GetServerTimeNow())
+	Net.FireAll("Fx", "Impact", { Pos = a.Root.Position, Kind = "Animal" })
 	a.Hum.Health = math.max(0, a.Hum.Health - amount)
 	return true
 end
@@ -70787,6 +70806,11 @@ function CameraCtl.Start()
 	player.CameraMaxZoomDistance = Config.Camera.MaxZoom
 	player.CameraMinZoomDistance = Config.Camera.MinZoom
 	CameraCtl._feel()
+	State.On("MatchEvent", function(ev)
+		if ev.Name == "MatchEnded" and ev.Data and ev.Data.Won then
+			CameraCtl.Victory(math.max(3, Config.Match.EndScreenLength - 1))
+		end
+	end)
 
 	local gui = UI.new("ScreenGui", { Name = "Crosshair", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 3, Parent = player:WaitForChild("PlayerGui") })
 	local ch = UI.new("Frame", { Size = UDim2.fromOffset(28, 28), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundTransparency = 1, Visible = false, Parent = gui })
@@ -70866,6 +70890,27 @@ function CameraCtl._feel()
 		cc.Saturation += (sat - cc.Saturation) * math.clamp(dt * 4, 0, 1)
 		local tint = if low then Color3.fromRGB(255, 225 + 15 * math.sin(os.clock() * 4), 225) else Color3.new(1, 1, 1)
 		cc.TintColor = cc.TintColor:Lerp(tint, math.clamp(dt * 4, 0, 1))
+	end)
+end
+
+-- Victory: a slow orbit around the winner for the end screen.
+function CameraCtl.Victory(duration: number)
+	local char = character()
+	local root = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not root then
+		return
+	end
+	local center = root.Position
+	local t0 = os.clock()
+	camera.CameraType = Enum.CameraType.Scriptable
+	RunService:BindToRenderStep("SurvivalHourVictory", Enum.RenderPriority.Camera.Value + 3, function()
+		local a = (os.clock() - t0) * 0.35
+		local eye = center + Vector3.new(math.cos(a) * 12, 5 + math.sin(a * 0.5), math.sin(a) * 12)
+		camera.CFrame = CFrame.lookAt(eye, center + Vector3.new(0, 2, 0))
+	end)
+	task.delay(duration, function()
+		RunService:UnbindFromRenderStep("SurvivalHourVictory")
+		camera.CameraType = Enum.CameraType.Custom
 	end)
 end
 
@@ -71449,8 +71494,22 @@ local function animate(r: Rig, dt: number)
 	end
 	local body = CFrame.identity
 	local neck = CFrame.Angles(math.sin(r.Phase * 2) * math.rad(3), 0, 0)
+	local t = os.clock()
+	if speed < 1 and not active then
+		-- idle life: breathing, looking around; prey graze with the head down
+		local seed = (m:GetAttribute("AnimalId") or 0) % 7
+		local look = math.sin(t * 0.7 + seed) * math.rad(20)
+		if (species == "Deer" or species == "Rabbit") and math.sin(t * 0.25 + seed) > 0.3 then
+			neck = CFrame.Angles(math.rad(-40), look * 0.3, 0)
+		else
+			neck = CFrame.Angles(math.sin(t * 1.6) * math.rad(3), look, 0)
+		end
+		body = CFrame.new(0, math.sin(t * 2.2 + seed) * 0.04, 0)
+	end
 	if tele == "Dead" then
-		body = CFrame.Angles(0, 0, math.rad(80))
+		-- topple over instead of snapping sideways
+		local k = math.clamp(teleAge / 0.6, 0, 1)
+		body = CFrame.Angles(0, 0, math.rad(85 * (1 - (1 - k) ^ 2)))
 	elseif active then
 		if tele == "Lunge" then
 			body = CFrame.Angles(math.rad(-10), 0, 0) * CFrame.new(0, -0.4, 0)
@@ -71472,6 +71531,13 @@ local function animate(r: Rig, dt: number)
 		end
 	elseif tele == "Strike" and teleAge < 0.25 then
 		neck = CFrame.Angles(math.rad(-25), 0, 0)
+	end
+	-- hit flinch
+	local hitAge = workspace:GetServerTimeNow() - ((m:GetAttribute("HitAt") :: number?) or 0)
+	if hitAge < 0.25 and tele ~= "Dead" then
+		local k = math.sin(hitAge / 0.25 * math.pi)
+		body = CFrame.Angles(math.rad(-6 * k), 0, math.rad(8 * k)) * body
+		neck = CFrame.Angles(math.rad(15 * k), 0, 0) * neck
 	end
 	if M.Body then
 		M.Body.Transform = body
@@ -71957,6 +72023,21 @@ function Effects.Start()
 					pe.LightEmission = 0.6
 					pe.Parent = root
 					Debris:AddItem(pe, math.max(0.2, (p:GetAttribute("Bursting") :: number) - now))
+				end
+				-- spawn / sunrise protection: a soft golden shimmer while it lasts
+				local prot = (p:GetAttribute("ProtectedUntil") or 0) > now
+				local shield = char:FindFirstChild("ProtectShimmer")
+				if prot and not shield then
+					local h = Instance.new("Highlight")
+					h.Name = "ProtectShimmer"
+					h.FillColor = Color3.fromRGB(255, 220, 130)
+					h.FillTransparency = 0.82
+					h.OutlineColor = Color3.fromRGB(255, 235, 170)
+					h.OutlineTransparency = 0.35
+					h.DepthMode = Enum.HighlightDepthMode.Occluded
+					h.Parent = char
+				elseif not prot and shield then
+					shield:Destroy()
 				end
 				local marked = p ~= player and p:GetAttribute("MarkedTeam") == myTeam and (p:GetAttribute("MarkedUntil") or 0) > now
 				if marked and not marks[p] then
@@ -74847,6 +74928,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local UI = require("../UI/UI")
+local Net = require(game:GetService("ReplicatedStorage").Shared.Net)
 local Theme = require("../UI/Theme")
 
 local Spectate = {}
@@ -74883,12 +74965,16 @@ end
 function Spectate.Start()
 	local gui = UI.new("ScreenGui", { Name = "Spectate", ResetOnSpawn = false, DisplayOrder = 4, Parent = player:WaitForChild("PlayerGui") })
 	bar = UI.panel({ Size = UDim2.fromOffset(420, 60), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -16), Visible = false, Parent = gui })
-	UI.button("◀", { Size = UDim2.fromOffset(60, 48), Position = UDim2.fromOffset(6, 6), TextSize = 24, Parent = bar }, function()
+	UI.Buttons.icon("◀", { Size = UDim2.fromOffset(60, 48), Position = UDim2.fromOffset(6, 6), TextSize = 24, Parent = bar }, function()
 		index -= 1
 	end)
-	UI.button("▶", { Size = UDim2.fromOffset(60, 48), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 6), TextSize = 24, Parent = bar }, function()
+	UI.Buttons.icon("▶", { Size = UDim2.fromOffset(60, 48), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 6), TextSize = 24, Parent = bar }, function()
 		index += 1
 	end)
+	local leave = UI.Buttons.action("🏠 Return to lobby", { Size = UDim2.fromOffset(220, 42), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 0, -8), Tone = "Neutral", Parent = bar }, function()
+		Net.Event("LeaveMatch"):FireServer()
+	end)
+	leave.Name = "Leave"
 	nameLabel = UI.text("", { Position = UDim2.fromOffset(70, 0), Size = UDim2.new(1, -140, 1, 0), TextSize = 16, Font = Theme.FontBold, TextXAlignment = Enum.TextXAlignment.Center, Parent = bar })
 
 	local acc = 0
@@ -74901,6 +74987,10 @@ function Spectate.Start()
 		if spectating() then
 			local list = candidates()
 			bar.Visible = true
+			local leaveBtn = bar:FindFirstChild("Leave") :: GuiObject?
+			if leaveBtn then
+				leaveBtn.Visible = player:GetAttribute("LifeState") == "Eliminated"
+			end
 			if #list == 0 then
 				nameLabel.Text = "No one left to watch"
 				return

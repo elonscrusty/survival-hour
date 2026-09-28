@@ -641,6 +641,8 @@ function WildlifeService.Damage(a: Animal, amount: number, attacker: Player?): b
 		Net.FireClient("HitFeedback", attacker, "Animal", math.floor(amount + 0.5), a.Root.Position)
 	end
 	ctx.Util.PlaySound("AnimalHit", a.Root)
+	a.Model:SetAttribute("HitAt", workspace:GetServerTimeNow())
+	Net.FireAll("Fx", "Impact", { Pos = a.Root.Position, Kind = "Animal" })
 	a.Hum.Health = math.max(0, a.Hum.Health - amount)
 	return true
 end

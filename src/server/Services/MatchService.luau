@@ -57,6 +57,7 @@ end
 
 function MatchService.Init(c)
 	ctx = c
+	ctx.Util.Connect("LeaveMatch", "Lobby", MatchService._onLeaveMatch)
 	state = Instance.new("Folder")
 	state.Name = "MatchState"
 	state.Parent = ReplicatedStorage
@@ -490,6 +491,21 @@ function MatchService.ReturnToLobby(players: { Player }, message: string?, prior
 	end
 	for _, p in players do
 		p:Kick("Match over — please rejoin Survival Hour.")
+	end
+end
+
+-- Eliminated players may leave early (their placement is already decided).
+function MatchService._onLeaveMatch(p: Player)
+	if not MatchService.Active or not p:GetAttribute("InMatch") or p:GetAttribute("LifeState") ~= "Eliminated" then
+		return
+	end
+	if ctx.Mode == "Match" then
+		MatchService.ReturnToLobby({ p }, nil)
+	else
+		p:SetAttribute("InMatch", false)
+		p:SetAttribute("Team", 0)
+		ctx.LivesService.SpawnInLobby(p)
+		Net.FireClient("MatchEvent", p, "ReturnedToLobby", {})
 	end
 end
 

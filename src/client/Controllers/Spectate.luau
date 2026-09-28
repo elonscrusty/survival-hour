@@ -6,6 +6,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local UI = require("../UI/UI")
+local Net = require(game:GetService("ReplicatedStorage").Shared.Net)
 local Theme = require("../UI/Theme")
 
 local Spectate = {}
@@ -42,12 +43,16 @@ end
 function Spectate.Start()
 	local gui = UI.new("ScreenGui", { Name = "Spectate", ResetOnSpawn = false, DisplayOrder = 4, Parent = player:WaitForChild("PlayerGui") })
 	bar = UI.panel({ Size = UDim2.fromOffset(420, 60), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -16), Visible = false, Parent = gui })
-	UI.button("◀", { Size = UDim2.fromOffset(60, 48), Position = UDim2.fromOffset(6, 6), TextSize = 24, Parent = bar }, function()
+	UI.Buttons.icon("◀", { Size = UDim2.fromOffset(60, 48), Position = UDim2.fromOffset(6, 6), TextSize = 24, Parent = bar }, function()
 		index -= 1
 	end)
-	UI.button("▶", { Size = UDim2.fromOffset(60, 48), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 6), TextSize = 24, Parent = bar }, function()
+	UI.Buttons.icon("▶", { Size = UDim2.fromOffset(60, 48), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 6), TextSize = 24, Parent = bar }, function()
 		index += 1
 	end)
+	local leave = UI.Buttons.action("🏠 Return to lobby", { Size = UDim2.fromOffset(220, 42), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 0, -8), Tone = "Neutral", Parent = bar }, function()
+		Net.Event("LeaveMatch"):FireServer()
+	end)
+	leave.Name = "Leave"
 	nameLabel = UI.text("", { Position = UDim2.fromOffset(70, 0), Size = UDim2.new(1, -140, 1, 0), TextSize = 16, Font = Theme.FontBold, TextXAlignment = Enum.TextXAlignment.Center, Parent = bar })
 
 	local acc = 0
@@ -60,6 +65,10 @@ function Spectate.Start()
 		if spectating() then
 			local list = candidates()
 			bar.Visible = true
+			local leaveBtn = bar:FindFirstChild("Leave") :: GuiObject?
+			if leaveBtn then
+				leaveBtn.Visible = player:GetAttribute("LifeState") == "Eliminated"
+			end
 			if #list == 0 then
 				nameLabel.Text = "No one left to watch"
 				return

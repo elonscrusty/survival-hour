@@ -42,6 +42,7 @@ Net.Events = {
 	"DevCommand",
 	"ClientReady",
 	"Sprint", -- (bool) hold-to-sprint state
+	"LeaveMatch", -- eliminated players go back to the lobby early
 }
 
 local folder: Folder
