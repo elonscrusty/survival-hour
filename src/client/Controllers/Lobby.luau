@@ -25,6 +25,8 @@ local State = require("../State")
 local Panels = require("./Panels")
 local Hud = require("./Hud")
 local Buttons = require("../UI/Buttons")
+local Season = require("./Season")
+local Seasons = require(Shared.Logic.Seasons)
 
 local Lobby = {}
 
@@ -41,6 +43,8 @@ local coinPill: TextLabel
 local diamondPill: TextLabel
 local xpSet: (number, string?) -> () = function() end
 local shownCoins, shownDiamonds = -1, -1
+local seasonBanner: Frame? = nil
+local seasonLabel: TextLabel? = nil
 
 -- Counts a currency label up/down to its new value (short, never blocks input).
 local function countTo(label: TextLabel, from: number, to: number)
@@ -135,6 +139,21 @@ local function renderHud()
 			TextXAlignment = Enum.TextXAlignment.Center,
 			Parent = partyStrip,
 		})
+	end
+end
+
+-- Seasonal event banner (Config.Seasons): "🎃 Halloween event: 9 days left". Tapping it opens
+-- the Locker, where the limited items are.
+local function renderSeason()
+	local season = Season.Current()
+	if not seasonBanner or not seasonLabel then
+		return
+	end
+	seasonBanner.Visible = season ~= nil
+	if season then
+		local left = Seasons.LeftText(Seasons.SecondsLeft(season, workspace:GetServerTimeNow()))
+		seasonLabel.Text = string.format("%s %s event: %s · limited items in the Locker", season.Glyph or "★", season.Name, left)
+		seasonLabel.TextColor3 = season.Accent or C.Warn
 	end
 end
 
@@ -301,19 +320,32 @@ local function renderLocker()
 			send("WearCosmetic", { Type = lockerType, Id = nil })
 		end)
 	end
+	local season = Season.Current()
 	for _, def in Cosmetics.List do
-		if def.Type == lockerType then
+		local owned = profile.Cosmetics[def.Id] == true
+		-- limited-time items: shown while their season runs, or once owned
+		local limited = def.Season ~= nil
+		local inSeason = limited and season ~= nil and season.Id == def.Season
+		if def.Type == lockerType and (not limited or inSeason or owned) then
 			order += 1
-			local owned = profile.Cosmetics[def.Id] == true
 			local rarity = rgb(Cosmetics.RarityColor[def.Rarity])
 			local sel = wearing == def.Id
-			local cd = card(lockerBody, order, 64, rarity, sel)
+			local cd = card(lockerBody, order, if limited then 78 else 64, rarity, sel)
 			local sw = UI.new("Frame", { Size = UDim2.fromOffset(42, 42), BackgroundColor3 = if def.Color then rgb(def.Color) else C.PanelLighter, Parent = cd }, { UI.corner(UDim.new(0, 8)) })
 			if def.Text then
 				UI.text("✎", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, Parent = sw })
 			end
 			UI.text(def.Name .. (if def.Text then '  "' .. def.Text .. '"' else ""), { Position = UDim2.fromOffset(52, 0), Size = UDim2.new(0.6, -52, 0, 22), TextSize = 15, Font = Theme.FontBold, Parent = cd })
-			UI.text(def.Rarity .. (if def.Level then " · level " .. def.Level .. " reward" elseif def.Mastery then " · " .. def.Mastery.Label elseif def.Price > 0 then " · " .. def.Price .. " Coins" else " · bundle"), { Position = UDim2.fromOffset(52, 22), Size = UDim2.new(0.6, -52, 0, 18), TextSize = 12, TextColor3 = rarity, Parent = cd })
+			local how = if def.Level then " · level " .. def.Level .. " reward" elseif def.Mastery then " · " .. def.Mastery.Label elseif def.Price > 0 then " · " .. def.Price .. " Coins" else " · bundle"
+			if inSeason and def.Mastery and not owned then
+				local have = (profile.SeasonStats or {})[def.Mastery.Stat] or 0
+				how ..= string.format(" (%d/%d)", math.min(have, def.Mastery.Need), def.Mastery.Need)
+			end
+			UI.text(def.Rarity .. how, { Position = UDim2.fromOffset(52, 22), Size = UDim2.new(0.6, -52, 0, 18), TextSize = 12, TextColor3 = rarity, Parent = cd })
+			if limited then
+				local tag = if inSeason and not owned then string.format("%s LIMITED · %s", season.Glyph or "★", Seasons.LeftText(Seasons.SecondsLeft(season, workspace:GetServerTimeNow()))) else "LIMITED EDITION"
+				UI.text(tag, { Position = UDim2.fromOffset(52, 40), Size = UDim2.new(0.6, -52, 0, 14), TextSize = 11, Font = Theme.FontBold, TextColor3 = if season and season.Accent then season.Accent else C.Warn, Parent = cd })
+			end
 			local row = buttonRow(cd)
 			if owned then
 				if def.Type == "Emote" then
@@ -423,6 +455,10 @@ end
 local function renderShop()
 	UI.clear(shopBody)
 	UI.text("Robux only buys Coins and cosmetics — never gameplay power. Diamonds (classes & power-ups) are earned by playing.", { LayoutOrder = 0, Size = UDim2.new(1, -8, 0, 34), TextWrapped = true, TextSize = 13, TextColor3 = C.TextDim, Parent = shopBody })
+	local season = Season.Current()
+	if season then
+		UI.text(string.format("%s %s event: limited cosmetics are in the LOCKER for Coins until the event ends.", season.Glyph or "★", season.Name), { LayoutOrder = 0, Size = UDim2.new(1, -8, 0, 20), TextSize = 13, Font = Theme.FontBold, TextColor3 = season.Accent or C.Warn, Parent = shopBody })
+	end
 	local order = 0
 	for _, p in Products.List do
 		if Products.OnSale(p.Key) then
@@ -695,6 +731,25 @@ function Lobby.Start()
 	end
 	coinPill = pill(442, "●", Color3.fromRGB(242, 193, 78))
 	diamondPill = pill(600, "◆", C.Diamond)
+	local banner = UI.panel({ Size = UDim2.fromOffset(308, 34), Position = UDim2.fromOffset(442, 54), Visible = false, Parent = gui })
+	seasonBanner = banner
+	seasonLabel = UI.text("", { Position = UDim2.fromOffset(10, 0), Size = UDim2.new(1, -20, 1, 0), TextSize = 13, Font = Theme.FontBold, TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd, Parent = banner })
+	local bannerHit = UI.new("TextButton", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", Parent = banner })
+	bannerHit.Activated:Connect(function()
+		Panels.Open("Locker")
+	end)
+	workspace:GetAttributeChangedSignal("Season"):Connect(function()
+		renderSeason()
+		if Panels.IsOpen("Locker") then
+			renderLocker()
+		end
+	end)
+	task.spawn(function()
+		while banner.Parent do
+			renderSeason()
+			task.wait(30)
+		end
+	end)
 
 	-- Bottom centre: the big READY UP plate, status and party strip.
 	local bottom = UI.new("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(460, 140), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12), Parent = gui })

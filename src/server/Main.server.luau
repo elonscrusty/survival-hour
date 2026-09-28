@@ -84,6 +84,18 @@ for _, name in order do
 	end
 end
 
+-- Seasonal event (Config.Seasons): clients read these attributes for the lobby banner,
+-- Locker "limited" tags and the seasonal look. Re-checked every minute so an event starts
+-- and ends on time in long-running servers.
+task.spawn(function()
+	while true do
+		local season = ctx.Util.Season()
+		workspace:SetAttribute("Season", if season then season.Id else nil)
+		workspace:SetAttribute("SeasonEnds", if season then season.End else nil)
+		task.wait(60)
+	end
+end)
+
 print(string.format("[SurvivalHour] v%s server started in %s mode%s", Config.Version, ctx.Mode, if isStudio then " (Studio)" else ""))
 
 -- Players who joined before services were ready get the normal join path.

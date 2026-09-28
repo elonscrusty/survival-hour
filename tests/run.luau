@@ -24,6 +24,7 @@ local specs = {
 	"./Challenges.spec",
 	"./Director.spec",
 	"./AnimClips.spec",
+	"./Seasons.spec",
 }
 
 local passed, failed = 0, 0

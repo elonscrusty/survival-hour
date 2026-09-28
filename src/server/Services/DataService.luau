@@ -335,6 +335,13 @@ function DataService.Push(player: Player)
 	local nextStreak = if p.Daily.Day == Progression.DayNumber(now) - 1 then p.Daily.Streak + 1 else 1
 	Challenges.Refresh(p.Challenges, p, Progression.DayNumber(now), week)
 	local st = p.Stats
+	-- matches played in each seasonal event (progress toward its earned title)
+	local seasonStats = {}
+	for k, v in st do
+		if string.sub(k, 1, 7) == "Season_" then
+			seasonStats[k] = v
+		end
+	end
 	Net.FireClient("ProfileSync", player, {
 		Diamonds = p.Diamonds,
 		Coins = p.Coins,
@@ -377,6 +384,7 @@ function DataService.Push(player: Player)
 			Pois = st.Pois or 0,
 			Crafts = st.Crafts or 0,
 		},
+		SeasonStats = seasonStats,
 	})
 	player:SetAttribute("Level", level)
 	ctx.CosmeticService.Apply(player)

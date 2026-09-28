@@ -12,6 +12,7 @@ local Perks = require("../Perks")
 local Cosmetics = require("../Cosmetics")
 local Progression = require("../Progression")
 local Challenges = require("./Challenges")
+local Seasons = require("./Seasons")
 
 export type Profile = {
 	Version: number,
@@ -356,7 +357,8 @@ end
 
 -- Cosmetics (Coins) -------------------------------------------------------------------
 
-function ProfileRules.BuyCosmetic(p: Profile, id: string): (boolean, string?)
+-- `season` is the active Config.Seasons id (nil = none); limited items sell only then.
+function ProfileRules.BuyCosmetic(p: Profile, id: string, season: string?): (boolean, string?)
 	local def = Cosmetics.ById[id]
 	if not def then
 		return false, "Unknown cosmetic"
@@ -365,7 +367,10 @@ function ProfileRules.BuyCosmetic(p: Profile, id: string): (boolean, string?)
 		return false, "Already owned"
 	end
 	if def.Price <= 0 then
-		return false, if def.Level then "Unlocked at level " .. def.Level else "Not sold"
+		return false, if def.Level then "Unlocked at level " .. def.Level elseif def.Mastery then def.Mastery.Label else "Not sold"
+	end
+	if not Seasons.OnSale(def.Season, season) then
+		return false, "Limited-time item: this event is over"
 	end
 	if p.Coins < def.Price then
 		return false, "Not enough Coins"

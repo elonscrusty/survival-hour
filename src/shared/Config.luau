@@ -5,7 +5,7 @@
 
 local Config = {}
 
-Config.Version = "1.0.0" -- at most 32 characters (ProfileRules.MaxSettingText); add Changelog.luau notes when bumping
+Config.Version = "1.1.0" -- at most 32 characters (ProfileRules.MaxSettingText); add Changelog.luau notes when bumping
 
 -- Development / Studio switches. None of these apply in live servers except
 -- where noted; `IsStudioLocal` is resolved at runtime by the server.
@@ -25,6 +25,10 @@ Config.Dev = {
 	DevPanelInStudio = true,
 	-- Faster day/night for quick tests (Studio only). nil = use normal lengths.
 	StudioPhaseLength = nil :: number?,
+	-- Studio only: a Config.Seasons id (e.g. "Halloween2026") to switch that seasonal event
+	-- on before its dates, to preview the Locker items and the spooky look. nil = real dates.
+	-- Ignored in live servers.
+	ForceSeason = nil :: string?,
 }
 
 -- Survival Wars launches solo: every player is a "team" of one with their own camp
@@ -441,6 +445,29 @@ Config.Teams = {
 	{ Name = "Owl", Color = Color3.fromRGB(59, 139, 232), Symbol = "●", Motif = "Slate" },
 	{ Name = "Stag", Color = Color3.fromRGB(155, 89, 208), Symbol = "◆", Motif = "Antler" },
 	{ Name = "Hare", Color = Color3.fromRGB(232, 198, 59), Symbol = "■", Motif = "Thatch" },
+}
+
+-- Seasonal events (Logic/Seasons). Each entry runs from Start (inclusive) to End (exclusive),
+-- unix seconds UTC. While a season runs: its limited cosmetics (Cosmetics.luau, Season = Id)
+-- are on sale for Coins, matches count toward its earned title, and clients add the
+-- Atmosphere look. Purely cosmetic: no match rules or numbers change. To add a season,
+-- add an entry here and tag its items in Cosmetics.luau.
+Config.Seasons = {
+	{
+		Id = "Halloween2026",
+		Name = "Halloween",
+		Glyph = "🎃",
+		Start = 1792800000, -- 2026-10-24 00:00 UTC
+		End = 1793664000, -- 2026-11-03 00:00 UTC
+		Accent = Color3.fromRGB(255, 140, 40), -- lobby banner / limited tags
+		Atmosphere = {
+			Tint = Color3.fromRGB(255, 226, 205), -- warm orange colour grade
+			Saturation = 0.05,
+			Contrast = 0.08,
+			Mist = Color3.fromRGB(150, 120, 190), -- purple ground mist near the camera
+			Glow = Color3.fromRGB(255, 130, 30), -- jack-o'-lantern light
+		},
+	},
 }
 
 -- Roblox badges (create them on the Creator Dashboard, then paste each badge id here).

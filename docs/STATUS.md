@@ -12,8 +12,13 @@ _Updated: 2026-09-28. The full history is in [IMPLEMENTATION_LOG.md](IMPLEMENTAT
 - 20 reworked models.
 - Launch extras: Roblox Analytics (funnel, economy, results), Premium ★ tag, one-time favourite
   prompt, "What's new" panel (`Changelog.luau`), update-restart notice, translation-safe name labels.
+- Seasonal events (v1.1.0): `Config.Seasons` + `Logic/Seasons`. First season Halloween 2026
+  (Oct 24 - Nov 3 UTC): 5 limited Coin cosmetics (sold only in season, kept forever), the earned
+  "Hallowed" title (5 matches in season), lobby banner + Locker "LIMITED" tags, client-only
+  spooky grade, mist and jack-o'-lanterns (`Controllers/Season`). Preview in Studio with
+  `Config.Dev.ForceSeason = "Halloween2026"`.
 
-**Checks:** `bash tools/check.sh` covers the type check, 169 unit tests, 34 skins/lobby checks and the build. All pass.
+**Checks:** `bash tools/check.sh` covers the type check, 175 unit tests, 34 skins/lobby checks and the build. All pass.
 
 **Not done yet: nothing has been playtested in Roblox Studio.** All numbers are working targets.
 
