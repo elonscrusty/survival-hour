@@ -4,6 +4,7 @@
 -- WorldService readable). Uses WorldService.LobbySpawn / LobbyBoard / LobbyWater fields.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
@@ -83,16 +84,11 @@ return function(WorldService: any)
 		folder:SetAttribute("ReadyCenter", readyCenter)
 		folder:SetAttribute("ReadyRadius", 11)
 
-		-- Stations: Shop (east), Class shrine (west), Party board (south), Outfitter (SE), Hall of Fame (SW)
-		local function station(name: string, pos: Vector3, color: Color3, label: string, promptText: string)
-			local m = Build.Model(name, folder)
-			local counter = Build.Part({ Name = "Counter", Size = Vector3.new(10, 3.4, 3), CFrame = CFrame.lookAt(pos + Vector3.new(0, 1.7, 0), O + Vector3.new(0, 1.7, 0)), Color = Color3.fromRGB(120, 84, 54), Material = Enum.Material.WoodPlanks, Parent = m })
-			for _, x in { -4.6, 4.6 } do
-				Build.Part({ Name = "Post", Size = Vector3.new(0.8, 9, 0.8), CFrame = counter.CFrame * CFrame.new(x, 2.8, 1.2), Color = Color3.fromRGB(90, 62, 40), Material = Enum.Material.Wood, Parent = m })
-			end
-			Build.Part({ Class = "WedgePart", Name = "Awning", Size = Vector3.new(11, 1.6, 5), CFrame = counter.CFrame * CFrame.new(0, 7.6, 0) * CFrame.Angles(0, math.rad(180), 0), Color = color, Material = Enum.Material.Fabric, Parent = m })
-			Build.Label(counter, label, Vector3.new(0, 9, 0), Color3.new(1, 1, 1), 120)
-			m.PrimaryPart = counter
+		-- Queue-zone look for the ring: hazard stripes, floor lettering, the live counter anchor
+		Refuge.QueueZone(folder, readyCenter, 11)
+
+		-- Stations: Shop (east), Class Hall (west), Party board (south), Outfitter (SE), Hall of Fame (SW)
+		local function stationPrompt(part: BasePart, name: string, label: string, promptText: string)
 			local prompt = Instance.new("ProximityPrompt")
 			prompt.Name = "StationPrompt"
 			prompt.ActionText = promptText
@@ -103,29 +99,59 @@ return function(WorldService: any)
 			prompt:SetAttribute("Station", name)
 			prompt:SetAttribute("Action", "Station")
 			prompt.Style = Enum.ProximityPromptStyle.Custom
-			prompt.Parent = counter
+			prompt.Parent = part
+		end
+		local function station(name: string, pos: Vector3, color: Color3, label: string, promptText: string)
+			local m = Build.Model(name, folder)
+			local counter = Build.Part({ Name = "Counter", Size = Vector3.new(10, 3.4, 3), CFrame = CFrame.lookAt(pos + Vector3.new(0, 1.7, 0), O + Vector3.new(0, 1.7, 0)), Color = Color3.fromRGB(120, 84, 54), Material = Enum.Material.WoodPlanks, Parent = m })
+			for _, x in { -4.6, 4.6 } do
+				Build.Part({ Name = "Post", Size = Vector3.new(0.8, 9, 0.8), CFrame = counter.CFrame * CFrame.new(x, 2.8, 1.2), Color = Color3.fromRGB(90, 62, 40), Material = Enum.Material.Wood, Parent = m })
+			end
+			Build.Part({ Class = "WedgePart", Name = "Awning", Size = Vector3.new(11, 1.6, 5), CFrame = counter.CFrame * CFrame.new(0, 7.6, 0) * CFrame.Angles(0, math.rad(180), 0), Color = color, Material = Enum.Material.Fabric, Parent = m })
+			Build.Label(counter, label, Vector3.new(0, 9, 0), Color3.new(1, 1, 1), 120)
+			m.PrimaryPart = counter
+			stationPrompt(counter, name, label, promptText)
 			return m
 		end
 		station("Shop", O + Vector3.new(40, 0, 0), Color3.fromRGB(230, 170, 60), "TRADING POST", "Open Shop")
-		local shrine = station("Classes", O + Vector3.new(-40, 0, 0), Color3.fromRGB(120, 200, 180), "CLASS SHRINE", "Choose Class")
+		-- Class Hall: a lit cabin with a mannequin per class in its windows (R15 rigs built
+		-- from a blank HumanoidDescription, so no uploaded assets; part figures if that fails)
 		local Classes = require(Shared:WaitForChild("Classes"))
-		for i, def in Classes.List do
-			local a = math.rad(-75 + (i - 1) * 25)
-			local pos = O + Vector3.new(-40 + math.cos(a + math.pi) * -9, 0, math.sin(a) * 12)
-			local ped = Build.Cyl("Pedestal", 3, 2.4, CFrame.new(pos + Vector3.new(0, 1.5, 0)), Color3.fromRGB(140, 136, 128), Enum.Material.Marble, shrine)
-			local orb = Build.Ball("Orb", 1.6, CFrame.new(pos + Vector3.new(0, 4, 0)), Color3.fromRGB(def.Color[1], def.Color[2], def.Color[3]), Enum.Material.Neon, shrine)
-			orb.CanQuery = false
-			Build.Label(ped, def.Glyph .. " " .. def.Name, Vector3.new(0, 5.4, 0), Color3.fromRGB(def.Color[1], def.Color[2], def.Color[3]), 60)
+		local function mannequinRig(color: Color3): Model?
+			local desc = Instance.new("HumanoidDescription")
+			local head, legs = Build.Tint(color, 1.15), Build.Tint(color, 0.72)
+			desc.HeadColor = head
+			desc.TorsoColor = color
+			desc.LeftArmColor = color
+			desc.RightArmColor = color
+			desc.LeftLegColor = legs
+			desc.RightLegColor = legs
+			local ok, rig = pcall(function()
+				return Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
+			end)
+			desc:Destroy()
+			return if ok and typeof(rig) == "Instance" and rig:IsA("Model") then rig else nil
+		end
+		local hall = Refuge.ClassHall(folder, O, Classes.List :: any, mannequinRig)
+		if hall.PrimaryPart then
+			stationPrompt(hall.PrimaryPart, "Classes", "CLASS HALL", "Choose Class")
 		end
 		local party = station("Party", O + Vector3.new(0, 0, 40), Color3.fromRGB(110, 150, 230), "PARTY BOARD", "Manage Party")
 		local locker = station("Locker", O + Vector3.new(30, 0, 30), Color3.fromRGB(190, 110, 200), "OUTFITTER", "Open Locker")
 		local profile = station("Profile", O + Vector3.new(-30, 0, 30), Color3.fromRGB(240, 200, 90), "HALL OF FAME", "Profile & Rewards")
+		-- Daily Challenges board beside the spawn path, facing it (drawn per player by the client)
+		local boardPos = O + Vector3.new(14, 0, 22)
+		local challenges = Refuge.ChallengeBoard(folder, CFrame.lookAt(boardPos, O + Vector3.new(0, 0, 12)))
+		if challenges.PrimaryPart then
+			stationPrompt(challenges.PrimaryPart, "Profile", "DAILY CHALLENGES", "View Challenges")
+		end
 		WorldService.LobbyBoard = Refuge.Dress(folder, O, readyCenter, {
 			Shop = folder:FindFirstChild("Shop") :: Model,
-			Classes = shrine,
+			Classes = hall,
 			Party = party,
 			Locker = locker,
 			Profile = profile,
+			Board = challenges,
 		}, WorldService.LobbyWater)
 
 		-- Title

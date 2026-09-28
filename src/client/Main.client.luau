@@ -83,6 +83,7 @@ local order = {
 	"Storage",
 	"Shop",
 	"Lobby",
+	"LobbyBoards",
 	"Map",
 	"Combat",
 	"Animation",

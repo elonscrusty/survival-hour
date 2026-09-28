@@ -17,6 +17,10 @@ _Updated: 2026-09-28. The full history is in [IMPLEMENTATION_LOG.md](IMPLEMENTAT
   "Hallowed" title (5 matches in season), lobby banner + Locker "LIMITED" tags, client-only
   spooky grade, mist and jack-o'-lanterns (`Controllers/Season`). Preview in Studio with
   `Config.Dev.ForceSeason = "Halloween2026"`.
+- Lobby hub pass: a lit Class Hall cabin west of the fire (a mannequin per class in its windows,
+  neon CLASSES sign, counter opens the classes panel), a per-player Daily Challenges board near
+  spawn with a reset timer (`Controllers/LobbyBoards` + `Logic/LobbyBoards`), a live
+  "READY UP · n/4" counter and hazard stripes on the ready ring, string lights along the paths.
 - Animation loader: paste uploaded clip ids into `AnimationIds.luau` (names in `Logic/AnimClips`);
   missing clips keep the procedural animation. ChatGPT prompt for making the clips is in chat history.
 
