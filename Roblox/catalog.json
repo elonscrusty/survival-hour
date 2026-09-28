@@ -14009,12 +14009,13 @@
    9,
    9
   ],
-  "tris": 256,
-  "verts": 154,
+  "tris": 844,
+  "verts": 536,
   "materials": 1,
   "texture_tiles": [
    "bark",
-   "fern",
+   "leaves",
+   "leaves_dark",
    "wood",
    "wood_dark"
   ],
@@ -14052,30 +14053,32 @@
   "use": "Rusted pickup truck (common POI), tilted into a ditch; scrap piles nearby are separate nodes.",
   "notes": "",
   "size_studs_roblox_XYZ": [
-   15.11,
-   5.35,
+   15.12,
+   5.36,
    9.42
   ],
   "footprint_studs": [
    16,
    12
   ],
-  "tris": 368,
-  "verts": 208,
+  "tris": 1166,
+  "verts": 685,
   "materials": 1,
   "texture_tiles": [
    "charcoal",
+   "cloth_dark",
+   "crate_paint",
    "enamel_amber",
-   "enamel_teal",
+   "grass",
    "metal",
    "metal_dark",
-   "red_paint",
-   "water"
+   "water",
+   "wood_dark"
   ],
   "origin_offset": [
-   -1.066,
-   -2.6765,
-   2.0705
+   -1.0425,
+   -2.6755,
+   2.0865
   ],
   "team_colored": false,
   "pivot": "Ground centre of the site. Entrance faces Blender +Y (Roblox +Z), matching Landmarks.luau, which keeps the collider parts and swaps in this mesh.",
@@ -14083,7 +14086,7 @@
   "attachments": [],
   "collision_boxes": [],
   "parts": [],
-  "lod1_tris": 176,
+  "lod1_tris": 660,
   "files": {
    "fbx": "Export/Meshes/SW_POI/SM_POI_BrokenVehicle.fbx",
    "lod1": "Export/LOD/SW_POI/SM_POI_BrokenVehicle_LOD1.fbx"
@@ -14167,12 +14170,13 @@
    18,
    14
   ],
-  "tris": 1204,
-  "verts": 664,
+  "tris": 1672,
+  "verts": 920,
   "materials": 1,
   "texture_tiles": [
    "bark",
-   "stone_mossy",
+   "stone",
+   "stone_dark",
    "wood",
    "wood_dark"
   ],
@@ -14187,7 +14191,7 @@
   "attachments": [],
   "collision_boxes": [],
   "parts": [],
-  "lod1_tris": 580,
+  "lod1_tris": 712,
   "files": {
    "fbx": "Export/Meshes/SW_POI/SM_POI_Cabin.fbx",
    "lod1": "Export/LOD/SW_POI/SM_POI_Cabin_LOD1.fbx"
@@ -14377,13 +14381,16 @@
    18,
    14
   ],
-  "tris": 596,
-  "verts": 324,
+  "tris": 960,
+  "verts": 556,
   "materials": 1,
   "texture_tiles": [
    "charcoal",
+   "glow",
+   "metal",
    "metal_dark",
    "red_paint",
+   "sign_blank",
    "stone_dark",
    "wood_dark"
   ],
@@ -14398,7 +14405,7 @@
   "attachments": [],
   "collision_boxes": [],
   "parts": [],
-  "lod1_tris": 204,
+  "lod1_tris": 528,
   "files": {
    "fbx": "Export/Meshes/SW_POI/SM_POI_MineEntrance.fbx",
    "lod1": "Export/LOD/SW_POI/SM_POI_MineEntrance_LOD1.fbx"
@@ -14423,25 +14430,29 @@
   "notes": "",
   "size_studs_roblox_XYZ": [
    14.6,
-   8.7,
+   8.68,
    14.92
   ],
   "footprint_studs": [
    18,
    16
   ],
-  "tris": 912,
-  "verts": 520,
+  "tris": 1180,
+  "verts": 688,
   "materials": 1,
   "texture_tiles": [
    "cloth",
+   "cloth_dark",
+   "glow",
+   "metal",
+   "metal_dark",
    "moss",
    "stone",
    "wood_dark"
   ],
   "origin_offset": [
    0.0,
-   -4.25,
+   -4.241,
    -1.1605
   ],
   "team_colored": false,
@@ -14450,7 +14461,7 @@
   "attachments": [],
   "collision_boxes": [],
   "parts": [],
-  "lod1_tris": 544,
+  "lod1_tris": 812,
   "files": {
    "fbx": "Export/Meshes/SW_POI/SM_POI_Bunker.fbx",
    "lod1": "Export/LOD/SW_POI/SM_POI_Bunker_LOD1.fbx"
@@ -14530,28 +14541,32 @@
   "use": "Derelict industrial yard (rare POI): steel shed, two containers, fuel tank, barrels.",
   "notes": "",
   "size_studs_roblox_XYZ": [
-   34.93,
-   10.6,
+   34.95,
+   10.61,
    22.5
   ],
   "footprint_studs": [
    34,
    30
   ],
-  "tris": 312,
-  "verts": 184,
+  "tris": 2372,
+  "verts": 1444,
   "materials": 1,
   "texture_tiles": [
    "crate_paint",
    "enamel_orange",
+   "enamel_red",
    "enamel_slate",
    "metal",
    "metal_dark",
-   "red_paint"
+   "red_paint",
+   "wood",
+   "wood_dark",
+   "wood_fresh"
   ],
   "origin_offset": [
-   -0.4655,
-   -5.3,
+   -0.4725,
+   -5.2975,
    -2.25
   ],
   "team_colored": false,
@@ -14560,7 +14575,7 @@
   "attachments": [],
   "collision_boxes": [],
   "parts": [],
-  "lod1_tris": 180,
+  "lod1_tris": 1980,
   "files": {
    "fbx": "Export/Meshes/SW_POI/SM_POI_IndustrialSite.fbx",
    "lod1": "Export/LOD/SW_POI/SM_POI_IndustrialSite_LOD1.fbx"
@@ -14592,13 +14607,16 @@
    22,
    20
   ],
-  "tris": 776,
-  "verts": 420,
+  "tris": 1140,
+  "verts": 652,
   "materials": 1,
   "texture_tiles": [
    "charcoal",
+   "glow",
+   "metal",
    "metal_dark",
    "red_paint",
+   "sign_blank",
    "stone_dark",
    "wood_dark"
   ],
@@ -14613,7 +14631,7 @@
   "attachments": [],
   "collision_boxes": [],
   "parts": [],
-  "lod1_tris": 324,
+  "lod1_tris": 648,
   "files": {
    "fbx": "Export/Meshes/SW_POI/SM_POI_LargeMine.fbx",
    "lod1": "Export/LOD/SW_POI/SM_POI_LargeMine_LOD1.fbx"

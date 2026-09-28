@@ -474,30 +474,79 @@ def poi_blind(m):
     for x in (-2.6, 2.6):
         for y in (-2.6, 2.6):
             m.cylinder("bark", 0.3, 0.28, 6, seg=6, loc=(x, y, 0))
+    for y in (-2.6, 2.6):                                    # cross bracing
+        m.box("wood_dark", (5.6, 0.18, 0.25), loc=(0, y, 3.0), rot=(0, 38, 0))
     m.box("wood", (6.4, 6.4, 0.5), loc=(0, 0, 6), bevel=0.05)
-    for c, s in (((0, -3, 7.4), (6.4, 0.3, 2.4)), ((3, 0, 7.4), (0.3, 6.4, 2.4)), ((-3, 0, 7.4), (0.3, 6.4, 2.4))):
-        m.box("fern", s, loc=c)
+    # screens: slatted planks with brush woven in (same volumes as the colliders)
+    for c, sz in (((0, -3, 7.4), (6.4, 0.3, 2.4)), ((3, 0, 7.4), (0.3, 6.4, 2.4)), ((-3, 0, 7.4), (0.3, 6.4, 2.4))):
+        along_x = sz[0] > sz[1]
+        L = sz[0] if along_x else sz[1]
+        n = int(L / 0.7)
+        for k in range(n):
+            o = -L / 2 + 0.35 + k * (L - 0.7) / (n - 1)
+            h = 2.4 - (k % 3) * 0.18
+            loc = (c[0] + (o if along_x else 0), c[1] + (0 if along_x else o), c[2] - (2.4 - h) / 2)
+            m.box("wood_dark" if k % 2 else "wood", (0.55, 0.22, h) if along_x else (0.22, 0.55, h), loc=loc)
+        m.box("wood_dark", (sz[0], sz[1], 0.2), loc=(c[0], c[1], 7.9))
+        for k in range(4):
+            o = -L / 2 + 0.9 + k * (L - 1.8) / 3
+            m.blob("leaves_dark" if k % 2 else "leaves", 0.5, loc=(c[0] + (o if along_x else 0), c[1] + (0 if along_x else o), 7.1 + (k % 2) * 0.5),
+                   scale=(1.2, 0.3, 0.8) if along_x else (0.3, 1.2, 0.8), subdiv=1)
     truss_ladder(m, (0, 3.6, 0), 6)
 
 
 @asset("SM_POI_BrokenVehicle", "SW_POI", "Structure", density=3.0, lod=True, pivot=POI_PIVOT, footprint=[16, 12],
        use="Rusted pickup truck (common POI), tilted into a ditch; scrap piles nearby are separate nodes.")
 def poi_vehicle(m):
+    # Same volumes as the Landmarks colliders (chassis, bed, cab, hood, wheels) and the
+    # published bounds; now an olive pickup with an open rusted bed, glass, rims and grille.
     rot = -15
+    tilt = (0, -6, rot)
+
     def at(x, y, z):
         a = math.radians(rot)
         return (x * math.cos(a) - y * math.sin(a), x * math.sin(a) + y * math.cos(a) - 2, z)
-    m.box("metal_dark", (12, 5, 1.2), loc=at(0, 0, 1.4), rot=(0, -6, rot), bevel=0.1)
-    m.box("red_paint", (7, 5, 2.4), loc=at(2.5, 0, 3.2), rot=(0, -6, rot), bevel=0.15)
-    m.box("enamel_teal", (3.6, 4.6, 3.2), loc=at(-3.6, 0, 3.6), rot=(0, -6, rot), bevel=0.25)
+    m.box("metal_dark", (12, 5, 1.2), loc=at(0, 0, 1.4), rot=tilt, bevel=0.1)
+    # open bed: floor, side walls, tailgate, rust patches
+    m.box("metal_dark", (7, 5, 0.3), loc=at(2.5, 0, 2.15), rot=tilt, bevel=0.05)
+    for y in (-2.35, 2.35):
+        m.box("crate_paint", (7, 0.3, 2.4), loc=at(2.5, y, 3.2), rot=tilt, bevel=0.08)
+        m.box("metal_dark", (6.8, 0.34, 0.25), loc=at(2.5, y, 4.3), rot=tilt)
+        for x in (0.2, 4.8):
+            m.box("metal_dark", (1.2, 0.34, 0.9), loc=at(x, y, 2.9), rot=tilt)
+    m.box("crate_paint", (0.3, 4.9, 2.3), loc=at(5.8, 0, 3.15), rot=tilt, bevel=0.08)
+    m.box("crate_paint", (0.3, 4.6, 2.0), loc=at(-0.85, 0, 3.4), rot=tilt)
+    for k in range(3):
+        m.box("wood_dark", (1.1, 3.6, 0.35), loc=at(1.2 + k * 1.3, 0.2 - k * 0.3, 2.5 + (k % 2) * 0.25), rot=(0, -6 + k * 5, rot + k * 12))
+    m.blob("cloth_dark", 0.8, loc=at(4.3, 1.0, 2.8), scale=(1.1, 0.8, 0.5), subdiv=1)
+    # cab with windows and a roof
+    m.box("crate_paint", (3.6, 4.6, 3.2), loc=at(-3.6, 0, 3.6), rot=tilt, bevel=0.25)
+    for y in (-2.32, 2.32):
+        m.box("water", (1.8, 0.06, 1.1), loc=at(-3.5, y, 4.3), rot=tilt)
+        m.box("metal_dark", (0.12, 0.08, 1.4), loc=at(-2.3, y, 4.2), rot=tilt)
+    m.box("crate_paint", (3.3, 4.4, 0.2), loc=at(-3.6, 0, 5.0), rot=tilt, bevel=0.06)
     m.box("water", (0.2, 4, 1.6), loc=at(-5.4, 0, 4.2), rot=(0, -21, rot))
-    m.box("enamel_teal", (2.6, 4.6, 1.6), loc=at(-6.6, 0, 2.6), rot=(0, -6, rot), bevel=0.2)
-    m.box("metal", (0.4, 5.2, 0.6), loc=at(-8, 0, 1.8), rot=(0, -6, rot))
+    m.box("metal_dark", (0.3, 4.2, 0.18), loc=at(-5.3, 0, 3.35), rot=tilt)
+    # hood, grille, bumper, headlights
+    m.box("crate_paint", (2.6, 4.6, 1.6), loc=at(-6.6, 0, 2.6), rot=tilt, bevel=0.2)
+    m.box("metal_dark", (2.3, 3.2, 0.1), loc=at(-6.6, 0, 3.42), rot=tilt)
+    for k in range(5):
+        m.box("metal", (0.12, 0.3, 1.0), loc=at(-7.92, -1.2 + k * 0.6, 2.5), rot=tilt)
+    m.box("metal", (0.4, 5.2, 0.6), loc=at(-8, 0, 1.8), rot=tilt, bevel=0.06)
     for y in (-1.8, 1.8):
-        m.box("enamel_amber", (0.1, 0.6, 0.4), loc=at(-7.95, y, 2.6), rot=(0, -6, rot))
+        m.box("enamel_amber", (0.1, 0.6, 0.4), loc=at(-7.95, y, 2.6), rot=tilt)
+    # wheels: tyre + rim + hub; the front-left one is flat and sunk
     for x in (-4, 4):
         for y in (-2.6, 2.6):
-            m.cylinder("charcoal", 1.1, 1.1, 1.0, seg=10, loc=at(x, y, 1.1), rot=(90, 0, rot))
+            flat = x == -4 and y < 0
+            z = 0.9 if flat else 1.1
+            m.cylinder("charcoal", 1.1, 1.1, 1.0, seg=12, loc=at(x, y, z), rot=(90, 0, rot), scale=(1, 0.82 if flat else 1, 1))
+            out = 1 if y > 0 else -1
+            m.cylinder("metal", 0.62, 0.62, 0.12, seg=10, loc=at(x, y + out * 0.02, z), rot=(90, 0, rot))
+            m.cylinder("metal_dark", 0.22, 0.22, 0.18, seg=8, loc=at(x, y + out * 0.05, z), rot=(90, 0, rot))
+    # weeds growing through
+    for k in range(5):
+        m.cone("grass", 0.25, 1.2 + (k % 3) * 0.3, seg=4, loc=at(-2 + k * 1.8, 2.9 - (k % 2) * 5.6, 0))
 
 
 @asset("SM_POI_SmallCabin", "SW_POI", "Structure", density=3.0, lod=True, pivot=POI_PIVOT, footprint=[13, 11],
@@ -517,7 +566,11 @@ def poi_cabin(m):
     m.box("wood_dark", (14, 3, 0.4), loc=(0, 6.4, 0.2))
     for x in (-6.6, 6.6):
         m.cylinder("bark", 0.25, 0.25, 7, seg=6, loc=(x, 7.6, 0))
-    m.cylinder("stone_mossy", 0.9, 0.8, 11, seg=8, loc=(5, -4, 0))
+    # stacked-stone chimney (square, capped) instead of a mossy tube through the roof
+    for k in range(11):
+        w = 1.8 - (0.3 if k > 7 else 0)
+        m.box("stone" if k % 2 else "stone_dark", (w, w, 1.0), loc=(5, -4, 0.5 + k), rot=(0, 0, (k % 3 - 1) * 3), bevel=0.06)
+    m.box("stone_dark", (1.7, 1.7, 0.25), loc=(5, -4, 10.9))
 
 
 @asset("SM_POI_RangerStation", "SW_POI", "Structure", density=3.0, lod=True, pivot=POI_PIVOT, footprint=[20, 16],
@@ -566,19 +619,52 @@ def poi_mine(m):
         m.box("wood_dark", (0.8, 0.8, 7), loc=(x, 2, 3.5))
     m.box("wood_dark", (6.8, 0.9, 0.9), loc=(0, 2, 7.2))
     m.box("charcoal", (4.8, 0.2, 6.4), loc=(0, 1.2, 3.3))
+    # name board on the header, knee braces and a hanging lantern
+    m.box("sign_blank", (3.0, 0.12, 0.7), loc=(0, 2.52, 7.2))           # weathered name board
+    for sx in (-1, 1):
+        m.box("wood_dark", (0.35, 0.5, 2.2), loc=(sx * 2.1, 2.3, 6.2), rot=(0, sx * 40, 0))
+    m.cylinder("metal_dark", 0.03, 0.03, 0.6, seg=4, loc=(1.6, 2.5, 6.1))
+    m.box("glow", (0.3, 0.3, 0.45), loc=(1.6, 2.5, 5.9))
+    m.box("metal_dark", (0.4, 0.4, 0.08), loc=(1.6, 2.5, 6.16))
+    # track: two rails on sleepers
     for x in (-0.9, 0.9):
         m.box("metal_dark", (0.2, 10, 0.2), loc=(x, 6.5, 0.1))
-    m.box("red_paint", (2.4, 3, 1.6), loc=(0, 8, 1.2), bevel=0.1)
+    for k in range(9):
+        m.box("wood_dark", (2.5, 0.45, 0.12), loc=(0, 2.0 + k * 1.15, 0.06), rot=(0, 0, (k % 3 - 1) * 3))
+    # ore cart: tapered steel tub on a frame with four wheels, heaped with ore
+    m.box("metal_dark", (2.0, 2.6, 0.3), loc=(0, 8, 0.75))
+    for x in (-0.9, 0.9):
+        for y in (7.0, 9.0):
+            m.cylinder("metal", 0.35, 0.35, 0.2, seg=8, loc=(x * 1.05, y, 0.4), rot=(0, 90, 0))
+    m.lathe("red_paint", [(0.95, 0.9), (1.2, 2.0)], 4, loc=(0, 8, 0), rot=(0, 0, 45), scale=(1.0, 1.25, 1))
+    m.box("metal_dark", (2.4, 3.0, 0.1), loc=(0, 8, 1.95))
+    for i in range(4):
+        m.blob("stone_dark", 0.45, loc=(-0.5 + (i % 2) * 0.9, 7.4 + (i // 2) * 1.1, 1.85), scale=(1, 1, 0.6), subdiv=1)
 
 
 @asset("SM_POI_Bunker", "SW_POI", "Structure", density=3.5, lod=True, pivot=POI_PIVOT, footprint=[18, 16],
        use="Half-buried concrete bunker (rare POI): thick walls, mossy slab, sandbags.")
 def poi_bunker(m):
     room(m, 13, 11, 7, "stone", t=1.4, door_w=5, door_h=6.4, floor_mat="stone")
-    m.box("stone", (14.4, 12.4, 1.4), loc=(0, 0, 7.7), bevel=0.2)
-    m.box("moss", (14.6, 12.6, 0.2), loc=(0, 0, 8.5))
+    m.box("stone", (14.6, 12.6, 1.4), loc=(0, 0, 7.7), bevel=0.2)
+    # moss creeping over the slab in patches, not a green lid
+    for i, (x, y, r) in enumerate(((-4.5, -3.5, 2.6), (3.8, 2.6, 2.2), (-1, 4.2, 1.6), (5, -4.2, 1.4), (-5.8, 3.4, 1.2))):
+        m.blob("moss", r, loc=(x, y, 8.4), scale=(1.2, 0.9, 0.07), subdiv=1)
+    for x in (-6.9, 6.9):                                    # moss dripping over the edges
+        m.box("moss", (0.12, 3.0, 1.0), loc=(x * 1.045, -2 if x < 0 else 2, 7.6))
+    # steel door frame, lamp cage and a vent
+    for x in (-2.7, 2.7):
+        m.box("metal_dark", (0.4, 0.4, 6.6), loc=(x, 5.4, 3.3))
+    m.box("metal_dark", (5.8, 0.4, 0.4), loc=(0, 5.4, 6.6))
+    m.box("glow", (0.5, 0.3, 0.3), loc=(0, 5.62, 6.1))
+    m.box("metal_dark", (1.6, 0.3, 0.8), loc=(4.5, 5.55, 5.0))
+    for k in range(3):
+        m.box("metal", (1.4, 0.32, 0.08), loc=(4.5, 5.56, 4.8 + k * 0.2))
+    # sandbag wall in two courses
     for i in range(-2, 3):
         m.blob("cloth", 0.9, loc=(-i * 2.1, 8.2, 0.4), scale=(1.1, 0.55, 0.45), subdiv=1)
+    for i in range(-1, 2):
+        m.blob("cloth_dark", 0.9, loc=(-i * 2.1 - 1.05, 8.2, 1.1), scale=(1.1, 0.55, 0.42), subdiv=1)
 
 
 @asset("SM_POI_Outpost", "SW_POI", "Structure", density=3.5, lod=True, pivot=POI_PIVOT, footprint=[30, 30],
@@ -602,16 +688,50 @@ def poi_outpost(m):
 @asset("SM_POI_IndustrialSite", "SW_POI", "Structure", density=4.0, lod=True, pivot=POI_PIVOT, footprint=[34, 30],
        use="Derelict industrial yard (rare POI): steel shed, two containers, fuel tank, barrels.")
 def poi_industrial(m):
+    # steel shed (beams, ribbed back wall, roof with purlins underneath)
     for x in (-9, 0, 9):
         for y in (-8, 4):
             m.box("metal_dark", (0.8, 0.8, 10), loc=(x, y, 5))
+        m.box("metal_dark", (0.5, 12.4, 0.5), loc=(x, -2, 9.75))
     m.box("metal_dark", (20, 14, 0.6), loc=(0, -2, 10.3))
     m.box("metal", (19, 0.6, 9), loc=(0, -8.6, 4.5))
-    m.box("red_paint", (6, 14, 6), loc=(14, 2, 3), bevel=0.1)
-    m.box("enamel_slate", (6, 14, 6), loc=(-14, 0, 3), rot=(0, 0, -8), bevel=0.1)
-    m.cylinder("enamel_orange", 2.5, 2.5, 8, seg=12, loc=(6, 11, 0))
-    for i in range(3):
-        m.cylinder("crate_paint", 0.6, 0.6, 1.8, seg=8, loc=(-5 + i * 1.3, 9, 0))
+    for k in range(-9, 10):
+        m.box("metal_dark", (0.25, 0.3, 9), loc=(k, -8.2, 4.5))
+    # shipping containers: corrugated walls, end doors with lock bars
+    for cx, cy, rz, mat in ((14, 2, 0, "red_paint"), (-14, 0, -8, "enamel_slate")):
+        a = math.radians(rz)
+
+        def at(x, y, z):
+            return (cx + x * math.cos(a) - y * math.sin(a), cy + x * math.sin(a) + y * math.cos(a), z)
+        m.box(mat, (5.7, 14, 5.8), loc=at(0, 0, 2.95), rot=(0, 0, rz), bevel=0.06)
+        for k in range(14):
+            for sx in (-1, 1):
+                m.box(mat, (0.3, 0.45, 5.4), loc=at(sx * 2.85, -6.4 + k * 0.98, 2.95), rot=(0, 0, rz))
+        m.box("metal_dark", (6, 14, 0.2), loc=at(0, 0, 5.9), rot=(0, 0, rz))
+        m.box("metal_dark", (6, 14, 0.25), loc=at(0, 0, 0.12), rot=(0, 0, rz))
+        for sx in (-1, 1):
+            m.box("metal_dark", (0.06, 0.1, 5.4), loc=at(0, 7.02, 2.95), rot=(0, 0, rz))
+            for x in (sx * 0.8, sx * 2.0):
+                m.box("metal", (0.12, 0.12, 5.2), loc=at(x, 7.05, 2.95), rot=(0, 0, rz))
+    # fuel tank with ladder, hatch and a pipe run
+    m.cylinder("enamel_orange", 2.5, 2.5, 8, seg=16, loc=(6, 11, 0))
+    m.cylinder("metal_dark", 2.45, 2.45, 0.3, seg=16, loc=(6, 11, 8))
+    m.cylinder("metal", 0.5, 0.5, 0.3, seg=8, loc=(6, 11, 8.3))
+    truss_ladder(m, (6, 8.4, 0), 8)
+    m.cylinder("metal_dark", 0.2, 0.2, 5, seg=6, loc=(3.5, 11, 0.6), rot=(0, -90, 0))
+    # barrel cluster (ribbed drums, one tipped) and pallet stack
+    for i, (x, y, tip) in enumerate(((-5, 9, 0), (-3.7, 9.2, 0), (-4.4, 10.3, 0), (-2.2, 9.8, 1))):
+        mat = "crate_paint" if i % 2 else "enamel_red"
+        if tip:
+            m.cylinder(mat, 0.6, 0.6, 1.8, seg=10, loc=(x, y, 0.6), rot=(0, 90, 30))
+        else:
+            m.cylinder(mat, 0.6, 0.6, 1.8, seg=10, loc=(x, y, 0))
+            for z in (0.45, 1.35):
+                m.torus("metal_dark", 0.6, 0.04, seg=10, tseg=4, loc=(x, y, z))
+    for k in range(3):
+        m.box("wood_fresh" if k % 2 else "wood", (3.6, 3.6, 0.45), loc=(2, -5, 0.25 + k * 0.5), rot=(0, 0, k * 6))
+    crate(m, (-4, -4, 0), 0.9)
+    crate(m, (-4.5, -4.2, 1.8), 0.7, 20)
 
 
 @asset("SM_POI_LargeMine", "SW_POI", "Structure", density=3.5, lod=True, pivot=POI_PIVOT, footprint=[22, 20],
