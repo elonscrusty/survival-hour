@@ -512,6 +512,53 @@ test("Lobby refuge without the pack stays procedural", function()
 	RS:SetAttribute("MeshSkins", nil)
 end)
 
+test("Lobby hub: class hall, challenge board, queue zone, string lights", function()
+	local folder = Instance.new("Folder")
+	folder.Parent = workspace
+	local classes = {}
+	for i, id in { "Survivor", "Lumberjack", "Miner", "Hunter", "Scavenger", "Raider", "Tracker" } do
+		table.insert(classes, { Id = id, Name = id, Price = (i - 1) * 25, Order = i, Glyph = "*", Color = { 100, 150, 200 } })
+	end
+	local hall = Refuge.ClassHall(folder, Vector3.new(0, 0, 0), classes, function()
+		return nil -- rig creation failed: part figures instead
+	end)
+	check(hall.PrimaryPart ~= nil and hall.PrimaryPart.Name == "Counter", "hall counter is the primary part")
+	local figs, tools = 0, 0
+	for _, c in hall:GetChildren() do
+		if string.find(c.Name, "^Mannequin_") then
+			figs += 1
+			if c:FindFirstChild("Tool") then
+				tools += 1
+			end
+		end
+	end
+	check(figs == 7, "seven mannequins (" .. figs .. ")")
+	check(tools == 7, "every mannequin holds a tool (" .. tools .. ")")
+	local fp = hall:FindFirstChild("Footprint")
+	check(fp ~= nil and Refuge.InBox(fp, Vector3.new(-46, 0, 10), 0) and not Refuge.InBox(fp, Vector3.new(-20, 0, 0), 0), "footprint covers the hall only")
+	local board = Refuge.ChallengeBoard(folder, CFrame.new(14, 0, 22))
+	check(board:FindFirstChild("ChallengeBoardFace") ~= nil, "board face")
+	local q = Refuge.QueueZone(folder, Vector3.new(0, 0, -38), 11)
+	check(q.Name == "QueueBoard", "queue anchor")
+	local st = lobbyStations(folder)
+	st.Classes = hall
+	Refuge.Dress(folder, Vector3.new(0, 0, 0), Vector3.new(0, 0, -38), st)
+	local lightsFolder = folder:FindFirstChild("EveningLights")
+	local bulbs = 0
+	for _, d in lightsFolder:GetChildren() do
+		if d.Name == "Bulb" then
+			bulbs += 1
+		end
+	end
+	check(bulbs > 40, "string light bulbs (" .. bulbs .. ")")
+	for _, d in folder:FindFirstChild("Forest"):GetChildren() do
+		if d.Name == "Lantern" then
+			check(not Refuge.InBox(fp, d.Position, 0), "lantern inside the hall")
+			check((d.Position - Vector3.new(0, 0, -38)).Magnitude > 12, "lantern inside the ready ring")
+		end
+	end
+end)
+
 -- disabled library ------------------------------------------------------------------
 test("MeshSkins=false leaves the procedural look", function()
 	RS:SetAttribute("MeshSkins", false)

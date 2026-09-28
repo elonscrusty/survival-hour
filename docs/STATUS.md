@@ -21,6 +21,10 @@ _Updated: 2026-09-28. The full history is in [IMPLEMENTATION_LOG.md](IMPLEMENTAT
   rarity stars and an owned filter, the player's avatar on a turning pedestal in class colours,
   perks + play-style tips. Daily deals (`Logic/ClassDeals`): each UTC day two paid classes get
   -20% / -10%, same on every server; the server charges the deal price.
+- Lobby hub pass: a lit Class Hall cabin west of the fire (a mannequin per class in its windows,
+  neon CLASSES sign, counter opens the classes panel), a per-player Daily Challenges board near
+  spawn with a reset timer (`Controllers/LobbyBoards` + `Logic/LobbyBoards`), a live
+  "READY UP · n/4" counter and hazard stripes on the ready ring, string lights along the paths.
 - Animation loader: paste uploaded clip ids into `AnimationIds.luau` (names in `Logic/AnimClips`);
   missing clips keep the procedural animation. ChatGPT prompt for making the clips is in chat history.
 
