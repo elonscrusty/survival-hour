@@ -2,10 +2,10 @@
 -- Unified input: keyboard/mouse, gamepad and on-screen touch controls all map
 -- to named actions, emitted as State "Action" events { Name, Down }.
 --
--- PC:      LMB attack/draw · RMB aim/block · 1-5 slots · Shift sprint · ` fists · Q swap weapons
---          X ability · H bandage · I inventory · C craft · B build · M map
--- Gamepad: R2 attack · L2 aim/block · R1 swap · L1 bandage · Y ability
---          DPad ←/→ cycle slots · Select map
+-- PC:      LMB attack/draw (hold for heavy) · RMB aim/block · 1-5 slots · Shift sprint · ` fists · Q swap
+--          H bandage · I inventory · C craft · B build · M map · R rotate (build)
+-- Gamepad: R2 attack · L2 aim/block · R1 swap · L1 bandage · L3 sprint
+--          DPad ←/→ cycle slots · DPad ↑ craft · DPad ↓ build · Y inventory · Select map
 -- Touch:   on-screen buttons (bottom-right cluster + top-right menu buttons)
 
 local UserInputService = game:GetService("UserInputService")
@@ -42,6 +42,9 @@ local KEYS: { [Enum.KeyCode]: string } = {
 	[Enum.KeyCode.DPadRight] = "NextSlot",
 	[Enum.KeyCode.DPadLeft] = "PrevSlot",
 	[Enum.KeyCode.ButtonSelect] = "Map",
+	[Enum.KeyCode.ButtonY] = "Inventory",
+	[Enum.KeyCode.DPadUp] = "Craft",
+	[Enum.KeyCode.DPadDown] = "Build",
 }
 
 Input.IsTouch = false

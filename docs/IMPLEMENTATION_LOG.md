@@ -225,3 +225,4 @@ gaps. No locked numbers were changed.
 
 | Kill feedback | The attacker gets a centre "⚔ YOU DOWNED …" / "✖ ELIMINATED …" confirm; the victim's respawn screen says who or what killed them | `LivesService` (`KillerId`), `Hud` |
 | Match recap | End screen adds a personal line: day reached, kills, animals, chests (tallied even when rewards are off) | `PowerupService.Stats`, `MatchService`, `Hud.showEnd` |
+| Gamepad | Inventory (Y), Craft (D-pad up) and Build (D-pad down) were unreachable on a controller; now bound. Stale "ability" key notes removed from the controls header | `Input` |
