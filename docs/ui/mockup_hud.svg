@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" font-family="Trebuchet MS, Segoe UI, Arial, sans-serif">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0c1224"/>
+      <stop offset="0.55" stop-color="#1c2a48"/>
+      <stop offset="1" stop-color="#0d140f"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffc56a" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#ff7a2a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2e2620" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#1a1512" stop-opacity="0.9"/>
+    </linearGradient>
+    <g id="pine"><polygon points="0,-120 -34,-40 -18,-40 -46,20 -24,20 -58,80 58,80 24,20 46,20 18,-40 34,-40"/><rect x="-6" y="80" width="12" height="30"/></g>
+  </defs>
+
+  <!-- night scene -->
+  <rect width="1600" height="900" fill="url(#sky)"/>
+  <circle cx="1240" cy="170" r="46" fill="#e8eeff"/><circle cx="1256" cy="160" r="46" fill="#1b2744" opacity="0.25"/>
+  <g fill="#e8eeff" opacity="0.8"><circle cx="200" cy="90" r="2"/><circle cx="420" cy="60" r="1.5"/><circle cx="700" cy="120" r="2"/><circle cx="960" cy="70" r="1.5"/><circle cx="1450" cy="110" r="2"/><circle cx="1100" cy="260" r="1.5"/></g>
+  <g fill="#1a2a2a"><use href="#pine" transform="translate(120,520) scale(1.8)"/><use href="#pine" transform="translate(360,560) scale(1.4)"/><use href="#pine" transform="translate(1180,540) scale(1.6)"/><use href="#pine" transform="translate(1420,500) scale(2)"/><use href="#pine" transform="translate(900,580) scale(1.2)"/></g>
+  <rect y="640" width="1600" height="260" fill="#0f1a12"/>
+  <circle cx="620" cy="640" r="160" fill="url(#glow)"/>
+  <path d="M600,650 C590,610 615,600 620,570 C628,600 650,610 640,650 Z" fill="#ff9a3a"/>
+  <!-- wolf eyes in the dark -->
+  <g fill="#ffd54a"><circle cx="1060" cy="610" r="4"/><circle cx="1076" cy="610" r="4"/><circle cx="1210" cy="628" r="3.5"/><circle cx="1224" cy="628" r="3.5"/></g>
+  <!-- crosshair -->
+  <g stroke="#fff" stroke-width="2" opacity="0.85"><line x1="800" y1="436" x2="800" y2="446"/><line x1="800" y1="454" x2="800" y2="464"/><line x1="786" y1="450" x2="796" y2="450"/><line x1="804" y1="450" x2="814" y2="450"/></g>
+
+  <!-- top center: phase + fire -->
+  <g transform="translate(620,20)">
+    <rect width="360" height="92" rx="16" fill="url(#panel)" stroke="#6a78b8" stroke-width="2"/>
+    <circle cx="44" cy="46" r="24" fill="#c9d4ff"/><circle cx="54" cy="40" r="22" fill="#2e2620"/>
+    <text x="82" y="42" font-size="24" font-weight="bold" fill="#dfe6ff">NIGHT 3</text>
+    <text x="82" y="68" font-size="15" fill="#e8736a">Fires can be snuffed</text>
+    <text x="336" y="56" text-anchor="end" font-size="34" font-weight="bold" fill="#fff">1:24</text>
+  </g>
+  <g transform="translate(620,120)">
+    <rect width="360" height="40" rx="12" fill="url(#panel)" stroke="#7a5f42" stroke-width="2"/>
+    <path d="M22,30 C16,20 24,16 24,8 C30,16 34,20 28,30 Z" fill="#ff9a3a"/>
+    <text x="42" y="26" font-size="14" font-weight="bold" fill="#ffe0b0">YOUR FIRE · LV 3</text>
+    <rect x="172" y="13" width="172" height="14" rx="7" fill="#120e0b"/>
+    <rect x="172" y="13" width="112" height="14" rx="7" fill="#f5a046"/>
+    <text x="258" y="25" text-anchor="middle" font-size="11" font-weight="bold" fill="#3a1a06">65%</text>
+  </g>
+
+  <!-- top-left: survivors -->
+  <g transform="translate(24,20)">
+    <rect width="260" height="130" rx="14" fill="url(#panel)" stroke="#7a5f42" stroke-width="2"/>
+    <text x="18" y="32" font-size="14" fill="#cbb89a" letter-spacing="2">SURVIVORS · 3 LEFT</text>
+    <g font-size="15" fill="#fff4dc">
+      <circle cx="28" cy="56" r="7" fill="#f5a046"/><text x="44" y="61">You</text><text x="240" y="61" text-anchor="end" fill="#9fd88a">fire lit</text>
+      <circle cx="28" cy="82" r="7" fill="#6aa8e8"/><text x="44" y="87">Mossback</text><text x="240" y="87" text-anchor="end" fill="#9fd88a">fire lit</text>
+      <circle cx="28" cy="108" r="7" fill="#b88ae0"/><text x="44" y="113">Emberjaw</text><text x="240" y="113" text-anchor="end" fill="#e8736a">FINAL LIFE</text>
+    </g>
+  </g>
+
+  <!-- top-right: minimap -->
+  <g transform="translate(1390,20)">
+    <circle cx="94" cy="94" r="94" fill="#2a3a26" stroke="#7a5f42" stroke-width="4"/>
+    <path d="M20,120 C60,100 90,140 130,110 C150,95 170,100 186,90" stroke="#5aa0e6" stroke-width="7" fill="none"/>
+    <circle cx="140" cy="60" r="12" fill="#5aa0e6"/>
+    <path d="M94,20 L94,170 M20,94 L170,94" stroke="#a88a62" stroke-width="3" stroke-dasharray="6 5"/>
+    <circle cx="60" cy="130" r="9" fill="#f5a046"/>
+    <rect x="120" y="120" width="12" height="12" fill="#ffd54a"/>
+    <polygon points="94,80 104,104 94,98 84,104" fill="#fff"/>
+    <text x="94" y="16" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">N</text>
+  </g>
+
+  <!-- kill feed / rewards -->
+  <g transform="translate(1340,240)" font-size="14">
+    <rect width="236" height="30" rx="8" fill="#000" opacity="0.45"/><text x="12" y="20" fill="#ffd27a">+50 XP  +10 Coins  Survived night 2</text>
+    <rect y="36" width="236" height="30" rx="8" fill="#000" opacity="0.45"/><text x="12" y="56" fill="#fff4dc">Wolf pack howling to the NE</text>
+  </g>
+
+  <!-- bottom-left: vitals -->
+  <g transform="translate(24,748)">
+    <rect width="330" height="128" rx="16" fill="url(#panel)" stroke="#7a5f42" stroke-width="2"/>
+    <text x="18" y="30" font-size="13" fill="#cbb89a" letter-spacing="2">HEALTH</text>
+    <rect x="18" y="38" width="294" height="22" rx="8" fill="#120e0b"/><rect x="18" y="38" width="210" height="22" rx="8" fill="#d8452e"/>
+    <text x="165" y="55" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">72 / 100</text>
+    <text x="18" y="84" font-size="13" fill="#cbb89a" letter-spacing="2">STAMINA</text>
+    <rect x="18" y="92" width="294" height="14" rx="7" fill="#120e0b"/><rect x="18" y="92" width="240" height="14" rx="7" fill="#e8c24a"/>
+    <text x="312" y="122" text-anchor="end" font-size="12" fill="#a89478">Hide armor 22%</text>
+  </g>
+
+  <!-- bottom center: hotbar -->
+  <g transform="translate(470,790)">
+    <rect x="-12" y="-12" width="684" height="100" rx="18" fill="url(#panel)" stroke="#7a5f42" stroke-width="2"/>
+    <g>
+      <rect width="120" height="76" rx="12" fill="#3c2f24" stroke="#ffd27a" stroke-width="3"/>
+      <rect x="54" y="14" width="10" height="46" fill="#8a5a32"/><path d="M62,16 L88,22 L84,40 L62,34 Z" fill="#aab4bc"/>
+      <text x="10" y="22" font-size="13" font-weight="bold" fill="#ffd27a">1</text>
+      <rect x="10" y="64" width="100" height="5" rx="2" fill="#120e0b"/><rect x="10" y="64" width="70" height="5" rx="2" fill="#7ad86a"/>
+    </g>
+    <g transform="translate(132,0)">
+      <rect width="120" height="76" rx="12" fill="#2a221b" stroke="#6a563e" stroke-width="2"/>
+      <path d="M40,60 Q60,6 80,60" stroke="#b08a52" stroke-width="5" fill="none"/><line x1="40" y1="60" x2="80" y2="60" stroke="#e8e0d0" stroke-width="2"/>
+      <text x="10" y="22" font-size="13" font-weight="bold" fill="#cbb89a">2</text><text x="110" y="68" text-anchor="end" font-size="13" fill="#fff">x14</text>
+    </g>
+    <g transform="translate(264,0)">
+      <rect width="120" height="76" rx="12" fill="#2a221b" stroke="#6a563e" stroke-width="2"/>
+      <rect x="56" y="16" width="8" height="46" fill="#8a5a32"/><path d="M36,24 Q60,6 84,24 L80,28 Q60,14 40,28 Z" fill="#8a9098"/>
+      <text x="10" y="22" font-size="13" font-weight="bold" fill="#cbb89a">3</text>
+    </g>
+    <g transform="translate(396,0)">
+      <rect width="120" height="76" rx="12" fill="#2a221b" stroke="#6a563e" stroke-width="2"/>
+      <rect x="44" y="22" width="32" height="38" rx="8" fill="#e8e8e0"/><rect x="56" y="28" width="8" height="26" fill="#d8452e"/><rect x="47" y="37" width="26" height="8" fill="#d8452e"/>
+      <text x="10" y="22" font-size="13" font-weight="bold" fill="#cbb89a">4</text><text x="110" y="68" text-anchor="end" font-size="13" fill="#fff">x2</text>
+    </g>
+    <g transform="translate(528,0)">
+      <rect width="120" height="76" rx="12" fill="#2a221b" stroke="#6a563e" stroke-width="2"/>
+      <rect x="46" y="20" width="28" height="40" rx="10" fill="#5a8ab8"/><rect x="54" y="14" width="12" height="8" fill="#3a5a78"/>
+      <text x="10" y="22" font-size="13" font-weight="bold" fill="#cbb89a">5</text><text x="110" y="68" text-anchor="end" font-size="11" fill="#bfe0ff">FULL</text>
+    </g>
+  </g>
+
+  <!-- bottom-right: pack + loadout -->
+  <g transform="translate(1246,748)">
+    <rect width="330" height="128" rx="16" fill="url(#panel)" stroke="#7a5f42" stroke-width="2"/>
+    <text x="18" y="30" font-size="13" fill="#cbb89a" letter-spacing="2">PACK 14 / 18</text>
+    <g font-size="15" font-weight="bold" fill="#fff4dc">
+      <rect x="18" y="42" width="66" height="34" rx="8" fill="#3c2f24"/><text x="51" y="65" text-anchor="middle">W 23</text>
+      <rect x="92" y="42" width="66" height="34" rx="8" fill="#3c2f24"/><text x="125" y="65" text-anchor="middle">S 11</text>
+      <rect x="166" y="42" width="66" height="34" rx="8" fill="#3c2f24"/><text x="199" y="65" text-anchor="middle">Fe 4</text>
+      <rect x="240" y="42" width="72" height="34" rx="8" fill="#3c2f24"/><text x="276" y="65" text-anchor="middle">Hide 3</text>
+    </g>
+    <text x="18" y="110" font-size="14" fill="#c6d8a8">Scavenger · Firekeeper</text>
+    <text x="312" y="110" text-anchor="end" font-size="13" fill="#a89478">[I] Bag  [C] Craft</text>
+  </g>
+</svg>
