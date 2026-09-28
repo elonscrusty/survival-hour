@@ -189,3 +189,15 @@ prices, tabs (Locker categories) and icon-only buttons (✖ ◀ ▶ +). Every st
 rim + glow), Disabled (grey, ignores clicks) and Selected/Equipped (gold rim + ✓). `UI.button` now draws in the kit
 style too, so every older button (inventory, crafting, storage, spectate...) matches. Panels switched to the
 reference's dark steel-slate; the equipped hotbar slot uses the gold "selected" rim.
+
+## Final polish pass (see docs/POLISH_AUDIT.md)
+
+| Area | Change | Where |
+|---|---|---|
+| Harvest / impact VFX | Fixed missing client handlers for ResourceHit/ResourceBreak/PourStart. Pooled emitters for chips, stone, leaves, dust, sparks, water, steam and blood. Rock/bush jolt. Effects for feeding the fire, Workbench upgrade and building. | `Controllers/Effects`, `GatherService`, `CampService`, `CraftService`, `BuildService` |
+| Animation | Mine, Breach, Craft (one-shot and channel), Build/Repair, Feed poses. Alternating light swings and wide heavy swings. Bow draw and ranged ready poses. Reaction layers for hit flinch, block impact, guard break, equip, air and landing, sprint lean and exhausted breathing. | `Controllers/Animation`, `Util.SetAction`, `CombatService` |
+| Movement / camera | Eased sprint acceleration; one eased FOV target (aim, sprint +6, damage punch); tiny damage roll; exhausted and low-health grade | `PowerupService`, `Controllers/Camera`, `Config.Camera.SprintFovBonus` |
+| Campfire | Fuel bar with low/critical states, critical banner, starving flame colour (skins respected) | `Hud`, `CampService`, `Models/Camp` |
+| Day / night | Afternoon lighting step | `Config.Lighting.Afternoon`, `MatchService` |
+| UI motion | Panel pop-in, button press squash, notification pop and fade, lobby profile card with count-up currencies | `Panels`, `UI/Buttons`, `Notifications`, `Lobby` |
+| Onboarding | Survival Guide objective tracker plus contextual one-off tips | `Controllers/Guide` |

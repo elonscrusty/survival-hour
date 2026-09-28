@@ -32,6 +32,36 @@ local setReady: (string, string?, string?) -> () = function() end
 local statusLabel: TextLabel
 local partyStrip: Frame
 local diamondsLabel: TextLabel
+local levelLabel: TextLabel
+local coinPill: TextLabel
+local diamondPill: TextLabel
+local xpSet: (number, string?) -> () = function() end
+local shownCoins, shownDiamonds = -1, -1
+
+-- Counts a currency label up/down to its new value (short, never blocks input).
+local function countTo(label: TextLabel, from: number, to: number)
+	if from < 0 or from == to then
+		label.Text = tostring(to)
+		return
+	end
+	local v = Instance.new("NumberValue")
+	v.Value = from
+	v.Changed:Connect(function(x)
+		label.Text = tostring(math.floor(x + 0.5))
+	end)
+	local tw = TweenService:Create(v, TweenInfo.new(0.6, Enum.EasingStyle.Quad), { Value = to })
+	tw.Completed:Once(function()
+		label.Text = tostring(to)
+		v:Destroy()
+	end)
+	tw:Play()
+	-- a small flash so gains are noticed
+	local up = to > from
+	label.TextColor3 = if up then Color3.fromRGB(160, 255, 140) else Color3.fromRGB(255, 140, 120)
+	task.delay(0.7, function()
+		label.TextColor3 = if label == coinPill then Color3.fromRGB(242, 193, 78) else C.Diamond
+	end)
+end
 local partyBody: ScrollingFrame
 local classBody: ScrollingFrame
 local perkBody: ScrollingFrame
@@ -57,8 +87,16 @@ local function renderHud()
 	if profile then
 		local cls = Classes.ById[profile.Class]
 		local perk = profile.Perk and Perks.ById[profile.Perk]
-		diamondsLabel.Text = string.format("Lv %d   ◆ %d   🪙 %d   %s %s · %s", profile.Level or 1, profile.Diamonds, profile.Coins or 0,
-			if cls then cls.Glyph else "", if cls then cls.Name else "?", if perk then perk.Glyph .. " " .. perk.Name else "no power-up")
+		diamondsLabel.Text = string.format("%s %s · %s", if cls then cls.Glyph else "", if cls then cls.Name else "?", if perk then perk.Glyph .. " " .. perk.Name else "no power-up")
+		levelLabel.Text = tostring(profile.Level or 1)
+		if (profile.LevelNeed or 0) > 0 then
+			xpSet(profile.LevelInto / profile.LevelNeed, string.format("%d / %d XP", profile.LevelInto, profile.LevelNeed))
+		else
+			xpSet(1, "MAX LEVEL")
+		end
+		countTo(coinPill, shownCoins, profile.Coins or 0)
+		countTo(diamondPill, shownDiamonds, profile.Diamonds or 0)
+		shownCoins, shownDiamonds = profile.Coins or 0, profile.Diamonds or 0
 	end
 	if not lobby then
 		return
@@ -511,8 +549,23 @@ function Lobby.Start()
 	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(rescale)
 	rescale()
 
-	local top = UI.panel({ Size = UDim2.fromOffset(560, 40), Position = UDim2.fromOffset(12, 8), Parent = gui })
-	diamondsLabel = UI.text("", { Position = UDim2.fromOffset(12, 0), Size = UDim2.new(1, -12, 1, 0), TextSize = 17, Font = Theme.FontBold, TextColor3 = C.Diamond, Parent = top })
+	-- Top: profile card (level badge, name, title, XP bar) + animated currency pills.
+	local card = UI.panel({ Size = UDim2.fromOffset(420, 80), Position = UDim2.fromOffset(12, 8), Parent = gui })
+	local badge = UI.new("Frame", { Size = UDim2.fromOffset(60, 60), Position = UDim2.fromOffset(10, 10), BackgroundColor3 = C.PanelLight, Parent = card }, { UI.corner(UDim.new(0.5, 0)), UI.new("UIStroke", { Color = C.Accent, Thickness = 3 }) })
+	UI.text("LVL", { Size = UDim2.new(1, 0, 0, 14), Position = UDim2.fromOffset(0, 10), TextSize = 11, Font = Theme.FontBold, TextColor3 = C.TextDim, TextXAlignment = Enum.TextXAlignment.Center, Parent = badge })
+	levelLabel = UI.text("1", { Name = "Level", Size = UDim2.new(1, 0, 0, 24), Position = UDim2.fromOffset(0, 24), TextSize = 22, Font = Theme.FontBlack, TextXAlignment = Enum.TextXAlignment.Center, Parent = badge })
+	UI.text(player.DisplayName, { Position = UDim2.fromOffset(82, 8), Size = UDim2.new(1, -90, 0, 22), TextSize = 18, Font = Theme.FontBlack, Parent = card })
+	diamondsLabel = UI.text("", { Position = UDim2.fromOffset(82, 30), Size = UDim2.new(1, -90, 0, 16), TextSize = 13, Font = Theme.FontBold, TextColor3 = C.Accent, Parent = card })
+	local xpHolder = UI.new("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(82, 52), Size = UDim2.new(1, -94, 0, 16), Parent = card })
+	local _xpBar
+	_xpBar, xpSet = UI.bar({ Size = UDim2.fromScale(1, 1), Parent = xpHolder }, C.Accent)
+	local function pill(x: number, glyph: string, color: Color3): TextLabel
+		local f = UI.panel({ Size = UDim2.fromOffset(150, 40), Position = UDim2.fromOffset(x, 8), Parent = gui })
+		UI.text(glyph, { Size = UDim2.fromOffset(34, 40), TextSize = 20, TextColor3 = color, TextXAlignment = Enum.TextXAlignment.Center, Parent = f })
+		return UI.text("0", { Position = UDim2.fromOffset(34, 0), Size = UDim2.new(1, -40, 1, 0), TextSize = 19, Font = Theme.FontBlack, TextColor3 = color, Parent = f })
+	end
+	coinPill = pill(442, "●", Color3.fromRGB(242, 193, 78))
+	diamondPill = pill(600, "◆", C.Diamond)
 
 	-- Bottom centre: the big READY UP plate, status and party strip.
 	local bottom = UI.new("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(460, 140), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12), Parent = gui })
@@ -529,7 +582,7 @@ function Lobby.Start()
 	setReady = setReadyFn
 
 	-- Left: menu tiles (icon + title + subtitle), two columns.
-	local nav = UI.new("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(2 * 104 + 8, 4 * 104 + 24), Position = UDim2.fromOffset(12, 60), Parent = gui }, {
+	local nav = UI.new("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(2 * 104 + 8, 4 * 104 + 24), Position = UDim2.fromOffset(12, 100), Parent = gui }, {
 		UI.new("UIGridLayout", { CellSize = UDim2.fromOffset(104, 104), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
 	})
 	local TILES = {

@@ -152,7 +152,14 @@ function PowerupService._tick()
 			if t < st.SecondWindUntil then
 				speed *= 1 + SECOND_WIND_SPEED
 			end
-			hum.WalkSpeed = if ctx.BuildService.IsHeld(p) then 0 else speed * ctx.StaminaService.SpeedMult(p) * (if ctx.ChannelService.IsBusy(p, "Heal") then Config.Healing.MoveSlow else 1)
+			local want = if ctx.BuildService.IsHeld(p) then 0 else speed * ctx.StaminaService.SpeedMult(p) * (if ctx.ChannelService.IsBusy(p, "Heal") then Config.Healing.MoveSlow else 1)
+			-- ease speed changes (sprint builds up over ~0.5 s, stopping is quicker); traps snap to 0
+			local cur = hum.WalkSpeed
+			if want == 0 or math.abs(want - cur) < 0.5 then
+				hum.WalkSpeed = want
+			else
+				hum.WalkSpeed = cur + (want - cur) * (if want > cur then 0.55 else 0.8)
+			end
 			-- Second Wind (automatic, once per life)
 			if (st.Effects.SecondWind or 0) > 0 and not st.SecondWindUsed and hum.Health < SECOND_WIND_HP then
 				st.SecondWindUsed = true

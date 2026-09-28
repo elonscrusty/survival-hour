@@ -572,6 +572,7 @@ Config.Camera = {
 	MinZoom = 6,
 	AimFov = 55,
 	DefaultFov = 70,
+	SprintFovBonus = 6, -- subtle widen while sprinting
 }
 
 Config.RateLimits = {
@@ -622,6 +623,24 @@ Config.Lighting = {
 		Saturation = 0.08,
 		Contrast = 0.05,
 		Tint = Color3.fromRGB(255, 250, 240),
+	},
+	Afternoon = {
+		-- warmer, longer shadows: the day visibly turning
+		ClockTime = 15.8,
+		Brightness = 2.2,
+		Ambient = Color3.fromRGB(100, 94, 92),
+		OutdoorAmbient = Color3.fromRGB(145, 132, 118),
+		FogColor = Color3.fromRGB(205, 190, 170),
+		FogStart = 130,
+		FogEnd = 800,
+		ColorShift = Color3.fromRGB(255, 220, 180),
+		Density = 0.32,
+		AtmoColor = Color3.fromRGB(215, 200, 180),
+		Decay = Color3.fromRGB(140, 120, 100),
+		Haze = 1,
+		Saturation = 0.1,
+		Contrast = 0.06,
+		Tint = Color3.fromRGB(255, 244, 230),
 	},
 	Sunset = {
 		ClockTime = 17.7,
@@ -675,6 +694,7 @@ Config.Lighting = {
 		Contrast = 0.06,
 		Tint = Color3.fromRGB(255, 238, 220),
 	},
+	AfternoonAt = 0.42, -- fraction of the day when light turns to afternoon
 	SunsetAt = 0.72, -- fraction of the day after which the sun sets
 	DawnTime = 12, -- seconds of dawn light at the start of each day
 	TransitionTime = 8,
@@ -4979,6 +4999,16 @@ function Camp.SetFire(m: Model, level: number, fuel: number)
 	if glow and glow.Enabled then
 		glow.Range = math.min(60, (40 + lv * 5) * (0.6 + 0.4 * f))
 		glow.Brightness = (2.2 + lv * 0.35) * f
+		-- a starving fire burns deep red; a healthy one warm gold
+		if not m:GetAttribute("FlameSkin") then
+			local starving = math.clamp(1 - fuel / 0.15, 0, 1)
+			glow.Color = Color3.fromRGB(255, 190, 110):Lerp(Color3.fromRGB(255, 90, 40), starving)
+		end
+	end
+	if flame and flame.Enabled and not m:GetAttribute("FlameSkin") then
+		local starving = math.clamp(1 - fuel / 0.15, 0, 1)
+		flame.Color = Color3.fromRGB(255, 150, 50):Lerp(Color3.fromRGB(200, 60, 20), starving)
+		flame.SecondaryColor = Color3.fromRGB(255, 220, 120):Lerp(Color3.fromRGB(120, 30, 10), starving)
 	end
 	local sparks = core:FindFirstChild("Sparks") :: ParticleEmitter?
 	if sparks and sparks.Enabled then
@@ -60687,6 +60717,8 @@ function BuildService._onPlace(p: Player, req: any)
 	ctx.InventoryService.Sync(p)
 	ctx.StorageService.SyncTeam(team)
 	BuildService.Spawn(req.Id, team, ground, yaw, p)
+	ctx.Util.SetAction(p, "Build")
+	Net.FireAll("Fx", "Built", { Pos = ground })
 	Net.FireClient("MatchEvent", p, "BuildResult", { Ok = true, Id = req.Id })
 end
 
@@ -60799,6 +60831,7 @@ function BuildService.Repair(p: Player, s: Structure)
 		ctx.InventoryService.Sync(p)
 		ctx.StorageService.SyncTeam(s.Team)
 	end
+	ctx.Util.SetAction(p, "Build")
 	local amount = math.min(s.Max - s.Health, s.Max * Recipes.Repair.RepairFraction * ctx.PowerupService.RepairMult(p))
 	s.Health += amount
 	local fromEnemy = math.min(amount, s.EnemyDamage)
@@ -61078,10 +61111,13 @@ end
 
 -- Fuel -------------------------------------------------------------------------------------
 
+local critical: { [number]: boolean } = {}
+
 function CampService._burn(dt: number)
 	for team, fire in fires do
 		if not fire.Out and ctx.MatchService.FireBurning(team) then
 			if FireRules.Burn(fire, dt, FIRE) then
+				critical[team] = nil
 				ctx.Util.NotifyTeam(team, "Your fire ran out of fuel and died. You're on your FINAL LIFE.", "danger")
 				ctx.MatchService.ExtinguishFire(team, nil)
 			else
@@ -61090,6 +61126,13 @@ function CampService._burn(dt: number)
 					ctx.Util.NotifyTeam(team, "Your fire is low on fuel! Add Wood before it dies for good.", "warn")
 				elseif fire.Fuel >= FIRE.FuelWarning + 0.05 then
 					warned[team] = false
+					critical[team] = nil
+				end
+				if fire.Fuel < 0.05 and not critical[team] then
+					critical[team] = true
+					for _, mate in ctx.Util.TeamPlayers(team) do
+						Net.FireClient("MatchEvent", mate, "FireCritical", {})
+					end
 				end
 				CampService._syncFire(team)
 			end
@@ -61175,6 +61218,8 @@ function CampService._onFeed(player: Player, prompt: ProximityPrompt)
 		return
 	end
 	FireRules.AddWood(fire, n, FIRE, fuelMult)
+	ctx.Util.SetAction(player, "Feed")
+	Net.FireAll("Fx", "FireFed", { Pos = camps[team].FirePos, Amount = n })
 	ctx.InventoryService.Sync(player)
 	CampService._syncFire(team)
 	ctx.Util.Notify(player, string.format("Added %d Wood · fuel %d%%", n, math.floor(fire.Fuel * 100 + 0.5)), "success")
@@ -61837,6 +61882,10 @@ function CombatService.DamagePlayer(victim: Player, amount: number, source: Sour
 			local r = CombatRules.Block(dmg, if isShield then bdef.BlockReduction else CFG.BlockReduction, ctx.StaminaService.Get(victim),
 				if isShield then CFG.ShieldDrainPerHp else CFG.BlockDrainPerHp, if source.Heavy then CFG.HeavyGuardDrain else 0)
 			ctx.StaminaService.Drain(victim, r.Drain)
+			local bchar = victim.Character
+			if bchar then
+				bchar:SetAttribute("BlockHitAt", workspace:GetServerTimeNow())
+			end
 			if slot then
 				ctx.InventoryService.Wear(victim, slot, math.max(1, math.ceil((dmg - r.Taken) / 4)))
 			end
@@ -61871,6 +61920,15 @@ function CombatService.DamagePlayer(victim: Player, amount: number, source: Sour
 	ctx.CampService.NoteHurt(victim)
 	hum.Health = math.max(0, hum.Health - dmg)
 	ctx.PowerupService.OnPlayerHurt(victim, dmg)
+	-- hit reaction (Animation flinches away from the attacker)
+	local vchar = victim.Character
+	if vchar then
+		vchar:SetAttribute("HitAt", workspace:GetServerTimeNow())
+		if source.Pos then
+			local away = (root.Position - source.Pos) * Vector3.new(1, 0, 1)
+			vchar:SetAttribute("HitDir", if away.Magnitude > 0.1 then away.Unit else nil)
+		end
+	end
 	Net.FireClient("HitFeedback", victim, "Hurt", dmg, source.Pos)
 	if source.By then
 		Net.FireClient("HitFeedback", source.By, "Player", dmg, root.Position)
@@ -61987,6 +62045,8 @@ function CombatService._onAttack(p: Player, payload: any)
 	char:SetAttribute("Action", "Attack")
 	char:SetAttribute("ActionAt", workspace:GetServerTimeNow())
 	char:SetAttribute("ActionItem", id)
+	char:SetAttribute("ActionHeavy", heavy)
+	char:SetAttribute("ActionVariant", ((char:GetAttribute("ActionVariant") or 0) + 1) % 2) -- alternate swing direction
 
 	local inMatch = p:GetAttribute("InMatch") == true and ctx.MatchService.IsPlaying()
 
@@ -62671,6 +62731,8 @@ function CraftService._onUpgrade(p: Player)
 	end
 	ctx.CampService.SetLevel(team, level + 1)
 	ctx.PowerupService.OnWorkbenchLevel(p, team, level + 1)
+	ctx.Util.SetAction(p, "Craft")
+	Net.FireAll("Fx", "BenchUpgrade", { Pos = ctx.CampService.GetCamp(team).WorkbenchCF.Position, Level = level + 1 })
 	ctx.InventoryService.Sync(p)
 	ctx.StorageService.SyncTeam(team)
 	ctx.Util.NotifyTeam(team, p.DisplayName .. " upgraded the workbench to level " .. (level + 1) .. "! New recipes unlocked.", "success")
@@ -63657,7 +63719,8 @@ function GatherService._apply(p: Player, n: Node, toolType: string?, power: numb
 	end
 	ctx.Util.PlaySound(if r.Finished and def.Kind == "Tree" then "ChopHeavy" else def.Sounds.Hit, n.Model.PrimaryPart)
 	local hitPos = n.Pos + Vector3.new(0, if def.Kind == "Tree" then 2.5 else 1, 0)
-	Net.FireAll("Fx", "ResourceHit", { Pos = hitPos, From = from, Kind = def.Effects.Hit })
+	-- non-tree nodes (rocks, bushes, ore) get a quick client-side jolt; trees shudder server-side
+	Net.FireAll("Fx", "ResourceHit", { Pos = hitPos, From = from, Kind = def.Effects.Hit, Model = if def.Kind ~= "Tree" then n.Model else nil, Last = r.Finished })
 	Net.FireClient("HitFeedback", p, "Resource", r.Dealt)
 	n.Model:SetAttribute("Health", n.S.Health)
 	n.Model:SetAttribute("MaxHealth", n.S.Max)
@@ -63744,7 +63807,7 @@ function GatherService._onGatherPrompt(p: Player, prompt: ProximityPrompt)
 		Duration = duration,
 		Range = def.Range,
 		InterruptOnDamage = true,
-		Action = if def.Kind == "Tree" then "Chop" else "Gather",
+		Action = if def.Kind == "Tree" then "Chop" elseif def.RequiredTool == "Pickaxe" then "Mine" else "Gather",
 		Position = function()
 			return if ResourceRules.Available(n.S) then n.Pos else nil
 		end,
@@ -66097,6 +66160,11 @@ function MatchService._enterPhase(phase: string)
 				ctx.WorldService.ApplyLighting("Day", false)
 			end
 		end)
+		task.delay(len * Config.Lighting.AfternoonAt, function()
+			if token == phaseToken and MatchService.Phase == "Day" then
+				ctx.WorldService.ApplyLighting("Afternoon", false)
+			end
+		end)
 		task.delay(len * Config.Lighting.SunsetAt, function()
 			if token == phaseToken and MatchService.Phase == "Day" then
 				ctx.WorldService.ApplyLighting("Sunset", false)
@@ -66828,7 +66896,14 @@ function PowerupService._tick()
 			if t < st.SecondWindUntil then
 				speed *= 1 + SECOND_WIND_SPEED
 			end
-			hum.WalkSpeed = if ctx.BuildService.IsHeld(p) then 0 else speed * ctx.StaminaService.SpeedMult(p) * (if ctx.ChannelService.IsBusy(p, "Heal") then Config.Healing.MoveSlow else 1)
+			local want = if ctx.BuildService.IsHeld(p) then 0 else speed * ctx.StaminaService.SpeedMult(p) * (if ctx.ChannelService.IsBusy(p, "Heal") then Config.Healing.MoveSlow else 1)
+			-- ease speed changes (sprint builds up over ~0.5 s, stopping is quicker); traps snap to 0
+			local cur = hum.WalkSpeed
+			if want == 0 or math.abs(want - cur) < 0.5 then
+				hum.WalkSpeed = want
+			else
+				hum.WalkSpeed = cur + (want - cur) * (if want > cur then 0.55 else 0.8)
+			end
 			-- Second Wind (automatic, once per life)
 			if (st.Effects.SecondWind or 0) > 0 and not st.SecondWindUsed and hum.Health < SECOND_WIND_HP then
 				st.SecondWindUsed = true
@@ -67823,7 +67898,7 @@ function StorageService._beginBreach(p: Player, e: Entry, prompt: ProximityPromp
 		Prompt = prompt,
 		InterruptOnDamage = true,
 		MoveTolerance = 3,
-		Action = if useCharge then "Gather" else "Chop",
+		Action = if useCharge then "Gather" else "Breach",
 		TargetKey = e.Key,
 		Position = function()
 			return if model.Parent and byKey[e.Key] then model:GetPivot().Position else nil
@@ -68178,6 +68253,19 @@ end
 
 function Util.InMatch(player: Player): boolean
 	return player:GetAttribute("InMatch") == true
+end
+
+-- One-shot character action for the procedural animator (Controllers/Animation):
+-- the client plays the pose for a short window after ActionAt.
+function Util.SetAction(player: Player, action: string, item: string?)
+	local char = player.Character
+	if char then
+		char:SetAttribute("Action", action)
+		char:SetAttribute("ActionAt", workspace:GetServerTimeNow())
+		if item then
+			char:SetAttribute("ActionItem", item)
+		end
+	end
 end
 
 function Util.Notify(player: Player, text: string, kind: string?)
@@ -69968,11 +70056,17 @@ type Rig = {
 	-- we reuse the stored base instead of stacking offsets.
 	Base: { [Joint]: CFrame },
 	Wrote: { [Joint]: CFrame },
+	-- reaction bookkeeping (client-side only)
+	Held: string?,
+	EquipAt: number,
+	WasAir: boolean,
+	LandAt: number,
 }
 
 local rigs: { [Model]: Rig } = {}
 local localSwingAt = 0
 local localSwingItem = "Fists"
+local localSwingHeavy = false
 local localDraw = false
 
 local ID = CFrame.identity
@@ -70011,16 +70105,34 @@ local function findRig(char: Model): Rig?
 		Cur = { r = ID, l = ID, w = ID, n = ID },
 		Base = {},
 		Wrote = {},
+		Held = char:GetAttribute("HeldId"),
+		EquipAt = 0,
+		WasAir = false,
+		LandAt = 0,
 	}
 end
 
+local function isBow(item: string): boolean
+	return item == "Bow" or item == "CrudeBow" or item == "HuntingBow"
+end
+
+local function isChopper(item: string): boolean
+	return string.find(item, "Axe$") ~= nil or string.find(item, "Pickaxe$") ~= nil or item == "RepairHammer" or item == "Sledgehammer" or item == "Crowbar"
+end
+
 -- Returns target offsets for right arm, left arm, waist, neck.
+-- Base pose from the current action, then additive reaction layers (hit flinch,
+-- block impact, guard break, landing, equip, sprint lean, exhausted breathing).
 local function pose(rig: Rig, t: number): (CFrame, CFrame, CFrame, CFrame)
 	local char = rig.Char
+	local owner = Players:GetPlayerFromCharacter(char)
+	local now = workspace:GetServerTimeNow()
 	local action = char:GetAttribute("Action") :: string?
 	local at = (char:GetAttribute("ActionAt") :: number?) or 0
 	local item = (char:GetAttribute("ActionItem") :: string?) or (char:GetAttribute("HeldId") :: string?) or "Fists"
-	local elapsed = workspace:GetServerTimeNow() - at
+	local heavy = char:GetAttribute("ActionHeavy") == true
+	local variant = (char:GetAttribute("ActionVariant") :: number?) or 0
+	local elapsed = now - at
 	local isLocal = char == player.Character
 	local phase = t * 6
 	local r, l, w, n = ID, ID, ID, ID
@@ -70033,52 +70145,92 @@ local function pose(rig: Rig, t: number): (CFrame, CFrame, CFrame, CFrame)
 	end
 
 	-- Local prediction for instant feedback
-	if isLocal and os.clock() - localSwingAt < 0.4 then
+	if isLocal and os.clock() - localSwingAt < 0.6 then
 		action = "Attack"
 		item = localSwingItem
+		heavy = localSwingHeavy
 		elapsed = os.clock() - localSwingAt
 	end
 
-	if (isLocal and localDraw) then
-		r = raise(80, 1) * CFrame.Angles(0, rad(-20), 0)
+	local held = (char:GetAttribute("HeldId") :: string?) or "Fists"
+	if held ~= rig.Held then
+		rig.Held = held
+		rig.EquipAt = t
+	end
+
+	if isLocal and localDraw then
+		-- bow draw: bow arm out, string hand back to the cheek
+		r = raise(85, 1) * CFrame.Angles(0, rad(-35), 0)
 		l = raise(90, -1)
-		w = CFrame.Angles(0, rad(-25), 0)
+		w = CFrame.Angles(0, rad(-30), 0)
+		n = CFrame.Angles(0, rad(20), 0)
 		return r, l, w, n
 	end
 
 	if char:GetAttribute("Blocking") then
-		r = raise(75, 1) * CFrame.Angles(0, rad(35), 0)
-		w = CFrame.Angles(0, rad(10), 0)
+		-- guard: weapon across the body, off hand braced
+		r = raise(78, 1) * CFrame.Angles(0, rad(40), 0)
+		l = raise(55, -1) * CFrame.Angles(0, rad(-25), 0)
+		w = CFrame.Angles(0, rad(12), 0)
+	elseif held == "Crossbow" or held == "Rifle" or held == "Pistol" then
+		-- ranged ready: weapon held low and forward
+		r = raise(35, 1)
+		l = if held == "Pistol" then ID else raise(30, -1)
+	elseif isBow(held) then
+		l = raise(25, -1)
 	end
 
-	if action == "Attack" and elapsed < 0.45 then
-		local k = math.clamp(elapsed / 0.35, 0, 1)
+	local swingLen = if heavy then 0.62 else 0.38
+	if action == "Attack" and elapsed < swingLen + 0.08 then
+		local k = math.clamp(elapsed / swingLen, 0, 1)
 		if item == "Spear" or item == "CrudeSpear" then
-			-- thrust
+			-- thrust (heavy: longer lunge)
 			local ext = math.sin(k * math.pi)
-			r = raise(70 + 20 * ext, 1)
-			w = CFrame.Angles(0, rad(-15 * ext), 0)
-		elseif item == "Bow" then
-			r = raise(80 * (1 - k), 1)
+			r = raise(70 + (if heavy then 30 else 20) * ext, 1)
+			l = raise(50 * ext, -1)
+			w = CFrame.Angles(rad(-8 * ext), rad(-15 * ext), 0)
+		elseif isBow(item) then
+			r = raise(85 * (1 - k), 1)
 			l = raise(90, -1)
-		elseif item == "Pistol" or item == "Rifle" then
+		elseif item == "Crossbow" or item == "Pistol" or item == "Rifle" then
 			local kick = math.max(0, 1 - k * 3)
 			r = raise(90 + 15 * kick, 1)
-			l = if item == "Rifle" then raise(80, -1) else ID
-		elseif string.find(item, "Axe$") or string.find(item, "Pickaxe$") or item == "RepairHammer" then
-			-- overhead chop
-			local a = if k < 0.3 then 150 * (k / 0.3) else 150 - 190 * ((k - 0.3) / 0.7)
+			l = if item == "Pistol" then ID else raise(80, -1)
+			n = CFrame.Angles(rad(-4 * kick), 0, 0)
+		elseif isChopper(item) then
+			-- overhead chop; heavy = bigger wind-up with a waist twist
+			local wind = if heavy then 0.45 else 0.3
+			local top = if heavy then 170 else 150
+			local a = if k < wind then top * (k / wind) else top - (top + 40) * ((k - wind) / (1 - wind))
 			r = raise(a, 1)
-			w = CFrame.Angles(rad(-10 * math.sin(k * math.pi)), 0, 0)
+			l = raise(a * 0.35, -1)
+			w = CFrame.Angles(rad(-12 * math.sin(k * math.pi)), rad((if heavy then 25 else 10) * (1 - k)), 0)
 		else
-			-- horizontal slash (sword, fists, shield bash)
-			local a = if k < 0.25 then -60 * (k / 0.25) else -60 + 140 * ((k - 0.25) / 0.75)
-			r = raise(80, 1) * CFrame.Angles(0, rad(a), 0)
-			w = CFrame.Angles(0, rad(-a * 0.3), 0)
+			-- horizontal slash; alternates direction, heavy is a wide wind-up
+			local dir = if variant == 0 then 1 else -1
+			local wind = if heavy then 0.4 else 0.25
+			local span = if heavy then 170 else 140
+			local a = if k < wind then -60 * dir * (k / wind) else dir * (-60 + span * ((k - wind) / (1 - wind)))
+			r = raise(if variant == 0 then 80 else 95, 1) * CFrame.Angles(0, rad(a), 0)
+			l = raise(30, -1)
+			w = CFrame.Angles(0, rad(-a * (if heavy then 0.45 else 0.3)), 0)
 		end
-	elseif action == "Chop" then
-		local k = (phase % 3) / 3
-		r = raise(if k < 0.4 then 140 * (k / 0.4) else 140 - 180 * ((k - 0.4) / 0.6), 1)
+	elseif action == "Chop" or action == "Breach" then
+		-- repeated overhead strikes; breaching is slower and heavier
+		local rate = if action == "Breach" then 2.4 else 3
+		local k = (phase % rate) / rate
+		local a = if k < 0.4 then 150 * (k / 0.4) else 150 - 190 * ((k - 0.4) / 0.6)
+		r = raise(a, 1)
+		l = raise(a * 0.4, -1)
+		w = CFrame.Angles(rad(-10 * math.max(0, math.sin(k * math.pi * 2))), rad(12), 0)
+	elseif action == "Mine" then
+		-- pickaxe: bent over, swinging down at the rock
+		local k = (phase % 2.6) / 2.6
+		local a = if k < 0.45 then 135 * (k / 0.45) else 135 - 175 * ((k - 0.45) / 0.55)
+		r = raise(a, 1)
+		l = raise(a * 0.5, -1)
+		w = CFrame.Angles(rad(-18), 0, 0)
+		n = CFrame.Angles(rad(-15), 0, 0)
 	elseif action == "Gather" or action == "Fill" then
 		w = CFrame.Angles(rad(-35), 0, 0)
 		n = CFrame.Angles(rad(-15), 0, 0)
@@ -70089,9 +70241,36 @@ local function pose(rig: Rig, t: number): (CFrame, CFrame, CFrame, CFrame)
 		w = CFrame.Angles(rad(-12), 0, 0)
 		n = CFrame.Angles(rad(-20), 0, 0)
 	elseif action == "Bandage" then
+		-- wrapping: both hands circle over the forearm, head down to watch
 		r = raise(60, 1) * CFrame.Angles(0, rad(40 + 15 * math.sin(phase * 2)), 0)
 		l = raise(60, -1) * CFrame.Angles(0, rad(-40 - 15 * math.sin(phase * 2)), 0)
+		n = CFrame.Angles(rad(-25), 0, 0)
+		w = CFrame.Angles(rad(-6), 0, 0)
+	elseif action == "Craft" and elapsed < 1.2 then
+		-- quick hammering at the bench
+		local k = (phase * 1.4) % 1
+		r = raise(70 + 40 * math.max(0, math.sin(k * math.pi * 2)), 1)
+		l = raise(55, -1) * CFrame.Angles(0, rad(-20), 0)
+		w = CFrame.Angles(rad(-15), 0, 0)
 		n = CFrame.Angles(rad(-20), 0, 0)
+	elseif action == "Craft" then
+		-- long craft channel: hands busy at chest height
+		r = raise(55 + 12 * math.sin(phase * 2.2), 1) * CFrame.Angles(0, rad(20), 0)
+		l = raise(55 + 12 * math.sin(phase * 2.2 + 1.3), -1) * CFrame.Angles(0, rad(-20), 0)
+		w = CFrame.Angles(rad(-12), 0, 0)
+		n = CFrame.Angles(rad(-22), 0, 0)
+	elseif action == "Build" and elapsed < 0.9 then
+		-- two hammer taps
+		local k = (elapsed / 0.45) % 1
+		r = raise(if k < 0.4 then 120 * (k / 0.4) else 120 - 110 * ((k - 0.4) / 0.6), 1)
+		w = CFrame.Angles(rad(-10), 0, 0)
+	elseif action == "Feed" and elapsed < 0.7 then
+		-- toss wood onto the fire
+		local k = elapsed / 0.7
+		local a = if k < 0.4 then 20 + 60 * (k / 0.4) else 80 - 40 * ((k - 0.4) / 0.6)
+		r = raise(a, 1)
+		l = raise(a, -1)
+		w = CFrame.Angles(rad(-20 * math.sin(k * math.pi)), 0, 0)
 	elseif action == "Open" or action == "Steal" then
 		w = CFrame.Angles(rad(-30), 0, 0)
 		r = raise(55 + 30 * math.sin(phase * 2), 1)
@@ -70119,11 +70298,54 @@ local function pose(rig: Rig, t: number): (CFrame, CFrame, CFrame, CFrame)
 			r = raise(170, 1)
 			n = CFrame.Angles(rad(15), 0, 0)
 		end
-	elseif action == "Ability" and elapsed < 0.6 then
-		local k = math.sin(math.clamp(elapsed / 0.6, 0, 1) * math.pi)
-		r = raise(150 * k, 1)
-		l = raise(150 * k, -1)
-		n = CFrame.Angles(rad(15 * k), 0, 0)
+	end
+
+	-- Reaction layers ---------------------------------------------------------------
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	-- equip: the new item comes up from the hip
+	local eq = t - rig.EquipAt
+	if eq < 0.28 and held ~= "Fists" then
+		r = raise(-35 * (1 - eq / 0.28), 1) * r
+	end
+	-- airborne arms lift a little; landing dips the torso
+	local air = hum ~= nil and hum.FloorMaterial == Enum.Material.Air
+	if air then
+		l = raise(18, -1) * l
+		r = raise(12, 1) * r
+	elseif rig.WasAir then
+		rig.LandAt = t
+	end
+	rig.WasAir = air
+	local land = t - rig.LandAt
+	if land < 0.25 then
+		w = CFrame.Angles(rad(-10 * math.sin(land / 0.25 * math.pi)), 0, 0) * w
+	end
+	-- sprint lean / exhausted breathing
+	if owner and owner:GetAttribute("Sprinting") and hum and hum.MoveDirection.Magnitude > 0.1 then
+		w = CFrame.Angles(rad(-7), 0, 0) * w
+	elseif owner and owner:GetAttribute("Exhausted") then
+		w = CFrame.Angles(rad(-8 + 3 * math.sin(t * 5)), 0, 0) * w
+		n = CFrame.Angles(rad(4 * math.sin(t * 5)), 0, 0) * n
+	end
+	-- guard broken: arms drop and the torso staggers
+	if owner and (owner:GetAttribute("GuardBrokenUntil") or 0) > now then
+		r = raise(-15, 1)
+		l = raise(-15, -1)
+		w = CFrame.Angles(rad(8), rad(10 * math.sin(t * 9)), 0) * w
+	end
+	-- block impact: the guard is knocked back
+	local bh = now - ((char:GetAttribute("BlockHitAt") :: number?) or 0)
+	if bh < 0.22 then
+		local k = math.sin(bh / 0.22 * math.pi)
+		r = raise(-18 * k, 1) * r
+		w = CFrame.Angles(rad(6 * k), 0, 0) * w
+	end
+	-- hit flinch: head and torso snap away from the blow
+	local hit = now - ((char:GetAttribute("HitAt") :: number?) or 0)
+	if hit < 0.3 then
+		local k = math.sin(hit / 0.3 * math.pi)
+		w = CFrame.Angles(rad(10 * k), 0, rad(4 * k)) * w
+		n = CFrame.Angles(rad(12 * k), 0, 0) * n
 	end
 	return r, l, w, n
 end
@@ -70159,6 +70381,7 @@ function Animation.Start()
 		if a.Kind == "Attack" or a.Kind == "Heavy" or a.Kind == "Release" then
 			localSwingAt = os.clock()
 			localSwingItem = a.Item
+			localSwingHeavy = a.Kind == "Heavy"
 			localDraw = false
 		elseif a.Kind == "Draw" then
 			localDraw = true
@@ -70563,6 +70786,7 @@ end
 function CameraCtl.Start()
 	player.CameraMaxZoomDistance = Config.Camera.MaxZoom
 	player.CameraMinZoomDistance = Config.Camera.MinZoom
+	CameraCtl._feel()
 
 	local gui = UI.new("ScreenGui", { Name = "Crosshair", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 3, Parent = player:WaitForChild("PlayerGui") })
 	local ch = UI.new("Frame", { Size = UDim2.fromOffset(28, 28), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundTransparency = 1, Visible = false, Parent = gui })
@@ -70603,6 +70827,48 @@ function CameraCtl.Start()
 	end)
 end
 
+-- Feel layer: one field-of-view target (aim zoom, a small sprint widen, a brief
+-- damage punch) eased every frame, a tiny damage roll, and low-health /
+-- exhausted screen tint. Deliberately subtle (no screen shake loops).
+local punchAt = -10
+local punchRoll = 0
+function CameraCtl._feel()
+	local cc = Instance.new("ColorCorrectionEffect")
+	cc.Name = "FeelGrade"
+	cc.Parent = game:GetService("Lighting")
+	State.On("Hit", function(h)
+		if h.Kind == "Hurt" then
+			punchAt = os.clock()
+			punchRoll = (if math.random() < 0.5 then -1 else 1) * math.clamp((h.Amount or 10) / 40, 0.2, 1)
+		end
+	end)
+	RunService:BindToRenderStep("SurvivalHourFeel", Enum.RenderPriority.Camera.Value + 2, function(dt)
+		local char = character()
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		local target = Config.Camera.DefaultFov
+		if CameraCtl.Aiming then
+			target = Config.Camera.AimFov
+		elseif hum and player:GetAttribute("Sprinting") and hum.MoveDirection.Magnitude > 0.1 then
+			target += Config.Camera.SprintFovBonus
+		end
+		local since = os.clock() - punchAt
+		if since < 0.22 then
+			local k = 1 - since / 0.22
+			target -= 3 * k
+			camera.CFrame *= CFrame.Angles(0, 0, math.rad(0.8 * punchRoll * k))
+		end
+		camera.FieldOfView += (target - camera.FieldOfView) * math.clamp(dt * 10, 0, 1)
+		-- grading: drained colour when exhausted, reddish edge of vision when badly hurt
+		local inMatch = player:GetAttribute("InMatch") == true
+		local low = inMatch and hum ~= nil and hum.Health > 0 and hum.Health < hum.MaxHealth * 0.3
+		local tired = inMatch and player:GetAttribute("Exhausted") == true
+		local sat = (if tired then -0.25 else 0) + (if low then -0.3 else 0)
+		cc.Saturation += (sat - cc.Saturation) * math.clamp(dt * 4, 0, 1)
+		local tint = if low then Color3.fromRGB(255, 225 + 15 * math.sin(os.clock() * 4), 225) else Color3.new(1, 1, 1)
+		cc.TintColor = cc.TintColor:Lerp(tint, math.clamp(dt * 4, 0, 1))
+	end)
+end
+
 function CameraCtl.SetAiming(on: boolean)
 	if CameraCtl.Aiming == on then
 		return
@@ -70613,7 +70879,6 @@ function CameraCtl.SetAiming(on: boolean)
 	if hum then
 		TweenService:Create(hum, TweenInfo.new(0.15), { CameraOffset = if on then Vector3.new(2.2, 0.6, 0) else Vector3.zero }):Play()
 	end
-	TweenService:Create(camera, TweenInfo.new(0.15), { FieldOfView = if on then Config.Camera.AimFov else Config.Camera.DefaultFov }):Play()
 	if crosshair then
 		crosshair.Visible = on
 	end
@@ -71382,6 +71647,89 @@ local function burst(pos: Vector3, color: Color3, count: number, speed: number, 
 	Debris:AddItem(a, 2)
 end
 
+-- Pooled particle emitters (one anchored holder per effect kind, moved and
+-- re-emitted) so harvesting and combat never create parts per hit.
+local FX_KINDS = {
+	Bark = { Colors = { Color3.fromRGB(120, 84, 52), Color3.fromRGB(196, 160, 110) }, Size = 0.32, Speed = 16, Life = 0.7, Grav = 45, Shape = "Chip" },
+	Splinter = { Colors = { Color3.fromRGB(206, 176, 128), Color3.fromRGB(150, 112, 70) }, Size = 0.26, Speed = 14, Life = 0.6, Grav = 40, Shape = "Chip" },
+	Stone = { Colors = { Color3.fromRGB(128, 126, 122), Color3.fromRGB(92, 90, 88) }, Size = 0.34, Speed = 15, Life = 0.6, Grav = 55, Shape = "Chip" },
+	Leaves = { Colors = { Color3.fromRGB(96, 150, 70), Color3.fromRGB(150, 180, 80) }, Size = 0.4, Speed = 7, Life = 1.3, Grav = 6, Shape = "Leaf" },
+	Berries = { Colors = { Color3.fromRGB(170, 40, 70), Color3.fromRGB(90, 140, 60) }, Size = 0.3, Speed = 8, Life = 0.8, Grav = 30, Shape = "Chip" },
+	Spores = { Colors = { Color3.fromRGB(210, 240, 190), Color3.fromRGB(160, 220, 150) }, Size = 0.25, Speed = 3, Life = 1.6, Grav = -2, Shape = "Glow" },
+	Dust = { Colors = { Color3.fromRGB(150, 138, 120), Color3.fromRGB(110, 100, 90) }, Size = 1.6, Speed = 5, Life = 1.1, Grav = -1, Shape = "Puff" },
+	Water = { Colors = { Color3.fromRGB(170, 210, 255), Color3.fromRGB(230, 240, 255) }, Size = 0.4, Speed = 10, Life = 0.7, Grav = 40, Shape = "Chip" },
+	Steam = { Colors = { Color3.fromRGB(230, 232, 236), Color3.fromRGB(180, 184, 190) }, Size = 2.4, Speed = 4, Life = 1.8, Grav = -6, Shape = "Puff" },
+	Blood = { Colors = { Color3.fromRGB(150, 20, 20), Color3.fromRGB(90, 10, 10) }, Size = 0.25, Speed = 9, Life = 0.5, Grav = 50, Shape = "Chip" },
+	Sparks = { Colors = { Color3.fromRGB(255, 220, 140), Color3.fromRGB(255, 150, 60) }, Size = 0.18, Speed = 14, Life = 0.35, Grav = 30, Shape = "Glow" },
+}
+local pool: { [string]: { Holder: BasePart, Emitter: ParticleEmitter } } = {}
+
+local function emitter(kind: string)
+	local e = pool[kind]
+	if e and e.Holder.Parent then
+		return e
+	end
+	local spec = FX_KINDS[kind] or FX_KINDS.Dust
+	local holder = part({ Name = "Fx_" .. kind, Size = Vector3.new(0.2, 0.2, 0.2), Transparency = 1 })
+	local pe = Instance.new("ParticleEmitter")
+	pe.Rate = 0
+	pe.Color = ColorSequence.new(spec.Colors[1], spec.Colors[2])
+	pe.Lifetime = NumberRange.new(spec.Life * 0.6, spec.Life)
+	pe.Speed = NumberRange.new(spec.Speed * 0.4, spec.Speed)
+	pe.SpreadAngle = Vector2.new(60, 60)
+	pe.Acceleration = Vector3.new(0, -spec.Grav, 0)
+	pe.Drag = if spec.Shape == "Puff" then 2 else 0.5
+	pe.Rotation = NumberRange.new(0, 360)
+	pe.RotSpeed = NumberRange.new(-240, 240)
+	if spec.Shape == "Puff" then
+		pe.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, spec.Size * 0.5), NumberSequenceKeypoint.new(1, spec.Size * 1.6) })
+		pe.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.55), NumberSequenceKeypoint.new(1, 1) })
+		pe.SpreadAngle = Vector2.new(180, 180)
+	elseif spec.Shape == "Glow" then
+		pe.Size = NumberSequence.new(spec.Size, 0)
+		pe.LightEmission = 1
+		pe.SpreadAngle = Vector2.new(180, 180)
+	else
+		pe.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, spec.Size), NumberSequenceKeypoint.new(0.8, spec.Size * 0.8), NumberSequenceKeypoint.new(1, 0) })
+		pe.Squash = NumberSequence.new(if spec.Shape == "Leaf" then 0.6 else 0.3)
+	end
+	pe.Parent = holder
+	e = { Holder = holder, Emitter = pe }
+	pool[kind] = e
+	return e
+end
+
+-- Emits `count` particles of `kind` at pos, spraying along `dir` (default up).
+local function emitAt(kind: string, pos: Vector3, count: number, dir: Vector3?)
+	local e = emitter(kind)
+	local d = if dir and dir.Magnitude > 0.01 then dir.Unit else Vector3.yAxis
+	-- ParticleEmitters spray along the holder's +Y (EmissionDirection Top)
+	e.Holder.CFrame = CFrame.lookAt(pos, pos + d) * CFrame.Angles(-math.pi / 2, 0, 0)
+	e.Emitter:Emit(count)
+end
+
+-- Quick client-side jolt for a struck rock / bush / ore node (visual only).
+local jolting: { [Model]: boolean } = {}
+local function jolt(m: Model?, from: Vector3?)
+	if not m or not m.Parent or jolting[m] then
+		return
+	end
+	jolting[m] = true
+	local home = m:GetPivot()
+	local away = if from then (home.Position - from) * Vector3.new(1, 0, 1) else Vector3.zero
+	local push = if away.Magnitude > 0.01 then away.Unit * 0.18 else Vector3.zero
+	task.spawn(function()
+		for _, k in { 1, -0.6, 0.3, 0 } do
+			if not m.Parent then
+				break
+			end
+			m:PivotTo(home + push * k)
+			task.wait(0.03)
+		end
+		jolting[m] = nil
+	end)
+end
+
 local function onFx(ev: any)
 	local d = ev.Data
 	local name = ev.Name
@@ -71415,9 +71763,9 @@ local function onFx(ev: any)
 		burst(d.Origin, Color3.fromRGB(255, 200, 120), 8, 12, 0.3)
 		burst(d.End, Color3.fromRGB(160, 150, 140), 6, 8, 0.25)
 	elseif name == "Impact" then
-		burst(d.Pos, if d.Kind == "Structure" then Color3.fromRGB(170, 130, 90) else Color3.fromRGB(200, 60, 60), 8, 12, 0.3)
+		emitAt(if d.Kind == "Structure" then "Splinter" else "Blood", d.Pos, if d.Kind == "Structure" then 10 else 6)
 	elseif name == "Block" then
-		burst(d.Pos + Vector3.new(0, 1.5, 0), Color3.fromRGB(255, 240, 180), 12, 16, 0.25)
+		emitAt("Sparks", d.Pos + Vector3.new(0, 1.5, 0), 14)
 	elseif name == "StructureBreak" then
 		for i = 1, 8 do
 			local chunk = part({ Size = Vector3.new(1.2, 0.5, 0.8), Position = d.Pos + Vector3.new(math.random(-3, 3), math.random(1, 6), math.random(-3, 3)), Color = Color3.fromRGB(130, 92, 58), Material = Enum.Material.Wood, Anchored = false })
@@ -71429,6 +71777,34 @@ local function onFx(ev: any)
 		burst(d.Pos + Vector3.new(0, 2, 0), Color3.fromRGB(255, 170, 70), 40, 20, 0.5)
 	elseif name == "Cosmetic" then
 		burst(d.Pos, d.Color or Color3.new(1, 1, 1), d.Count or 25, 14, 0.7)
+	elseif name == "ResourceHit" then
+		-- chips fly back toward the swinger, like a real strike
+		local toward = if d.From then (d.From - d.Pos) * Vector3.new(1, 0, 1) + Vector3.new(0, 1.2, 0) else nil
+		emitAt(d.Kind or "Dust", d.Pos, if d.Kind == "Leaves" or d.Kind == "Spores" then 8 else 12, toward)
+		if d.Kind == "Stone" then
+			emitAt("Dust", d.Pos, 3)
+			emitAt("Sparks", d.Pos, 4, toward)
+		end
+		jolt(d.Model, d.From)
+	elseif name == "ResourceBreak" then
+		emitAt(d.Kind or "Dust", d.Pos, if d.Big then 40 else 22)
+		emitAt("Dust", d.Pos, if d.Big then 10 else 5)
+	elseif name == "PourStart" then
+		emitAt("Water", d.Pos + Vector3.new(0, 2, 0), 18)
+		emitAt("Steam", d.Pos + Vector3.new(0, 2, 0), 8)
+	elseif name == "FireFed" then
+		-- wood hits the fire: a flare of sparks and embers
+		emitAt("Sparks", d.Pos + Vector3.new(0, 2, 0), math.clamp(6 + (d.Amount or 1), 8, 30))
+		emitAt("Dust", d.Pos + Vector3.new(0, 1, 0), 3)
+	elseif name == "BenchUpgrade" then
+		emitAt("Sparks", d.Pos + Vector3.new(0, 3, 0), 30)
+		emitAt("Dust", d.Pos + Vector3.new(0, 1, 0), 8)
+		burst(d.Pos + Vector3.new(0, 4, 0), Color3.fromRGB(255, 210, 120), 20, 10, 0.5)
+	elseif name == "Built" then
+		emitAt("Dust", d.Pos + Vector3.new(0, 1, 0), 8)
+		emitAt("Splinter", d.Pos + Vector3.new(0, 2, 0), 6)
+	elseif name == "Blood" then
+		emitAt("Blood", d.Pos, 8, d.Dir)
 	end
 end
 
@@ -71618,6 +71994,182 @@ return Effects
           </Item>
           <Item class="ModuleScript" referent="910">
             <Properties>
+              <string name="Name">Guide</string>
+              <string name="Source"><![CDATA[--!nonstrict
+-- Survival Guide: a compact objective tracker for new players (onboarding).
+-- One short line at a time, derived from what the player actually has and has
+-- done, so it never blocks play and never shows a wall of text. It hides once
+-- the basics are done, for experienced accounts (level 8+), or when dismissed.
+-- Contextual one-off tips (first night, Night 3, first death, final life) use
+-- the HUD announcer.
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+
+local UI = require("../UI/UI")
+local Theme = require("../UI/Theme")
+local State = require("../State")
+
+local Guide = {}
+
+local player = Players.LocalPlayer
+local C = Theme.Colors
+
+local frame: Frame
+local stepLabel: TextLabel
+local textLabel: TextLabel
+local dismissed = false
+local fed = false
+local built = false
+local lastFuel: number? = nil
+local shownTips: { [string]: boolean } = {}
+
+local function hasItem(inv: any, pattern: string): boolean
+	for _, st in inv.Slots or {} do
+		if st and type(st.Id) == "string" and string.find(st.Id, pattern) then
+			return true
+		end
+	end
+	return false
+end
+
+local function res(inv: any, id: string): number
+	return (inv.Resources and inv.Resources[id]) or 0
+end
+
+-- Steps in order: { text, done() }.
+local STEPS = {
+	{ "Pick up sticks, stones and fibre by hand (walk up and press E)", function(inv)
+		return res(inv, "Stick") + res(inv, "Stone") >= 4 or hasItem(inv, "Axe")
+	end },
+	{ "Craft a Crude Axe — open CRAFT (C)", function(inv)
+		return hasItem(inv, "Axe")
+	end },
+	{ "Chop trees for Wood (small tree = 4 Wood)", function(inv)
+		return res(inv, "Wood") >= 4 or fed
+	end },
+	{ "Feed your fire: hold E at your Campfire (1 Wood = +2% fuel)", function()
+		return fed
+	end },
+	{ "Upgrade your Workbench to Tier II — CRAFT (C)", function()
+		local craft = State.Get("Craft")
+		return craft ~= nil and (craft.Level or 1) >= 2
+	end },
+	{ "Build walls or storage near your fire — BUILD (B)", function()
+		return built
+	end },
+}
+
+local function tip(key: string, title: string, sub: string, color: Color3?)
+	if shownTips[key] then
+		return
+	end
+	shownTips[key] = true
+	local Hud = require("./Hud")
+	Hud.Announce(title, sub, color or C.Accent, 4)
+end
+
+local function refresh()
+	local inMatch = player:GetAttribute("InMatch") == true
+	local profile = State.Get("Profile")
+	local veteran = profile ~= nil and (profile.Level or 1) >= 8
+	local inv = State.Get("Inventory")
+	local step, total = nil, #STEPS
+	if inv then
+		for i, s in STEPS do
+			if not s[2](inv) then
+				step = i
+				break
+			end
+		end
+	end
+	local show = inMatch and not dismissed and not veteran and step ~= nil and player:GetAttribute("LifeState") == "Alive"
+	if show and step then
+		local text = STEPS[step][1]
+		if textLabel.Text ~= text then
+			textLabel.Text = text
+			stepLabel.Text = string.format("SURVIVAL GUIDE · %d/%d", step, total)
+			-- small nudge when the objective changes
+			local pop = frame:FindFirstChildOfClass("UIScale") :: UIScale
+			pop.Scale = 1.06
+			TweenService:Create(pop, TweenInfo.new(0.25, Enum.EasingStyle.Quad), { Scale = 1 }):Play()
+		end
+	end
+	frame.Visible = show
+end
+
+function Guide.Start()
+	local gui = UI.new("ScreenGui", { Name = "Guide", ResetOnSpawn = false, DisplayOrder = 2, Parent = player:WaitForChild("PlayerGui") })
+	frame = UI.panel({ Size = UDim2.fromOffset(330, 58), AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 12, 1, -190), Visible = false, Parent = gui }, { UI.padding(8), UI.new("UIScale", {}) })
+	local stroke = frame:FindFirstChildOfClass("UIStroke")
+	if stroke then
+		stroke.Color = C.Accent
+	end
+	stepLabel = UI.text("SURVIVAL GUIDE", { Size = UDim2.new(1, -30, 0, 14), TextSize = 11, Font = Theme.FontBlack, TextColor3 = C.Accent, Parent = frame })
+	textLabel = UI.text("", { Position = UDim2.fromOffset(0, 16), Size = UDim2.new(1, -4, 0, 26), TextSize = 13, Font = Theme.FontBold, TextWrapped = true, Parent = frame })
+	UI.Buttons.icon("✖", { Size = UDim2.fromOffset(22, 22), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 4, 0, -4), TextSize = 12, Parent = frame }, function()
+		dismissed = true
+		frame.Visible = false
+	end)
+
+	-- progress signals
+	player:GetAttributeChangedSignal("FireFuel"):Connect(function()
+		local f = player:GetAttribute("FireFuel") :: number?
+		if f and lastFuel and f > lastFuel + 0.005 then
+			fed = true
+		end
+		lastFuel = f
+	end)
+	State.On("Notify", function(n)
+		if type(n.Text) == "string" and (string.find(n.Text, "^Built") or string.find(n.Text, "placed")) then
+			built = true
+		end
+	end)
+	State.On("Fx", function(ev)
+		if ev.Name == "Built" then
+			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			if root and ev.Data and ev.Data.Pos and (root.Position - ev.Data.Pos).Magnitude < 30 then
+				built = true
+			end
+		end
+	end)
+	State.On("Inventory", refresh)
+	State.On("Craft", refresh)
+
+	-- contextual tips (once per session)
+	local ms = ReplicatedStorage:WaitForChild("MatchState")
+	State.On("MatchEvent", function(ev)
+		local d = ev.Data or {}
+		if ev.Name == "Phase" and d.Phase == "Night" and d.Day == 1 then
+			tip("night1", "🌙 FIRST NIGHT", "Predators hunt at night. Stay near your fire's light and keep it fed.", C.Night)
+		elseif ev.Name == "Phase" and d.ProtectionEnded then
+			tip("night3", "⚠ FIRES ARE EXPOSED", "Enemies can now snuff your fire with water. Guard it — and raid theirs.", C.Bad)
+		elseif ev.Name == "Died" and not d.Final then
+			tip("death", "YOU'LL RESPAWN AT YOUR FIRE", "Only materials drop. Tools, armour and your backpack are kept.", C.Warn)
+		elseif ev.Name == "FireOut" and d.Team == player:GetAttribute("Team") then
+			tip("final", "FINAL LIFE", "Your fire is out. One more death and you're eliminated — play carefully.", C.Bad)
+		elseif ev.Name == "ReturnedToLobby" or ev.Name == "Loading" then
+			fed, built, lastFuel = false, false, nil
+		end
+	end)
+	player:GetAttributeChangedSignal("InMatch"):Connect(refresh)
+	player:GetAttributeChangedSignal("LifeState"):Connect(refresh)
+	ms:GetAttributeChangedSignal("Phase"):Connect(refresh)
+	task.spawn(function()
+		while true do
+			task.wait(1)
+			refresh()
+		end
+	end)
+end
+
+return Guide
+]]></string>
+            </Properties>
+          </Item>
+          <Item class="ModuleScript" referent="911">
+            <Properties>
               <string name="Name">Hud</string>
               <string name="Source"><![CDATA[--!nonstrict
 -- Match HUD: phase/timer, clan fire strip, health/lives/pack/pouches, hotbar,
@@ -71787,8 +72339,21 @@ local function refreshVitals()
 		-- Unlimited respawns while the fire burns: show the fire's level and fuel instead.
 		local fuel = player:GetAttribute("FireFuel") or 0
 		local lvl = player:GetAttribute("FireLevel") or 1
-		livesLabel.Text = string.format("🔥 Fire L%d · fuel %d%%", lvl, math.floor(fuel * 100 + 0.5))
-		livesLabel.TextColor3 = if fuel < 0.15 then C.Warn else C.Text
+		local state = if fuel < 0.05 then "  CRITICAL!" elseif fuel < 0.15 then "  LOW FUEL" else ""
+		livesLabel.Text = string.format("🔥 Fire L%d · fuel %d%%", lvl, math.floor(fuel * 100 + 0.5)) .. state
+		-- thin fuel bar under the label: ember orange → amber → pulsing red
+		local back = livesLabel:FindFirstChild("FuelBack") :: Frame?
+		if not back then
+			back = UI.new("Frame", { Name = "FuelBack", AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, 2), Size = UDim2.new(0.9, 0, 0, 4), BackgroundColor3 = Color3.fromRGB(15, 12, 10), BorderSizePixel = 0, Parent = livesLabel }, {
+				UI.corner(UDim.new(0, 2)),
+				UI.new("Frame", { Name = "FuelBar", Size = UDim2.fromScale(1, 1), BorderSizePixel = 0 }, { UI.corner(UDim.new(0, 2)) }),
+			})
+		end
+		local b = (back :: Frame):FindFirstChild("FuelBar") :: Frame
+		b.Size = UDim2.fromScale(math.clamp(fuel, 0, 1), 1)
+		local pulse = 0.5 + 0.5 * math.sin(os.clock() * 8)
+		b.BackgroundColor3 = if fuel < 0.15 then C.Bad:Lerp(Color3.new(1, 1, 1), 0.3 * pulse) elseif fuel < 0.4 then C.Warn else C.Accent
+		livesLabel.TextColor3 = if fuel < 0.05 then C.Bad elseif fuel < 0.15 then C.Warn else C.Text
 	elseif fire then
 		local flames = string.rep("🔥", math.min(free, 10))
 		livesLabel.Text = "Respawns: " .. flames .. "  (" .. free .. " left)"
@@ -72147,6 +72712,8 @@ local function onMatchEvent(ev: any)
 		pushFeed("✚ " .. teamTag(d.ByTeam) .. tostring(d.By) .. " opened a care package", C.TextDim)
 	elseif name == "MatchEnded" then
 		showEnd(d)
+	elseif name == "FireCritical" then
+		Hud.Announce("🔥 YOUR FIRE IS DYING", "Add Wood now or you lose your respawns", C.Bad, 4)
 	elseif name == "Sunset" then
 		Hud.Announce("🌅 SUNSET", "Night falls soon — get back to your fire.", C.Warn, 3)
 	elseif name == "Reward" then
@@ -72258,7 +72825,7 @@ return Hud
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="911">
+          <Item class="ModuleScript" referent="912">
             <Properties>
               <string name="Name">Input</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -72447,7 +73014,7 @@ return Input
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="912">
+          <Item class="ModuleScript" referent="913">
             <Properties>
               <string name="Name">Inventory</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -72644,7 +73211,7 @@ return Inventory
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="913">
+          <Item class="ModuleScript" referent="914">
             <Properties>
               <string name="Name">Lobby</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -72681,6 +73248,36 @@ local setReady: (string, string?, string?) -> () = function() end
 local statusLabel: TextLabel
 local partyStrip: Frame
 local diamondsLabel: TextLabel
+local levelLabel: TextLabel
+local coinPill: TextLabel
+local diamondPill: TextLabel
+local xpSet: (number, string?) -> () = function() end
+local shownCoins, shownDiamonds = -1, -1
+
+-- Counts a currency label up/down to its new value (short, never blocks input).
+local function countTo(label: TextLabel, from: number, to: number)
+	if from < 0 or from == to then
+		label.Text = tostring(to)
+		return
+	end
+	local v = Instance.new("NumberValue")
+	v.Value = from
+	v.Changed:Connect(function(x)
+		label.Text = tostring(math.floor(x + 0.5))
+	end)
+	local tw = TweenService:Create(v, TweenInfo.new(0.6, Enum.EasingStyle.Quad), { Value = to })
+	tw.Completed:Once(function()
+		label.Text = tostring(to)
+		v:Destroy()
+	end)
+	tw:Play()
+	-- a small flash so gains are noticed
+	local up = to > from
+	label.TextColor3 = if up then Color3.fromRGB(160, 255, 140) else Color3.fromRGB(255, 140, 120)
+	task.delay(0.7, function()
+		label.TextColor3 = if label == coinPill then Color3.fromRGB(242, 193, 78) else C.Diamond
+	end)
+end
 local partyBody: ScrollingFrame
 local classBody: ScrollingFrame
 local perkBody: ScrollingFrame
@@ -72706,8 +73303,16 @@ local function renderHud()
 	if profile then
 		local cls = Classes.ById[profile.Class]
 		local perk = profile.Perk and Perks.ById[profile.Perk]
-		diamondsLabel.Text = string.format("Lv %d   ◆ %d   🪙 %d   %s %s · %s", profile.Level or 1, profile.Diamonds, profile.Coins or 0,
-			if cls then cls.Glyph else "", if cls then cls.Name else "?", if perk then perk.Glyph .. " " .. perk.Name else "no power-up")
+		diamondsLabel.Text = string.format("%s %s · %s", if cls then cls.Glyph else "", if cls then cls.Name else "?", if perk then perk.Glyph .. " " .. perk.Name else "no power-up")
+		levelLabel.Text = tostring(profile.Level or 1)
+		if (profile.LevelNeed or 0) > 0 then
+			xpSet(profile.LevelInto / profile.LevelNeed, string.format("%d / %d XP", profile.LevelInto, profile.LevelNeed))
+		else
+			xpSet(1, "MAX LEVEL")
+		end
+		countTo(coinPill, shownCoins, profile.Coins or 0)
+		countTo(diamondPill, shownDiamonds, profile.Diamonds or 0)
+		shownCoins, shownDiamonds = profile.Coins or 0, profile.Diamonds or 0
 	end
 	if not lobby then
 		return
@@ -73160,8 +73765,23 @@ function Lobby.Start()
 	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(rescale)
 	rescale()
 
-	local top = UI.panel({ Size = UDim2.fromOffset(560, 40), Position = UDim2.fromOffset(12, 8), Parent = gui })
-	diamondsLabel = UI.text("", { Position = UDim2.fromOffset(12, 0), Size = UDim2.new(1, -12, 1, 0), TextSize = 17, Font = Theme.FontBold, TextColor3 = C.Diamond, Parent = top })
+	-- Top: profile card (level badge, name, title, XP bar) + animated currency pills.
+	local card = UI.panel({ Size = UDim2.fromOffset(420, 80), Position = UDim2.fromOffset(12, 8), Parent = gui })
+	local badge = UI.new("Frame", { Size = UDim2.fromOffset(60, 60), Position = UDim2.fromOffset(10, 10), BackgroundColor3 = C.PanelLight, Parent = card }, { UI.corner(UDim.new(0.5, 0)), UI.new("UIStroke", { Color = C.Accent, Thickness = 3 }) })
+	UI.text("LVL", { Size = UDim2.new(1, 0, 0, 14), Position = UDim2.fromOffset(0, 10), TextSize = 11, Font = Theme.FontBold, TextColor3 = C.TextDim, TextXAlignment = Enum.TextXAlignment.Center, Parent = badge })
+	levelLabel = UI.text("1", { Name = "Level", Size = UDim2.new(1, 0, 0, 24), Position = UDim2.fromOffset(0, 24), TextSize = 22, Font = Theme.FontBlack, TextXAlignment = Enum.TextXAlignment.Center, Parent = badge })
+	UI.text(player.DisplayName, { Position = UDim2.fromOffset(82, 8), Size = UDim2.new(1, -90, 0, 22), TextSize = 18, Font = Theme.FontBlack, Parent = card })
+	diamondsLabel = UI.text("", { Position = UDim2.fromOffset(82, 30), Size = UDim2.new(1, -90, 0, 16), TextSize = 13, Font = Theme.FontBold, TextColor3 = C.Accent, Parent = card })
+	local xpHolder = UI.new("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(82, 52), Size = UDim2.new(1, -94, 0, 16), Parent = card })
+	local _xpBar
+	_xpBar, xpSet = UI.bar({ Size = UDim2.fromScale(1, 1), Parent = xpHolder }, C.Accent)
+	local function pill(x: number, glyph: string, color: Color3): TextLabel
+		local f = UI.panel({ Size = UDim2.fromOffset(150, 40), Position = UDim2.fromOffset(x, 8), Parent = gui })
+		UI.text(glyph, { Size = UDim2.fromOffset(34, 40), TextSize = 20, TextColor3 = color, TextXAlignment = Enum.TextXAlignment.Center, Parent = f })
+		return UI.text("0", { Position = UDim2.fromOffset(34, 0), Size = UDim2.new(1, -40, 1, 0), TextSize = 19, Font = Theme.FontBlack, TextColor3 = color, Parent = f })
+	end
+	coinPill = pill(442, "●", Color3.fromRGB(242, 193, 78))
+	diamondPill = pill(600, "◆", C.Diamond)
 
 	-- Bottom centre: the big READY UP plate, status and party strip.
 	local bottom = UI.new("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(460, 140), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12), Parent = gui })
@@ -73178,7 +73798,7 @@ function Lobby.Start()
 	setReady = setReadyFn
 
 	-- Left: menu tiles (icon + title + subtitle), two columns.
-	local nav = UI.new("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(2 * 104 + 8, 4 * 104 + 24), Position = UDim2.fromOffset(12, 60), Parent = gui }, {
+	local nav = UI.new("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(2 * 104 + 8, 4 * 104 + 24), Position = UDim2.fromOffset(12, 100), Parent = gui }, {
 		UI.new("UIGridLayout", { CellSize = UDim2.fromOffset(104, 104), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
 	})
 	local TILES = {
@@ -73252,7 +73872,7 @@ return Lobby
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="914">
+          <Item class="ModuleScript" referent="915">
             <Properties>
               <string name="Name">Map</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -73504,7 +74124,7 @@ return MapCtl
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="915">
+          <Item class="ModuleScript" referent="916">
             <Properties>
               <string name="Name">Movement</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -73562,7 +74182,7 @@ return Movement
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="916">
+          <Item class="ModuleScript" referent="917">
             <Properties>
               <string name="Name">Notifications</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -73607,9 +74227,23 @@ function Notifications.Push(text: string, kind: string?)
 		Parent = card,
 	}, { UI.corner(UDim.new(0.5, 0)) })
 	UI.text(text, { Position = UDim2.fromOffset(30, 0), Size = UDim2.new(1, -30, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextSize = 15, Parent = card })
+	-- pop in (quick scale from 0.85), fade everything out at the end
+	local pop = UI.new("UIScale", { Scale = 0.85, Parent = card })
+	TweenService:Create(pop, TweenInfo.new(0.16, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
 	local life = if k == "gain" then 1.8 elseif k == "danger" or k == "error" then 5 else 3.5
 	task.delay(life, function()
-		TweenService:Create(card, TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
+		if not card.Parent then
+			return
+		end
+		local info = TweenInfo.new(0.3)
+		TweenService:Create(card, info, { BackgroundTransparency = 1 }):Play()
+		for _, d in card:GetDescendants() do
+			if d:IsA("TextLabel") then
+				TweenService:Create(d, info, { TextTransparency = 1, BackgroundTransparency = 1 }):Play()
+			elseif d:IsA("UIStroke") then
+				TweenService:Create(d, info, { Transparency = 1 }):Play()
+			end
+		end
 		task.wait(0.3)
 		card:Destroy()
 	end)
@@ -73646,7 +74280,7 @@ return Notifications
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="917">
+          <Item class="ModuleScript" referent="918">
             <Properties>
               <string name="Name">Panels</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -73657,6 +74291,7 @@ return Notifications
 local Players = game:GetService("Players")
 local GuiService = game:GetService("GuiService")
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 
 local UI = require("../UI/UI")
 local Theme = require("../UI/Theme")
@@ -73729,6 +74364,10 @@ function Panels.Open(name: string)
 	end
 	Panels.Current = name
 	p.Frame.Visible = true
+	-- quick pop-in (fast enough to never slow the player down)
+	local pop = p.Frame:FindFirstChild("Pop") :: UIScale? or UI.new("UIScale", { Name = "Pop", Parent = p.Frame })
+	pop.Scale = 0.93
+	TweenService:Create(pop, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1 }):Play()
 	if p.OnOpen then
 		p.OnOpen()
 	end
@@ -73766,7 +74405,7 @@ return Panels
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="918">
+          <Item class="ModuleScript" referent="919">
             <Properties>
               <string name="Name">Prompts</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -73946,7 +74585,7 @@ return Prompts
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="919">
+          <Item class="ModuleScript" referent="920">
             <Properties>
               <string name="Name">Shop</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -74058,7 +74697,7 @@ return Shop
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="920">
+          <Item class="ModuleScript" referent="921">
             <Properties>
               <string name="Name">Sound</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -74197,7 +74836,7 @@ return SoundCtl
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="921">
+          <Item class="ModuleScript" referent="922">
             <Properties>
               <string name="Name">Spectate</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -74287,7 +74926,7 @@ return Spectate
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="922">
+          <Item class="ModuleScript" referent="923">
             <Properties>
               <string name="Name">Storage</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -74411,7 +75050,7 @@ return Storage
             </Properties>
           </Item>
         </Item>
-        <Item class="LocalScript" referent="923">
+        <Item class="LocalScript" referent="924">
           <Properties>
             <string name="Name">Main</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -74504,6 +75143,7 @@ local order = {
 	"Animation",
 	"Creatures",
 	"Effects",
+	"Guide",
 	"Spectate",
 	"Dev",
 }
@@ -74530,7 +75170,7 @@ local _ = Players
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="924">
+        <Item class="ModuleScript" referent="925">
           <Properties>
             <string name="Name">State</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -74580,11 +75220,11 @@ return State
 ]]></string>
           </Properties>
         </Item>
-        <Item class="Folder" referent="925">
+        <Item class="Folder" referent="926">
           <Properties>
             <string name="Name">UI</string>
           </Properties>
-          <Item class="ModuleScript" referent="926">
+          <Item class="ModuleScript" referent="927">
             <Properties>
               <string name="Name">Buttons</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -74601,6 +75241,8 @@ return State
 -- States (all styles): Normal · Hover/Pressed (green rim + glow) · Disabled
 -- (grey, ignores clicks) · Selected/Equipped (gold rim + glow, ✓).
 -- Tones pick the resting colour: Neutral, Green, Gold, Red, Blue.
+
+local TweenService = game:GetService("TweenService")
 
 local Theme = require("./Theme")
 
@@ -74722,14 +75364,25 @@ function Buttons.decorate(b: GuiButton, tone: string?, radius: UDim?)
 		b:SetAttribute("Hover", nil)
 		b:SetAttribute("Down", nil)
 		Buttons.refresh(b)
+		local ps = b:FindFirstChild("Press") :: UIScale?
+		if ps then
+			ps.Scale = 1
+		end
 	end)
+	-- press feedback: a quick squash to 95% and back
+	local press = new("UIScale", { Name = "Press", Parent = b })
+	local quick = TweenInfo.new(0.07, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 	b.MouseButton1Down:Connect(function()
 		b:SetAttribute("Down", true)
 		Buttons.refresh(b)
+		if b:GetAttribute("State") ~= "Disabled" then
+			TweenService:Create(press, quick, { Scale = 0.95 }):Play()
+		end
 	end)
 	b.MouseButton1Up:Connect(function()
 		b:SetAttribute("Down", nil)
 		Buttons.refresh(b)
+		TweenService:Create(press, quick, { Scale = 1 }):Play()
 	end)
 end
 
@@ -74766,6 +75419,10 @@ function Buttons.refresh(b: GuiButton)
 		end
 	end
 	b.Active = state ~= "Disabled"
+	local ps = b:FindFirstChild("Press") :: UIScale?
+	if ps and state ~= "Disabled" then
+		ps.Scale = if b:GetAttribute("Down") then 0.95 else 1
+	end
 end
 
 function Buttons.setState(b: GuiButton, state: string)
@@ -74973,7 +75630,7 @@ return Buttons
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="927">
+          <Item class="ModuleScript" referent="928">
             <Properties>
               <string name="Name">Theme</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -75035,7 +75692,7 @@ return Theme
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="928">
+          <Item class="ModuleScript" referent="929">
             <Properties>
               <string name="Name">UI</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -75252,7 +75909,7 @@ return UI
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="929">
+  <Item class="Workspace" referent="930">
     <Properties>
       <string name="Name">Workspace</string>
       <float name="Gravity">196.2</float>

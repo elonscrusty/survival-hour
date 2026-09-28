@@ -28,6 +28,7 @@ end
 function CameraCtl.Start()
 	player.CameraMaxZoomDistance = Config.Camera.MaxZoom
 	player.CameraMinZoomDistance = Config.Camera.MinZoom
+	CameraCtl._feel()
 
 	local gui = UI.new("ScreenGui", { Name = "Crosshair", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 3, Parent = player:WaitForChild("PlayerGui") })
 	local ch = UI.new("Frame", { Size = UDim2.fromOffset(28, 28), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundTransparency = 1, Visible = false, Parent = gui })
@@ -68,6 +69,48 @@ function CameraCtl.Start()
 	end)
 end
 
+-- Feel layer: one field-of-view target (aim zoom, a small sprint widen, a brief
+-- damage punch) eased every frame, a tiny damage roll, and low-health /
+-- exhausted screen tint. Deliberately subtle (no screen shake loops).
+local punchAt = -10
+local punchRoll = 0
+function CameraCtl._feel()
+	local cc = Instance.new("ColorCorrectionEffect")
+	cc.Name = "FeelGrade"
+	cc.Parent = game:GetService("Lighting")
+	State.On("Hit", function(h)
+		if h.Kind == "Hurt" then
+			punchAt = os.clock()
+			punchRoll = (if math.random() < 0.5 then -1 else 1) * math.clamp((h.Amount or 10) / 40, 0.2, 1)
+		end
+	end)
+	RunService:BindToRenderStep("SurvivalHourFeel", Enum.RenderPriority.Camera.Value + 2, function(dt)
+		local char = character()
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		local target = Config.Camera.DefaultFov
+		if CameraCtl.Aiming then
+			target = Config.Camera.AimFov
+		elseif hum and player:GetAttribute("Sprinting") and hum.MoveDirection.Magnitude > 0.1 then
+			target += Config.Camera.SprintFovBonus
+		end
+		local since = os.clock() - punchAt
+		if since < 0.22 then
+			local k = 1 - since / 0.22
+			target -= 3 * k
+			camera.CFrame *= CFrame.Angles(0, 0, math.rad(0.8 * punchRoll * k))
+		end
+		camera.FieldOfView += (target - camera.FieldOfView) * math.clamp(dt * 10, 0, 1)
+		-- grading: drained colour when exhausted, reddish edge of vision when badly hurt
+		local inMatch = player:GetAttribute("InMatch") == true
+		local low = inMatch and hum ~= nil and hum.Health > 0 and hum.Health < hum.MaxHealth * 0.3
+		local tired = inMatch and player:GetAttribute("Exhausted") == true
+		local sat = (if tired then -0.25 else 0) + (if low then -0.3 else 0)
+		cc.Saturation += (sat - cc.Saturation) * math.clamp(dt * 4, 0, 1)
+		local tint = if low then Color3.fromRGB(255, 225 + 15 * math.sin(os.clock() * 4), 225) else Color3.new(1, 1, 1)
+		cc.TintColor = cc.TintColor:Lerp(tint, math.clamp(dt * 4, 0, 1))
+	end)
+end
+
 function CameraCtl.SetAiming(on: boolean)
 	if CameraCtl.Aiming == on then
 		return
@@ -78,7 +121,6 @@ function CameraCtl.SetAiming(on: boolean)
 	if hum then
 		TweenService:Create(hum, TweenInfo.new(0.15), { CameraOffset = if on then Vector3.new(2.2, 0.6, 0) else Vector3.zero }):Play()
 	end
-	TweenService:Create(camera, TweenInfo.new(0.15), { FieldOfView = if on then Config.Camera.AimFov else Config.Camera.DefaultFov }):Play()
 	if crosshair then
 		crosshair.Visible = on
 	end

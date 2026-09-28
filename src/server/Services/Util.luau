@@ -154,6 +154,19 @@ function Util.InMatch(player: Player): boolean
 	return player:GetAttribute("InMatch") == true
 end
 
+-- One-shot character action for the procedural animator (Controllers/Animation):
+-- the client plays the pose for a short window after ActionAt.
+function Util.SetAction(player: Player, action: string, item: string?)
+	local char = player.Character
+	if char then
+		char:SetAttribute("Action", action)
+		char:SetAttribute("ActionAt", workspace:GetServerTimeNow())
+		if item then
+			char:SetAttribute("ActionItem", item)
+		end
+	end
+end
+
 function Util.Notify(player: Player, text: string, kind: string?)
 	Net.FireClient("Notify", player, text, kind or "info")
 end

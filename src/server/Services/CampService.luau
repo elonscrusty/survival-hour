@@ -104,10 +104,13 @@ end
 
 -- Fuel -------------------------------------------------------------------------------------
 
+local critical: { [number]: boolean } = {}
+
 function CampService._burn(dt: number)
 	for team, fire in fires do
 		if not fire.Out and ctx.MatchService.FireBurning(team) then
 			if FireRules.Burn(fire, dt, FIRE) then
+				critical[team] = nil
 				ctx.Util.NotifyTeam(team, "Your fire ran out of fuel and died. You're on your FINAL LIFE.", "danger")
 				ctx.MatchService.ExtinguishFire(team, nil)
 			else
@@ -116,6 +119,13 @@ function CampService._burn(dt: number)
 					ctx.Util.NotifyTeam(team, "Your fire is low on fuel! Add Wood before it dies for good.", "warn")
 				elseif fire.Fuel >= FIRE.FuelWarning + 0.05 then
 					warned[team] = false
+					critical[team] = nil
+				end
+				if fire.Fuel < 0.05 and not critical[team] then
+					critical[team] = true
+					for _, mate in ctx.Util.TeamPlayers(team) do
+						Net.FireClient("MatchEvent", mate, "FireCritical", {})
+					end
 				end
 				CampService._syncFire(team)
 			end
@@ -201,6 +211,8 @@ function CampService._onFeed(player: Player, prompt: ProximityPrompt)
 		return
 	end
 	FireRules.AddWood(fire, n, FIRE, fuelMult)
+	ctx.Util.SetAction(player, "Feed")
+	Net.FireAll("Fx", "FireFed", { Pos = camps[team].FirePos, Amount = n })
 	ctx.InventoryService.Sync(player)
 	CampService._syncFire(team)
 	ctx.Util.Notify(player, string.format("Added %d Wood · fuel %d%%", n, math.floor(fire.Fuel * 100 + 0.5)), "success")

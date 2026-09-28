@@ -57,6 +57,89 @@ local function burst(pos: Vector3, color: Color3, count: number, speed: number, 
 	Debris:AddItem(a, 2)
 end
 
+-- Pooled particle emitters (one anchored holder per effect kind, moved and
+-- re-emitted) so harvesting and combat never create parts per hit.
+local FX_KINDS = {
+	Bark = { Colors = { Color3.fromRGB(120, 84, 52), Color3.fromRGB(196, 160, 110) }, Size = 0.32, Speed = 16, Life = 0.7, Grav = 45, Shape = "Chip" },
+	Splinter = { Colors = { Color3.fromRGB(206, 176, 128), Color3.fromRGB(150, 112, 70) }, Size = 0.26, Speed = 14, Life = 0.6, Grav = 40, Shape = "Chip" },
+	Stone = { Colors = { Color3.fromRGB(128, 126, 122), Color3.fromRGB(92, 90, 88) }, Size = 0.34, Speed = 15, Life = 0.6, Grav = 55, Shape = "Chip" },
+	Leaves = { Colors = { Color3.fromRGB(96, 150, 70), Color3.fromRGB(150, 180, 80) }, Size = 0.4, Speed = 7, Life = 1.3, Grav = 6, Shape = "Leaf" },
+	Berries = { Colors = { Color3.fromRGB(170, 40, 70), Color3.fromRGB(90, 140, 60) }, Size = 0.3, Speed = 8, Life = 0.8, Grav = 30, Shape = "Chip" },
+	Spores = { Colors = { Color3.fromRGB(210, 240, 190), Color3.fromRGB(160, 220, 150) }, Size = 0.25, Speed = 3, Life = 1.6, Grav = -2, Shape = "Glow" },
+	Dust = { Colors = { Color3.fromRGB(150, 138, 120), Color3.fromRGB(110, 100, 90) }, Size = 1.6, Speed = 5, Life = 1.1, Grav = -1, Shape = "Puff" },
+	Water = { Colors = { Color3.fromRGB(170, 210, 255), Color3.fromRGB(230, 240, 255) }, Size = 0.4, Speed = 10, Life = 0.7, Grav = 40, Shape = "Chip" },
+	Steam = { Colors = { Color3.fromRGB(230, 232, 236), Color3.fromRGB(180, 184, 190) }, Size = 2.4, Speed = 4, Life = 1.8, Grav = -6, Shape = "Puff" },
+	Blood = { Colors = { Color3.fromRGB(150, 20, 20), Color3.fromRGB(90, 10, 10) }, Size = 0.25, Speed = 9, Life = 0.5, Grav = 50, Shape = "Chip" },
+	Sparks = { Colors = { Color3.fromRGB(255, 220, 140), Color3.fromRGB(255, 150, 60) }, Size = 0.18, Speed = 14, Life = 0.35, Grav = 30, Shape = "Glow" },
+}
+local pool: { [string]: { Holder: BasePart, Emitter: ParticleEmitter } } = {}
+
+local function emitter(kind: string)
+	local e = pool[kind]
+	if e and e.Holder.Parent then
+		return e
+	end
+	local spec = FX_KINDS[kind] or FX_KINDS.Dust
+	local holder = part({ Name = "Fx_" .. kind, Size = Vector3.new(0.2, 0.2, 0.2), Transparency = 1 })
+	local pe = Instance.new("ParticleEmitter")
+	pe.Rate = 0
+	pe.Color = ColorSequence.new(spec.Colors[1], spec.Colors[2])
+	pe.Lifetime = NumberRange.new(spec.Life * 0.6, spec.Life)
+	pe.Speed = NumberRange.new(spec.Speed * 0.4, spec.Speed)
+	pe.SpreadAngle = Vector2.new(60, 60)
+	pe.Acceleration = Vector3.new(0, -spec.Grav, 0)
+	pe.Drag = if spec.Shape == "Puff" then 2 else 0.5
+	pe.Rotation = NumberRange.new(0, 360)
+	pe.RotSpeed = NumberRange.new(-240, 240)
+	if spec.Shape == "Puff" then
+		pe.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, spec.Size * 0.5), NumberSequenceKeypoint.new(1, spec.Size * 1.6) })
+		pe.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.55), NumberSequenceKeypoint.new(1, 1) })
+		pe.SpreadAngle = Vector2.new(180, 180)
+	elseif spec.Shape == "Glow" then
+		pe.Size = NumberSequence.new(spec.Size, 0)
+		pe.LightEmission = 1
+		pe.SpreadAngle = Vector2.new(180, 180)
+	else
+		pe.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, spec.Size), NumberSequenceKeypoint.new(0.8, spec.Size * 0.8), NumberSequenceKeypoint.new(1, 0) })
+		pe.Squash = NumberSequence.new(if spec.Shape == "Leaf" then 0.6 else 0.3)
+	end
+	pe.Parent = holder
+	e = { Holder = holder, Emitter = pe }
+	pool[kind] = e
+	return e
+end
+
+-- Emits `count` particles of `kind` at pos, spraying along `dir` (default up).
+local function emitAt(kind: string, pos: Vector3, count: number, dir: Vector3?)
+	local e = emitter(kind)
+	local d = if dir and dir.Magnitude > 0.01 then dir.Unit else Vector3.yAxis
+	-- ParticleEmitters spray along the holder's +Y (EmissionDirection Top)
+	e.Holder.CFrame = CFrame.lookAt(pos, pos + d) * CFrame.Angles(-math.pi / 2, 0, 0)
+	e.Emitter:Emit(count)
+end
+
+-- Quick client-side jolt for a struck rock / bush / ore node (visual only).
+local jolting: { [Model]: boolean } = {}
+local function jolt(m: Model?, from: Vector3?)
+	if not m or not m.Parent or jolting[m] then
+		return
+	end
+	jolting[m] = true
+	local home = m:GetPivot()
+	local away = if from then (home.Position - from) * Vector3.new(1, 0, 1) else Vector3.zero
+	local push = if away.Magnitude > 0.01 then away.Unit * 0.18 else Vector3.zero
+	task.spawn(function()
+		for _, k in { 1, -0.6, 0.3, 0 } do
+			if not m.Parent then
+				break
+			end
+			m:PivotTo(home + push * k)
+			task.wait(0.03)
+		end
+		jolting[m] = nil
+	end)
+end
+
 local function onFx(ev: any)
 	local d = ev.Data
 	local name = ev.Name
@@ -90,9 +173,9 @@ local function onFx(ev: any)
 		burst(d.Origin, Color3.fromRGB(255, 200, 120), 8, 12, 0.3)
 		burst(d.End, Color3.fromRGB(160, 150, 140), 6, 8, 0.25)
 	elseif name == "Impact" then
-		burst(d.Pos, if d.Kind == "Structure" then Color3.fromRGB(170, 130, 90) else Color3.fromRGB(200, 60, 60), 8, 12, 0.3)
+		emitAt(if d.Kind == "Structure" then "Splinter" else "Blood", d.Pos, if d.Kind == "Structure" then 10 else 6)
 	elseif name == "Block" then
-		burst(d.Pos + Vector3.new(0, 1.5, 0), Color3.fromRGB(255, 240, 180), 12, 16, 0.25)
+		emitAt("Sparks", d.Pos + Vector3.new(0, 1.5, 0), 14)
 	elseif name == "StructureBreak" then
 		for i = 1, 8 do
 			local chunk = part({ Size = Vector3.new(1.2, 0.5, 0.8), Position = d.Pos + Vector3.new(math.random(-3, 3), math.random(1, 6), math.random(-3, 3)), Color = Color3.fromRGB(130, 92, 58), Material = Enum.Material.Wood, Anchored = false })
@@ -104,6 +187,34 @@ local function onFx(ev: any)
 		burst(d.Pos + Vector3.new(0, 2, 0), Color3.fromRGB(255, 170, 70), 40, 20, 0.5)
 	elseif name == "Cosmetic" then
 		burst(d.Pos, d.Color or Color3.new(1, 1, 1), d.Count or 25, 14, 0.7)
+	elseif name == "ResourceHit" then
+		-- chips fly back toward the swinger, like a real strike
+		local toward = if d.From then (d.From - d.Pos) * Vector3.new(1, 0, 1) + Vector3.new(0, 1.2, 0) else nil
+		emitAt(d.Kind or "Dust", d.Pos, if d.Kind == "Leaves" or d.Kind == "Spores" then 8 else 12, toward)
+		if d.Kind == "Stone" then
+			emitAt("Dust", d.Pos, 3)
+			emitAt("Sparks", d.Pos, 4, toward)
+		end
+		jolt(d.Model, d.From)
+	elseif name == "ResourceBreak" then
+		emitAt(d.Kind or "Dust", d.Pos, if d.Big then 40 else 22)
+		emitAt("Dust", d.Pos, if d.Big then 10 else 5)
+	elseif name == "PourStart" then
+		emitAt("Water", d.Pos + Vector3.new(0, 2, 0), 18)
+		emitAt("Steam", d.Pos + Vector3.new(0, 2, 0), 8)
+	elseif name == "FireFed" then
+		-- wood hits the fire: a flare of sparks and embers
+		emitAt("Sparks", d.Pos + Vector3.new(0, 2, 0), math.clamp(6 + (d.Amount or 1), 8, 30))
+		emitAt("Dust", d.Pos + Vector3.new(0, 1, 0), 3)
+	elseif name == "BenchUpgrade" then
+		emitAt("Sparks", d.Pos + Vector3.new(0, 3, 0), 30)
+		emitAt("Dust", d.Pos + Vector3.new(0, 1, 0), 8)
+		burst(d.Pos + Vector3.new(0, 4, 0), Color3.fromRGB(255, 210, 120), 20, 10, 0.5)
+	elseif name == "Built" then
+		emitAt("Dust", d.Pos + Vector3.new(0, 1, 0), 8)
+		emitAt("Splinter", d.Pos + Vector3.new(0, 2, 0), 6)
+	elseif name == "Blood" then
+		emitAt("Blood", d.Pos, 8, d.Dir)
 	end
 end
 

@@ -282,6 +282,11 @@ function MatchService._enterPhase(phase: string)
 				ctx.WorldService.ApplyLighting("Day", false)
 			end
 		end)
+		task.delay(len * Config.Lighting.AfternoonAt, function()
+			if token == phaseToken and MatchService.Phase == "Day" then
+				ctx.WorldService.ApplyLighting("Afternoon", false)
+			end
+		end)
 		task.delay(len * Config.Lighting.SunsetAt, function()
 			if token == phaseToken and MatchService.Phase == "Day" then
 				ctx.WorldService.ApplyLighting("Sunset", false)

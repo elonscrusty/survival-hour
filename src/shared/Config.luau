@@ -243,6 +243,7 @@ Config.Camera = {
 	MinZoom = 6,
 	AimFov = 55,
 	DefaultFov = 70,
+	SprintFovBonus = 6, -- subtle widen while sprinting
 }
 
 Config.RateLimits = {
@@ -293,6 +294,24 @@ Config.Lighting = {
 		Saturation = 0.08,
 		Contrast = 0.05,
 		Tint = Color3.fromRGB(255, 250, 240),
+	},
+	Afternoon = {
+		-- warmer, longer shadows: the day visibly turning
+		ClockTime = 15.8,
+		Brightness = 2.2,
+		Ambient = Color3.fromRGB(100, 94, 92),
+		OutdoorAmbient = Color3.fromRGB(145, 132, 118),
+		FogColor = Color3.fromRGB(205, 190, 170),
+		FogStart = 130,
+		FogEnd = 800,
+		ColorShift = Color3.fromRGB(255, 220, 180),
+		Density = 0.32,
+		AtmoColor = Color3.fromRGB(215, 200, 180),
+		Decay = Color3.fromRGB(140, 120, 100),
+		Haze = 1,
+		Saturation = 0.1,
+		Contrast = 0.06,
+		Tint = Color3.fromRGB(255, 244, 230),
 	},
 	Sunset = {
 		ClockTime = 17.7,
@@ -346,6 +365,7 @@ Config.Lighting = {
 		Contrast = 0.06,
 		Tint = Color3.fromRGB(255, 238, 220),
 	},
+	AfternoonAt = 0.42, -- fraction of the day when light turns to afternoon
 	SunsetAt = 0.72, -- fraction of the day after which the sun sets
 	DawnTime = 12, -- seconds of dawn light at the start of each day
 	TransitionTime = 8,

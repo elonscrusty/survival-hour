@@ -227,6 +227,8 @@ function BuildService._onPlace(p: Player, req: any)
 	ctx.InventoryService.Sync(p)
 	ctx.StorageService.SyncTeam(team)
 	BuildService.Spawn(req.Id, team, ground, yaw, p)
+	ctx.Util.SetAction(p, "Build")
+	Net.FireAll("Fx", "Built", { Pos = ground })
 	Net.FireClient("MatchEvent", p, "BuildResult", { Ok = true, Id = req.Id })
 end
 
@@ -339,6 +341,7 @@ function BuildService.Repair(p: Player, s: Structure)
 		ctx.InventoryService.Sync(p)
 		ctx.StorageService.SyncTeam(s.Team)
 	end
+	ctx.Util.SetAction(p, "Build")
 	local amount = math.min(s.Max - s.Health, s.Max * Recipes.Repair.RepairFraction * ctx.PowerupService.RepairMult(p))
 	s.Health += amount
 	local fromEnemy = math.min(amount, s.EnemyDamage)

@@ -255,7 +255,7 @@ function StorageService._beginBreach(p: Player, e: Entry, prompt: ProximityPromp
 		Prompt = prompt,
 		InterruptOnDamage = true,
 		MoveTolerance = 3,
-		Action = if useCharge then "Gather" else "Chop",
+		Action = if useCharge then "Gather" else "Breach",
 		TargetKey = e.Key,
 		Position = function()
 			return if model.Parent and byKey[e.Key] then model:GetPivot().Position else nil

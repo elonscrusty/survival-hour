@@ -88,6 +88,7 @@ local order = {
 	"Animation",
 	"Creatures",
 	"Effects",
+	"Guide",
 	"Spectate",
 	"Dev",
 }

@@ -105,6 +105,16 @@ function Camp.SetFire(m: Model, level: number, fuel: number)
 	if glow and glow.Enabled then
 		glow.Range = math.min(60, (40 + lv * 5) * (0.6 + 0.4 * f))
 		glow.Brightness = (2.2 + lv * 0.35) * f
+		-- a starving fire burns deep red; a healthy one warm gold
+		if not m:GetAttribute("FlameSkin") then
+			local starving = math.clamp(1 - fuel / 0.15, 0, 1)
+			glow.Color = Color3.fromRGB(255, 190, 110):Lerp(Color3.fromRGB(255, 90, 40), starving)
+		end
+	end
+	if flame and flame.Enabled and not m:GetAttribute("FlameSkin") then
+		local starving = math.clamp(1 - fuel / 0.15, 0, 1)
+		flame.Color = Color3.fromRGB(255, 150, 50):Lerp(Color3.fromRGB(200, 60, 20), starving)
+		flame.SecondaryColor = Color3.fromRGB(255, 220, 120):Lerp(Color3.fromRGB(120, 30, 10), starving)
 	end
 	local sparks = core:FindFirstChild("Sparks") :: ParticleEmitter?
 	if sparks and sparks.Enabled then

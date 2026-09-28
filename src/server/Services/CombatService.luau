@@ -90,6 +90,10 @@ function CombatService.DamagePlayer(victim: Player, amount: number, source: Sour
 			local r = CombatRules.Block(dmg, if isShield then bdef.BlockReduction else CFG.BlockReduction, ctx.StaminaService.Get(victim),
 				if isShield then CFG.ShieldDrainPerHp else CFG.BlockDrainPerHp, if source.Heavy then CFG.HeavyGuardDrain else 0)
 			ctx.StaminaService.Drain(victim, r.Drain)
+			local bchar = victim.Character
+			if bchar then
+				bchar:SetAttribute("BlockHitAt", workspace:GetServerTimeNow())
+			end
 			if slot then
 				ctx.InventoryService.Wear(victim, slot, math.max(1, math.ceil((dmg - r.Taken) / 4)))
 			end
@@ -124,6 +128,15 @@ function CombatService.DamagePlayer(victim: Player, amount: number, source: Sour
 	ctx.CampService.NoteHurt(victim)
 	hum.Health = math.max(0, hum.Health - dmg)
 	ctx.PowerupService.OnPlayerHurt(victim, dmg)
+	-- hit reaction (Animation flinches away from the attacker)
+	local vchar = victim.Character
+	if vchar then
+		vchar:SetAttribute("HitAt", workspace:GetServerTimeNow())
+		if source.Pos then
+			local away = (root.Position - source.Pos) * Vector3.new(1, 0, 1)
+			vchar:SetAttribute("HitDir", if away.Magnitude > 0.1 then away.Unit else nil)
+		end
+	end
 	Net.FireClient("HitFeedback", victim, "Hurt", dmg, source.Pos)
 	if source.By then
 		Net.FireClient("HitFeedback", source.By, "Player", dmg, root.Position)
@@ -240,6 +253,8 @@ function CombatService._onAttack(p: Player, payload: any)
 	char:SetAttribute("Action", "Attack")
 	char:SetAttribute("ActionAt", workspace:GetServerTimeNow())
 	char:SetAttribute("ActionItem", id)
+	char:SetAttribute("ActionHeavy", heavy)
+	char:SetAttribute("ActionVariant", ((char:GetAttribute("ActionVariant") or 0) + 1) % 2) -- alternate swing direction
 
 	local inMatch = p:GetAttribute("InMatch") == true and ctx.MatchService.IsPlaying()
 

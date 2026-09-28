@@ -38,11 +38,17 @@ type Rig = {
 	-- we reuse the stored base instead of stacking offsets.
 	Base: { [Joint]: CFrame },
 	Wrote: { [Joint]: CFrame },
+	-- reaction bookkeeping (client-side only)
+	Held: string?,
+	EquipAt: number,
+	WasAir: boolean,
+	LandAt: number,
 }
 
 local rigs: { [Model]: Rig } = {}
 local localSwingAt = 0
 local localSwingItem = "Fists"
+local localSwingHeavy = false
 local localDraw = false
 
 local ID = CFrame.identity
@@ -81,16 +87,34 @@ local function findRig(char: Model): Rig?
 		Cur = { r = ID, l = ID, w = ID, n = ID },
 		Base = {},
 		Wrote = {},
+		Held = char:GetAttribute("HeldId"),
+		EquipAt = 0,
+		WasAir = false,
+		LandAt = 0,
 	}
 end
 
+local function isBow(item: string): boolean
+	return item == "Bow" or item == "CrudeBow" or item == "HuntingBow"
+end
+
+local function isChopper(item: string): boolean
+	return string.find(item, "Axe$") ~= nil or string.find(item, "Pickaxe$") ~= nil or item == "RepairHammer" or item == "Sledgehammer" or item == "Crowbar"
+end
+
 -- Returns target offsets for right arm, left arm, waist, neck.
+-- Base pose from the current action, then additive reaction layers (hit flinch,
+-- block impact, guard break, landing, equip, sprint lean, exhausted breathing).
 local function pose(rig: Rig, t: number): (CFrame, CFrame, CFrame, CFrame)
 	local char = rig.Char
+	local owner = Players:GetPlayerFromCharacter(char)
+	local now = workspace:GetServerTimeNow()
 	local action = char:GetAttribute("Action") :: string?
 	local at = (char:GetAttribute("ActionAt") :: number?) or 0
 	local item = (char:GetAttribute("ActionItem") :: string?) or (char:GetAttribute("HeldId") :: string?) or "Fists"
-	local elapsed = workspace:GetServerTimeNow() - at
+	local heavy = char:GetAttribute("ActionHeavy") == true
+	local variant = (char:GetAttribute("ActionVariant") :: number?) or 0
+	local elapsed = now - at
 	local isLocal = char == player.Character
 	local phase = t * 6
 	local r, l, w, n = ID, ID, ID, ID
@@ -103,52 +127,92 @@ local function pose(rig: Rig, t: number): (CFrame, CFrame, CFrame, CFrame)
 	end
 
 	-- Local prediction for instant feedback
-	if isLocal and os.clock() - localSwingAt < 0.4 then
+	if isLocal and os.clock() - localSwingAt < 0.6 then
 		action = "Attack"
 		item = localSwingItem
+		heavy = localSwingHeavy
 		elapsed = os.clock() - localSwingAt
 	end
 
-	if (isLocal and localDraw) then
-		r = raise(80, 1) * CFrame.Angles(0, rad(-20), 0)
+	local held = (char:GetAttribute("HeldId") :: string?) or "Fists"
+	if held ~= rig.Held then
+		rig.Held = held
+		rig.EquipAt = t
+	end
+
+	if isLocal and localDraw then
+		-- bow draw: bow arm out, string hand back to the cheek
+		r = raise(85, 1) * CFrame.Angles(0, rad(-35), 0)
 		l = raise(90, -1)
-		w = CFrame.Angles(0, rad(-25), 0)
+		w = CFrame.Angles(0, rad(-30), 0)
+		n = CFrame.Angles(0, rad(20), 0)
 		return r, l, w, n
 	end
 
 	if char:GetAttribute("Blocking") then
-		r = raise(75, 1) * CFrame.Angles(0, rad(35), 0)
-		w = CFrame.Angles(0, rad(10), 0)
+		-- guard: weapon across the body, off hand braced
+		r = raise(78, 1) * CFrame.Angles(0, rad(40), 0)
+		l = raise(55, -1) * CFrame.Angles(0, rad(-25), 0)
+		w = CFrame.Angles(0, rad(12), 0)
+	elseif held == "Crossbow" or held == "Rifle" or held == "Pistol" then
+		-- ranged ready: weapon held low and forward
+		r = raise(35, 1)
+		l = if held == "Pistol" then ID else raise(30, -1)
+	elseif isBow(held) then
+		l = raise(25, -1)
 	end
 
-	if action == "Attack" and elapsed < 0.45 then
-		local k = math.clamp(elapsed / 0.35, 0, 1)
+	local swingLen = if heavy then 0.62 else 0.38
+	if action == "Attack" and elapsed < swingLen + 0.08 then
+		local k = math.clamp(elapsed / swingLen, 0, 1)
 		if item == "Spear" or item == "CrudeSpear" then
-			-- thrust
+			-- thrust (heavy: longer lunge)
 			local ext = math.sin(k * math.pi)
-			r = raise(70 + 20 * ext, 1)
-			w = CFrame.Angles(0, rad(-15 * ext), 0)
-		elseif item == "Bow" then
-			r = raise(80 * (1 - k), 1)
+			r = raise(70 + (if heavy then 30 else 20) * ext, 1)
+			l = raise(50 * ext, -1)
+			w = CFrame.Angles(rad(-8 * ext), rad(-15 * ext), 0)
+		elseif isBow(item) then
+			r = raise(85 * (1 - k), 1)
 			l = raise(90, -1)
-		elseif item == "Pistol" or item == "Rifle" then
+		elseif item == "Crossbow" or item == "Pistol" or item == "Rifle" then
 			local kick = math.max(0, 1 - k * 3)
 			r = raise(90 + 15 * kick, 1)
-			l = if item == "Rifle" then raise(80, -1) else ID
-		elseif string.find(item, "Axe$") or string.find(item, "Pickaxe$") or item == "RepairHammer" then
-			-- overhead chop
-			local a = if k < 0.3 then 150 * (k / 0.3) else 150 - 190 * ((k - 0.3) / 0.7)
+			l = if item == "Pistol" then ID else raise(80, -1)
+			n = CFrame.Angles(rad(-4 * kick), 0, 0)
+		elseif isChopper(item) then
+			-- overhead chop; heavy = bigger wind-up with a waist twist
+			local wind = if heavy then 0.45 else 0.3
+			local top = if heavy then 170 else 150
+			local a = if k < wind then top * (k / wind) else top - (top + 40) * ((k - wind) / (1 - wind))
 			r = raise(a, 1)
-			w = CFrame.Angles(rad(-10 * math.sin(k * math.pi)), 0, 0)
+			l = raise(a * 0.35, -1)
+			w = CFrame.Angles(rad(-12 * math.sin(k * math.pi)), rad((if heavy then 25 else 10) * (1 - k)), 0)
 		else
-			-- horizontal slash (sword, fists, shield bash)
-			local a = if k < 0.25 then -60 * (k / 0.25) else -60 + 140 * ((k - 0.25) / 0.75)
-			r = raise(80, 1) * CFrame.Angles(0, rad(a), 0)
-			w = CFrame.Angles(0, rad(-a * 0.3), 0)
+			-- horizontal slash; alternates direction, heavy is a wide wind-up
+			local dir = if variant == 0 then 1 else -1
+			local wind = if heavy then 0.4 else 0.25
+			local span = if heavy then 170 else 140
+			local a = if k < wind then -60 * dir * (k / wind) else dir * (-60 + span * ((k - wind) / (1 - wind)))
+			r = raise(if variant == 0 then 80 else 95, 1) * CFrame.Angles(0, rad(a), 0)
+			l = raise(30, -1)
+			w = CFrame.Angles(0, rad(-a * (if heavy then 0.45 else 0.3)), 0)
 		end
-	elseif action == "Chop" then
-		local k = (phase % 3) / 3
-		r = raise(if k < 0.4 then 140 * (k / 0.4) else 140 - 180 * ((k - 0.4) / 0.6), 1)
+	elseif action == "Chop" or action == "Breach" then
+		-- repeated overhead strikes; breaching is slower and heavier
+		local rate = if action == "Breach" then 2.4 else 3
+		local k = (phase % rate) / rate
+		local a = if k < 0.4 then 150 * (k / 0.4) else 150 - 190 * ((k - 0.4) / 0.6)
+		r = raise(a, 1)
+		l = raise(a * 0.4, -1)
+		w = CFrame.Angles(rad(-10 * math.max(0, math.sin(k * math.pi * 2))), rad(12), 0)
+	elseif action == "Mine" then
+		-- pickaxe: bent over, swinging down at the rock
+		local k = (phase % 2.6) / 2.6
+		local a = if k < 0.45 then 135 * (k / 0.45) else 135 - 175 * ((k - 0.45) / 0.55)
+		r = raise(a, 1)
+		l = raise(a * 0.5, -1)
+		w = CFrame.Angles(rad(-18), 0, 0)
+		n = CFrame.Angles(rad(-15), 0, 0)
 	elseif action == "Gather" or action == "Fill" then
 		w = CFrame.Angles(rad(-35), 0, 0)
 		n = CFrame.Angles(rad(-15), 0, 0)
@@ -159,9 +223,36 @@ local function pose(rig: Rig, t: number): (CFrame, CFrame, CFrame, CFrame)
 		w = CFrame.Angles(rad(-12), 0, 0)
 		n = CFrame.Angles(rad(-20), 0, 0)
 	elseif action == "Bandage" then
+		-- wrapping: both hands circle over the forearm, head down to watch
 		r = raise(60, 1) * CFrame.Angles(0, rad(40 + 15 * math.sin(phase * 2)), 0)
 		l = raise(60, -1) * CFrame.Angles(0, rad(-40 - 15 * math.sin(phase * 2)), 0)
+		n = CFrame.Angles(rad(-25), 0, 0)
+		w = CFrame.Angles(rad(-6), 0, 0)
+	elseif action == "Craft" and elapsed < 1.2 then
+		-- quick hammering at the bench
+		local k = (phase * 1.4) % 1
+		r = raise(70 + 40 * math.max(0, math.sin(k * math.pi * 2)), 1)
+		l = raise(55, -1) * CFrame.Angles(0, rad(-20), 0)
+		w = CFrame.Angles(rad(-15), 0, 0)
 		n = CFrame.Angles(rad(-20), 0, 0)
+	elseif action == "Craft" then
+		-- long craft channel: hands busy at chest height
+		r = raise(55 + 12 * math.sin(phase * 2.2), 1) * CFrame.Angles(0, rad(20), 0)
+		l = raise(55 + 12 * math.sin(phase * 2.2 + 1.3), -1) * CFrame.Angles(0, rad(-20), 0)
+		w = CFrame.Angles(rad(-12), 0, 0)
+		n = CFrame.Angles(rad(-22), 0, 0)
+	elseif action == "Build" and elapsed < 0.9 then
+		-- two hammer taps
+		local k = (elapsed / 0.45) % 1
+		r = raise(if k < 0.4 then 120 * (k / 0.4) else 120 - 110 * ((k - 0.4) / 0.6), 1)
+		w = CFrame.Angles(rad(-10), 0, 0)
+	elseif action == "Feed" and elapsed < 0.7 then
+		-- toss wood onto the fire
+		local k = elapsed / 0.7
+		local a = if k < 0.4 then 20 + 60 * (k / 0.4) else 80 - 40 * ((k - 0.4) / 0.6)
+		r = raise(a, 1)
+		l = raise(a, -1)
+		w = CFrame.Angles(rad(-20 * math.sin(k * math.pi)), 0, 0)
 	elseif action == "Open" or action == "Steal" then
 		w = CFrame.Angles(rad(-30), 0, 0)
 		r = raise(55 + 30 * math.sin(phase * 2), 1)
@@ -189,11 +280,54 @@ local function pose(rig: Rig, t: number): (CFrame, CFrame, CFrame, CFrame)
 			r = raise(170, 1)
 			n = CFrame.Angles(rad(15), 0, 0)
 		end
-	elseif action == "Ability" and elapsed < 0.6 then
-		local k = math.sin(math.clamp(elapsed / 0.6, 0, 1) * math.pi)
-		r = raise(150 * k, 1)
-		l = raise(150 * k, -1)
-		n = CFrame.Angles(rad(15 * k), 0, 0)
+	end
+
+	-- Reaction layers ---------------------------------------------------------------
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	-- equip: the new item comes up from the hip
+	local eq = t - rig.EquipAt
+	if eq < 0.28 and held ~= "Fists" then
+		r = raise(-35 * (1 - eq / 0.28), 1) * r
+	end
+	-- airborne arms lift a little; landing dips the torso
+	local air = hum ~= nil and hum.FloorMaterial == Enum.Material.Air
+	if air then
+		l = raise(18, -1) * l
+		r = raise(12, 1) * r
+	elseif rig.WasAir then
+		rig.LandAt = t
+	end
+	rig.WasAir = air
+	local land = t - rig.LandAt
+	if land < 0.25 then
+		w = CFrame.Angles(rad(-10 * math.sin(land / 0.25 * math.pi)), 0, 0) * w
+	end
+	-- sprint lean / exhausted breathing
+	if owner and owner:GetAttribute("Sprinting") and hum and hum.MoveDirection.Magnitude > 0.1 then
+		w = CFrame.Angles(rad(-7), 0, 0) * w
+	elseif owner and owner:GetAttribute("Exhausted") then
+		w = CFrame.Angles(rad(-8 + 3 * math.sin(t * 5)), 0, 0) * w
+		n = CFrame.Angles(rad(4 * math.sin(t * 5)), 0, 0) * n
+	end
+	-- guard broken: arms drop and the torso staggers
+	if owner and (owner:GetAttribute("GuardBrokenUntil") or 0) > now then
+		r = raise(-15, 1)
+		l = raise(-15, -1)
+		w = CFrame.Angles(rad(8), rad(10 * math.sin(t * 9)), 0) * w
+	end
+	-- block impact: the guard is knocked back
+	local bh = now - ((char:GetAttribute("BlockHitAt") :: number?) or 0)
+	if bh < 0.22 then
+		local k = math.sin(bh / 0.22 * math.pi)
+		r = raise(-18 * k, 1) * r
+		w = CFrame.Angles(rad(6 * k), 0, 0) * w
+	end
+	-- hit flinch: head and torso snap away from the blow
+	local hit = now - ((char:GetAttribute("HitAt") :: number?) or 0)
+	if hit < 0.3 then
+		local k = math.sin(hit / 0.3 * math.pi)
+		w = CFrame.Angles(rad(10 * k), 0, rad(4 * k)) * w
+		n = CFrame.Angles(rad(12 * k), 0, 0) * n
 	end
 	return r, l, w, n
 end
@@ -229,6 +363,7 @@ function Animation.Start()
 		if a.Kind == "Attack" or a.Kind == "Heavy" or a.Kind == "Release" then
 			localSwingAt = os.clock()
 			localSwingItem = a.Item
+			localSwingHeavy = a.Kind == "Heavy"
 			localDraw = false
 		elseif a.Kind == "Draw" then
 			localDraw = true

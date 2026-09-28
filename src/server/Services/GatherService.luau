@@ -451,7 +451,8 @@ function GatherService._apply(p: Player, n: Node, toolType: string?, power: numb
 	end
 	ctx.Util.PlaySound(if r.Finished and def.Kind == "Tree" then "ChopHeavy" else def.Sounds.Hit, n.Model.PrimaryPart)
 	local hitPos = n.Pos + Vector3.new(0, if def.Kind == "Tree" then 2.5 else 1, 0)
-	Net.FireAll("Fx", "ResourceHit", { Pos = hitPos, From = from, Kind = def.Effects.Hit })
+	-- non-tree nodes (rocks, bushes, ore) get a quick client-side jolt; trees shudder server-side
+	Net.FireAll("Fx", "ResourceHit", { Pos = hitPos, From = from, Kind = def.Effects.Hit, Model = if def.Kind ~= "Tree" then n.Model else nil, Last = r.Finished })
 	Net.FireClient("HitFeedback", p, "Resource", r.Dealt)
 	n.Model:SetAttribute("Health", n.S.Health)
 	n.Model:SetAttribute("MaxHealth", n.S.Max)
@@ -538,7 +539,7 @@ function GatherService._onGatherPrompt(p: Player, prompt: ProximityPrompt)
 		Duration = duration,
 		Range = def.Range,
 		InterruptOnDamage = true,
-		Action = if def.Kind == "Tree" then "Chop" else "Gather",
+		Action = if def.Kind == "Tree" then "Chop" elseif def.RequiredTool == "Pickaxe" then "Mine" else "Gather",
 		Position = function()
 			return if ResourceRules.Available(n.S) then n.Pos else nil
 		end,

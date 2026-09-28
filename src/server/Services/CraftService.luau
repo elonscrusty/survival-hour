@@ -196,6 +196,8 @@ function CraftService._onUpgrade(p: Player)
 	end
 	ctx.CampService.SetLevel(team, level + 1)
 	ctx.PowerupService.OnWorkbenchLevel(p, team, level + 1)
+	ctx.Util.SetAction(p, "Craft")
+	Net.FireAll("Fx", "BenchUpgrade", { Pos = ctx.CampService.GetCamp(team).WorkbenchCF.Position, Level = level + 1 })
 	ctx.InventoryService.Sync(p)
 	ctx.StorageService.SyncTeam(team)
 	ctx.Util.NotifyTeam(team, p.DisplayName .. " upgraded the workbench to level " .. (level + 1) .. "! New recipes unlocked.", "success")

@@ -166,8 +166,21 @@ local function refreshVitals()
 		-- Unlimited respawns while the fire burns: show the fire's level and fuel instead.
 		local fuel = player:GetAttribute("FireFuel") or 0
 		local lvl = player:GetAttribute("FireLevel") or 1
-		livesLabel.Text = string.format("🔥 Fire L%d · fuel %d%%", lvl, math.floor(fuel * 100 + 0.5))
-		livesLabel.TextColor3 = if fuel < 0.15 then C.Warn else C.Text
+		local state = if fuel < 0.05 then "  CRITICAL!" elseif fuel < 0.15 then "  LOW FUEL" else ""
+		livesLabel.Text = string.format("🔥 Fire L%d · fuel %d%%", lvl, math.floor(fuel * 100 + 0.5)) .. state
+		-- thin fuel bar under the label: ember orange → amber → pulsing red
+		local back = livesLabel:FindFirstChild("FuelBack") :: Frame?
+		if not back then
+			back = UI.new("Frame", { Name = "FuelBack", AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, 2), Size = UDim2.new(0.9, 0, 0, 4), BackgroundColor3 = Color3.fromRGB(15, 12, 10), BorderSizePixel = 0, Parent = livesLabel }, {
+				UI.corner(UDim.new(0, 2)),
+				UI.new("Frame", { Name = "FuelBar", Size = UDim2.fromScale(1, 1), BorderSizePixel = 0 }, { UI.corner(UDim.new(0, 2)) }),
+			})
+		end
+		local b = (back :: Frame):FindFirstChild("FuelBar") :: Frame
+		b.Size = UDim2.fromScale(math.clamp(fuel, 0, 1), 1)
+		local pulse = 0.5 + 0.5 * math.sin(os.clock() * 8)
+		b.BackgroundColor3 = if fuel < 0.15 then C.Bad:Lerp(Color3.new(1, 1, 1), 0.3 * pulse) elseif fuel < 0.4 then C.Warn else C.Accent
+		livesLabel.TextColor3 = if fuel < 0.05 then C.Bad elseif fuel < 0.15 then C.Warn else C.Text
 	elseif fire then
 		local flames = string.rep("🔥", math.min(free, 10))
 		livesLabel.Text = "Respawns: " .. flames .. "  (" .. free .. " left)"
@@ -526,6 +539,8 @@ local function onMatchEvent(ev: any)
 		pushFeed("✚ " .. teamTag(d.ByTeam) .. tostring(d.By) .. " opened a care package", C.TextDim)
 	elseif name == "MatchEnded" then
 		showEnd(d)
+	elseif name == "FireCritical" then
+		Hud.Announce("🔥 YOUR FIRE IS DYING", "Add Wood now or you lose your respawns", C.Bad, 4)
 	elseif name == "Sunset" then
 		Hud.Announce("🌅 SUNSET", "Night falls soon — get back to your fire.", C.Warn, 3)
 	elseif name == "Reward" then

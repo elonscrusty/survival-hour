@@ -6,6 +6,7 @@
 local Players = game:GetService("Players")
 local GuiService = game:GetService("GuiService")
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 
 local UI = require("../UI/UI")
 local Theme = require("../UI/Theme")
@@ -78,6 +79,10 @@ function Panels.Open(name: string)
 	end
 	Panels.Current = name
 	p.Frame.Visible = true
+	-- quick pop-in (fast enough to never slow the player down)
+	local pop = p.Frame:FindFirstChild("Pop") :: UIScale? or UI.new("UIScale", { Name = "Pop", Parent = p.Frame })
+	pop.Scale = 0.93
+	TweenService:Create(pop, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1 }):Play()
 	if p.OnOpen then
 		p.OnOpen()
 	end

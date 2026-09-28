@@ -13,6 +13,8 @@
 -- (grey, ignores clicks) · Selected/Equipped (gold rim + glow, ✓).
 -- Tones pick the resting colour: Neutral, Green, Gold, Red, Blue.
 
+local TweenService = game:GetService("TweenService")
+
 local Theme = require("./Theme")
 
 local Buttons = {}
@@ -133,14 +135,25 @@ function Buttons.decorate(b: GuiButton, tone: string?, radius: UDim?)
 		b:SetAttribute("Hover", nil)
 		b:SetAttribute("Down", nil)
 		Buttons.refresh(b)
+		local ps = b:FindFirstChild("Press") :: UIScale?
+		if ps then
+			ps.Scale = 1
+		end
 	end)
+	-- press feedback: a quick squash to 95% and back
+	local press = new("UIScale", { Name = "Press", Parent = b })
+	local quick = TweenInfo.new(0.07, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 	b.MouseButton1Down:Connect(function()
 		b:SetAttribute("Down", true)
 		Buttons.refresh(b)
+		if b:GetAttribute("State") ~= "Disabled" then
+			TweenService:Create(press, quick, { Scale = 0.95 }):Play()
+		end
 	end)
 	b.MouseButton1Up:Connect(function()
 		b:SetAttribute("Down", nil)
 		Buttons.refresh(b)
+		TweenService:Create(press, quick, { Scale = 1 }):Play()
 	end)
 end
 
@@ -177,6 +190,10 @@ function Buttons.refresh(b: GuiButton)
 		end
 	end
 	b.Active = state ~= "Disabled"
+	local ps = b:FindFirstChild("Press") :: UIScale?
+	if ps and state ~= "Disabled" then
+		ps.Scale = if b:GetAttribute("Down") then 0.95 else 1
+	end
 end
 
 function Buttons.setState(b: GuiButton, state: string)

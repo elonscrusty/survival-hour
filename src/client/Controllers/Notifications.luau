@@ -40,9 +40,23 @@ function Notifications.Push(text: string, kind: string?)
 		Parent = card,
 	}, { UI.corner(UDim.new(0.5, 0)) })
 	UI.text(text, { Position = UDim2.fromOffset(30, 0), Size = UDim2.new(1, -30, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextSize = 15, Parent = card })
+	-- pop in (quick scale from 0.85), fade everything out at the end
+	local pop = UI.new("UIScale", { Scale = 0.85, Parent = card })
+	TweenService:Create(pop, TweenInfo.new(0.16, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
 	local life = if k == "gain" then 1.8 elseif k == "danger" or k == "error" then 5 else 3.5
 	task.delay(life, function()
-		TweenService:Create(card, TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
+		if not card.Parent then
+			return
+		end
+		local info = TweenInfo.new(0.3)
+		TweenService:Create(card, info, { BackgroundTransparency = 1 }):Play()
+		for _, d in card:GetDescendants() do
+			if d:IsA("TextLabel") then
+				TweenService:Create(d, info, { TextTransparency = 1, BackgroundTransparency = 1 }):Play()
+			elseif d:IsA("UIStroke") then
+				TweenService:Create(d, info, { Transparency = 1 }):Play()
+			end
+		end
 		task.wait(0.3)
 		card:Destroy()
 	end)
