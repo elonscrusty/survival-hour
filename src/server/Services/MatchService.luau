@@ -36,6 +36,8 @@ MatchService.Map = nil :: any
 MatchService.State = (nil :: any) :: Folder -- ReplicatedStorage.MatchState, set in Init
 local phaseToken = 0
 local ending = false
+local matchStartedAt = os.clock()
+local lastRemaining = 0 -- standing clans at the last outcome check (for Final Three / Two)
 local elimOrder: { number } = {} -- teams in the order they were eliminated (for placements)
 
 function MatchService.On(event: string, fn: (...any) -> ())
@@ -175,6 +177,8 @@ end
 function MatchService.Begin(assignment: { [Player]: number }, matchId: string?)
 	assert(not MatchService.Active, "match already active")
 	MatchService.Active = true
+	matchStartedAt = os.clock()
+	lastRemaining = 0
 	ending = false
 	MatchService.MatchId = matchId or HttpService:GenerateGUID(false)
 	MatchService.Day = 0
@@ -360,6 +364,19 @@ function MatchService.CheckOutcome()
 			emit("TeamEliminated", t)
 		end
 	end
+	-- survivors remaining: announce each drop, and make Final Three / Final Two moments
+	local remaining = 0
+	for _, t in MatchService.StartedTeams do
+		if standing[t] then
+			remaining += 1
+		end
+	end
+	state:SetAttribute("Remaining", remaining)
+	if lastRemaining > 0 and remaining < lastRemaining and remaining >= 2 then
+		local final = if remaining == 3 and #MatchService.StartedTeams >= 4 then "Three" elseif remaining == 2 then "Two" else nil
+		MatchService.Broadcast("SurvivorsLeft", { Left = remaining, Final = final })
+	end
+	lastRemaining = remaining
 	local result, winner = LivesRules.Outcome(standing, MatchService.StartedTeams, ctx.IsStudio and Config.Dev.StudioAllowSingleTeam)
 	if result == "Winner" then
 		MatchService.End(winner)
@@ -396,7 +413,7 @@ function MatchService.End(winner: number?)
 			local place = placeOf(team)
 			local session = ctx.DataService.Get(p)
 			local earned = ctx.PowerupService.Earned(p) or { XP = 0, Coins = 0, Diamonds = 0, Levels = 0 }
-			local sum = { Place = place, Of = started, XP = earned.XP, Coins = earned.Coins, Diamonds = earned.Diamonds, Levels = earned.Levels, Stats = ctx.PowerupService.Stats(p), Nights = MatchService.Day or 0 }
+			local sum = { Place = place, Of = started, XP = earned.XP, Coins = earned.Coins, Diamonds = earned.Diamonds, Levels = earned.Levels, Stats = ctx.PowerupService.Stats(p), Nights = MatchService.Day or 0, Bench = ctx.CampService.GetLevel(team), Duration = math.floor(os.clock() - matchStartedAt) }
 			if session and ctx.DataService.CanGrant(p) then
 				session.Profile.Matches += 1
 				ProfileRules.NoteMatch(session.Profile, os.time(), place == 1)

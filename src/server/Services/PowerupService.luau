@@ -46,7 +46,8 @@ type PState = {
 	Earned: { XP: number, Coins: number, Diamonds: number, Levels: number, Lines: { [string]: number } },
 	KillsOn: { [number]: number },
 	WildlifeRewards: number,
-	Stats: { Kills: number, Animals: number, Chests: number },
+	Stats: { [string]: number }, -- per-match tallies for the recap (Kills, Animals, Bears, Chests, Resources, DamageDealt, DamageTaken, FiresOut, Breaches)
+	Notoriety: number, -- aggressive actions this match (Dangerous Survivor callouts)
 	Pois: { [number]: boolean },
 	SecondWindUsed: boolean,
 	SecondWindUntil: number,
@@ -116,7 +117,8 @@ function PowerupService._lock(p: Player)
 		Earned = { XP = 0, Coins = 0, Diamonds = 0, Levels = 0, Lines = {} },
 		KillsOn = {},
 		WildlifeRewards = 0,
-		Stats = { Kills = 0, Animals = 0, Chests = 0 },
+		Stats = { Kills = 0, Eliminations = 0, Animals = 0, Bears = 0, Chests = 0, Resources = 0, DamageDealt = 0, DamageTaken = 0, FiresOut = 0, Breaches = 0 },
+		Notoriety = 0,
 		Pois = {},
 		SecondWindUsed = false,
 		SecondWindUntil = 0,
@@ -437,9 +439,42 @@ function PowerupService.Earned(p: Player): { XP: number, Coins: number, Diamonds
 end
 
 -- Per-match tallies for the end screen (counted even when rewards are off).
-function PowerupService.Stats(p: Player): { Kills: number, Animals: number, Chests: number }?
+function PowerupService.Stats(p: Player): { [string]: number }?
 	local st = states[p]
-	return st and st.Stats
+	if not st then
+		return nil
+	end
+	local out = table.clone(st.Stats)
+	local pois = 0
+	for _ in st.Pois do
+		pois += 1
+	end
+	out.Pois = pois
+	return out
+end
+
+function PowerupService.Tally(p: Player?, key: string, n: number)
+	local st = p and states[p]
+	if st and n > 0 then
+		st.Stats[key] = (st.Stats[key] or 0) + n
+	end
+end
+
+-- Dangerous Survivor: kills, eliminations and snuffed fires build notoriety. At each
+-- threshold everyone hears the name (never a position), once per threshold per match.
+local NOTORIETY = { { At = 3, Line = "has taken down several survivors." }, { At = 6, Line = "is hunting everyone. Watch your fire." } }
+local function addNotoriety(p: Player, n: number)
+	local st = states[p]
+	if not st then
+		return
+	end
+	local before = st.Notoriety
+	st.Notoriety += n
+	for _, t in NOTORIETY do
+		if before < t.At and st.Notoriety >= t.At then
+			ctx.MatchService.Broadcast("Dangerous", { Name = p.DisplayName, UserId = p.UserId, Line = t.Line, Level = t.At })
+		end
+	end
 end
 
 -- Hooks from other services ----------------------------------------------------------------------
@@ -450,6 +485,10 @@ function PowerupService.OnPlayerKill(killer: Player, victim: Player, eliminated:
 		return
 	end
 	st.Stats.Kills += 1
+	if eliminated then
+		st.Stats.Eliminations += 1
+	end
+	addNotoriety(killer, if eliminated then 2 else 1)
 	local n = st.KillsOn[victim.UserId] or 0
 	st.KillsOn[victim.UserId] = n + 1
 	local session = ctx.DataService.Get(killer)
@@ -468,6 +507,8 @@ function PowerupService.OnPlayerKill(killer: Player, victim: Player, eliminated:
 end
 
 function PowerupService.OnFireExtinguished(p: Player)
+	PowerupService.Tally(p, "FiresOut", 1)
+	addNotoriety(p, 2)
 	PowerupService.Reward(p, "ExtinguishFire", "Snuffed a fire")
 end
 
@@ -475,6 +516,9 @@ function PowerupService.OnWildlifeKill(p: Player, species: string, _night: boole
 	local st = states[p]
 	if st then
 		st.Stats.Animals += 1
+		if species == "Bear" then
+			st.Stats.Bears += 1
+		end
 	end
 	if not st or st.WildlifeRewards >= WILDLIFE_REWARDS_PER_MATCH then
 		return

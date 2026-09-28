@@ -294,6 +294,7 @@ function StorageService._beginBreach(p: Player, e: Entry, prompt: ProximityPromp
 				end
 			end
 			setBreached(e, true)
+			ctx.PowerupService.Tally(p, "Breaches", 1)
 			alertBreach(p, e, true)
 			ctx.Util.NotifyTeam(e.Structure.Team, "⚠ Your " .. def.Name .. " was BREACHED! Resecure it (hold R at the storage).", "danger")
 			ctx.Util.Notify(p, "Breached! Open it to loot.", "success")

@@ -529,7 +529,7 @@ end
 local function showEnd(data: any)
 	local won = data.Won
 	local winner = data.Winner
-	local frame = UI.panel({ Name = "EndScreen", Size = UDim2.fromOffset(460, 230), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45), Parent = gui }, { UI.padding(16) })
+	local frame = UI.panel({ Name = "EndScreen", Size = UDim2.fromOffset(480, 360), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45), Parent = gui }, { UI.padding(16) })
 	-- the result card lands with a short pop (rewards feel earned, not sluggish)
 	local pop = UI.new("UIScale", { Scale = 0.6, Parent = frame })
 	TweenService:Create(pop, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
@@ -549,10 +549,30 @@ local function showEnd(data: any)
 	if (sum.Levels or 0) > 0 then
 		UI.text("LEVEL UP → " .. tostring(sum.Level), { Position = UDim2.fromOffset(0, 150), Size = UDim2.new(1, 0, 0, 22), TextSize = 18, Font = Theme.FontBold, TextColor3 = C.Good, TextXAlignment = Enum.TextXAlignment.Center, Parent = frame })
 	end
+	-- match recap: what this match was, win or lose (tallied even when rewards are off)
 	local stats = sum.Stats
 	if stats then
-		local line = string.format("Day %d  ·  ⚔ %d kills  ·  🐾 %d animals  ·  ◈ %d chests", sum.Nights or 0, stats.Kills or 0, stats.Animals or 0, stats.Chests or 0)
-		UI.text(line, { Position = UDim2.fromOffset(0, 176), Size = UDim2.new(1, 0, 0, 20), TextSize = 14, TextColor3 = C.TextDim, TextXAlignment = Enum.TextXAlignment.Center, Parent = frame })
+		local dur = sum.Duration or 0
+		local rows = {
+			{ "Match length", string.format("%d:%02d", dur // 60, dur % 60) },
+			{ "Reached", "Day " .. tostring(sum.Nights or 0) },
+			{ "Survivors taken down", string.format("%d  (%d out)", stats.Kills or 0, stats.Eliminations or 0) },
+			{ "Wildlife hunted", tostring(stats.Animals or 0) .. (if (stats.Bears or 0) > 0 then "  (" .. stats.Bears .. " bear)" else "") },
+			{ "Resources gathered", tostring(stats.Resources or 0) },
+			{ "Damage dealt / taken", string.format("%d / %d", stats.DamageDealt or 0, stats.DamageTaken or 0) },
+			{ "Fires snuffed", tostring(stats.FiresOut or 0) },
+			{ "Storage breached", tostring(stats.Breaches or 0) },
+			{ "Places discovered", tostring(stats.Pois or 0) },
+			{ "Workbench tier", ({ "I", "II", "III", "IV", "V" })[sum.Bench or 1] or "I" },
+		}
+		local grid = UI.new("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 176), Size = UDim2.new(1, 0, 0, 5 * 22), Parent = frame }, {
+			UI.new("UIGridLayout", { CellSize = UDim2.new(0.5, -6, 0, 20), CellPadding = UDim2.fromOffset(12, 2), SortOrder = Enum.SortOrder.LayoutOrder }),
+		})
+		for i, r in rows do
+			local cell = UI.new("Frame", { BackgroundTransparency = 1, LayoutOrder = i, Parent = grid })
+			UI.text(r[1], { Size = UDim2.fromScale(0.64, 1), TextSize = 13, TextColor3 = C.TextDim, TextXAlignment = Enum.TextXAlignment.Left, Parent = cell })
+			UI.text(r[2], { Position = UDim2.fromScale(0.64, 0), Size = UDim2.fromScale(0.36, 1), TextSize = 13, Font = Theme.FontBold, TextXAlignment = Enum.TextXAlignment.Right, Parent = cell })
+		end
 	end
 	UI.text("Returning to the lobby shortly…", { Position = UDim2.new(0, 0, 1, -24), TextSize = 14, TextColor3 = C.TextDim, TextXAlignment = Enum.TextXAlignment.Center, Parent = frame })
 	task.delay(Config.Match.EndScreenLength + 2, function()
@@ -602,6 +622,23 @@ local function onMatchEvent(ev: any)
 		pushFeed(teamTag(d.Team) .. (def and def.Name or "") .. " clan eliminated", C.Bad)
 	elseif name == "TeammateNeedsRevive" then
 		pendingRevives[d.UserId] = { Name = d.Name, Ends = d.Ends }
+	elseif name == "SurvivorsLeft" then
+		-- the circle tightens: Final Three / Final Two get their own moment
+		if d.Final == "Three" then
+			Hud.Announce("FINAL THREE", tostring(d.Left) .. " survivors remain.", C.Bad, 4)
+			Hud.Flash(Color3.fromRGB(120, 20, 10), 0.8, 1.2)
+		elseif d.Final == "Two" then
+			Hud.Announce("FINAL TWO", "One fire left to put out.", C.Bad, 4.5)
+			Hud.Flash(Color3.fromRGB(140, 20, 10), 0.7, 1.4)
+		else
+			Hud.Announce("SURVIVOR ELIMINATED", tostring(d.Left) .. " survivors remain.", C.Warn, 2.5)
+		end
+	elseif name == "Dangerous" then
+		if d.UserId ~= player.UserId then
+			Hud.Announce("☠ DANGEROUS SURVIVOR", tostring(d.Name) .. " " .. tostring(d.Line), C.Bad, 3.5)
+		else
+			pushFeed("☠ Everyone now knows your name. Watch your back.", C.Warn)
+		end
 	elseif name == "WorldEvent" then
 		-- world events: a short banner when they begin, a quiet feed line when they end
 		if d.Stage == "Start" and d.Title then

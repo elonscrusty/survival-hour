@@ -93,6 +93,10 @@ function SoundCtl.Start()
 		if name == "Phase" then
 			SoundCtl.Play(if ev.Data.Phase == "Night" then "Dusk" else "Dawn")
 			setAmbient(if ev.Data.Phase == "Night" then "AmbientNight" else "AmbientDay")
+		elseif name == "SurvivorsLeft" then
+			SoundCtl.Play(if ev.Data.Final then "Dusk" else "Notify")
+		elseif name == "Dangerous" then
+			SoundCtl.Play("Alarm")
 		elseif name == "WorldEvent" then
 			local d = ev.Data or {}
 			if d.Stage == "Start" and d.Kind ~= "Condition" then
@@ -201,6 +205,12 @@ function SoundCtl.Start()
 				s:Play()
 				game:GetService("Debris"):AddItem(spot, 6)
 			end
+		end
+		-- endgame tension: in the final three the ambience settles lower and slower
+		if ambient then
+			local left = ms:GetAttribute("Remaining")
+			local tense = inMatch and type(left) == "number" and left <= 3 and left >= 2
+			ambient.PlaybackSpeed = if tense then 0.9 else 1
 		end
 		-- rain loop layered over the ambience during showers
 		local wantRain = inMatch and (ms:GetAttribute("Weather") == "Rain" or ms:GetAttribute("Weather") == "Storm")

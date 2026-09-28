@@ -62093,6 +62093,10 @@ function CombatService.DamagePlayer(victim: Player, amount: number, source: Sour
 	ctx.CampService.NoteHurt(victim)
 	hum.Health = math.max(0, hum.Health - dmg)
 	ctx.PowerupService.OnPlayerHurt(victim, dmg)
+	ctx.PowerupService.Tally(victim, "DamageTaken", dmg)
+	if typeof(source.By) == "Instance" and source.By:IsA("Player") and source.By ~= victim then
+		ctx.PowerupService.Tally(source.By, "DamageDealt", dmg)
+	end
 	-- hit reaction (Animation flinches away from the attacker)
 	local vchar = victim.Character
 	if vchar then
@@ -64292,6 +64296,7 @@ local function grant(p: Player, n: Node, items: { [string]: number }): { string 
 	local lines = {}
 	for id, count in items do
 		local added = ctx.InventoryService.AddResource(p, id, count)
+		ctx.PowerupService.Tally(p, "Resources", count)
 		if added > 0 then
 			table.insert(lines, string.format("+%d %s", added, Items[id] and Items[id].Name or id))
 		end
@@ -66591,6 +66596,8 @@ MatchService.Map = nil :: any
 MatchService.State = (nil :: any) :: Folder -- ReplicatedStorage.MatchState, set in Init
 local phaseToken = 0
 local ending = false
+local matchStartedAt = os.clock()
+local lastRemaining = 0 -- standing clans at the last outcome check (for Final Three / Two)
 local elimOrder: { number } = {} -- teams in the order they were eliminated (for placements)
 
 function MatchService.On(event: string, fn: (...any) -> ())
@@ -66730,6 +66737,8 @@ end
 function MatchService.Begin(assignment: { [Player]: number }, matchId: string?)
 	assert(not MatchService.Active, "match already active")
 	MatchService.Active = true
+	matchStartedAt = os.clock()
+	lastRemaining = 0
 	ending = false
 	MatchService.MatchId = matchId or HttpService:GenerateGUID(false)
 	MatchService.Day = 0
@@ -66915,6 +66924,19 @@ function MatchService.CheckOutcome()
 			emit("TeamEliminated", t)
 		end
 	end
+	-- survivors remaining: announce each drop, and make Final Three / Final Two moments
+	local remaining = 0
+	for _, t in MatchService.StartedTeams do
+		if standing[t] then
+			remaining += 1
+		end
+	end
+	state:SetAttribute("Remaining", remaining)
+	if lastRemaining > 0 and remaining < lastRemaining and remaining >= 2 then
+		local final = if remaining == 3 and #MatchService.StartedTeams >= 4 then "Three" elseif remaining == 2 then "Two" else nil
+		MatchService.Broadcast("SurvivorsLeft", { Left = remaining, Final = final })
+	end
+	lastRemaining = remaining
 	local result, winner = LivesRules.Outcome(standing, MatchService.StartedTeams, ctx.IsStudio and Config.Dev.StudioAllowSingleTeam)
 	if result == "Winner" then
 		MatchService.End(winner)
@@ -66951,7 +66973,7 @@ function MatchService.End(winner: number?)
 			local place = placeOf(team)
 			local session = ctx.DataService.Get(p)
 			local earned = ctx.PowerupService.Earned(p) or { XP = 0, Coins = 0, Diamonds = 0, Levels = 0 }
-			local sum = { Place = place, Of = started, XP = earned.XP, Coins = earned.Coins, Diamonds = earned.Diamonds, Levels = earned.Levels, Stats = ctx.PowerupService.Stats(p), Nights = MatchService.Day or 0 }
+			local sum = { Place = place, Of = started, XP = earned.XP, Coins = earned.Coins, Diamonds = earned.Diamonds, Levels = earned.Levels, Stats = ctx.PowerupService.Stats(p), Nights = MatchService.Day or 0, Bench = ctx.CampService.GetLevel(team), Duration = math.floor(os.clock() - matchStartedAt) }
 			if session and ctx.DataService.CanGrant(p) then
 				session.Profile.Matches += 1
 				ProfileRules.NoteMatch(session.Profile, os.time(), place == 1)
@@ -67486,7 +67508,8 @@ type PState = {
 	Earned: { XP: number, Coins: number, Diamonds: number, Levels: number, Lines: { [string]: number } },
 	KillsOn: { [number]: number },
 	WildlifeRewards: number,
-	Stats: { Kills: number, Animals: number, Chests: number },
+	Stats: { [string]: number }, -- per-match tallies for the recap (Kills, Animals, Bears, Chests, Resources, DamageDealt, DamageTaken, FiresOut, Breaches)
+	Notoriety: number, -- aggressive actions this match (Dangerous Survivor callouts)
 	Pois: { [number]: boolean },
 	SecondWindUsed: boolean,
 	SecondWindUntil: number,
@@ -67556,7 +67579,8 @@ function PowerupService._lock(p: Player)
 		Earned = { XP = 0, Coins = 0, Diamonds = 0, Levels = 0, Lines = {} },
 		KillsOn = {},
 		WildlifeRewards = 0,
-		Stats = { Kills = 0, Animals = 0, Chests = 0 },
+		Stats = { Kills = 0, Eliminations = 0, Animals = 0, Bears = 0, Chests = 0, Resources = 0, DamageDealt = 0, DamageTaken = 0, FiresOut = 0, Breaches = 0 },
+		Notoriety = 0,
 		Pois = {},
 		SecondWindUsed = false,
 		SecondWindUntil = 0,
@@ -67877,9 +67901,42 @@ function PowerupService.Earned(p: Player): { XP: number, Coins: number, Diamonds
 end
 
 -- Per-match tallies for the end screen (counted even when rewards are off).
-function PowerupService.Stats(p: Player): { Kills: number, Animals: number, Chests: number }?
+function PowerupService.Stats(p: Player): { [string]: number }?
 	local st = states[p]
-	return st and st.Stats
+	if not st then
+		return nil
+	end
+	local out = table.clone(st.Stats)
+	local pois = 0
+	for _ in st.Pois do
+		pois += 1
+	end
+	out.Pois = pois
+	return out
+end
+
+function PowerupService.Tally(p: Player?, key: string, n: number)
+	local st = p and states[p]
+	if st and n > 0 then
+		st.Stats[key] = (st.Stats[key] or 0) + n
+	end
+end
+
+-- Dangerous Survivor: kills, eliminations and snuffed fires build notoriety. At each
+-- threshold everyone hears the name (never a position), once per threshold per match.
+local NOTORIETY = { { At = 3, Line = "has taken down several survivors." }, { At = 6, Line = "is hunting everyone. Watch your fire." } }
+local function addNotoriety(p: Player, n: number)
+	local st = states[p]
+	if not st then
+		return
+	end
+	local before = st.Notoriety
+	st.Notoriety += n
+	for _, t in NOTORIETY do
+		if before < t.At and st.Notoriety >= t.At then
+			ctx.MatchService.Broadcast("Dangerous", { Name = p.DisplayName, UserId = p.UserId, Line = t.Line, Level = t.At })
+		end
+	end
 end
 
 -- Hooks from other services ----------------------------------------------------------------------
@@ -67890,6 +67947,10 @@ function PowerupService.OnPlayerKill(killer: Player, victim: Player, eliminated:
 		return
 	end
 	st.Stats.Kills += 1
+	if eliminated then
+		st.Stats.Eliminations += 1
+	end
+	addNotoriety(killer, if eliminated then 2 else 1)
 	local n = st.KillsOn[victim.UserId] or 0
 	st.KillsOn[victim.UserId] = n + 1
 	local session = ctx.DataService.Get(killer)
@@ -67908,6 +67969,8 @@ function PowerupService.OnPlayerKill(killer: Player, victim: Player, eliminated:
 end
 
 function PowerupService.OnFireExtinguished(p: Player)
+	PowerupService.Tally(p, "FiresOut", 1)
+	addNotoriety(p, 2)
 	PowerupService.Reward(p, "ExtinguishFire", "Snuffed a fire")
 end
 
@@ -67915,6 +67978,9 @@ function PowerupService.OnWildlifeKill(p: Player, species: string, _night: boole
 	local st = states[p]
 	if st then
 		st.Stats.Animals += 1
+		if species == "Bear" then
+			st.Stats.Bears += 1
+		end
 	end
 	if not st or st.WildlifeRewards >= WILDLIFE_REWARDS_PER_MATCH then
 		return
@@ -68649,6 +68715,7 @@ function StorageService._beginBreach(p: Player, e: Entry, prompt: ProximityPromp
 				end
 			end
 			setBreached(e, true)
+			ctx.PowerupService.Tally(p, "Breaches", 1)
 			alertBreach(p, e, true)
 			ctx.Util.NotifyTeam(e.Structure.Team, "⚠ Your " .. def.Name .. " was BREACHED! Resecure it (hold R at the storage).", "danger")
 			ctx.Util.Notify(p, "Breached! Open it to loot.", "success")
@@ -73825,7 +73892,7 @@ end
 local function showEnd(data: any)
 	local won = data.Won
 	local winner = data.Winner
-	local frame = UI.panel({ Name = "EndScreen", Size = UDim2.fromOffset(460, 230), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45), Parent = gui }, { UI.padding(16) })
+	local frame = UI.panel({ Name = "EndScreen", Size = UDim2.fromOffset(480, 360), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45), Parent = gui }, { UI.padding(16) })
 	-- the result card lands with a short pop (rewards feel earned, not sluggish)
 	local pop = UI.new("UIScale", { Scale = 0.6, Parent = frame })
 	TweenService:Create(pop, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
@@ -73845,10 +73912,30 @@ local function showEnd(data: any)
 	if (sum.Levels or 0) > 0 then
 		UI.text("LEVEL UP → " .. tostring(sum.Level), { Position = UDim2.fromOffset(0, 150), Size = UDim2.new(1, 0, 0, 22), TextSize = 18, Font = Theme.FontBold, TextColor3 = C.Good, TextXAlignment = Enum.TextXAlignment.Center, Parent = frame })
 	end
+	-- match recap: what this match was, win or lose (tallied even when rewards are off)
 	local stats = sum.Stats
 	if stats then
-		local line = string.format("Day %d  ·  ⚔ %d kills  ·  🐾 %d animals  ·  ◈ %d chests", sum.Nights or 0, stats.Kills or 0, stats.Animals or 0, stats.Chests or 0)
-		UI.text(line, { Position = UDim2.fromOffset(0, 176), Size = UDim2.new(1, 0, 0, 20), TextSize = 14, TextColor3 = C.TextDim, TextXAlignment = Enum.TextXAlignment.Center, Parent = frame })
+		local dur = sum.Duration or 0
+		local rows = {
+			{ "Match length", string.format("%d:%02d", dur // 60, dur % 60) },
+			{ "Reached", "Day " .. tostring(sum.Nights or 0) },
+			{ "Survivors taken down", string.format("%d  (%d out)", stats.Kills or 0, stats.Eliminations or 0) },
+			{ "Wildlife hunted", tostring(stats.Animals or 0) .. (if (stats.Bears or 0) > 0 then "  (" .. stats.Bears .. " bear)" else "") },
+			{ "Resources gathered", tostring(stats.Resources or 0) },
+			{ "Damage dealt / taken", string.format("%d / %d", stats.DamageDealt or 0, stats.DamageTaken or 0) },
+			{ "Fires snuffed", tostring(stats.FiresOut or 0) },
+			{ "Storage breached", tostring(stats.Breaches or 0) },
+			{ "Places discovered", tostring(stats.Pois or 0) },
+			{ "Workbench tier", ({ "I", "II", "III", "IV", "V" })[sum.Bench or 1] or "I" },
+		}
+		local grid = UI.new("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 176), Size = UDim2.new(1, 0, 0, 5 * 22), Parent = frame }, {
+			UI.new("UIGridLayout", { CellSize = UDim2.new(0.5, -6, 0, 20), CellPadding = UDim2.fromOffset(12, 2), SortOrder = Enum.SortOrder.LayoutOrder }),
+		})
+		for i, r in rows do
+			local cell = UI.new("Frame", { BackgroundTransparency = 1, LayoutOrder = i, Parent = grid })
+			UI.text(r[1], { Size = UDim2.fromScale(0.64, 1), TextSize = 13, TextColor3 = C.TextDim, TextXAlignment = Enum.TextXAlignment.Left, Parent = cell })
+			UI.text(r[2], { Position = UDim2.fromScale(0.64, 0), Size = UDim2.fromScale(0.36, 1), TextSize = 13, Font = Theme.FontBold, TextXAlignment = Enum.TextXAlignment.Right, Parent = cell })
+		end
 	end
 	UI.text("Returning to the lobby shortly…", { Position = UDim2.new(0, 0, 1, -24), TextSize = 14, TextColor3 = C.TextDim, TextXAlignment = Enum.TextXAlignment.Center, Parent = frame })
 	task.delay(Config.Match.EndScreenLength + 2, function()
@@ -73898,6 +73985,23 @@ local function onMatchEvent(ev: any)
 		pushFeed(teamTag(d.Team) .. (def and def.Name or "") .. " clan eliminated", C.Bad)
 	elseif name == "TeammateNeedsRevive" then
 		pendingRevives[d.UserId] = { Name = d.Name, Ends = d.Ends }
+	elseif name == "SurvivorsLeft" then
+		-- the circle tightens: Final Three / Final Two get their own moment
+		if d.Final == "Three" then
+			Hud.Announce("FINAL THREE", tostring(d.Left) .. " survivors remain.", C.Bad, 4)
+			Hud.Flash(Color3.fromRGB(120, 20, 10), 0.8, 1.2)
+		elseif d.Final == "Two" then
+			Hud.Announce("FINAL TWO", "One fire left to put out.", C.Bad, 4.5)
+			Hud.Flash(Color3.fromRGB(140, 20, 10), 0.7, 1.4)
+		else
+			Hud.Announce("SURVIVOR ELIMINATED", tostring(d.Left) .. " survivors remain.", C.Warn, 2.5)
+		end
+	elseif name == "Dangerous" then
+		if d.UserId ~= player.UserId then
+			Hud.Announce("☠ DANGEROUS SURVIVOR", tostring(d.Name) .. " " .. tostring(d.Line), C.Bad, 3.5)
+		else
+			pushFeed("☠ Everyone now knows your name. Watch your back.", C.Warn)
+		end
 	elseif name == "WorldEvent" then
 		-- world events: a short banner when they begin, a quiet feed line when they end
 		if d.Stage == "Start" and d.Title then
@@ -76101,6 +76205,10 @@ function SoundCtl.Start()
 		if name == "Phase" then
 			SoundCtl.Play(if ev.Data.Phase == "Night" then "Dusk" else "Dawn")
 			setAmbient(if ev.Data.Phase == "Night" then "AmbientNight" else "AmbientDay")
+		elseif name == "SurvivorsLeft" then
+			SoundCtl.Play(if ev.Data.Final then "Dusk" else "Notify")
+		elseif name == "Dangerous" then
+			SoundCtl.Play("Alarm")
 		elseif name == "WorldEvent" then
 			local d = ev.Data or {}
 			if d.Stage == "Start" and d.Kind ~= "Condition" then
@@ -76209,6 +76317,12 @@ function SoundCtl.Start()
 				s:Play()
 				game:GetService("Debris"):AddItem(spot, 6)
 			end
+		end
+		-- endgame tension: in the final three the ambience settles lower and slower
+		if ambient then
+			local left = ms:GetAttribute("Remaining")
+			local tense = inMatch and type(left) == "number" and left <= 3 and left >= 2
+			ambient.PlaybackSpeed = if tense then 0.9 else 1
 		end
 		-- rain loop layered over the ambience during showers
 		local wantRain = inMatch and (ms:GetAttribute("Weather") == "Rain" or ms:GetAttribute("Weather") == "Storm")

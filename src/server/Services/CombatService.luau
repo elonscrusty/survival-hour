@@ -132,6 +132,10 @@ function CombatService.DamagePlayer(victim: Player, amount: number, source: Sour
 	ctx.CampService.NoteHurt(victim)
 	hum.Health = math.max(0, hum.Health - dmg)
 	ctx.PowerupService.OnPlayerHurt(victim, dmg)
+	ctx.PowerupService.Tally(victim, "DamageTaken", dmg)
+	if typeof(source.By) == "Instance" and source.By:IsA("Player") and source.By ~= victim then
+		ctx.PowerupService.Tally(source.By, "DamageDealt", dmg)
+	end
 	-- hit reaction (Animation flinches away from the attacker)
 	local vchar = victim.Character
 	if vchar then
