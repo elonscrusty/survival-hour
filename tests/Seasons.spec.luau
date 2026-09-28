@@ -79,4 +79,10 @@ return {
 		local back = P.Reconcile(p)
 		t.ok(back.Cosmetics[earned.Id], "kept after reconcile")
 	end,
+	season_match_needs_real_play = function(t)
+		t.ok(Seasons.CountsMatch(3, false, 12))
+		t.no(Seasons.CountsMatch(1, false, 12), "left on day 1")
+		t.no(Seasons.CountsMatch(3, true, 12), "AFK")
+		t.no(Seasons.CountsMatch(3, false, 0), "gathered nothing")
+	end,
 }

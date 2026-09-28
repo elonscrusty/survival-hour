@@ -72,7 +72,7 @@ Cosmetics.List = {
 	c("PlateBark", "Bark Nameplate", "Nameplate", "Common", 1600, { 110, 80, 50 }),
 	c("PlateMoss", "Moss Nameplate", "Nameplate", "Uncommon", 4000, { 70, 110, 60 }),
 	c("PlateSilver", "Silver Nameplate", "Nameplate", "Rare", 10000, { 190, 195, 205 }),
-	c("PlateGold", "Gold Nameplate", "Nameplate", "Epic", 22000, { 230, 190, 80 }),
+	c("PlateGold", "Gold Nameplate", "Nameplate", "Rare", 12000, { 230, 190, 80 }),
 	c("PlateEmber", "Ember Nameplate", "Nameplate", "Legendary", 45000, { 230, 100, 40 }),
 	-- Titles (some sold, some level rewards)
 	c("TitleForager", "Forager", "Title", "Common", 1500, nil, nil, "Forager"),
@@ -140,13 +140,14 @@ local function s(season: string, def: Def): Def
 	return def
 end
 local SEASONAL: { Def } = {
+	-- Priced below permanent items of similar looks: they are only on sale for ~10 days.
 	-- Halloween 2026
-	s("Halloween2026", c("OutfitPumpkin", "Pumpkin Patch", "Outfit", "Rare", 12500, { 235, 120, 30 }, { 32, 26, 34 })),
+	s("Halloween2026", c("OutfitPumpkin", "Pumpkin Patch", "Outfit", "Uncommon", 7500, { 235, 120, 30 }, { 32, 26, 34 })),
 	s("Halloween2026", c("PlateGhost", "Ghostly Nameplate", "Nameplate", "Epic", 22000, { 190, 235, 225 })),
-	s("Halloween2026", c("TitleNightTerror", "Night Terror", "Title", "Rare", 11000, nil, nil, "Night Terror")),
-	s("Halloween2026", c("EmotePumpkin", "Pumpkin Cheer", "Emote", "Uncommon", 5000, { 255, 140, 40 })),
-	s("Halloween2026", c("FireJack", "Jack-o'-Flame", "CampfireSkin", "Epic", 26000, { 255, 120, 20 }, { 170, 80, 230 })),
-	s("Halloween2026", m("TitleHallowed", "Hallowed", "Title", "Epic", "Season_Halloween2026", 5, "Play 5 matches during Halloween 2026", "Hallowed")),
+	s("Halloween2026", c("TitleNightTerror", "Night Terror", "Title", "Uncommon", 6000, nil, nil, "Night Terror")),
+	s("Halloween2026", c("EmotePumpkin", "Pumpkin Cheer", "Emote", "Common", 3000, { 255, 140, 40 })),
+	s("Halloween2026", c("FireJack", "Jack-o'-Flame", "CampfireSkin", "Rare", 15000, { 255, 120, 20 }, { 170, 80, 230 })),
+	s("Halloween2026", m("TitleHallowed", "Hallowed", "Title", "Rare", "Season_Halloween2026", 5, "Play 5 matches during Halloween 2026", "Hallowed")),
 }
 for _, d in SEASONAL do
 	table.insert(Cosmetics.List, d)

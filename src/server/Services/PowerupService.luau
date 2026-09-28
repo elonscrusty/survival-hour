@@ -629,7 +629,8 @@ function PowerupService.CommitMatch(p: Player, profile: any, place: number?, fir
 	end
 	-- seasonal event: matches played during it count toward its earned title (Cosmetics, Season)
 	local season = ctx.Util.Season()
-	if season then
+	local played = st ~= nil and Seasons.CountsMatch(ctx.MatchService.Day or 0, p:GetAttribute("AFK") == true, st.Stats.Resources or 0)
+	if season and played then
 		local key = Seasons.StatKey(season.Id)
 		profile.Stats[key] = (profile.Stats[key] or 0) + 1
 	end

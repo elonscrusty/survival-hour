@@ -69,4 +69,13 @@ function Seasons.OnSale(season: string?, activeId: string?): boolean
 	return season == nil or season == activeId
 end
 
+-- Whether a match counts toward a season's earned title: the match reached its
+-- second day, and the player wasn't AFK and gathered something (join-and-leave
+-- or idling can't farm it).
+Seasons.CountMinDay = 2
+
+function Seasons.CountsMatch(day: number, afk: boolean, resources: number): boolean
+	return day >= Seasons.CountMinDay and not afk and resources > 0
+end
+
 return Seasons
