@@ -70482,8 +70482,8 @@ function Build.Start()
 	UI.button("▶", { Size = UDim2.fromOffset(64, 52), TextSize = 26, Parent = row }, function()
 		rotate(1)
 	end)
-	UI.button("PLACE", { Size = UDim2.fromOffset(140, 52), TextSize = 20, BackgroundColor3 = Theme.Colors.AccentDark, Parent = row }, place)
-	UI.button("✖", { Size = UDim2.fromOffset(64, 52), TextSize = 22, BackgroundColor3 = Color3.fromRGB(90, 40, 36), Parent = row }, Build.Stop)
+	UI.button("✓ PLACE", { Size = UDim2.fromOffset(140, 52), TextSize = 20, Font = Theme.FontBlack, Tone = "Green", Parent = row }, place)
+	UI.button("✖", { Size = UDim2.fromOffset(64, 52), TextSize = 22, Tone = "Red", Parent = row }, Build.Stop)
 	UI.text("PC: R/Q rotate · click to place · right-click to exit", { Position = UDim2.new(0, 0, 1, -14), Size = UDim2.new(1, 0, 0, 14), TextSize = 11, TextColor3 = Theme.Colors.TextDim, TextXAlignment = Enum.TextXAlignment.Center, Parent = touchBar })
 
 	pickerBody = Panels.Create("Build", "BUILD", Vector2.new(600, 330), renderPicker)
@@ -71833,12 +71833,14 @@ local function refreshHotbar()
 			Name = slot,
 			LayoutOrder = i,
 			Size = UDim2.fromOffset(64, 72),
-			BackgroundColor3 = if equipped then C.AccentDark else C.Panel,
-			BackgroundTransparency = if equipped then 0.05 else 0.2,
 			Text = "",
-			AutoButtonColor = false,
 			Parent = hotbar,
-		}, { UI.corner(UDim.new(0, 10)), UI.stroke(if equipped then C.Accent else C.Stroke, if equipped then 2.5 else 1.2, 0.1) })
+		})
+		-- kit style: the equipped slot gets the gold "selected" rim and glow
+		UI.Buttons.decorate(btn, "Neutral", UDim.new(0, 10))
+		if equipped then
+			UI.Buttons.setState(btn, "Selected")
+		end
 		if stack then
 			local def = Items[stack.Id]
 			local ic = UI.icon(def.Icon.Glyph, def.Icon.Color, 40, def.Icon.Shape)
@@ -72275,7 +72277,6 @@ local Players = game:GetService("Players")
 
 local State = require("../State")
 local UI = require("../UI/UI")
-local Theme = require("../UI/Theme")
 
 local Input = {}
 
@@ -72378,26 +72379,12 @@ function Input._buildTouch()
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 		Parent = player:WaitForChild("PlayerGui"),
 	})
-	local function round(name: string, glyph: string, label: string, size: number, pos: UDim2, action: string, hold: boolean, color: Color3?)
-		local b = UI.new("TextButton", {
-			Name = name,
-			Size = UDim2.fromOffset(size, size),
-			Position = pos,
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			BackgroundColor3 = color or Theme.Colors.Panel,
-			BackgroundTransparency = 0.25,
-			Text = "",
-			AutoButtonColor = false,
-			Parent = gui,
-		}, {
-			UI.corner(UDim.new(0.5, 0)),
-			UI.stroke(Theme.Colors.Accent, 2, 0.3),
-			UI.new("TextLabel", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 0.62), Text = glyph, TextScaled = true, Font = Theme.FontBlack, TextColor3 = Theme.Colors.Text }),
-			UI.new("TextLabel", { BackgroundTransparency = 1, Position = UDim2.fromScale(0, 0.58), Size = UDim2.fromScale(1, 0.3), Text = label, TextScaled = true, Font = Theme.FontBold, TextColor3 = Theme.Colors.TextDim }),
-		})
+	local function round(name: string, glyph: string, label: string, size: number, pos: UDim2, action: string, hold: boolean, tone: string)
+		local b = UI.Buttons.round(glyph, label, size, tone, { Name = name, Position = pos, AnchorPoint = Vector2.new(0.5, 0.5), Parent = gui })
 		b.InputBegan:Connect(function(io)
 			if io.UserInputType == Enum.UserInputType.Touch then
-				b.BackgroundTransparency = 0.05
+				b:SetAttribute("Down", true)
+				UI.Buttons.refresh(b)
 				emit(action, true)
 				if not hold then
 					emit(action, false)
@@ -72406,7 +72393,8 @@ function Input._buildTouch()
 		end)
 		b.InputEnded:Connect(function(io)
 			if io.UserInputType == Enum.UserInputType.Touch then
-				b.BackgroundTransparency = 0.25
+				b:SetAttribute("Down", nil)
+				UI.Buttons.refresh(b)
 				if hold and Input.Down[action] then
 					emit(action, false)
 				end
@@ -72415,10 +72403,10 @@ function Input._buildTouch()
 		return b
 	end
 	-- Bottom-right combat cluster (clear of the default jump button, which sits lower-right).
-	local attack = round("Attack", "⚔", "ATTACK", 92, UDim2.new(1, -170, 1, -190), "Attack", true, Color3.fromRGB(90, 40, 30))
-	round("Aim", "◎", "AIM/BLOCK", 66, UDim2.new(1, -270, 1, -150), "Aim", true)
-	round("Bandage", "✚", "HEAL", 58, UDim2.new(1, -90, 1, -270), "Bandage", false, Color3.fromRGB(80, 30, 34))
-	round("Swap", "⇄", "SWAP", 54, UDim2.new(1, -170, 1, -300), "Swap", false)
+	local attack = round("Attack", "🗡", "ATTACK", 92, UDim2.new(1, -170, 1, -200), "Attack", true, "Red")
+	round("Aim", "🛡", "AIM / BLOCK", 66, UDim2.new(1, -275, 1, -155), "Aim", true, "Blue")
+	round("Bandage", "✚", "HEAL", 60, UDim2.new(1, -85, 1, -285), "Bandage", false, "Green")
+	round("Swap", "⇄", "SWAP", 56, UDim2.new(1, -170, 1, -320), "Swap", false, "Neutral")
 	State.Set("TouchAttackButton", attack)
 
 	-- Menu buttons (top right, below the Roblox top bar)
@@ -72430,21 +72418,8 @@ function Input._buildTouch()
 		AnchorPoint = Vector2.new(1, 0),
 		Parent = gui,
 	}, { UI.list(Enum.FillDirection.Horizontal, 6, Enum.HorizontalAlignment.Right) })
-	for i, spec in { { "Inventory", "▤", "BAG" }, { "Craft", "⚒", "CRAFT" }, { "Build", "▥", "BUILD" }, { "Map", "🧭", "MAP" } } do
-		local b = UI.new("TextButton", {
-			Name = spec[1],
-			LayoutOrder = i,
-			Size = UDim2.fromOffset(56, 56),
-			BackgroundColor3 = Theme.Colors.Panel,
-			BackgroundTransparency = 0.2,
-			Text = "",
-			Parent = menu,
-		}, {
-			UI.corner(UDim.new(0, 10)),
-			UI.stroke(),
-			UI.new("TextLabel", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 0.62), Text = spec[2], TextScaled = true, Font = Theme.FontBlack, TextColor3 = Theme.Colors.Text }),
-			UI.new("TextLabel", { BackgroundTransparency = 1, Position = UDim2.fromScale(0, 0.62), Size = UDim2.fromScale(1, 0.3), Text = spec[3], TextScaled = true, Font = Theme.FontBold, TextColor3 = Theme.Colors.TextDim }),
-		})
+	for i, spec in { { "Inventory", "🎒", "BAG" }, { "Craft", "🔨", "CRAFT" }, { "Build", "🧱", "BUILD" }, { "Map", "🗺", "MAP" } } do
+		local b = UI.Buttons.tile(spec[3], nil, spec[2], { Name = spec[1], LayoutOrder = i, Size = UDim2.fromOffset(58, 58), Parent = menu })
 		b.Activated:Connect(function()
 			emit(spec[1], true)
 			emit(spec[1], false)
@@ -72695,13 +72670,14 @@ local Theme = require("../UI/Theme")
 local State = require("../State")
 local Panels = require("./Panels")
 local Hud = require("./Hud")
+local Buttons = require("../UI/Buttons")
 
 local Lobby = {}
 
 local player = Players.LocalPlayer
 local C = Theme.Colors
 local gui: ScreenGui
-local readyBtn: TextButton
+local setReady: (string, string?, string?) -> () = function() end
 local statusLabel: TextLabel
 local partyStrip: Frame
 local diamondsLabel: TextLabel
@@ -72736,8 +72712,13 @@ local function renderHud()
 	if not lobby then
 		return
 	end
-	readyBtn.Text = if lobby.Queued then "SEARCHING…  (tap to cancel)" elseif lobby.Ready then "READY ✓  (waiting for party)" else "READY UP"
-	readyBtn.BackgroundColor3 = if lobby.Queued then Color3.fromRGB(60, 90, 140) elseif lobby.Ready then Color3.fromRGB(50, 120, 70) else C.AccentDark
+	if lobby.Queued then
+		setReady("READY UP", "Searching… tap to cancel", "Normal")
+	elseif lobby.Ready then
+		setReady("READY UP ✓", "Waiting for your party", "Normal")
+	else
+		setReady("READY UP", nil, "Normal")
+	end
 	local q = lobby.Queue or {}
 	if lobby.Queued then
 		statusLabel.Text = string.format("In queue %s · %d searching · matches start at %d players (fills to %d)%s", UI.fmtTime(lobby.QueuedFor or 0), q.Searching or 0, lobby.MinPlayers, lobby.MaxPlayers, if q.Mode == "Local" then " · STUDIO LOCAL MODE" else "")
@@ -72771,13 +72752,13 @@ local function renderParty()
 		local r = UI.new("Frame", { LayoutOrder = 1 + i, Size = UDim2.new(1, -8, 0, 48), BackgroundColor3 = C.PanelLight, BorderSizePixel = 0, Parent = partyBody }, { UI.corner(UDim.new(0, 8)) })
 		UI.text((if m.Leader then "★ " else "") .. m.Name .. (if m.Ready then "   ✓ ready" else "   not ready"), { Position = UDim2.fromOffset(10, 12), Size = UDim2.new(1, -120, 0, 24), TextSize = 16, Parent = r })
 		if lobby.IsLeader and m.UserId ~= player.UserId then
-			UI.button("Kick", { Size = UDim2.fromOffset(90, 38), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), BackgroundColor3 = Color3.fromRGB(90, 40, 36), Parent = r }, function()
+			Buttons.action("👤 Kick", { Size = UDim2.fromOffset(100, 38), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), Tone = "Red", Parent = r }, function()
 				send("Kick", { UserId = m.UserId })
 			end)
 		end
 	end
 	if #lobby.Members > 1 then
-		UI.button("Leave party", { LayoutOrder = 10, Size = UDim2.new(1, -8, 0, 44), BackgroundColor3 = Color3.fromRGB(90, 40, 36), Parent = partyBody }, function()
+		Buttons.action("⮌ Leave party", { LayoutOrder = 10, Size = UDim2.new(1, -8, 0, 44), Tone = "Neutral", Parent = partyBody }, function()
 			send("Leave")
 		end)
 	end
@@ -72798,7 +72779,7 @@ local function renderParty()
 			order += 1
 			UI.text(pl.Name .. (if pl.InParty then "  (in a party)" else ""), { Position = UDim2.fromOffset(10, 12), Size = UDim2.new(1, -120, 0, 22), TextSize = 15, Parent = r })
 			if lobby.IsLeader and #lobby.Members < 4 then
-				UI.button("Invite", { Size = UDim2.fromOffset(96, 38), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), Parent = r }, function()
+				Buttons.action("+ Invite", { Size = UDim2.fromOffset(110, 38), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), Tone = "Neutral", Parent = r }, function()
 					send("Invite", { UserId = pl.UserId })
 				end)
 			end
@@ -72821,7 +72802,6 @@ local function buttonRow(parent: Instance): Frame
 	return UI.new("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, 0, 1, 0), Size = UDim2.new(0.5, 0, 0, 44), Parent = parent }, { UI.list(Enum.FillDirection.Horizontal, 6, Enum.HorizontalAlignment.Right) })
 end
 
-local BUY = Color3.fromRGB(40, 90, 120)
 
 -- Classes panel ----------------------------------------------------------------------------------
 
@@ -72845,11 +72825,11 @@ local function renderClasses()
 		UI.text("• " .. table.concat(def.Lines, "\n• "), { Position = UDim2.fromOffset(68, 40), Size = UDim2.new(0.55, -68, 0, 64), TextSize = 12, TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top, Parent = cd })
 		local row = buttonRow(cd)
 		if owned then
-			UI.button(if sel then "Selected ✓" else "Select", { Size = UDim2.fromOffset(120, 40), BackgroundColor3 = if sel then C.AccentDark else C.PanelLighter, Parent = row }, function()
+			Buttons.action(if sel then "Selected" else "Select", { Size = UDim2.fromOffset(130, 40), Tone = "Green", State = if sel then "Selected" else nil, Parent = row }, function()
 				send("EquipClass", { Id = def.Id })
 			end)
 		else
-			UI.button("Unlock " .. def.Price .. " ◆", { Size = UDim2.fromOffset(140, 40), BackgroundColor3 = if profile.Diamonds >= def.Price then BUY else C.PanelLighter, Parent = row }, function()
+			Buttons.action("Unlock", { Size = UDim2.fromOffset(150, 40), Tone = "Green", Price = { Kind = "Diamonds", Amount = def.Price }, State = if profile.Diamonds >= def.Price then nil else "Disabled", Parent = row }, function()
 				send("BuyClass", { Id = def.Id })
 			end)
 		end
@@ -72877,11 +72857,11 @@ local function renderPerks()
 		UI.text(def.Text, { Position = UDim2.fromOffset(60, 24), Size = UDim2.new(0.62, -60, 0, 36), TextWrapped = true, TextSize = 13, TextYAlignment = Enum.TextYAlignment.Top, Parent = cd })
 		local row = buttonRow(cd)
 		if owned then
-			UI.button(if sel then "Equipped ✓" else "Equip", { Size = UDim2.fromOffset(120, 40), BackgroundColor3 = if sel then C.AccentDark else C.PanelLighter, Parent = row }, function()
+			Buttons.action(if sel then "Equipped" else "Equip", { Size = UDim2.fromOffset(130, 40), Tone = "Green", State = if sel then "Selected" else nil, Parent = row }, function()
 				send("EquipPerk", { Id = if sel then nil else def.Id })
 			end)
 		else
-			UI.button("Unlock " .. def.Price .. " ◆", { Size = UDim2.fromOffset(140, 40), BackgroundColor3 = if profile.Diamonds >= def.Price then BUY else C.PanelLighter, Parent = row }, function()
+			Buttons.action("Unlock", { Size = UDim2.fromOffset(150, 40), Tone = "Green", Price = { Kind = "Diamonds", Amount = def.Price }, State = if profile.Diamonds >= def.Price then nil else "Disabled", Parent = row }, function()
 				send("BuyPerk", { Id = def.Id })
 			end)
 		end
@@ -72895,6 +72875,11 @@ local TYPE_LABEL = {
 	StorageSkin = "Storage", Nameplate = "Nameplates", Title = "Titles", Emote = "Emotes", EliminationFx = "Elim. effects", VictoryPose = "Victory poses",
 }
 
+local TYPE_GLYPH = {
+	Outfit = "👕", ToolSkin = "🔨", BackpackSkin = "🎒", CampfireSkin = "🔥", WorkbenchSkin = "⚒", StorageSkin = "📦",
+	Nameplate = "🏷", Title = "👑", Emote = "🙌", EliminationFx = "💀", VictoryPose = "🏆",
+}
+
 local function renderLocker()
 	UI.clear(lockerBody)
 	local profile = State.Get("Profile")
@@ -72903,9 +72888,9 @@ local function renderLocker()
 		return
 	end
 	UI.text(string.format("🪙 %d Coins · cosmetics are purely visual — they never change stats", profile.Coins or 0), { LayoutOrder = 0, TextSize = 14, TextColor3 = C.Accent, Parent = lockerBody })
-	local tabs = UI.new("Frame", { LayoutOrder = 1, BackgroundTransparency = 1, Size = UDim2.new(1, -8, 0, 72), Parent = lockerBody }, { UI.new("UIGridLayout", { CellSize = UDim2.fromOffset(104, 32), CellPadding = UDim2.fromOffset(4, 4) }) })
+	local tabs = UI.new("Frame", { LayoutOrder = 1, BackgroundTransparency = 1, Size = UDim2.new(1, -8, 0, 190), Parent = lockerBody }, { UI.new("UIGridLayout", { CellSize = UDim2.fromOffset(104, 56), CellPadding = UDim2.fromOffset(6, 6) }) })
 	for _, typ in Cosmetics.Types do
-		UI.button(TYPE_LABEL[typ] or typ, { Size = UDim2.fromOffset(104, 32), TextSize = 12, BackgroundColor3 = if typ == lockerType then C.AccentDark else C.PanelLighter, Parent = tabs }, function()
+		Buttons.tab(TYPE_LABEL[typ] or typ, TYPE_GLYPH[typ], typ == lockerType, { Size = UDim2.fromOffset(104, 56), Parent = tabs }, function()
 			lockerType = typ
 			renderLocker()
 		end)
@@ -72913,7 +72898,7 @@ local function renderLocker()
 	local order = 10
 	local wearing = profile.Wearing[lockerType]
 	if wearing then
-		UI.button("Remove " .. (TYPE_LABEL[lockerType] or lockerType):lower(), { LayoutOrder = 2, Size = UDim2.new(1, -8, 0, 36), BackgroundColor3 = C.PanelLighter, Parent = lockerBody }, function()
+		Buttons.action("Remove " .. (TYPE_LABEL[lockerType] or lockerType):lower(), { LayoutOrder = 2, Size = UDim2.new(1, -8, 0, 36), Tone = "Neutral", Parent = lockerBody }, function()
 			send("WearCosmetic", { Type = lockerType, Id = nil })
 		end)
 	end
@@ -72933,15 +72918,15 @@ local function renderLocker()
 			local row = buttonRow(cd)
 			if owned then
 				if def.Type == "Emote" then
-					UI.button("Play", { Size = UDim2.fromOffset(80, 40), BackgroundColor3 = C.PanelLighter, Parent = row }, function()
+					Buttons.action("▶ Play", { Size = UDim2.fromOffset(90, 40), Tone = "Neutral", Parent = row }, function()
 						send("Emote", { Id = def.Id })
 					end)
 				end
-				UI.button(if sel then "Wearing ✓" else "Wear", { Size = UDim2.fromOffset(110, 40), BackgroundColor3 = if sel then C.AccentDark else C.PanelLighter, Parent = row }, function()
+				Buttons.action(if sel then "Wearing" else "Wear", { Size = UDim2.fromOffset(120, 40), Tone = "Green", State = if sel then "Selected" else nil, Parent = row }, function()
 					send("WearCosmetic", { Type = def.Type, Id = if sel then nil else def.Id })
 				end)
 			elseif def.Price > 0 then
-				UI.button("Buy " .. def.Price .. " 🪙", { Size = UDim2.fromOffset(140, 40), BackgroundColor3 = if (profile.Coins or 0) >= def.Price then BUY else C.PanelLighter, Parent = row }, function()
+				Buttons.action("Buy", { Size = UDim2.fromOffset(150, 40), Tone = "Gold", Price = { Kind = "Coins", Amount = def.Price }, State = if (profile.Coins or 0) >= def.Price then nil else "Disabled", Parent = row }, function()
 					send("BuyCosmetic", { Id = def.Id })
 				end)
 			else
@@ -72975,7 +72960,7 @@ local function renderProfile()
 	local dcard = card(profileBody, 10, 64, C.Accent, daily.CanClaim == true)
 	UI.text("Daily bonus", { Size = UDim2.new(0.6, 0, 0, 22), TextSize = 16, Font = Theme.FontBold, Parent = dcard })
 	UI.text(string.format("Streak %d · +%d Coins (grows each day in a row, max 150)", daily.Streak or 0, daily.Amount or 50), { Position = UDim2.fromOffset(0, 22), Size = UDim2.new(0.6, 0, 0, 20), TextSize = 12, TextColor3 = C.TextDim, Parent = dcard })
-	UI.button(if daily.CanClaim then "Claim +" .. (daily.Amount or 50) else "Claimed ✓", { Size = UDim2.fromOffset(130, 40), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), BackgroundColor3 = if daily.CanClaim then Color3.fromRGB(40, 110, 60) else C.PanelLighter, Parent = dcard }, function()
+	Buttons.action(if daily.CanClaim then "🎁 Claim +" .. (daily.Amount or 50) else "Claimed", { Size = UDim2.fromOffset(150, 40), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), Tone = "Green", State = if daily.CanClaim then nil else "Selected", Parent = dcard }, function()
 		send("ClaimDaily")
 	end)
 	-- Weekly
@@ -72983,7 +72968,7 @@ local function renderProfile()
 	local wcard = card(profileBody, 11, 64, C.Accent, wk.CanClaim == true)
 	UI.text("Weekly bonus", { Size = UDim2.new(0.6, 0, 0, 22), TextSize = 16, Font = Theme.FontBold, Parent = wcard })
 	UI.text(string.format("Matches %d/%d · wins %d → +%d Coins", wk.Matches or 0, wk.Need or 3, wk.Wins or 0, wk.Amount or 300), { Position = UDim2.fromOffset(0, 22), Size = UDim2.new(0.6, 0, 0, 20), TextSize = 12, TextColor3 = C.TextDim, Parent = wcard })
-	UI.button(if wk.Claimed then "Claimed ✓" elseif wk.CanClaim then "Claim" else "Keep playing", { Size = UDim2.fromOffset(130, 40), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), BackgroundColor3 = if wk.CanClaim then Color3.fromRGB(40, 110, 60) else C.PanelLighter, Parent = wcard }, function()
+	Buttons.action(if wk.Claimed then "Claimed" elseif wk.CanClaim then "🏆 Claim" else "Keep playing", { Size = UDim2.fromOffset(150, 40), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), Tone = if wk.CanClaim then "Gold" else "Green", State = if wk.Claimed then "Selected" elseif wk.CanClaim then nil else "Disabled", Parent = wcard }, function()
 		send("ClaimWeekly")
 	end)
 	-- Leaderboards
@@ -73028,7 +73013,7 @@ local function renderShop()
 				end
 				UI.text(table.concat(names, " · "), { Position = UDim2.fromOffset(64, 32), Size = UDim2.new(1, -240, 0, 18), TextSize = 12, TextColor3 = C.TextDim, Parent = r })
 			end
-			UI.button(Hud.PriceText(p.Key), { Size = UDim2.fromOffset(160, 48), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), BackgroundColor3 = Color3.fromRGB(40, 110, 60), Parent = r }, function()
+			Buttons.action("Buy " .. Hud.PriceText(p.Key), { Size = UDim2.fromOffset(170, 48), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), Tone = "Green", Parent = r }, function()
 				send("BuyRobux", { Key = p.Key })
 			end)
 		end
@@ -73063,11 +73048,11 @@ end
 local function showInvite(d: any)
 	local card = UI.panel({ Size = UDim2.fromOffset(340, 104), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 90), Parent = gui }, { UI.padding(10) })
 	UI.text(tostring(d.From) .. " invited you to their party", { Size = UDim2.new(1, 0, 0, 24), TextSize = 16, Font = Theme.FontBold, Parent = card })
-	UI.button("Accept", { Size = UDim2.new(0.48, 0, 0, 46), Position = UDim2.new(0, 0, 1, -46), BackgroundColor3 = Color3.fromRGB(40, 110, 60), Parent = card }, function()
+	Buttons.action("✓ Accept", { Size = UDim2.new(0.48, 0, 0, 46), Position = UDim2.new(0, 0, 1, -46), Tone = "Green", Parent = card }, function()
 		send("Accept", { PartyId = d.PartyId })
 		card:Destroy()
 	end)
-	UI.button("Decline", { Size = UDim2.new(0.48, 0, 0, 46), Position = UDim2.new(0.52, 0, 1, -46), BackgroundColor3 = Color3.fromRGB(90, 40, 36), Parent = card }, function()
+	Buttons.action("✖ Decline", { Size = UDim2.new(0.48, 0, 0, 46), Position = UDim2.new(0.52, 0, 1, -46), Tone = "Red", Parent = card }, function()
 		send("Decline", { PartyId = d.PartyId })
 		card:Destroy()
 	end)
@@ -73104,7 +73089,7 @@ local function titleScreen()
 	local title = UI.text("SURVIVAL HOUR", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.36), Size = UDim2.new(0.9, 0, 0, 90), TextSize = 78, Font = Theme.FontBlack, TextColor3 = C.Accent, TextStrokeTransparency = 0.3, TextXAlignment = Enum.TextXAlignment.Center, TextTransparency = 1, Parent = shade })
 	local tag = UI.text("Keep your fire burning. Outlast every other survivor.", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.36, 64), Size = UDim2.new(0.9, 0, 0, 30), TextSize = 22, Font = Theme.FontBold, TextXAlignment = Enum.TextXAlignment.Center, TextTransparency = 1, Parent = shade })
 	local done = false
-	local btn = UI.button("ENTER THE REFUGE", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.7), Size = UDim2.fromOffset(300, 64), TextSize = 24, Font = Theme.FontBlack, BackgroundColor3 = C.AccentDark, Parent = shade }, function()
+	local _btn, setBtn = Buttons.primary("ENTER THE REFUGE", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.72), Size = UDim2.fromOffset(440, 80), Parent = shade }, function()
 		done = true
 	end)
 	TweenService:Create(title, TweenInfo.new(1.6), { TextTransparency = 0 }):Play()
@@ -73123,8 +73108,7 @@ local function titleScreen()
 	end
 	-- Don't hand the camera back until the character exists (the server may
 	-- still be starting up), otherwise the view looks frozen.
-	btn.Active = false
-	btn.Text = "LOADING THE FOREST…"
+	setBtn("ENTER THE REFUGE", "Loading the forest…", "Disabled")
 	local waitUntil = os.clock() + 60
 	local hum: Humanoid? = nil
 	while os.clock() < waitUntil do
@@ -73179,8 +73163,11 @@ function Lobby.Start()
 	local top = UI.panel({ Size = UDim2.fromOffset(560, 40), Position = UDim2.fromOffset(12, 8), Parent = gui })
 	diamondsLabel = UI.text("", { Position = UDim2.fromOffset(12, 0), Size = UDim2.new(1, -12, 1, 0), TextSize = 17, Font = Theme.FontBold, TextColor3 = C.Diamond, Parent = top })
 
-	local bottom = UI.panel({ Size = UDim2.fromOffset(640, 150), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12), Parent = gui }, { UI.padding(10) })
-	readyBtn = UI.button("READY UP", { Size = UDim2.new(1, 0, 0, 56), TextSize = 24, Font = Theme.FontBlack, Parent = bottom }, function()
+	-- Bottom centre: the big READY UP plate, status and party strip.
+	local bottom = UI.new("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(460, 140), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12), Parent = gui })
+	partyStrip = UI.new("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 22), Parent = bottom }, { UI.list(Enum.FillDirection.Horizontal, 4, Enum.HorizontalAlignment.Center) })
+	statusLabel = UI.text("", { Position = UDim2.fromOffset(0, 22), Size = UDim2.new(1, 0, 0, 20), TextSize = 13, TextColor3 = C.Text, TextStrokeTransparency = 0.5, TextXAlignment = Enum.TextXAlignment.Center, Parent = bottom })
+	local _, setReadyFn = Buttons.primary("READY UP", { Size = UDim2.new(1, 0, 0, 84), Position = UDim2.fromOffset(0, 50), Parent = bottom }, function()
 		local lobby = State.Get("Lobby")
 		if lobby and (lobby.Ready or lobby.Queued) then
 			send("Ready", { Value = false })
@@ -73188,11 +73175,24 @@ function Lobby.Start()
 			send("Ready", { Value = true })
 		end
 	end)
-	statusLabel = UI.text("", { Position = UDim2.fromOffset(0, 60), Size = UDim2.new(1, 0, 0, 20), TextSize = 13, TextColor3 = C.TextDim, TextXAlignment = Enum.TextXAlignment.Center, Parent = bottom })
-	partyStrip = UI.new("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 82), Size = UDim2.new(1, 0, 0, 24), Parent = bottom }, { UI.list(Enum.FillDirection.Horizontal, 4, Enum.HorizontalAlignment.Center) })
-	local nav = UI.new("Frame", { BackgroundTransparency = 1, Position = UDim2.new(0, 0, 1, -40), Size = UDim2.new(1, 0, 0, 40), Parent = bottom }, { UI.list(Enum.FillDirection.Horizontal, 6, Enum.HorizontalAlignment.Center) })
-	for _, spec in { { "Party", "♟ Party" }, { "Classes", "⛺ Class" }, { "Perks", "⚡ Power-up" }, { "Locker", "👕 Locker" }, { "Profile", "★ Profile" }, { "LobbyShop", "🪙 Shop" }, { "Help", "?" } } do
-		UI.button(spec[2], { Size = UDim2.fromOffset(if spec[1] == "Help" then 40 else 90, 40), TextSize = 13, Parent = nav }, function()
+	setReady = setReadyFn
+
+	-- Left: menu tiles (icon + title + subtitle), two columns.
+	local nav = UI.new("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(2 * 104 + 8, 4 * 104 + 24), Position = UDim2.fromOffset(12, 60), Parent = gui }, {
+		UI.new("UIGridLayout", { CellSize = UDim2.fromOffset(104, 104), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+	})
+	local TILES = {
+		{ "Party", "PARTY", "Play with friends", "👥" },
+		{ "Classes", "CLASS", "Choose your style", "🏠" },
+		{ "Perks", "POWER-UP", "Boost your run", "⚡" },
+		{ "Locker", "LOCKER", "Customize", "🎒" },
+		{ "Profile", "PROFILE", "Stats & rewards", "👤" },
+		{ "LobbyShop", "SHOP", "Coins & bundles", "🛒" },
+		{ "Help", "HOW TO PLAY", "Learn the basics", "❓" },
+		{ "LobbyShop", "BUY COINS", "Get more coins", "🪙" },
+	}
+	for i, spec in TILES do
+		Buttons.tile(spec[2], spec[3], spec[4], { LayoutOrder = i, Parent = nav, Tone = if spec[2] == "BUY COINS" then "Gold" else "Neutral" }, function()
 			Panels.Toggle(spec[1])
 		end)
 	end
@@ -73517,7 +73517,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Net = require(ReplicatedStorage.Shared.Net)
 local State = require("../State")
 local UI = require("../UI/UI")
-local Theme = require("../UI/Theme")
 
 local Movement = {}
 
@@ -73549,24 +73548,12 @@ function Movement.Start()
 	-- Touch: a RUN toggle next to the jump button.
 	local gui = player:WaitForChild("PlayerGui"):WaitForChild("TouchControls", 5)
 	if gui then
-		local btn = UI.new("TextButton", {
-			Name = "Sprint",
-			Size = UDim2.fromOffset(58, 58),
-			Position = UDim2.new(1, -90, 1, -350),
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			BackgroundColor3 = Theme.Colors.Panel,
-			BackgroundTransparency = 0.25,
-			Text = "RUN",
-			Font = Theme.FontBlack,
-			TextScaled = true,
-			TextColor3 = Theme.Colors.Text,
-			Parent = gui,
-		}, { UI.corner(UDim.new(0.5, 0)), UI.stroke(Theme.Colors.Accent, 2, 0.3) })
+		local btn = UI.Buttons.round("🏃", "RUN", 56, "Neutral", { Name = "Sprint", Position = UDim2.new(1, -85, 1, -375), AnchorPoint = Vector2.new(0.5, 0.5), Parent = gui })
 		btn.Activated:Connect(function()
 			State.Emit("Action", { Name = "SprintToggle", Down = true })
 		end)
 		State.On("SprintWanted", function(v)
-			btn.BackgroundColor3 = if v then Theme.Colors.AccentDark else Theme.Colors.Panel
+			UI.Buttons.setTone(btn, if v then "Green" else "Neutral")
 		end)
 	end
 end
@@ -73713,9 +73700,9 @@ function Panels.Create(name: string, title: string, size: Vector2, onOpen: (() -
 	UI.new("UISizeConstraint", { MaxSize = Vector2.new(size.X, size.Y), Parent = frame })
 	local header = UI.new("Frame", { Size = UDim2.new(1, 0, 0, 48), BackgroundColor3 = Theme.Colors.PanelLight, BorderSizePixel = 0, Parent = frame }, { UI.corner() })
 	UI.text(title, { Position = UDim2.fromOffset(14, 0), Size = UDim2.new(1, -80, 1, 0), TextSize = 22, Font = Theme.FontBlack, TextColor3 = Theme.Colors.Accent, Parent = header })
-	UI.button("✖", { Size = UDim2.fromOffset(44, 40), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), TextSize = 22, BackgroundColor3 = Color3.fromRGB(90, 40, 36), Parent = header }, function()
+	UI.Buttons.icon("✖", { Size = UDim2.fromOffset(40, 40), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0), Parent = header }, function()
 		Panels.Close()
-	end)
+	end, "Red")
 	local body = UI.new("ScrollingFrame", {
 		Name = "Body",
 		Position = UDim2.fromOffset(0, 52),
@@ -74599,6 +74586,395 @@ return State
           </Properties>
           <Item class="ModuleScript" referent="926">
             <Properties>
+              <string name="Name">Buttons</string>
+              <string name="Source"><![CDATA[--!nonstrict
+-- Survival Hour button kit (docs/ui/button_reference.png).
+--
+-- Six styles, one look: dark steel plates with a bevel gradient, a coloured
+-- rim and a soft outer glow.
+--   Buttons.primary  big green call-to-action (ENTER THE REFUGE, READY UP)
+--   Buttons.tile     square menu tile: icon + TITLE + subtitle
+--   Buttons.round    round mobile action button (ATTACK, AIM/BLOCK, HEAL, SWAP, RUN)
+--   Buttons.action   small action button (EQUIP, UNLOCK ◆ 250, BUY ● 500, CLAIM, LOCKED)
+--   Buttons.tab      tab (OUTFITS, BACKPACKS...)
+--   Buttons.icon     icon-only square (✖, ◀, ▶, +)
+-- States (all styles): Normal · Hover/Pressed (green rim + glow) · Disabled
+-- (grey, ignores clicks) · Selected/Equipped (gold rim + glow, ✓).
+-- Tones pick the resting colour: Neutral, Green, Gold, Red, Blue.
+
+local Theme = require("./Theme")
+
+local Buttons = {}
+
+-- click sound hook (UI.luau points this at UI.ClickSound)
+Buttons.GetClickSound = function(): (() -> ())?
+	return nil
+end
+
+type Tone = { Top: Color3, Rim: Color3, Text: Color3, Glow: number }
+
+local function rgb(r: number, g: number, b: number): Color3
+	return Color3.fromRGB(r, g, b)
+end
+
+Buttons.Tones = {
+	Neutral = { Top = rgb(44, 53, 61), Rim = rgb(88, 100, 110), Text = rgb(236, 240, 242), Glow = 1 },
+	Green = { Top = rgb(58, 150, 40), Rim = rgb(134, 255, 90), Text = rgb(255, 255, 255), Glow = 0.55 },
+	Gold = { Top = rgb(66, 54, 26), Rim = rgb(242, 193, 78), Text = rgb(255, 231, 160), Glow = 0.5 },
+	Red = { Top = rgb(160, 44, 34), Rim = rgb(255, 106, 90), Text = rgb(255, 240, 236), Glow = 0.6 },
+	Blue = { Top = rgb(40, 96, 180), Rim = rgb(106, 184, 255), Text = rgb(240, 248, 255), Glow = 0.6 },
+	Disabled = { Top = rgb(58, 62, 66), Rim = rgb(92, 96, 100), Text = rgb(138, 142, 146), Glow = 1 },
+} :: { [string]: Tone }
+
+local HOVER_RIM = rgb(134, 255, 90)
+
+local function new(className: string, props: { [string]: any }, children: { Instance }?): any
+	local inst = Instance.new(className :: any)
+	local parent = props.Parent
+	for k, v in props do
+		if k ~= "Parent" then
+			(inst :: any)[k] = v
+		end
+	end
+	if children then
+		for _, c in children do
+			c.Parent = inst
+		end
+	end
+	if parent then
+		inst.Parent = parent
+	end
+	return inst
+end
+
+-- Price text: Coins ● gold, Diamonds ◆ cyan, Robux R$.
+function Buttons.priceText(kind: string?, amount: number?): string
+	if not kind or not amount then
+		return ""
+	end
+	local n = tostring(amount)
+	n = string.reverse((string.gsub(string.reverse(n), "(%d%d%d)", "%1,")))
+	if string.sub(n, 1, 1) == "," then
+		n = string.sub(n, 2)
+	end
+	if kind == "Coins" then
+		return ' <font color="#F2C14E">●</font> ' .. n
+	elseif kind == "Diamonds" then
+		return ' <font color="#7EE0FF">◆</font> ' .. n
+	elseif kind == "Robux" then
+		return " R$ " .. n
+	end
+	return " " .. n
+end
+
+-- Applies the kit look to any GuiButton and wires hover/press feedback.
+-- Stores Tone/State as attributes so setState/setTone can restyle later.
+function Buttons.decorate(b: GuiButton, tone: string?, radius: UDim?)
+	b.AutoButtonColor = false
+	b.BorderSizePixel = 0
+	b:SetAttribute("Tone", tone or "Neutral")
+	b:SetAttribute("State", b:GetAttribute("State") or "Normal")
+	if not b:FindFirstChildOfClass("UICorner") then
+		new("UICorner", { CornerRadius = radius or UDim.new(0, 8), Parent = b })
+	end
+	local stroke = b:FindFirstChildOfClass("UIStroke") or new("UIStroke", { Parent = b })
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Thickness = 2
+	stroke.Transparency = 0
+	if not b:FindFirstChild("Bevel") then
+		new("UIGradient", {
+			Name = "Bevel",
+			Rotation = 90,
+			Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+				ColorSequenceKeypoint.new(0.5, rgb(200, 200, 200)),
+				ColorSequenceKeypoint.new(1, rgb(120, 120, 120)),
+			}),
+			Parent = b,
+		})
+	end
+	if not b:FindFirstChild("Glow") then
+		-- a ring just outside the plate: reads as a soft glow and never covers content
+		local glow = new("Frame", {
+			Name = "Glow",
+			BackgroundTransparency = 1,
+			Size = UDim2.new(1, 8, 1, 8),
+			Position = UDim2.fromOffset(-4, -4),
+			ZIndex = b.ZIndex,
+			Active = false,
+			Parent = b,
+		}, {
+			new("UICorner", { CornerRadius = if radius and radius.Scale > 0 then radius else UDim.new(0, (radius and radius.Offset or 8) + 4) }),
+			new("UIStroke", { Thickness = 4, Transparency = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+		})
+		glow:SetAttribute("Deco", true)
+	end
+	Buttons.refresh(b)
+	if b:GetAttribute("Wired") then
+		return
+	end
+	b:SetAttribute("Wired", true)
+	b.MouseEnter:Connect(function()
+		b:SetAttribute("Hover", true)
+		Buttons.refresh(b)
+	end)
+	b.MouseLeave:Connect(function()
+		b:SetAttribute("Hover", nil)
+		b:SetAttribute("Down", nil)
+		Buttons.refresh(b)
+	end)
+	b.MouseButton1Down:Connect(function()
+		b:SetAttribute("Down", true)
+		Buttons.refresh(b)
+	end)
+	b.MouseButton1Up:Connect(function()
+		b:SetAttribute("Down", nil)
+		Buttons.refresh(b)
+	end)
+end
+
+-- Recolours a decorated button from its Tone / State / hover attributes.
+function Buttons.refresh(b: GuiButton)
+	local state = b:GetAttribute("State") or "Normal"
+	local toneName = if state == "Disabled" then "Disabled" elseif state == "Selected" then "Gold" else (b:GetAttribute("Tone") or "Neutral")
+	local tone = Buttons.Tones[toneName] or Buttons.Tones.Neutral
+	local hot = state ~= "Disabled" and (b:GetAttribute("Hover") or b:GetAttribute("Down"))
+	local top = tone.Top
+	if b:GetAttribute("Down") and state ~= "Disabled" then
+		top = top:Lerp(Color3.new(0, 0, 0), 0.25)
+	elseif hot then
+		top = top:Lerp(Color3.new(1, 1, 1), 0.08)
+	end
+	b.BackgroundColor3 = top
+	b.BackgroundTransparency = 0
+	local stroke = b:FindFirstChildOfClass("UIStroke")
+	if stroke then
+		stroke.Color = if hot and toneName ~= "Red" then HOVER_RIM else tone.Rim
+	end
+	local glow = b:FindFirstChild("Glow")
+	local gs = glow and glow:FindFirstChildOfClass("UIStroke")
+	if gs then
+		gs.Color = if hot and toneName ~= "Red" then HOVER_RIM else tone.Rim
+		gs.Transparency = if hot then 0.45 else tone.Glow
+	end
+	if b:IsA("TextButton") and b.Text ~= "" then
+		b.TextColor3 = tone.Text
+	end
+	for _, d in b:GetDescendants() do
+		if d:IsA("TextLabel") and d:GetAttribute("Tinted") then
+			d.TextColor3 = if d:GetAttribute("Sub") then tone.Text:Lerp(tone.Top, 0.35) else tone.Text
+		end
+	end
+	b.Active = state ~= "Disabled"
+end
+
+function Buttons.setState(b: GuiButton, state: string)
+	b:SetAttribute("State", state)
+	Buttons.refresh(b)
+end
+
+function Buttons.setTone(b: GuiButton, tone: string)
+	b:SetAttribute("Tone", tone)
+	Buttons.refresh(b)
+end
+
+local function wireClick(b: GuiButton, onClick: (() -> ())?)
+	if not onClick then
+		return
+	end
+	b.Activated:Connect(function()
+		if b:GetAttribute("State") == "Disabled" then
+			return
+		end
+		local sfx = Buttons.GetClickSound()
+		if sfx then
+			sfx()
+		end
+		onClick()
+	end)
+end
+
+local function label(parent: Instance, text: string, props: { [string]: any }): TextLabel
+	local p = table.clone(props)
+	p.BackgroundTransparency = 1
+	p.Text = text
+	p.Font = p.Font or Theme.FontBlack
+	p.TextScaled = if p.TextScaled == nil then true else p.TextScaled
+	p.RichText = true
+	p.Parent = parent
+	local l = new("TextLabel", p)
+	l:SetAttribute("Tinted", true)
+	return l
+end
+
+local function base(className: string, props: { [string]: any }?): { [string]: any }
+	local p = props and table.clone(props) or {}
+	p.Tone = nil
+	p.State = nil
+	p.Price = nil
+	p.Sub = nil
+	p.Glyph = nil
+	return p
+end
+
+--- Big primary button. Returns the button and setter(text, sub?, state?).
+function Buttons.primary(text: string, props: { [string]: any }?, onClick: (() -> ())?): (TextButton, (string, string?, string?) -> ())
+	local p = base("TextButton", props)
+	p.Text = ""
+	p.Size = p.Size or UDim2.fromOffset(420, 72)
+	local b = new("TextButton", p)
+	Buttons.decorate(b, (props and props.Tone) or "Green", UDim.new(0, 12))
+	-- pine silhouettes at both ends, like the reference plate
+	for _, side in { 0, 1 } do
+		local trees = label(b, "▲▲", { Name = "Trees" .. side, Size = UDim2.new(0.16, 0, 0.7, 0), Position = UDim2.new(if side == 0 then 0.02 else 0.82, 0, 0.15, 0), TextTransparency = 0.55, Font = Theme.FontBlack })
+		trees:SetAttribute("Tinted", nil)
+		trees.TextColor3 = rgb(10, 40, 8)
+	end
+	local main = label(b, text, { Name = "Main", Size = UDim2.new(0.68, 0, 0.62, 0), Position = UDim2.fromScale(0.16, 0.19), TextStrokeTransparency = 0.5 })
+	local sub = label(b, "", { Name = "Sub", Size = UDim2.new(0.6, 0, 0.26, 0), Position = UDim2.fromScale(0.2, 0.66), Font = Theme.FontBold, Visible = false })
+	sub:SetAttribute("Sub", true)
+	local function set(t: string, s: string?, state: string?)
+		main.Text = t
+		sub.Text = s or ""
+		sub.Visible = s ~= nil and s ~= ""
+		main.Size = if sub.Visible then UDim2.new(0.68, 0, 0.48, 0) else UDim2.new(0.68, 0, 0.62, 0)
+		main.Position = if sub.Visible then UDim2.fromScale(0.16, 0.12) else UDim2.fromScale(0.16, 0.19)
+		b:SetAttribute("State", state or "Normal")
+		Buttons.refresh(b)
+	end
+	set(text, props and props.Sub, props and props.State)
+	wireClick(b, onClick)
+	return b, set
+end
+
+--- Square menu tile: glyph + TITLE + subtitle.
+function Buttons.tile(title: string, sub: string?, glyph: string, props: { [string]: any }?, onClick: (() -> ())?): TextButton
+	local p = base("TextButton", props)
+	p.Text = ""
+	p.Size = p.Size or UDim2.fromOffset(104, 104)
+	local b = new("TextButton", p)
+	Buttons.decorate(b, (props and props.Tone) or "Neutral", UDim.new(0, 10))
+	local hasSub = sub ~= nil and sub ~= ""
+	label(b, glyph, { Name = "Glyph", Size = UDim2.fromScale(0.8, if hasSub then 0.42 else 0.5), Position = UDim2.fromScale(0.1, 0.08), Font = Theme.FontBlack })
+	label(b, title, { Name = "Title", Size = UDim2.fromScale(0.9, if hasSub then 0.2 else 0.24), Position = UDim2.fromScale(0.05, if hasSub then 0.52 else 0.64) })
+	if hasSub then
+		local s = label(b, sub :: string, { Name = "Subtitle", Size = UDim2.fromScale(0.9, 0.15), Position = UDim2.fromScale(0.05, 0.74), Font = Theme.FontBold })
+		s:SetAttribute("Sub", true)
+	end
+	if props and props.State then
+		Buttons.setState(b, props.State)
+	end
+	wireClick(b, onClick)
+	return b
+end
+
+--- Round mobile action button (caller wires touch input). Label sits under the disc.
+function Buttons.round(glyph: string, text: string, size: number, tone: string, props: { [string]: any }?): TextButton
+	local p = base("TextButton", props)
+	p.Text = ""
+	p.Size = UDim2.fromOffset(size, size)
+	local b = new("TextButton", p)
+	Buttons.decorate(b, tone, UDim.new(0.5, 0))
+	local stroke = b:FindFirstChildOfClass("UIStroke")
+	if stroke then
+		stroke.Thickness = 3
+	end
+	label(b, glyph, { Name = "Glyph", Size = UDim2.fromScale(0.62, 0.62), Position = UDim2.fromScale(0.19, 0.19) })
+	local cap = label(b, text, { Name = "Caption", Size = UDim2.new(1.4, 0, 0, math.max(12, size * 0.2)), Position = UDim2.new(-0.2, 0, 1, 4), Font = Theme.FontBlack, TextStrokeTransparency = 0.3 })
+	cap:SetAttribute("Tinted", nil)
+	cap.TextColor3 = Color3.new(1, 1, 1)
+	return b
+end
+
+--- Small action button, optional price: props.Price = { Kind = "Coins"|"Diamonds"|"Robux", Amount = n }.
+--- props.State "Selected" adds ✓; "Locked" shows a padlock (and is disabled).
+function Buttons.action(text: string, props: { [string]: any }?, onClick: (() -> ())?): TextButton
+	local p = base("TextButton", props)
+	local price = props and props.Price
+	local state = props and props.State
+	local shown = string.upper(text)
+	if price then
+		shown ..= Buttons.priceText(price.Kind, price.Amount)
+	end
+	if state == "Selected" then
+		shown ..= " ✓"
+	elseif state == "Locked" then
+		shown = "🔒 " .. shown
+	end
+	p.Text = shown
+	p.RichText = true
+	p.Font = p.Font or Theme.FontBlack
+	p.TextSize = p.TextSize or 15
+	p.Size = p.Size or UDim2.fromOffset(140, 40)
+	local b = new("TextButton", p)
+	Buttons.decorate(b, (props and props.Tone) or "Green", UDim.new(0, 8))
+	if state then
+		Buttons.setState(b, if state == "Locked" then "Disabled" else state)
+	end
+	wireClick(b, onClick)
+	return b
+end
+
+--- Tab button; selected tabs are gold.
+function Buttons.tab(text: string, glyph: string?, selected: boolean, props: { [string]: any }?, onClick: (() -> ())?): TextButton
+	local p = base("TextButton", props)
+	p.Size = p.Size or UDim2.fromOffset(110, 36)
+	if glyph then
+		p.Text = ""
+	else
+		p.Text = string.upper(text)
+		p.Font = Theme.FontBlack
+		p.TextSize = p.TextSize or 13
+	end
+	local b = new("TextButton", p)
+	Buttons.decorate(b, "Neutral", UDim.new(0, 6))
+	if glyph then
+		label(b, glyph, { Name = "Glyph", Size = UDim2.fromScale(0.8, 0.52), Position = UDim2.fromScale(0.1, 0.06) })
+		local t = label(b, text, { Name = "Title", Size = UDim2.fromScale(0.92, 0.28), Position = UDim2.fromScale(0.04, 0.64), Font = Theme.FontBold })
+		t:SetAttribute("Sub", true)
+	end
+	Buttons.setState(b, if selected then "Selected" else "Normal")
+	wireClick(b, onClick)
+	return b
+end
+
+--- Icon-only square button (✖ ◀ ▶ +). tone "Red" for close/cancel.
+function Buttons.icon(glyph: string, props: { [string]: any }?, onClick: (() -> ())?, tone: string?): TextButton
+	local p = base("TextButton", props)
+	p.Text = glyph
+	p.Font = Theme.FontBlack
+	p.TextSize = p.TextSize or 22
+	p.Size = p.Size or UDim2.fromOffset(44, 44)
+	local b = new("TextButton", p)
+	Buttons.decorate(b, tone or "Neutral", UDim.new(0, 8))
+	wireClick(b, onClick)
+	return b
+end
+
+-- Picks a tone from a legacy BackgroundColor3 (so older call sites keep their meaning).
+function Buttons.toneFor(color: Color3?): string
+	if not color then
+		return "Neutral"
+	end
+	local r, g, bl = color.R * 255, color.G * 255, color.B * 255
+	if r > g + 30 and r > bl + 20 and g < 90 then
+		return "Red"
+	elseif g > r + 20 and g > bl then
+		return "Green"
+	elseif bl > r + 25 then
+		return "Blue"
+	elseif r > 150 and g > 90 and bl < 90 then
+		return "Gold"
+	end
+	return "Neutral"
+end
+
+return Buttons
+]]></string>
+            </Properties>
+          </Item>
+          <Item class="ModuleScript" referent="927">
+            <Properties>
               <string name="Name">Theme</string>
               <string name="Source"><![CDATA[--!nonstrict
 -- Visual language for all Survival Hour interfaces: warm campfire accents on
@@ -74608,10 +74984,11 @@ return State
 local Theme = {}
 
 Theme.Colors = {
-	Panel = Color3.fromRGB(26, 23, 20),
-	PanelLight = Color3.fromRGB(44, 38, 32),
-	PanelLighter = Color3.fromRGB(62, 54, 45),
-	Stroke = Color3.fromRGB(120, 96, 68),
+	-- dark steel-slate panels to match the button kit (docs/ui/button_reference.png)
+	Panel = Color3.fromRGB(20, 26, 32),
+	PanelLight = Color3.fromRGB(30, 38, 46),
+	PanelLighter = Color3.fromRGB(44, 54, 64),
+	Stroke = Color3.fromRGB(84, 98, 110),
 	Text = Color3.fromRGB(246, 238, 224),
 	TextDim = Color3.fromRGB(190, 178, 160),
 	Accent = Color3.fromRGB(245, 160, 70),
@@ -74658,13 +75035,14 @@ return Theme
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="927">
+          <Item class="ModuleScript" referent="928">
             <Properties>
               <string name="Name">UI</string>
               <string name="Source"><![CDATA[--!nonstrict
 -- Tiny declarative helpers for building Roblox GUIs in code.
 
 local Theme = require("./Theme")
+local Buttons = require("./Buttons")
 
 local UI = {}
 
@@ -74744,33 +75122,30 @@ function UI.text(text: string, props: { [string]: any }?): TextLabel
 	return UI.new("TextLabel", p)
 end
 
--- Button with hover/press feedback. `onClick` receives nothing.
+-- Button in the Survival Hour kit style (UI/Buttons): steel plate, coloured rim,
+-- green hover glow. `props.Tone` (Neutral/Green/Gold/Red/Blue) and `props.State`
+-- (Normal/Selected/Disabled) are optional; a legacy BackgroundColor3 still maps
+-- to the matching tone. `onClick` receives nothing.
 function UI.button(text: string, props: { [string]: any }?, onClick: (() -> ())?): TextButton
 	local p = props and table.clone(props) or {}
-	local color = p.BackgroundColor3 or Theme.Colors.PanelLighter
+	local tone = p.Tone or Buttons.toneFor(p.BackgroundColor3)
+	local state = p.State
+	p.Tone = nil
+	p.State = nil
 	p.Text = text
-	p.AutoButtonColor = false
-	p.BackgroundColor3 = color
-	p.BorderSizePixel = 0
 	p.Font = p.Font or Theme.FontBold
-	p.TextColor3 = p.TextColor3 or Theme.Colors.Text
 	p.TextSize = p.TextSize or 16
 	p.Size = p.Size or UDim2.new(0, 140, 0, 44)
-	local b: TextButton = UI.new("TextButton", p, { UI.corner(UDim.new(0, 8)), UI.stroke(Theme.Colors.Stroke, 1.2, 0.4) })
-	b.MouseEnter:Connect(function()
-		b.BackgroundColor3 = color:Lerp(Color3.new(1, 1, 1), 0.12)
-	end)
-	b.MouseLeave:Connect(function()
-		b.BackgroundColor3 = color
-	end)
-	b.MouseButton1Down:Connect(function()
-		b.BackgroundColor3 = color:Lerp(Color3.new(0, 0, 0), 0.2)
-	end)
-	b.MouseButton1Up:Connect(function()
-		b.BackgroundColor3 = color
-	end)
+	local b: TextButton = UI.new("TextButton", p)
+	Buttons.decorate(b, tone)
+	if state then
+		Buttons.setState(b, state)
+	end
 	if onClick then
 		b.Activated:Connect(function()
+			if b:GetAttribute("State") == "Disabled" then
+				return
+			end
 			local sfx = UI.ClickSound
 			if sfx then
 				sfx()
@@ -74782,6 +75157,10 @@ function UI.button(text: string, props: { [string]: any }?, onClick: (() -> ())?
 end
 
 UI.ClickSound = nil :: (() -> ())?
+Buttons.GetClickSound = function()
+	return UI.ClickSound
+end
+UI.Buttons = Buttons
 
 -- Item/powerup icon badge drawn from primitives: shaped background + glyph.
 function UI.icon(glyph: string, color: Color3, size: number, shape: string?): Frame
@@ -74873,7 +75252,7 @@ return UI
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="928">
+  <Item class="Workspace" referent="929">
     <Properties>
       <string name="Name">Workspace</string>
       <float name="Gravity">196.2</float>

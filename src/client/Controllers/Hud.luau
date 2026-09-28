@@ -212,12 +212,14 @@ local function refreshHotbar()
 			Name = slot,
 			LayoutOrder = i,
 			Size = UDim2.fromOffset(64, 72),
-			BackgroundColor3 = if equipped then C.AccentDark else C.Panel,
-			BackgroundTransparency = if equipped then 0.05 else 0.2,
 			Text = "",
-			AutoButtonColor = false,
 			Parent = hotbar,
-		}, { UI.corner(UDim.new(0, 10)), UI.stroke(if equipped then C.Accent else C.Stroke, if equipped then 2.5 else 1.2, 0.1) })
+		})
+		-- kit style: the equipped slot gets the gold "selected" rim and glow
+		UI.Buttons.decorate(btn, "Neutral", UDim.new(0, 10))
+		if equipped then
+			UI.Buttons.setState(btn, "Selected")
+		end
 		if stack then
 			local def = Items[stack.Id]
 			local ic = UI.icon(def.Icon.Glyph, def.Icon.Color, 40, def.Icon.Shape)

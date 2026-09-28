@@ -49,9 +49,9 @@ function Panels.Create(name: string, title: string, size: Vector2, onOpen: (() -
 	UI.new("UISizeConstraint", { MaxSize = Vector2.new(size.X, size.Y), Parent = frame })
 	local header = UI.new("Frame", { Size = UDim2.new(1, 0, 0, 48), BackgroundColor3 = Theme.Colors.PanelLight, BorderSizePixel = 0, Parent = frame }, { UI.corner() })
 	UI.text(title, { Position = UDim2.fromOffset(14, 0), Size = UDim2.new(1, -80, 1, 0), TextSize = 22, Font = Theme.FontBlack, TextColor3 = Theme.Colors.Accent, Parent = header })
-	UI.button("✖", { Size = UDim2.fromOffset(44, 40), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), TextSize = 22, BackgroundColor3 = Color3.fromRGB(90, 40, 36), Parent = header }, function()
+	UI.Buttons.icon("✖", { Size = UDim2.fromOffset(40, 40), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0), Parent = header }, function()
 		Panels.Close()
-	end)
+	end, "Red")
 	local body = UI.new("ScrollingFrame", {
 		Name = "Body",
 		Position = UDim2.fromOffset(0, 52),

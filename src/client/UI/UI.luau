@@ -2,6 +2,7 @@
 -- Tiny declarative helpers for building Roblox GUIs in code.
 
 local Theme = require("./Theme")
+local Buttons = require("./Buttons")
 
 local UI = {}
 
@@ -81,33 +82,30 @@ function UI.text(text: string, props: { [string]: any }?): TextLabel
 	return UI.new("TextLabel", p)
 end
 
--- Button with hover/press feedback. `onClick` receives nothing.
+-- Button in the Survival Hour kit style (UI/Buttons): steel plate, coloured rim,
+-- green hover glow. `props.Tone` (Neutral/Green/Gold/Red/Blue) and `props.State`
+-- (Normal/Selected/Disabled) are optional; a legacy BackgroundColor3 still maps
+-- to the matching tone. `onClick` receives nothing.
 function UI.button(text: string, props: { [string]: any }?, onClick: (() -> ())?): TextButton
 	local p = props and table.clone(props) or {}
-	local color = p.BackgroundColor3 or Theme.Colors.PanelLighter
+	local tone = p.Tone or Buttons.toneFor(p.BackgroundColor3)
+	local state = p.State
+	p.Tone = nil
+	p.State = nil
 	p.Text = text
-	p.AutoButtonColor = false
-	p.BackgroundColor3 = color
-	p.BorderSizePixel = 0
 	p.Font = p.Font or Theme.FontBold
-	p.TextColor3 = p.TextColor3 or Theme.Colors.Text
 	p.TextSize = p.TextSize or 16
 	p.Size = p.Size or UDim2.new(0, 140, 0, 44)
-	local b: TextButton = UI.new("TextButton", p, { UI.corner(UDim.new(0, 8)), UI.stroke(Theme.Colors.Stroke, 1.2, 0.4) })
-	b.MouseEnter:Connect(function()
-		b.BackgroundColor3 = color:Lerp(Color3.new(1, 1, 1), 0.12)
-	end)
-	b.MouseLeave:Connect(function()
-		b.BackgroundColor3 = color
-	end)
-	b.MouseButton1Down:Connect(function()
-		b.BackgroundColor3 = color:Lerp(Color3.new(0, 0, 0), 0.2)
-	end)
-	b.MouseButton1Up:Connect(function()
-		b.BackgroundColor3 = color
-	end)
+	local b: TextButton = UI.new("TextButton", p)
+	Buttons.decorate(b, tone)
+	if state then
+		Buttons.setState(b, state)
+	end
 	if onClick then
 		b.Activated:Connect(function()
+			if b:GetAttribute("State") == "Disabled" then
+				return
+			end
 			local sfx = UI.ClickSound
 			if sfx then
 				sfx()
@@ -119,6 +117,10 @@ function UI.button(text: string, props: { [string]: any }?, onClick: (() -> ())?
 end
 
 UI.ClickSound = nil :: (() -> ())?
+Buttons.GetClickSound = function()
+	return UI.ClickSound
+end
+UI.Buttons = Buttons
 
 -- Item/powerup icon badge drawn from primitives: shaped background + glyph.
 function UI.icon(glyph: string, color: Color3, size: number, shape: string?): Frame

@@ -179,3 +179,13 @@ checks. It caught a shadowed-local bug in the Hall of Fame board before commit.
   the Survival Wars FBX set (Docs/IMPORT.md), then tune economy numbers (Progression, Cosmetics prices, yields).
 - Classes and power-ups live in `Shared/Classes` / `Shared/Perks`. The effect keys are consumed only in
   `PowerupService` (the list of known keys is enforced by `tests/Cosmetics.spec.luau`).
+
+## UI button kit (from docs/ui/button_reference.png)
+
+`src/client/UI/Buttons.luau` implements the six reference styles in code (no image assets): big primary
+(ENTER THE REFUGE, READY UP with searching/ready states), menu tiles (icon + title + subtitle), round mobile
+buttons (ATTACK red, AIM/BLOCK blue, HEAL green, SWAP, RUN), small action buttons with Coins / Diamonds / Robux
+prices, tabs (Locker categories) and icon-only buttons (✖ ◀ ▶ +). Every style has Normal, Hover/Pressed (green
+rim + glow), Disabled (grey, ignores clicks) and Selected/Equipped (gold rim + ✓). `UI.button` now draws in the kit
+style too, so every older button (inventory, crafting, storage, spectate...) matches. Panels switched to the
+reference's dark steel-slate; the equipped hotbar slot uses the gold "selected" rim.

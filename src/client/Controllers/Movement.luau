@@ -8,7 +8,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Net = require(ReplicatedStorage.Shared.Net)
 local State = require("../State")
 local UI = require("../UI/UI")
-local Theme = require("../UI/Theme")
 
 local Movement = {}
 
@@ -40,24 +39,12 @@ function Movement.Start()
 	-- Touch: a RUN toggle next to the jump button.
 	local gui = player:WaitForChild("PlayerGui"):WaitForChild("TouchControls", 5)
 	if gui then
-		local btn = UI.new("TextButton", {
-			Name = "Sprint",
-			Size = UDim2.fromOffset(58, 58),
-			Position = UDim2.new(1, -90, 1, -350),
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			BackgroundColor3 = Theme.Colors.Panel,
-			BackgroundTransparency = 0.25,
-			Text = "RUN",
-			Font = Theme.FontBlack,
-			TextScaled = true,
-			TextColor3 = Theme.Colors.Text,
-			Parent = gui,
-		}, { UI.corner(UDim.new(0.5, 0)), UI.stroke(Theme.Colors.Accent, 2, 0.3) })
+		local btn = UI.Buttons.round("🏃", "RUN", 56, "Neutral", { Name = "Sprint", Position = UDim2.new(1, -85, 1, -375), AnchorPoint = Vector2.new(0.5, 0.5), Parent = gui })
 		btn.Activated:Connect(function()
 			State.Emit("Action", { Name = "SprintToggle", Down = true })
 		end)
 		State.On("SprintWanted", function(v)
-			btn.BackgroundColor3 = if v then Theme.Colors.AccentDark else Theme.Colors.Panel
+			UI.Buttons.setTone(btn, if v then "Green" else "Neutral")
 		end)
 	end
 end

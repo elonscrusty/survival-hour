@@ -14,7 +14,6 @@ local Players = game:GetService("Players")
 
 local State = require("../State")
 local UI = require("../UI/UI")
-local Theme = require("../UI/Theme")
 
 local Input = {}
 
@@ -117,26 +116,12 @@ function Input._buildTouch()
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 		Parent = player:WaitForChild("PlayerGui"),
 	})
-	local function round(name: string, glyph: string, label: string, size: number, pos: UDim2, action: string, hold: boolean, color: Color3?)
-		local b = UI.new("TextButton", {
-			Name = name,
-			Size = UDim2.fromOffset(size, size),
-			Position = pos,
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			BackgroundColor3 = color or Theme.Colors.Panel,
-			BackgroundTransparency = 0.25,
-			Text = "",
-			AutoButtonColor = false,
-			Parent = gui,
-		}, {
-			UI.corner(UDim.new(0.5, 0)),
-			UI.stroke(Theme.Colors.Accent, 2, 0.3),
-			UI.new("TextLabel", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 0.62), Text = glyph, TextScaled = true, Font = Theme.FontBlack, TextColor3 = Theme.Colors.Text }),
-			UI.new("TextLabel", { BackgroundTransparency = 1, Position = UDim2.fromScale(0, 0.58), Size = UDim2.fromScale(1, 0.3), Text = label, TextScaled = true, Font = Theme.FontBold, TextColor3 = Theme.Colors.TextDim }),
-		})
+	local function round(name: string, glyph: string, label: string, size: number, pos: UDim2, action: string, hold: boolean, tone: string)
+		local b = UI.Buttons.round(glyph, label, size, tone, { Name = name, Position = pos, AnchorPoint = Vector2.new(0.5, 0.5), Parent = gui })
 		b.InputBegan:Connect(function(io)
 			if io.UserInputType == Enum.UserInputType.Touch then
-				b.BackgroundTransparency = 0.05
+				b:SetAttribute("Down", true)
+				UI.Buttons.refresh(b)
 				emit(action, true)
 				if not hold then
 					emit(action, false)
@@ -145,7 +130,8 @@ function Input._buildTouch()
 		end)
 		b.InputEnded:Connect(function(io)
 			if io.UserInputType == Enum.UserInputType.Touch then
-				b.BackgroundTransparency = 0.25
+				b:SetAttribute("Down", nil)
+				UI.Buttons.refresh(b)
 				if hold and Input.Down[action] then
 					emit(action, false)
 				end
@@ -154,10 +140,10 @@ function Input._buildTouch()
 		return b
 	end
 	-- Bottom-right combat cluster (clear of the default jump button, which sits lower-right).
-	local attack = round("Attack", "⚔", "ATTACK", 92, UDim2.new(1, -170, 1, -190), "Attack", true, Color3.fromRGB(90, 40, 30))
-	round("Aim", "◎", "AIM/BLOCK", 66, UDim2.new(1, -270, 1, -150), "Aim", true)
-	round("Bandage", "✚", "HEAL", 58, UDim2.new(1, -90, 1, -270), "Bandage", false, Color3.fromRGB(80, 30, 34))
-	round("Swap", "⇄", "SWAP", 54, UDim2.new(1, -170, 1, -300), "Swap", false)
+	local attack = round("Attack", "🗡", "ATTACK", 92, UDim2.new(1, -170, 1, -200), "Attack", true, "Red")
+	round("Aim", "🛡", "AIM / BLOCK", 66, UDim2.new(1, -275, 1, -155), "Aim", true, "Blue")
+	round("Bandage", "✚", "HEAL", 60, UDim2.new(1, -85, 1, -285), "Bandage", false, "Green")
+	round("Swap", "⇄", "SWAP", 56, UDim2.new(1, -170, 1, -320), "Swap", false, "Neutral")
 	State.Set("TouchAttackButton", attack)
 
 	-- Menu buttons (top right, below the Roblox top bar)
@@ -169,21 +155,8 @@ function Input._buildTouch()
 		AnchorPoint = Vector2.new(1, 0),
 		Parent = gui,
 	}, { UI.list(Enum.FillDirection.Horizontal, 6, Enum.HorizontalAlignment.Right) })
-	for i, spec in { { "Inventory", "▤", "BAG" }, { "Craft", "⚒", "CRAFT" }, { "Build", "▥", "BUILD" }, { "Map", "🧭", "MAP" } } do
-		local b = UI.new("TextButton", {
-			Name = spec[1],
-			LayoutOrder = i,
-			Size = UDim2.fromOffset(56, 56),
-			BackgroundColor3 = Theme.Colors.Panel,
-			BackgroundTransparency = 0.2,
-			Text = "",
-			Parent = menu,
-		}, {
-			UI.corner(UDim.new(0, 10)),
-			UI.stroke(),
-			UI.new("TextLabel", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 0.62), Text = spec[2], TextScaled = true, Font = Theme.FontBlack, TextColor3 = Theme.Colors.Text }),
-			UI.new("TextLabel", { BackgroundTransparency = 1, Position = UDim2.fromScale(0, 0.62), Size = UDim2.fromScale(1, 0.3), Text = spec[3], TextScaled = true, Font = Theme.FontBold, TextColor3 = Theme.Colors.TextDim }),
-		})
+	for i, spec in { { "Inventory", "🎒", "BAG" }, { "Craft", "🔨", "CRAFT" }, { "Build", "🧱", "BUILD" }, { "Map", "🗺", "MAP" } } do
+		local b = UI.Buttons.tile(spec[3], nil, spec[2], { Name = spec[1], LayoutOrder = i, Size = UDim2.fromOffset(58, 58), Parent = menu })
 		b.Activated:Connect(function()
 			emit(spec[1], true)
 			emit(spec[1], false)

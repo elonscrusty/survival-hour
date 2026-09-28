@@ -6,10 +6,11 @@
 local Theme = {}
 
 Theme.Colors = {
-	Panel = Color3.fromRGB(26, 23, 20),
-	PanelLight = Color3.fromRGB(44, 38, 32),
-	PanelLighter = Color3.fromRGB(62, 54, 45),
-	Stroke = Color3.fromRGB(120, 96, 68),
+	-- dark steel-slate panels to match the button kit (docs/ui/button_reference.png)
+	Panel = Color3.fromRGB(20, 26, 32),
+	PanelLight = Color3.fromRGB(30, 38, 46),
+	PanelLighter = Color3.fromRGB(44, 54, 64),
+	Stroke = Color3.fromRGB(84, 98, 110),
 	Text = Color3.fromRGB(246, 238, 224),
 	TextDim = Color3.fromRGB(190, 178, 160),
 	Accent = Color3.fromRGB(245, 160, 70),
