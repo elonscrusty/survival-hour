@@ -29,6 +29,8 @@ Config.Dev = {
 	-- on before its dates, to preview the Locker items and the spooky look. nil = real dates.
 	-- Ignored in live servers.
 	ForceSeason = nil :: string?,
+	-- Studio only: open the lobby's "What's new" panel on every visit (to check it).
+	PreviewWhatsNew = false,
 }
 
 -- Survival Wars launches solo: every player is a "team" of one with their own camp

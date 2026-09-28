@@ -567,6 +567,10 @@ local function lobbyPrompts()
 		return
 	end
 	local st = profile.Settings or {}
+	if Config.Dev.PreviewWhatsNew and RunService:IsStudio() then
+		Panels.Open("News")
+		return
+	end
 	if st.SeenVersion ~= Config.Version then
 		Net.Event("SetSetting"):FireServer("SeenVersion", Config.Version)
 		if (profile.Matches or 0) > 0 and Changelog[1] and Changelog[1].Version == Config.Version then
