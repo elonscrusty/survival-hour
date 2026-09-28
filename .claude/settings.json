@@ -27,7 +27,6 @@
     ],
     "deny": [
       "Read(./build/**)",
-      "Read(./Renders/**)",
       "Read(./Export/**)",
       "Read(./Source/**)",
       "Read(./Textures/**)",
