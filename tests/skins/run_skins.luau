@@ -491,7 +491,6 @@ test("Lobby refuge: forest, props, signs, board", function()
 	check(deck and arch, "deck + ready arch")
 	check(wet == 0, "no decoration placed in the pond (" .. wet .. ")")
 	check(skinOf(st.Shop, "SM_Lobby_ShopDisplay") and skinOf(st.Party, "SM_Lobby_PartyArea"), "station props")
-	check(skinOf(st.Classes, "SM_Lobby_PowerupStand"), "class stands")
 	check(st.Shop.PrimaryPart.CanCollide ~= false, "counter keeps collision")
 	local signs = 0
 	for _, d in forest:GetDescendants() do

@@ -9386,19 +9386,6 @@ function Refuge.Dress(folder: Instance, O: Vector3, readyCenter: Vector3, statio
 			Skins.Dress(m, mesh, { cf = flatCF(Vector3.new(pos.X, O.Y, pos.Z), O), keep = { Awning = name == "Locker" } })
 		end
 	end
-	local shrine = stations.Classes
-	if shrine and Skins.Has("SM_Lobby_PowerupStand") then
-		for _, ped in shrine:GetChildren() do
-			if ped.Name == "Pedestal" and ped:IsA("BasePart") then
-				local v = Skins.Visual("SM_Lobby_PowerupStand")
-				if v then
-					v:PivotTo(flatCF(Vector3.new(ped.Position.X, O.Y, ped.Position.Z), O))
-					v.Parent = shrine
-					ped.Transparency = 1
-				end
-			end
-		end
-	end
 	if Skins.Has("SM_Lobby_ReadyStation") then
 		local v = Skins.Visual("SM_Lobby_ReadyStation")
 		if v then
