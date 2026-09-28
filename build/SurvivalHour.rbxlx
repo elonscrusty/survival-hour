@@ -64679,6 +64679,7 @@ function LivesService._setupCharacter(p: Player, char: Model)
 	hum.Health = Config.Player.MaxHealth
 	hum.BreakJointsOnDeath = false
 	hum.NameDisplayDistance = 60
+	hum.MaxSlopeAngle = 55 -- grounded: no scrambling up near-vertical cliffs
 	hum.HealthDisplayDistance = 0
 	for _, part in char:GetDescendants() do
 		if part:IsA("BasePart") then
