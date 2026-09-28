@@ -63,3 +63,38 @@ ID. Only in that case does `Roblox/uploaded_model_ids.json` need the new ID and
 | `Export/Meshes/Camp/SM_Camp_Hut.fbx` | new: send Claude the ID after uploading |
 
 The log cabin behind each camp. Until it's uploaded the game keeps the old block shack.
+
+## Trees: simpler "99 Nights" look (re-upload, SAME asset IDs)
+
+Every tree and the three harvest stumps were redone in a clean, chunky low-poly style: straight
+tapered trunks, pines/spruces as 3-5 stacked rounded cones in flat greens (lighter tips, darker
+undersides), oaks as 3-4 big soft lumps on a thick trunk, birch/aspen as a white trunk with dark marks
+under a tall rounded crown, the dead tree as a bare trunk with four thick forked branches, and stumps
+with a clean cut top, root nubs and chips. Colours are flat picks from the existing texture atlas, so
+the atlas does not change. Each model keeps its **exact published size and pivot**
+(`tools/check_bounds.py` passes), so `src/shared/AssetIds.luau` does not change. Preview:
+`Renders/Preview_TreeBeforeAfter.png`, `Renders/Preview_TreeMix.png`.
+
+| File | Existing asset ID |
+|---|---|
+| `Export/Meshes/Forest/SM_Tree_Pine_Small01.fbx` | 111873807466339 |
+| `Export/Meshes/Forest/SM_Tree_Pine_Medium01.fbx` | 77229859134923 |
+| `Export/Meshes/Forest/SM_Tree_Pine_Medium02.fbx` | 119682051803520 |
+| `Export/Meshes/Forest/SM_Tree_Pine_Large01.fbx` | 87910798610678 |
+| `Export/Meshes/Forest/SM_Tree_Oak_Small01.fbx` | 82141594475205 |
+| `Export/Meshes/Forest/SM_Tree_Oak_Medium01.fbx` | 77801315546713 |
+| `Export/Meshes/Forest/SM_Tree_Oak_Medium02.fbx` | 125738669214390 |
+| `Export/Meshes/Forest/SM_Tree_Oak_Large01.fbx` | 101790810639448 |
+| `Export/Meshes/Forest/SM_Tree_Birch_Small01.fbx` | 139651902303022 |
+| `Export/Meshes/Forest/SM_Tree_Birch_Medium01.fbx` | 91019597566936 |
+| `Export/Meshes/Forest/SM_Tree_Dead_Large01.fbx` | 104187717812981 |
+| `Export/Meshes/Forest/SM_Tree_Pine_Small01_Stump.fbx` | 136745938202045 |
+| `Export/Meshes/Forest/SM_Tree_Oak_Small01_Stump.fbx` | 99865726662230 |
+| `Export/Meshes/Forest/SM_Tree_Birch_Small01_Stump.fbx` | 84165405557090 |
+| `Export/Meshes/SW_Landscape/SM_Tree_Spruce01.fbx` | 100042706682519 |
+| `Export/Meshes/SW_Landscape/SM_Tree_Spruce02.fbx` | 93555666107911 |
+| `Export/Meshes/SW_Landscape/SM_Tree_Aspen01.fbx` | 140600945899866 |
+
+Upload these 17 the same way as the table above (Open Cloud `PATCH .../assets/v1/assets/{assetId}`,
+new version of the existing asset, no new assets). The ChatGPT prompt above works as is: tell it to
+use this table instead.

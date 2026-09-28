@@ -75,6 +75,39 @@ class Model:
             if pred(f.calc_center_median(), f.normal):
                 f[self.l_mat] = i
 
+    def tone(self, verts, q, pred=None):
+        """Flat colour: faces of `verts` (optionally only where pred(center, normal))
+        take one colour from their tile, at lightness percentile q (0..100)."""
+        lay = self.bm.faces.layers.int.get("tone")
+        if lay is None:
+            lay = self.bm.faces.layers.int.new("tone")
+        for f in self._faces_of(verts):
+            if pred is None or pred(f.calc_center_median(), f.normal):
+                f[lay] = int(q) + 1
+        return verts
+
+    def fit_bounds(self, lo, hi):
+        """Stretch the model so its box is exactly lo..hi while the origin stays put:
+        each side of each axis scales on its own (keeps a trunk on the pivot while
+        matching a published, off-centre bounding box). Moves attachments and
+        collision boxes along."""
+        vs = list(self.bm.verts)
+        cur_lo = [min(v.co[i] for v in vs) for i in range(3)]
+        cur_hi = [max(v.co[i] for v in vs) for i in range(3)]
+
+        def k(i, x):
+            if x >= 0:
+                return hi[i] / cur_hi[i] if cur_hi[i] > 1e-6 else 1.0
+            return lo[i] / cur_lo[i] if cur_lo[i] < -1e-6 else 1.0
+
+        def f(p):
+            return tuple(p[i] * k(i, p[i]) for i in range(3))
+        for v in vs:
+            v.co = f(v.co)
+        self.attachments = [(n, f(loc), rot) for n, loc, rot in self.attachments]
+        self.collision = [(f(c), tuple(s * k(i, c[i]) for i, s in enumerate(size)), rot)
+                          for c, size, rot in self.collision]
+
     def jitter(self, verts, amount, axes=(1, 1, 1)):
         if amount:
             for v in verts:
@@ -368,6 +401,14 @@ class Model:
 
     # ----------------------------------------------------------------- build
     def _uv_face(self, f, uv_layer):
+        lay = self.bm.faces.layers.int.get("tone")
+        if lay is not None and f[lay]:
+            u, v = tx.tone_uv(f[self.l_mat], f[lay] - 1)
+            d = 0.5 / tx.ATLAS
+            for j, l in enumerate(f.loops):
+                a = j * math.tau / len(f.loops)
+                l[uv_layer].uv = (u + d * math.cos(a), v + d * math.sin(a))
+            return
         mat = tx.TILE_NAMES[f[self.l_mat]]
         u0, v0, u1, v1 = tx.tile_rect(f[self.l_mat])
         fit = FIT_MATS.get(mat, FIT_NONE)
@@ -461,6 +502,8 @@ class Model:
         bm.loops.layers.uv.remove(self.l_nuv)
         bm.faces.layers.int.remove(self.l_mat)
         bm.faces.layers.int.remove(self.l_nat)
+        if bm.faces.layers.int.get("tone") is not None:
+            bm.faces.layers.int.remove(bm.faces.layers.int.get("tone"))
 
     def build(self, material, collection, name=None):
         self._finalize_bm()

@@ -470,3 +470,44 @@ def build_atlas(out_dir, embed_size=256):
 if __name__ == "__main__":
     import sys
     print(build_atlas(sys.argv[1] if len(sys.argv) > 1 else "Textures"))
+
+
+# --- flat colour picks (no atlas change) -------------------------------------------
+
+_TONE_CACHE = {}
+
+
+def _box_blur(a, r):
+    out = np.zeros_like(a)
+    for dy in range(-r, r + 1):
+        for dx in range(-r, r + 1):
+            out += np.roll(np.roll(a, dy, 0), dx, 1)
+    return out / (2 * r + 1) ** 2
+
+
+def tone_uv(index, q):
+    """Atlas UV of a calm spot inside tile `index` whose (blurred) lightness sits at
+    percentile q (0 = darkest, 100 = lightest). Collapsing a face's UVs onto this
+    point gives it one flat colour taken from the existing atlas, so flat-coloured
+    models need no new tiles. Also survives the downscaled embedded atlas."""
+    key = (index, int(q))
+    if key in _TONE_CACHE:
+        return _TONE_CACHE[key]
+    if index not in _TONE_CACHE:
+        gen = _tiles()[index][1]
+        c = np.clip(gen(np.random.default_rng(1000 + index))[0], 0, 1)
+        c = _box_blur(c, 5)
+        lum = c @ np.array([0.3, 0.59, 0.11])
+        gy, gx = np.gradient(lum)
+        _TONE_CACHE[index] = (lum, np.hypot(gx, gy))
+    lum, grad = _TONE_CACHE[index]
+    lo, hi = MARGIN + 12, TILE - MARGIN - 12
+    inner = lum[lo:hi, lo:hi]
+    target = np.percentile(inner, q)
+    score = np.abs(inner - target) + 2.0 * grad[lo:hi, lo:hi]
+    y, x = np.unravel_index(np.argmin(score), score.shape)
+    y, x = y + lo + 0.5, x + lo + 0.5
+    col, row = index % GRID, index // GRID
+    uv = ((col * TILE + x) / ATLAS, 1 - (row * TILE + y) / ATLAS)
+    _TONE_CACHE[key] = uv
+    return uv
