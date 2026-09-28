@@ -24,6 +24,7 @@ local Progression = require(Shared:WaitForChild("Progression"))
 local Challenges = require(Shared:WaitForChild("Logic"):WaitForChild("Challenges"))
 local ProfileRules = require(Shared:WaitForChild("Logic"):WaitForChild("ProfileRules"))
 local Cosmetics = require(Shared:WaitForChild("Cosmetics"))
+local Seasons = require(Shared:WaitForChild("Logic"):WaitForChild("Seasons"))
 
 local PowerupService = {}
 
@@ -625,6 +626,12 @@ function PowerupService.CommitMatch(p: Player, profile: any, place: number?, fir
 		if profile.Stats.Pois >= Config.ExplorerBadgePlaces then
 			ctx.Util.AwardBadge(p, "Explorer")
 		end
+	end
+	-- seasonal event: matches played during it count toward its earned title (Cosmetics, Season)
+	local season = ctx.Util.Season()
+	if season then
+		local key = Seasons.StatKey(season.Id)
+		profile.Stats[key] = (profile.Stats[key] or 0) + 1
 	end
 	if place == 1 and st and st.FinalLife then
 		profile.Stats.FinalLifeWins = (profile.Stats.FinalLifeWins or 0) + 1

@@ -90,6 +90,7 @@ local order = {
 	"Effects",
 	"Guide",
 	"Weather",
+	"Season",
 	"Spectate",
 	"Dev",
 }

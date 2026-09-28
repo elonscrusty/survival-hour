@@ -351,7 +351,6 @@ local ACTION_FN = {
 	EquipClass = ProfileRules.EquipClass,
 	BuyPerk = ProfileRules.BuyPerk,
 	EquipPerk = ProfileRules.EquipPerk,
-	BuyCosmetic = ProfileRules.BuyCosmetic,
 }
 
 local ACTION_DONE = {
@@ -407,6 +406,13 @@ function LobbyService._profileAction(p: Player, action: string, req: any)
 		ok, why = ProfileRules.WearCosmetic(profile, req.Type, id)
 	elseif action == "EquipPerk" then
 		ok, why = ProfileRules.EquipPerk(profile, id)
+	elseif action == "BuyCosmetic" then
+		if type(id) ~= "string" then
+			return
+		end
+		-- limited-time items sell only while their season runs (server clock, not the client's)
+		local season = ctx.Util.Season()
+		ok, why = ProfileRules.BuyCosmetic(profile, id, if season then season.Id else nil)
 	elseif id then
 		ok, why = ACTION_FN[action](profile, id)
 	end

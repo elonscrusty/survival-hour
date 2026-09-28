@@ -15,6 +15,7 @@ export type Def = {
 	Color2: { number }?,
 	Text: string?, -- titles
 	Mastery: { Stat: string, Need: number, Label: string }?, -- earned from lifetime records (never sold)
+	Season: string?, -- limited time: sold only while this Config.Seasons id is active (owned forever after)
 }
 
 local Cosmetics = {}
@@ -127,6 +128,27 @@ local MASTERY: { Def } = {
 	m("PlateCenturion", "Centurion Nameplate", "Nameplate", "Legendary", "Wins", 100, "Win 100 matches", nil, { 200, 60, 50 }),
 }
 for _, d in MASTERY do
+	table.insert(Cosmetics.List, d)
+end
+
+-- Seasonal (limited-time) items: bought with Coins only while their season runs
+-- (Config.Seasons, Logic/Seasons), then kept forever. Each season also has one title
+-- earned by playing during it (never sold). The earned title's stat is
+-- Seasons.StatKey(id), counted in PowerupService.CommitMatch.
+local function s(season: string, def: Def): Def
+	def.Season = season
+	return def
+end
+local SEASONAL: { Def } = {
+	-- Halloween 2026
+	s("Halloween2026", c("OutfitPumpkin", "Pumpkin Patch", "Outfit", "Rare", 12500, { 235, 120, 30 }, { 32, 26, 34 })),
+	s("Halloween2026", c("PlateGhost", "Ghostly Nameplate", "Nameplate", "Epic", 22000, { 190, 235, 225 })),
+	s("Halloween2026", c("TitleNightTerror", "Night Terror", "Title", "Rare", 11000, nil, nil, "Night Terror")),
+	s("Halloween2026", c("EmotePumpkin", "Pumpkin Cheer", "Emote", "Uncommon", 5000, { 255, 140, 40 })),
+	s("Halloween2026", c("FireJack", "Jack-o'-Flame", "CampfireSkin", "Epic", 26000, { 255, 120, 20 }, { 170, 80, 230 })),
+	s("Halloween2026", m("TitleHallowed", "Hallowed", "Title", "Epic", "Season_Halloween2026", 5, "Play 5 matches during Halloween 2026", "Hallowed")),
+}
+for _, d in SEASONAL do
 	table.insert(Cosmetics.List, d)
 end
 

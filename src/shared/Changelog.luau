@@ -7,6 +7,14 @@ export type Entry = { Version: string, Lines: { string } }
 
 local Changelog: { Entry } = {
 	{
+		Version = "1.1.0",
+		Lines = {
+			"🎃 Halloween event (Oct 24 - Nov 2): a spooky glow over the forest and jack-o'-lanterns by the fire.",
+			"Limited Halloween cosmetics in the Locker, for Coins only while the event runs. Keep them forever.",
+			"Play 5 matches during the event to earn the Hallowed title.",
+		},
+	},
+	{
 		Version = "1.0.0",
 		Lines = {
 			"Survival Hour is live. Thanks for playing!",

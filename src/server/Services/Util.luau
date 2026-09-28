@@ -9,6 +9,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared:WaitForChild("Net"))
 local Config = require(Shared:WaitForChild("Config"))
 local RateLimiter = require(Shared:WaitForChild("Logic"):WaitForChild("RateLimiter"))
+local Seasons = require(Shared:WaitForChild("Logic"):WaitForChild("Seasons"))
 
 local Util = {}
 
@@ -225,6 +226,13 @@ end
 
 function Util.Now(): number
 	return workspace:GetServerTimeNow()
+end
+
+-- The seasonal event running now (Config.Seasons), or nil. Config.Dev.ForceSeason turns
+-- one on early, in Studio only.
+function Util.Season(): any
+	local force = if game:GetService("RunService"):IsStudio() then Config.Dev.ForceSeason else nil
+	return Seasons.Active(Config.Seasons :: any, os.time(), force)
 end
 
 -- Sounds (server-side spatial one-shots replicate to everyone nearby)
