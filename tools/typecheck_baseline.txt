@@ -1,0 +1,89 @@
+  Property '[indexer value]' is not compatible.
+  Property '[indexer value]' is not compatible.
+  {(...any) -> } | {|  |}
+  {(Player, any, { [string]: any }?) -> } | {|  |}
+  {(any) -> } | {|  |}
+  {(any) -> } | {|  |}
+  {(any) -> } | {|  |}
+  {(any) -> } | {|  |}
+/home/user/survival-hour/src/client/State.luau [game/StarterPlayer/StarterPlayerScripts/Client/State]: TypeError: Cannot call a value of type {(any) -> ()} in union:
+/home/user/survival-hour/src/client/State.luau [game/StarterPlayer/StarterPlayerScripts/Client/State]: TypeError: Cannot call a value of type {(any) -> ()} in union:
+/home/user/survival-hour/src/shared/Logic/LayoutGen.luau [game/ReplicatedStorage/Shared/Logic/LayoutGen]: TypeError: Type 'number' could not be converted into 'string'
+/home/user/survival-hour/src/shared/Logic/LayoutGen.luau [game/ReplicatedStorage/Shared/Logic/LayoutGen]: TypeError: Type 'number' could not be converted into 'string'
+/home/user/survival-hour/src/shared/Logic/LayoutGen.luau [game/ReplicatedStorage/Shared/Logic/LayoutGen]: TypeError: Type 'number' could not be converted into 'string'
+/home/user/survival-hour/src/shared/Logic/LayoutGen.luau [game/ReplicatedStorage/Shared/Logic/LayoutGen]: TypeError: Type 'number' could not be converted into 'string'
+/home/user/survival-hour/src/shared/Logic/LayoutGen.luau [game/ReplicatedStorage/Shared/Logic/LayoutGen]: TypeError: Type 'number' could not be converted into 'string'
+/home/user/survival-hour/src/shared/Logic/LayoutGen.luau [game/ReplicatedStorage/Shared/Logic/LayoutGen]: TypeError: Type 'number' could not be converted into 'string'
+/home/user/survival-hour/src/shared/Logic/LayoutGen.luau [game/ReplicatedStorage/Shared/Logic/LayoutGen]: TypeError: Type 'number' could not be converted into 'string'
+/home/user/survival-hour/src/shared/Logic/LayoutGen.luau [game/ReplicatedStorage/Shared/Logic/LayoutGen]: TypeError: Type 'number' could not be converted into 'string'
+/home/user/survival-hour/src/shared/Logic/LayoutGen.luau [game/ReplicatedStorage/Shared/Logic/LayoutGen]: TypeError: Type 'number' could not be converted into 'string'
+/home/user/survival-hour/src/shared/Logic/LayoutGen.luau [game/ReplicatedStorage/Shared/Logic/LayoutGen]: TypeError: Type 'number' could not be converted into 'string'
+/home/user/survival-hour/src/shared/Logic/LayoutGen.luau [game/ReplicatedStorage/Shared/Logic/LayoutGen]: TypeError: Type 'number' could not be converted into 'string'
+/home/user/survival-hour/src/shared/Logic/LayoutGen.luau [game/ReplicatedStorage/Shared/Logic/LayoutGen]: TypeError: Type 'number' could not be converted into 'string'
+/home/user/survival-hour/src/shared/Logic/LayoutGen.luau [game/ReplicatedStorage/Shared/Logic/LayoutGen]: TypeError: Type 'number' could not be converted into 'string'
+/home/user/survival-hour/src/shared/Logic/LayoutGen.luau [game/ReplicatedStorage/Shared/Logic/LayoutGen]: TypeError: Type 'number' could not be converted into 'string'
+/home/user/survival-hour/src/shared/Logic/LayoutGen.luau [game/ReplicatedStorage/Shared/Logic/LayoutGen]: TypeError: Type 'number' could not be converted into 'string'
+/home/user/survival-hour/src/shared/Logic/LayoutGen.luau [game/ReplicatedStorage/Shared/Logic/LayoutGen]: TypeError: Type 'number' could not be converted into 'string'
+/home/user/survival-hour/src/shared/Logic/LayoutGen.luau [game/ReplicatedStorage/Shared/Logic/LayoutGen]: TypeError: Type 'number' could not be converted into 'string'
+/home/user/survival-hour/src/shared/Logic/LayoutGen.luau [game/ReplicatedStorage/Shared/Logic/LayoutGen]: TypeError: Type 'number' could not be converted into 'string'
+/home/user/survival-hour/src/shared/Logic/LayoutGen.luau [game/ReplicatedStorage/Shared/Logic/LayoutGen]: TypeError: Type 'number' could not be converted into 'string'
+/home/user/survival-hour/src/shared/Logic/LayoutGen.luau [game/ReplicatedStorage/Shared/Logic/LayoutGen]: TypeError: Type 'number' could not be converted into 'string'
+/home/user/survival-hour/src/shared/Logic/LayoutGen.luau [game/ReplicatedStorage/Shared/Logic/LayoutGen]: TypeError: Type 'number' could not be converted into 'string'
+/home/user/survival-hour/src/shared/Logic/LayoutGen.luau [game/ReplicatedStorage/Shared/Logic/LayoutGen]: TypeError: Type 'number' could not be converted into 'string'
+/home/user/survival-hour/src/shared/Logic/LayoutGen.luau [game/ReplicatedStorage/Shared/Logic/LayoutGen]: TypeError: Type 'number' could not be converted into 'string'
+/home/user/survival-hour/src/shared/Logic/LayoutGen.luau [game/ReplicatedStorage/Shared/Logic/LayoutGen]: TypeError: Type 'number' could not be converted into 'string'
+/home/user/survival-hour/src/shared/Logic/LayoutGen.luau [game/ReplicatedStorage/Shared/Logic/LayoutGen]: TypeError: Type 'number' could not be converted into 'string'
+/home/user/survival-hour/src/shared/Logic/LayoutGen.luau [game/ReplicatedStorage/Shared/Logic/LayoutGen]: TypeError: Type 'number' could not be converted into 'string'
+/home/user/survival-hour/src/shared/Logic/LayoutGen.luau [game/ReplicatedStorage/Shared/Logic/LayoutGen]: TypeError: Type 'number' could not be converted into 'string'
+/home/user/survival-hour/src/shared/Net.luau [game/ReplicatedStorage/Shared/Net]: TypeError: Type 'nil' could not be converted into 'Folder'
+Table type '{| HX: any, HZ: any, Model: any, X: any, Yaw: any, Z: any |}' not compatible with type 'Rect' because the former has extra field 'Model'
+Table type '{| Id: any, Party: any, Size: any |}' not compatible with type 'Party' because the former has extra field 'Party'
+caused by:
+caused by:
+src/client/Controllers/Build.luau: TypeError: Type '{{| HX: any, HZ: any, Model: any, X: any, Yaw: any, Z: any |}}' could not be converted into '{Rect}'
+src/client/State.luau: TypeError: Cannot call a value of type {(any) -> ()} in union:
+src/client/State.luau: TypeError: Cannot call a value of type {(any) -> ()} in union:
+src/server/Services/BuildService.luau: TypeError: Value of type 'Folder?' could be nil
+src/server/Services/BuildService.luau: TypeError: Value of type 'Folder?' could be nil
+src/server/Services/CampService.luau: ImplicitReturn: Function '_onPour' can implicitly return no values even though there's an explicit return at line N; add explicit return to silence
+src/server/Services/CombatService.luau: TypeError: Cannot cast 'Model?' into 'Instance' because the types are unrelated
+src/server/Services/CombatService.luau: TypeError: Cannot cast 'Model?' into 'Instance' because the types are unrelated
+src/server/Services/CombatService.luau: TypeError: Cannot cast 'Model?' into 'Instance' because the types are unrelated
+src/server/Services/InventoryService.luau: TypeError: Cannot cast 'Model?' into 'Instance' because the types are unrelated
+src/server/Services/LivesService.luau: TypeError: Type "Alive" cannot be compared with "Respawning"
+src/server/Services/LootService.luau: TypeError: Value of type 'Folder?' could be nil
+src/server/Services/LootService.luau: TypeError: Value of type 'Folder?' could be nil
+src/server/Services/MatchService.luau: TypeError: Cannot call a value of type {(...any) -> ()} in union:
+src/server/Services/MatchmakingService.luau: TypeError: Type '{{| Id: any, Party: any, Size: any |}}' could not be converted into '{Party}'
+src/server/Services/PurchaseService.luau: TypeError: Cannot call a value of type {(Player, any, { [string]: any }?) -> ()} in union:
+src/server/Services/WildlifeService.luau: TypeError: Cannot cast 'Model?' into 'Instance' because the types are unrelated
+src/server/Services/WildlifeService.luau: TypeError: Value of type 'Folder?' could be nil
+src/server/Services/WildlifeService.luau: TypeError: Value of type 'Folder?' could be nil
+src/shared/Logic/LayoutGen.luau: TypeError: Type 'number' could not be converted into 'string'
+src/shared/Logic/LayoutGen.luau: TypeError: Type 'number' could not be converted into 'string'
+src/shared/Logic/LayoutGen.luau: TypeError: Type 'number' could not be converted into 'string'
+src/shared/Logic/LayoutGen.luau: TypeError: Type 'number' could not be converted into 'string'
+src/shared/Logic/LayoutGen.luau: TypeError: Type 'number' could not be converted into 'string'
+src/shared/Logic/LayoutGen.luau: TypeError: Type 'number' could not be converted into 'string'
+src/shared/Logic/LayoutGen.luau: TypeError: Type 'number' could not be converted into 'string'
+src/shared/Logic/LayoutGen.luau: TypeError: Type 'number' could not be converted into 'string'
+src/shared/Logic/LayoutGen.luau: TypeError: Type 'number' could not be converted into 'string'
+src/shared/Logic/LayoutGen.luau: TypeError: Type 'number' could not be converted into 'string'
+src/shared/Logic/LayoutGen.luau: TypeError: Type 'number' could not be converted into 'string'
+src/shared/Logic/LayoutGen.luau: TypeError: Type 'number' could not be converted into 'string'
+src/shared/Logic/LayoutGen.luau: TypeError: Type 'number' could not be converted into 'string'
+src/shared/Logic/LayoutGen.luau: TypeError: Type 'number' could not be converted into 'string'
+src/shared/Logic/LayoutGen.luau: TypeError: Type 'number' could not be converted into 'string'
+src/shared/Logic/LayoutGen.luau: TypeError: Type 'number' could not be converted into 'string'
+src/shared/Logic/LayoutGen.luau: TypeError: Type 'number' could not be converted into 'string'
+src/shared/Logic/LayoutGen.luau: TypeError: Type 'number' could not be converted into 'string'
+src/shared/Logic/LayoutGen.luau: TypeError: Type 'number' could not be converted into 'string'
+src/shared/Logic/LayoutGen.luau: TypeError: Type 'number' could not be converted into 'string'
+src/shared/Logic/LayoutGen.luau: TypeError: Type 'number' could not be converted into 'string'
+src/shared/Logic/LayoutGen.luau: TypeError: Type 'number' could not be converted into 'string'
+src/shared/Logic/LayoutGen.luau: TypeError: Type 'number' could not be converted into 'string'
+src/shared/Logic/LayoutGen.luau: TypeError: Type 'number' could not be converted into 'string'
+src/shared/Logic/LayoutGen.luau: TypeError: Type 'number' could not be converted into 'string'
+src/shared/Logic/LayoutGen.luau: TypeError: Type 'number' could not be converted into 'string'
+src/shared/Logic/LayoutGen.luau: TypeError: Type 'number' could not be converted into 'string'
+src/shared/Net.luau: TypeError: Type 'nil' could not be converted into 'Folder'
