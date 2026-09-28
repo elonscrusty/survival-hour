@@ -419,6 +419,11 @@ function LootService.RemoveCache(key: string)
 	end
 end
 
+-- Match Director: one extra free supply drop at the front of the queue (dispatched by day).
+function LootService.QueueFree()
+	table.insert(queue, 1, { Source = "Free" })
+end
+
 function LootService._onOpenChest(p: Player, prompt: ProximityPrompt)
 	local key = prompt:GetAttribute("ChestKey") :: string?
 	local chest = key and chests[key]

@@ -22,6 +22,7 @@ local specs = {
 	"./AssetFit.spec",
 	"./MatchEvents.spec",
 	"./Challenges.spec",
+	"./Director.spec",
 }
 
 local passed, failed = 0, 0

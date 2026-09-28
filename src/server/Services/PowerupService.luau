@@ -496,6 +496,26 @@ function PowerupService.Tally(p: Player?, key: string, n: number)
 	end
 end
 
+-- Share of POIs any player has visited this match (Match Director input).
+function PowerupService.PoisExploredShare(): number
+	local map = ctx.MatchService.Map
+	local total = map and map.Pois and #map.Pois or 0
+	if total == 0 then
+		return 0
+	end
+	local seen = {}
+	for _, st in states do
+		for i in st.Pois do
+			seen[i] = true
+		end
+	end
+	local n = 0
+	for _ in seen do
+		n += 1
+	end
+	return n / total
+end
+
 -- End of match: fold this match's tallies into lifetime stats, keep the win streak and award
 -- the win badges. Called once per participant with a loaded profile (MatchService.End).
 local LIFETIME = { "Animals", "Bears", "Predators", "Chests", "Resources", "DamageDealt", "FiresOut", "Breaches", "Nights", "Crafts", "BenchUpgrades" }

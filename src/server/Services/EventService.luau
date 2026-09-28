@@ -16,6 +16,7 @@ local Config = require(Shared:WaitForChild("Config"))
 local Net = require(Shared:WaitForChild("Net"))
 local MatchEvents = require(Shared:WaitForChild("Logic"):WaitForChild("MatchEvents"))
 local Build = require(Shared:WaitForChild("Models"):WaitForChild("Build"))
+local Director = require(Shared:WaitForChild("Logic"):WaitForChild("Director"))
 
 local EventService = {}
 
@@ -34,6 +35,14 @@ local held: string? = nil -- weather an event is holding (Storm / Fog)
 local phaseWeather = "Clear"
 local cacheFolder: Folder? = nil
 local bonusCaches = 0
+-- Match Director inputs (activity clocks) and its current plan
+local lastAction = os.clock() -- PvP hit, raid, snuff or elimination
+local lastWildlife = -math.huge
+local eventStarts: { number } = {}
+local lastOpportunity = -math.huge
+local plan: Director.Plan? = nil
+local cacheFocus: string? = nil
+local firstDay: number? = nil -- os.clock() when Day 1 began
 
 local function state(): Instance
 	return ctx.MatchService.State
@@ -97,6 +106,67 @@ end
 local function holdWeather(w: string?)
 	held = w
 	ctx.WorldService.SetWeather(w or phaseWeather)
+end
+
+-- Match Director --------------------------------------------------------------------------------------------
+
+-- Other services report what just happened (no positions are kept or shared).
+function EventService.Note(kind: string)
+	if kind == "Wildlife" then
+		lastWildlife = os.clock()
+	else
+		lastAction = os.clock()
+	end
+end
+
+local function livingPositions(): { Vector3 }
+	local out = {}
+	for _, p in ctx.Util.MatchPlayers() do
+		local r = ctx.Util.Root(p)
+		if r and ctx.Util.IsAlive(p) then
+			table.insert(out, r.Position)
+		end
+	end
+	return out
+end
+
+function EventService._snapshot(): Director.Snapshot
+	local now = os.clock()
+	local recent = 0
+	for _, t in eventStarts do
+		if now - t < 600 then
+			recent += 1
+		end
+	end
+	local map = ctx.MatchService.Map
+	local remaining = state():GetAttribute("Remaining")
+	return {
+		MatchAge = now - (firstDay or now),
+		Night = ctx.MatchService.IsNight(),
+		Remaining = if type(remaining) == "number" then remaining else #ctx.MatchService.StartedTeams,
+		Started = #ctx.MatchService.StartedTeams,
+		Spread = Director.Spread(livingPositions(), if map then map.Layout.HalfSize * 2 else 1),
+		QuietFor = now - lastAction,
+		SinceWildlifeFight = now - lastWildlife,
+		RecentEvents = recent,
+		PoisExplored = ctx.PowerupService.PoisExploredShare(),
+	}
+end
+
+function EventService._replan()
+	local p = Director.Plan(EventService._snapshot())
+	plan = p
+	state():SetAttribute("DirectorReason", p.Reason)
+	local now = os.clock()
+	-- a long lull pulls the next roll forward instead of waiting out the whole gap
+	if not active and p.GapMult < 1 and nextRoll ~= math.huge and nextRoll - now > 45 then
+		nextRoll = now + 45
+	end
+	-- late-game standoff by day: one extra contested supply drop (at most every 6 minutes)
+	if p.Opportunity and now - lastOpportunity > 360 then
+		lastOpportunity = now
+		ctx.LootService.QueueFree()
+	end
 end
 
 -- Hooks read by other services ------------------------------------------------------------------------------
@@ -190,8 +260,28 @@ end
 -- to it and only a vague "near the ranger station" hint.
 local function cacheSpot(): (Vector3?, string, Vector3?)
 	local map = ctx.MatchService.Map
-	for _ = 1, 30 do
-		local pos = inMap(map.Origin.X + rng:NextNumber(-1, 1) * map.Layout.HalfSize, map.Origin.Z + rng:NextNumber(-1, 1) * map.Layout.HalfSize, 30)
+	-- the Director may ask for the cache between spread-out players or at the map centre
+	local focus: Vector3? = nil
+	if cacheFocus == "Centre" then
+		focus = map.Origin
+	elseif cacheFocus == "Between" then
+		local pts = livingPositions()
+		if #pts > 0 then
+			local c = Vector3.zero
+			for _, v in pts do
+				c += v
+			end
+			focus = c / #pts
+		end
+	end
+	for attempt = 1, 30 do
+		local pos
+		if focus and attempt <= 20 then
+			local a, d = rng:NextNumber() * math.pi * 2, rng:NextNumber(10, 70)
+			pos = inMap(focus.X + math.cos(a) * d, focus.Z + math.sin(a) * d, 30)
+		else
+			pos = inMap(map.Origin.X + rng:NextNumber(-1, 1) * map.Layout.HalfSize, map.Origin.Z + rng:NextNumber(-1, 1) * map.Layout.HalfSize, 30)
+		end
 		local ok = not nearCamp(pos, 45)
 		for _, poi in map.Pois or {} do
 			if (poi.Pos - pos).Magnitude < 22 then
@@ -305,7 +395,14 @@ local function blocked(): { [string]: boolean }
 end
 
 function EventService._tryStart(kind: string?): boolean
-	kind = kind or MatchEvents.PickEvent(E.Weights, condition, blocked(), roll)
+	if not kind then
+		local weights = {}
+		for k, w in E.Weights do
+			weights[k] = w * Director.Weight(k, plan)
+		end
+		kind = MatchEvents.PickEvent(weights, condition, blocked(), roll)
+	end
+	cacheFocus = plan and plan.CacheFocus or nil
 	if not kind or not START[kind] then
 		return false
 	end
@@ -320,6 +417,7 @@ function EventService._tryStart(kind: string?): boolean
 		return false
 	end
 	active = { Kind = kind, Ends = os.clock() + duration, Cleanup = cleanup }
+	table.insert(eventStarts, os.clock())
 	lastKind = kind
 	state():SetAttribute("Event", kind)
 	return true
@@ -332,7 +430,7 @@ function EventService._stop()
 	if a and a.Cleanup then
 		pcall(a.Cleanup)
 	end
-	nextRoll = os.clock() + rng:NextNumber(E.GapMin, E.GapMax)
+	nextRoll = os.clock() + rng:NextNumber(E.GapMin, E.GapMax) * (plan and plan.GapMult or 1)
 end
 
 -- Dev helper: force an event now (ends the current one first).
@@ -348,6 +446,8 @@ function EventService.Init(c)
 	ctx.MatchService.On("MatchStarting", function(map)
 		active, lastKind, held = nil, nil, nil
 		nextRoll = math.huge
+		lastAction, lastWildlife, lastOpportunity = os.clock(), -math.huge, -math.huge
+		eventStarts, plan, cacheFocus, firstDay = {}, nil, nil, nil
 		local f = Instance.new("Folder")
 		f.Name = "Events"
 		f.Parent = map.Folder
@@ -359,6 +459,8 @@ function EventService.Init(c)
 	ctx.MatchService.On("PhaseChanged", function(phase: string, day: number)
 		if phase == "Day" and day == 1 then
 			nextRoll = os.clock() + E.FirstDelay
+			firstDay = os.clock()
+			lastAction = os.clock()
 			if condition then
 				local c = condition
 				task.delay(4, function()
@@ -366,6 +468,12 @@ function EventService.Init(c)
 				end)
 			end
 		end
+	end)
+	ctx.MatchService.On("FireOut", function()
+		EventService.Note("FireOut")
+	end)
+	ctx.MatchService.On("TeamEliminated", function()
+		EventService.Note("Elimination")
 	end)
 	ctx.MatchService.On("MatchCleanup", function()
 		if active and active.Cleanup then
@@ -383,6 +491,7 @@ function EventService.Init(c)
 end
 
 function EventService.Start()
+	local replanAcc = 0
 	task.spawn(function()
 		while true do
 			task.wait(1)
@@ -391,6 +500,11 @@ function EventService.Start()
 					return
 				end
 				local now = os.clock()
+				replanAcc += 1
+				if replanAcc >= 20 and firstDay then
+					replanAcc = 0
+					EventService._replan()
+				end
 				if active then
 					if now >= active.Ends then
 						EventService._stop()
