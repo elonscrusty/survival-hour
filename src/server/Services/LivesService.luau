@@ -277,6 +277,7 @@ function LivesService._onDied(p: Player, char: Model)
 		VictimTeam = team,
 		Killer = if killer then killer.DisplayName else nil,
 		KillerTeam = if killer then ctx.Util.Team(killer) else nil,
+		KillerId = if killer then killer.UserId else nil,
 		Cause = if cause == "Animal" and dmg then (dmg.Name or "Animal") else cause,
 		Eliminated = action == "Eliminate",
 	})

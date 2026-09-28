@@ -397,7 +397,7 @@ function MatchService.End(winner: number?)
 			local place = placeOf(team)
 			local session = ctx.DataService.Get(p)
 			local earned = ctx.PowerupService.Earned(p) or { XP = 0, Coins = 0, Diamonds = 0, Levels = 0 }
-			local sum = { Place = place, Of = started, XP = earned.XP, Coins = earned.Coins, Diamonds = earned.Diamonds, Levels = earned.Levels }
+			local sum = { Place = place, Of = started, XP = earned.XP, Coins = earned.Coins, Diamonds = earned.Diamonds, Levels = earned.Levels, Stats = ctx.PowerupService.Stats(p), Nights = MatchService.Day or 0 }
 			if session and ctx.DataService.CanGrant(p) then
 				session.Profile.Matches += 1
 				ProfileRules.NoteMatch(session.Profile, os.time(), place == 1)

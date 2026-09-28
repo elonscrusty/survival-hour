@@ -46,6 +46,7 @@ type PState = {
 	Earned: { XP: number, Coins: number, Diamonds: number, Levels: number, Lines: { [string]: number } },
 	KillsOn: { [number]: number },
 	WildlifeRewards: number,
+	Stats: { Kills: number, Animals: number, Chests: number },
 	Pois: { [number]: boolean },
 	SecondWindUsed: boolean,
 	SecondWindUntil: number,
@@ -115,6 +116,7 @@ function PowerupService._lock(p: Player)
 		Earned = { XP = 0, Coins = 0, Diamonds = 0, Levels = 0, Lines = {} },
 		KillsOn = {},
 		WildlifeRewards = 0,
+		Stats = { Kills = 0, Animals = 0, Chests = 0 },
 		Pois = {},
 		SecondWindUsed = false,
 		SecondWindUntil = 0,
@@ -434,6 +436,12 @@ function PowerupService.Earned(p: Player): { XP: number, Coins: number, Diamonds
 	return st and st.Earned
 end
 
+-- Per-match tallies for the end screen (counted even when rewards are off).
+function PowerupService.Stats(p: Player): { Kills: number, Animals: number, Chests: number }?
+	local st = states[p]
+	return st and st.Stats
+end
+
 -- Hooks from other services ----------------------------------------------------------------------
 
 function PowerupService.OnPlayerKill(killer: Player, victim: Player, eliminated: boolean?)
@@ -441,6 +449,7 @@ function PowerupService.OnPlayerKill(killer: Player, victim: Player, eliminated:
 	if not st then
 		return
 	end
+	st.Stats.Kills += 1
 	local n = st.KillsOn[victim.UserId] or 0
 	st.KillsOn[victim.UserId] = n + 1
 	local session = ctx.DataService.Get(killer)
@@ -464,6 +473,9 @@ end
 
 function PowerupService.OnWildlifeKill(p: Player, species: string, _night: boolean)
 	local st = states[p]
+	if st then
+		st.Stats.Animals += 1
+	end
 	if not st or st.WildlifeRewards >= WILDLIFE_REWARDS_PER_MATCH then
 		return
 	end
@@ -472,6 +484,10 @@ function PowerupService.OnWildlifeKill(p: Player, species: string, _night: boole
 end
 
 function PowerupService.OnChestOpened(p: Player, tier: string, _poi: string?)
+	local st = states[p]
+	if st then
+		st.Stats.Chests += 1
+	end
 	PowerupService.Reward(p, if tier == "Rare" or tier == "VeryRare" then "RareChest" else "Chest", "Chests")
 end
 

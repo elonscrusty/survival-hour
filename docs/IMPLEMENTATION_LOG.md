@@ -223,3 +223,5 @@ gaps. No locked numbers were changed.
 | Night soundscape | Occasional distant howls and growls from a random far bearing (atmosphere, never a real position) | `Sound` |
 | Animation | Eating (hand to mouth), a weapon-ready idle (weapons carried forward, tools relaxed), crossbow reload after firing, and prey startle (head up) before bolting | `Animation`, `Creatures`, `WildlifeService` |
 
+| Kill feedback | The attacker gets a centre "⚔ YOU DOWNED …" / "✖ ELIMINATED …" confirm; the victim's respawn screen says who or what killed them | `LivesService` (`KillerId`), `Hud` |
+| Match recap | End screen adds a personal line: day reached, kills, animals, chests (tallied even when rewards are off) | `PowerupService.Stats`, `MatchService`, `Hud.showEnd` |

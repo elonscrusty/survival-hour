@@ -391,6 +391,7 @@ local deathSub: TextLabel
 local reviveBtn: TextButton
 local teamRevive: Frame
 local pendingRevives: { [number]: { Name: string, Ends: number } } = {}
+local lastKilledBy: string? = nil
 
 local function buildDeath()
 	deathFrame = UI.panel({ Name = "Death", Size = UDim2.fromOffset(420, 150), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Visible = false, Parent = gui }, { UI.padding(12) })
@@ -415,6 +416,9 @@ local function refreshDeath()
 			local free = player:GetAttribute("FreeRespawns") or 0
 			local left = math.max(0, math.ceil((player:GetAttribute("RespawnAt") or 0) - now()))
 			deathSub.Text = if free < 0 then string.format("Respawning at your campfire in %d s…", left) else "Respawning at your campfire… (" .. free .. " free respawns left)"
+			if lastKilledBy then
+				deathSub.Text = lastKilledBy .. "\n" .. deathSub.Text
+			end
 			reviveBtn.Visible = false
 		elseif st == "AwaitingRevive" then
 			local left = math.max(0, (player:GetAttribute("WindowEnds") or 0) - now())
@@ -545,6 +549,11 @@ local function showEnd(data: any)
 	if (sum.Levels or 0) > 0 then
 		UI.text("LEVEL UP → " .. tostring(sum.Level), { Position = UDim2.fromOffset(0, 150), Size = UDim2.new(1, 0, 0, 22), TextSize = 18, Font = Theme.FontBold, TextColor3 = C.Good, TextXAlignment = Enum.TextXAlignment.Center, Parent = frame })
 	end
+	local stats = sum.Stats
+	if stats then
+		local line = string.format("Day %d  ·  ⚔ %d kills  ·  🐾 %d animals  ·  ◈ %d chests", sum.Nights or 0, stats.Kills or 0, stats.Animals or 0, stats.Chests or 0)
+		UI.text(line, { Position = UDim2.fromOffset(0, 176), Size = UDim2.new(1, 0, 0, 20), TextSize = 14, TextColor3 = C.TextDim, TextXAlignment = Enum.TextXAlignment.Center, Parent = frame })
+	end
 	UI.text("Returning to the lobby shortly…", { Position = UDim2.new(0, 0, 1, -24), TextSize = 14, TextColor3 = C.TextDim, TextXAlignment = Enum.TextXAlignment.Center, Parent = frame })
 	task.delay(Config.Match.EndScreenLength + 2, function()
 		frame:Destroy()
@@ -582,6 +591,12 @@ local function onMatchEvent(ev: any)
 	elseif name == "Death" then
 		local killer = if d.Killer then teamTag(d.KillerTeam) .. d.Killer else tostring(d.Cause)
 		pushFeed(killer .. "  ⚔  " .. teamTag(d.VictimTeam) .. d.Victim .. (if d.Eliminated then "  [OUT]" else ""), if d.Eliminated then C.Bad else C.Text)
+		if d.KillerId == player.UserId and d.Victim ~= player.DisplayName then
+			-- kill confirm for the attacker: a quick, punchy centre banner
+			Hud.Announce(if d.Eliminated then "✖ ELIMINATED " .. string.upper(d.Victim) else "⚔ YOU DOWNED " .. string.upper(d.Victim), nil, if d.Eliminated then C.Accent else C.Good, 1.8)
+		end
+	elseif name == "Died" then
+		lastKilledBy = if d.Killer then "Killed by " .. d.Killer elseif d.Cause == "Animal" then "Killed by wildlife" elseif d.Cause then "Cause: " .. tostring(d.Cause) else nil
 	elseif name == "TeamEliminated" then
 		local def = Config.Teams[d.Team]
 		pushFeed(teamTag(d.Team) .. (def and def.Name or "") .. " clan eliminated", C.Bad)
@@ -638,6 +653,7 @@ local function onMatchEvent(ev: any)
 		Hud.Announce("ELIMINATED", if d.Cause == "FireOut" then "Your fire went out while you were down." else "Spectating.", C.Bad, 4)
 	elseif name == "ReturnedToLobby" then
 		pendingRevives = {}
+		lastKilledBy = nil
 	end
 end
 
