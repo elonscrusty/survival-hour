@@ -575,8 +575,32 @@ local function showEnd(data: any)
 		end
 	end
 	UI.text("Returning to the lobby shortly…", { Position = UDim2.new(0, 0, 1, -24), TextSize = 14, TextColor3 = C.TextDim, TextXAlignment = Enum.TextXAlignment.Center, Parent = frame })
+	-- YOUR SURVIVAL STORY: a short factual timeline beside the result card (below it on narrow screens)
+	local story = sum.Story
+	local storyFrame: Frame? = nil
+	if type(story) == "table" and #story > 0 then
+		local vp = workspace.CurrentCamera.ViewportSize
+		local wide = vp.X >= 1000
+		local h = math.min(360, 44 + #story * 20)
+		local sf = UI.panel({ Name = "Story", Size = UDim2.fromOffset(if wide then 340 else 480, h), AnchorPoint = if wide then Vector2.new(0, 0.5) else Vector2.new(0.5, 0), Position = if wide then UDim2.new(0.5, 142, 0.45, 0) else UDim2.new(0.5, 0, 0.45, 190), Parent = gui }, { UI.padding(12) })
+		if wide then
+			frame.Position = UDim2.new(0.5, -110, 0.45, 0)
+		end
+		UI.text("YOUR SURVIVAL STORY", { Size = UDim2.new(1, 0, 0, 22), TextSize = 16, Font = Theme.FontBlack, TextColor3 = C.Accent, Parent = sf })
+		for i, line in story do
+			local lbl = UI.text(tostring(line), { Position = UDim2.fromOffset(0, 26 + (i - 1) * 20), Size = UDim2.new(1, 0, 0, 20), TextSize = 13, TextTruncate = Enum.TextTruncate.AtEnd, TextWrapped = false, TextColor3 = if i == #story then C.Text else C.TextDim, TextTransparency = 1, Parent = sf })
+			-- lines appear one after another, like the story being told
+			task.delay(0.4 + i * 0.12, function()
+				TweenService:Create(lbl, TweenInfo.new(0.25), { TextTransparency = 0 }):Play()
+			end)
+		end
+		storyFrame = sf
+	end
 	task.delay(Config.Match.EndScreenLength + 2, function()
 		frame:Destroy()
+		if storyFrame then
+			storyFrame:Destroy()
+		end
 	end)
 end
 
@@ -602,7 +626,7 @@ local function onMatchEvent(ev: any)
 		local mine = d.Team == player:GetAttribute("Team")
 		if mine then
 			-- this is the moment everything changes: a dark-red flash and a lingering banner
-			Hud.Announce("YOUR FIRE IS OUT", "No more respawns. One death and you're eliminated.", C.Bad, 6)
+			Hud.Announce("YOUR FIRE IS OUT", (if d.By then "Put out by " .. tostring(d.By) .. ". " else "") .. "No more respawns. One death and you're eliminated.", C.Bad, 6)
 			Hud.Flash(Color3.fromRGB(120, 0, 0), 0.35, 1.6)
 		else
 			Hud.Announce((def and def.Symbol or "") .. " " .. (def and def.Name or "?") .. " FIRE EXTINGUISHED", if d.By then "Put out by " .. d.By else nil, C.Warn, 4)
@@ -610,7 +634,7 @@ local function onMatchEvent(ev: any)
 		pushFeed("✖🔥 " .. teamTag(d.Team) .. (def and def.Name or "") .. " fire is out", C.Warn)
 	elseif name == "Death" then
 		local killer = if d.Killer then teamTag(d.KillerTeam) .. d.Killer else tostring(d.Cause)
-		pushFeed(killer .. "  ⚔  " .. teamTag(d.VictimTeam) .. d.Victim .. (if d.Eliminated then "  [OUT]" else ""), if d.Eliminated then C.Bad else C.Text)
+		pushFeed((if d.Rivalry then "RIVALRY · " else "") .. killer .. "  ⚔  " .. teamTag(d.VictimTeam) .. d.Victim .. (if d.Eliminated then "  [OUT]" else ""), if d.Eliminated then C.Bad elseif d.Rivalry then C.Warn else C.Text)
 		if d.KillerId == player.UserId and d.Victim ~= player.DisplayName then
 			-- kill confirm for the attacker: a quick, punchy centre banner
 			Hud.Announce(if d.Eliminated then "✖ ELIMINATED " .. string.upper(d.Victim) else "⚔ YOU DOWNED " .. string.upper(d.Victim), nil, if d.Eliminated then C.Accent else C.Good, 1.8)

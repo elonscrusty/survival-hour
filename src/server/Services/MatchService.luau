@@ -433,6 +433,8 @@ function MatchService.End(winner: number?)
 					ctx.DataService.PostLeaderboards(p)
 				end)
 			end
+			ctx.PowerupService.TellResult(p, place)
+			sum.Story = ctx.PowerupService.Story(p)
 			summaries[p] = sum
 		end
 	end

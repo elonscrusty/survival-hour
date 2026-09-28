@@ -49,6 +49,9 @@ type PState = {
 	Stats: { [string]: number }, -- per-match tallies for the recap (Kills, Animals, Bears, Chests, Resources, DamageDealt, DamageTaken, FiresOut, Breaches)
 	Notoriety: number, -- aggressive actions this match (Dangerous Survivor callouts)
 	FinalLife: boolean?, -- was on Final Life at some point this match
+	Story: { string }, -- chronicle lines for the end screen (only things that happened)
+	Told: { [string]: boolean }, -- one-off story keys already used
+	NightAttack: string?, -- predator that hurt this player during the current night
 	Pois: { [number]: boolean },
 	SecondWindUsed: boolean,
 	SecondWindUntil: number,
@@ -60,6 +63,7 @@ local states: { [Player]: PState } = {}
 local blood: { { Pos: Vector3, At: number, UserId: number } } = {}
 local workbenchRewarded: { [number]: boolean } = {}
 local trophies: { [number]: { [string]: number } } = {} -- camp trophies placed per team/kind
+local fights: { [string]: { [number]: number } } = {} -- kills between each pair (rivalries)
 
 -- Camp trophies (CampService.AddTrophy): at most `cap` of a kind per team per match.
 local TROPHY_CAP = { Bear = 2, Wolf = 1, Raid = 1, Explorer = 1 }
@@ -97,12 +101,22 @@ function PowerupService.Init(c)
 		blood = {}
 		workbenchRewarded = {}
 		trophies = {}
+		fights = {}
 	end)
 	ctx.MatchService.On("PhaseChanged", function(phase: string, day: number)
 		-- Surviving a night: everyone still alive at sunrise (Day 2 onwards).
 		if phase == "Day" and day > 1 then
 			for p in states do
 				if p.Parent and ctx.Util.IsAlive(p) then
+					local st = states[p]
+					if st and st.NightAttack then
+						PowerupService.Tell(p, "Survived Night " .. (day - 1) .. " after a " .. string.lower(st.NightAttack) .. " attack.")
+					elseif day == 2 then
+						PowerupService.Tell(p, "Survived your first night.")
+					end
+					if st then
+						st.NightAttack = nil
+					end
 					PowerupService.Reward(p, "SurviveNight", "Survived night " .. (day - 1))
 					PowerupService.Tally(p, "Nights", 1)
 					ctx.Util.AwardBadge(p, "FirstNight")
@@ -111,10 +125,11 @@ function PowerupService.Init(c)
 		end
 	end)
 	-- Final Life: anyone alive on a team whose fire goes out (Untouchable badge check)
-	ctx.MatchService.On("FireOut", function(team: number)
+	ctx.MatchService.On("FireOut", function(team: number, byPlayer: Player?)
 		for p, st in states do
 			if p.Parent and ctx.Util.Team(p) == team then
 				st.FinalLife = true
+				PowerupService.Tell(p, "Your Campfire was put out" .. (if byPlayer then " by " .. byPlayer.DisplayName else "") .. ". Final Life.")
 			end
 		end
 	end)
@@ -145,6 +160,8 @@ function PowerupService._lock(p: Player)
 		WildlifeRewards = 0,
 		Stats = { Kills = 0, Eliminations = 0, Animals = 0, Bears = 0, Chests = 0, Resources = 0, DamageDealt = 0, DamageTaken = 0, FiresOut = 0, Breaches = 0 },
 		Notoriety = 0,
+		Story = {},
+		Told = {},
 		Pois = {},
 		SecondWindUsed = false,
 		SecondWindUntil = 0,
@@ -213,6 +230,9 @@ function PowerupService._tick()
 					if not st.Pois[i] and (poi.Pos - root.Position).Magnitude <= POI_RADIUS then
 						st.Pois[i] = true
 						PowerupService.Reward(p, "PoiDiscovered", "Discovered a " .. poi.Type)
+						if poi.Tier == "Rare" or poi.Tier == "Uncommon" then
+							PowerupService.Tell(p, "Discovered the " .. string.lower((string.gsub(poi.Type, "(%l)(%u)", "%1 %2"))) .. ".", "poi" .. poi.Type)
+						end
 						local found = 0
 						for _ in st.Pois do
 							found += 1
@@ -486,6 +506,58 @@ function PowerupService.Stats(p: Player): { [string]: number }?
 	return out
 end
 
+-- Chronicle: "Day 2 — Discovered the ranger station." Only real server events are written.
+-- `key` makes a line one-off (first axe, first wolf...). Capped so the recap stays readable.
+local STORY_MAX = 14
+function PowerupService.Tell(p: Player?, text: string, key: string?)
+	local st = p and states[p]
+	if not st then
+		return
+	end
+	if key then
+		if st.Told[key] then
+			return
+		end
+		st.Told[key] = true
+	end
+	if #st.Story >= STORY_MAX then
+		table.remove(st.Story, 2) -- keep the first line, drop the oldest middle one
+	end
+	local M = ctx.MatchService
+	local stamp = if M.Phase == "Night" then "Night " .. M.Day elseif M.Phase == "Day" then "Day " .. M.Day else "Dawn"
+	table.insert(st.Story, stamp .. " — " .. text)
+end
+
+function PowerupService.Story(p: Player): { string }
+	local st = states[p]
+	return if st then table.clone(st.Story) else {}
+end
+
+-- Close call: a line when a player wins a fight on almost no health.
+local function closeCall(p: Player): string?
+	local hum = ctx.Util.Humanoid(p)
+	if hum and hum.Health > 0 and hum.Health <= hum.MaxHealth * 0.15 then
+		return string.format(" with only %d HP left", math.ceil(hum.Health))
+	end
+	return nil
+end
+
+-- Rivalries: two players who keep killing each other get a RIVALRY tag in the feed (story only).
+function PowerupService.RecordFight(killer: Player, victim: Player): boolean
+	local a, b = math.min(killer.UserId, victim.UserId), math.max(killer.UserId, victim.UserId)
+	local key = a .. ":" .. b
+	local f = fights[key] or {}
+	fights[key] = f
+	f[killer.UserId] = (f[killer.UserId] or 0) + 1
+	local ka, kb = f[a] or 0, f[b] or 0
+	local rival = (ka >= 1 and kb >= 1) or ka + kb >= 3
+	if rival then
+		PowerupService.Tell(killer, "Your rivalry with " .. victim.DisplayName .. " grew.", "rival" .. victim.UserId)
+		PowerupService.Tell(victim, "Your rivalry with " .. killer.DisplayName .. " grew.", "rival" .. killer.UserId)
+	end
+	return rival
+end
+
 function PowerupService.Tally(p: Player?, key: string, n: number)
 	local st = p and states[p]
 	if st and n > 0 then
@@ -514,6 +586,16 @@ function PowerupService.PoisExploredShare(): number
 		n += 1
 	end
 	return n / total
+end
+
+-- Last chronicle line: how it ended.
+function PowerupService.TellResult(p: Player, place: number?)
+	local st = states[p]
+	if place == 1 then
+		PowerupService.Tell(p, if st and st.FinalLife then "VICTORY — on Final Life." else "VICTORY.")
+	elseif place then
+		PowerupService.Tell(p, "Finished " .. (({ "1st", "2nd", "3rd" })[place] or (tostring(place) .. "th")) .. ".")
+	end
 end
 
 -- End of match: fold this match's tallies into lifetime stats, keep the win streak and award
@@ -578,6 +660,10 @@ function PowerupService.OnPlayerKill(killer: Player, victim: Player, eliminated:
 	end
 	st.Stats.Kills += 1
 	ctx.Util.AwardBadge(killer, "FirstBlood")
+	local close = closeCall(killer)
+	local finalLife = if st.FinalLife then " while on Final Life" else ""
+	PowerupService.Tell(killer, (if eliminated then "Eliminated " else "Took down ") .. victim.DisplayName .. finalLife .. (close or "") .. ".")
+	PowerupService.Tell(victim, (if eliminated then "Eliminated by " else "Taken down by ") .. killer.DisplayName .. ".")
 	if eliminated then
 		st.Stats.Eliminations += 1
 	end
@@ -602,6 +688,7 @@ end
 function PowerupService.OnFireExtinguished(p: Player)
 	PowerupService.Tally(p, "FiresOut", 1)
 	addNotoriety(p, 2)
+	PowerupService.Tell(p, "Put out an enemy Campfire.")
 	ctx.Util.AwardBadge(p, "FireExtinguisher")
 	PowerupService.Reward(p, "ExtinguishFire", "Snuffed a fire")
 end
@@ -614,8 +701,15 @@ function PowerupService.OnWildlifeKill(p: Player, species: string, _night: boole
 			st.Stats.Bears += 1
 			ctx.Util.AwardBadge(p, "BearHunter")
 			trophy(p, "Bear")
+			PowerupService.Tell(p, "Brought down a bear" .. (closeCall(p) or "") .. ".")
 		elseif species == "Wolf" then
 			trophy(p, "Wolf")
+			local close = closeCall(p)
+			if close then
+				PowerupService.Tell(p, "Killed a wolf" .. close .. ".")
+			else
+				PowerupService.Tell(p, "Killed your first wolf.", "wolf")
+			end
 		end
 		if PREDATORS[species] then
 			st.Stats.Predators = (st.Stats.Predators or 0) + 1
@@ -628,7 +722,29 @@ function PowerupService.OnWildlifeKill(p: Player, species: string, _night: boole
 	PowerupService.Reward(p, if PREDATORS[species] then "Predator" else "Wildlife", "Hunting")
 end
 
+-- Hurt by anything: remembers a night-time predator attack for the chronicle.
+function PowerupService.NoteHurt(victim: Player, kind: string?, name: string?)
+	local st = states[victim]
+	if st and kind == "Animal" and ctx.MatchService.IsNight() then
+		st.NightAttack = name or "wildlife"
+	end
+end
+
+-- Any death (the chronicle's line for deaths not caused by a player).
+function PowerupService.OnDeath(p: Player, cause: string?, byPlayer: boolean, eliminated: boolean)
+	if byPlayer then
+		return -- OnPlayerKill tells this one
+	end
+	local what = if cause == "Animal" then "wildlife" elseif cause == "FireOut" then "the dark" else string.lower(tostring(cause or "the forest"))
+	PowerupService.Tell(p, (if eliminated then "Eliminated by " else "Killed by ") .. what .. ".")
+end
+
 function PowerupService.OnChestOpened(p: Player, tier: string, _poi: string?)
+	if _poi == "Cache" then
+		PowerupService.Tell(p, "Found a lost survivor's cache.")
+	elseif tier == "Rare" or tier == "VeryRare" then
+		PowerupService.Tell(p, "Opened a " .. (if tier == "VeryRare" then "very rare" else "rare") .. " chest.", "chest" .. tier)
+	end
 	local st = states[p]
 	if st then
 		st.Stats.Chests += 1
@@ -639,6 +755,9 @@ end
 -- Workbench V: once per camp per match, to the player who finished it.
 function PowerupService.OnWorkbenchLevel(p: Player, team: number, level: number)
 	PowerupService.Tally(p, "BenchUpgrades", 1)
+	if level == 3 or level == 5 then
+		PowerupService.Tell(p, "Raised your Workbench to Tier " .. ({ "I", "II", "III", "IV", "V" })[level] .. ".")
+	end
 	if level >= 5 then
 		ctx.Util.AwardBadge(p, "MasterCrafter")
 	end

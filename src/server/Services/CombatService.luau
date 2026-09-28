@@ -133,6 +133,7 @@ function CombatService.DamagePlayer(victim: Player, amount: number, source: Sour
 	hum.Health = math.max(0, hum.Health - dmg)
 	ctx.PowerupService.OnPlayerHurt(victim, dmg)
 	ctx.PowerupService.Tally(victim, "DamageTaken", dmg)
+	ctx.PowerupService.NoteHurt(victim, source.Kind, source.Name)
 	if typeof(source.By) == "Instance" and source.By:IsA("Player") and source.By ~= victim then
 		ctx.PowerupService.Tally(source.By, "DamageDealt", dmg)
 		ctx.EventService.Note("PvP")

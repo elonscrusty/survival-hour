@@ -272,7 +272,9 @@ function LivesService._onDied(p: Player, char: Model)
 	local action = LivesRules.OnDeath(life, burning, now(), Config.Lives.ReviveWindow)
 	LivesService._sync(p)
 
+	local rival = killer ~= nil and killer ~= p and ctx.PowerupService.RecordFight(killer, p)
 	ctx.MatchService.Broadcast("Death", {
+		Rivalry = rival or nil,
 		Victim = p.DisplayName,
 		VictimTeam = team,
 		Killer = if killer then killer.DisplayName else nil,
@@ -284,6 +286,7 @@ function LivesService._onDied(p: Player, char: Model)
 	if killer and killer ~= p then
 		ctx.PowerupService.OnPlayerKill(killer, p, action == "Eliminate")
 	end
+	ctx.PowerupService.OnDeath(p, cause, killer ~= nil and killer ~= p, action == "Eliminate")
 
 	if action == "Respawn" then
 		local delay = LivesRules.RespawnDelay(life, Config.Lives.RespawnDelays)

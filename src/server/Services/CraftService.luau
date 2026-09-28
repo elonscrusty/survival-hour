@@ -174,6 +174,9 @@ function CraftService._craftNow(p: Player, recipeId: string)
 		Net.FireAll("Fx", "Crafted", { Pos = cr.Position })
 	end
 	ctx.PowerupService.Tally(p, "Crafts", 1)
+	if def.Kind == "Tool" or def.Kind == "Weapon" then
+		ctx.PowerupService.Tell(p, "Crafted your first " .. def.Name .. ".", "craft" .. def.Id)
+	end
 	ctx.Util.Notify(p, "Crafted " .. (if recipe.Count > 1 then recipe.Count .. " " else "") .. def.Name, "success")
 	CraftService.Push(p)
 end
