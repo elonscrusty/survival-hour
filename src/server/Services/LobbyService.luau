@@ -43,6 +43,14 @@ function LobbyService.Init(c)
 	ctx.Util.OnPlayerAdded(function(p)
 		LobbyService._solo(p)
 		dirty = true
+		-- PLAY AGAIN from the last match: straight back into the queue
+		local join = p:GetJoinData()
+		local td = join and join.TeleportData
+		if type(td) == "table" and td.AutoReady == true then
+			task.delay(4, function()
+				LobbyService.AutoReady(p)
+			end)
+		end
 		-- Stream the lobby around its fire (not the character) while in the lobby: the
 		-- title screen shows the refuge before any character exists.
 		local focus
@@ -79,9 +87,15 @@ function LobbyService.Start()
 		return
 	end
 	local acc = 0
+	local afkAcc = 0
 	while true do
 		task.wait(0.5)
 		LobbyService._ringCheck()
+		afkAcc += 0.5
+		if afkAcc >= 5 then
+			afkAcc = 0
+			pcall(LobbyService._afkTick)
+		end
 		acc += 0.5
 		if dirty or acc >= 3 then
 			acc = 0
@@ -243,6 +257,41 @@ function LobbyService._onAction(p: Player, req: any)
 		LobbyService._robux(p, req.Key)
 	end
 	dirty = true
+end
+
+-- Readies a player who asked to play again (waits for their profile and character).
+function LobbyService.AutoReady(p: Player)
+	for _ = 1, 30 do
+		if not p.Parent then
+			return
+		end
+		if canUseLobby(p) and ctx.DataService.Get(p) and ctx.Util.Root(p) then
+			local party = partyOf[p]
+			if party and not ready[p] then
+				ready[p] = "Button"
+				ctx.Util.LastActive[p] = os.clock()
+				LobbyService._checkParty(party)
+				ctx.Util.Notify(p, "Back in the queue for another match. Press CANCEL to stay in the Refuge.", "success")
+			end
+			return
+		end
+		task.wait(1)
+	end
+end
+
+-- AFK in the lobby: a readied-up player who stops moving is un-readied (never kicked).
+function LobbyService._afkTick()
+	local now = os.clock()
+	for p, how in ready do
+		local last = ctx.Util.LastActive[p]
+		local party = partyOf[p]
+		-- (standing in the ready ring is a deliberate choice; only button-readies time out)
+		if how == "Button" and last and now - last >= Config.Afk.LobbyUnreadyAfter and party then
+			ready[p] = nil
+			LobbyService._checkParty(party)
+			ctx.Util.Notify(p, "You were un-readied for being away. Ready up again when you're back.", "warn")
+		end
+	end
 end
 
 function LobbyService._checkParty(party: Party)

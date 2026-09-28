@@ -49,10 +49,15 @@ function Spectate.Start()
 	UI.Buttons.icon("▶", { Size = UDim2.fromOffset(60, 48), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 6), TextSize = 24, Parent = bar }, function()
 		index += 1
 	end)
-	local leave = UI.Buttons.action("🏠 Return to lobby", { Size = UDim2.fromOffset(220, 42), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 0, -8), Tone = "Neutral", Parent = bar }, function()
+	-- out of the match: go back (or go back already queued for the next one)
+	local leave = UI.new("Frame", { Name = "Leave", BackgroundTransparency = 1, Size = UDim2.fromOffset(420, 42), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 0, -8), Parent = bar }, { UI.list(Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Center) })
+	UI.Buttons.action("▶ Play again", { Size = UDim2.fromOffset(190, 42), Tone = "Green", LayoutOrder = 1, Parent = leave }, function()
+		Net.Event("PlayAgain"):FireServer()
 		Net.Event("LeaveMatch"):FireServer()
 	end)
-	leave.Name = "Leave"
+	UI.Buttons.action("🏠 Lobby", { Size = UDim2.fromOffset(150, 42), Tone = "Neutral", LayoutOrder = 2, Parent = leave }, function()
+		Net.Event("LeaveMatch"):FireServer()
+	end)
 	nameLabel = UI.text("", { Position = UDim2.fromOffset(70, 0), Size = UDim2.new(1, -140, 1, 0), TextSize = 16, Font = Theme.FontBold, TextXAlignment = Enum.TextXAlignment.Center, Parent = bar })
 
 	local acc = 0

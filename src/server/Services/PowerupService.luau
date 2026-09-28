@@ -22,6 +22,7 @@ local Classes = require(Shared:WaitForChild("Classes"))
 local Perks = require(Shared:WaitForChild("Perks"))
 local Progression = require(Shared:WaitForChild("Progression"))
 local ProfileRules = require(Shared:WaitForChild("Logic"):WaitForChild("ProfileRules"))
+local Cosmetics = require(Shared:WaitForChild("Cosmetics"))
 
 local PowerupService = {}
 
@@ -107,7 +108,7 @@ function PowerupService.Init(c)
 		-- Surviving a night: everyone still alive at sunrise (Day 2 onwards).
 		if phase == "Day" and day > 1 then
 			for p in states do
-				if p.Parent and ctx.Util.IsAlive(p) then
+				if p.Parent and ctx.Util.IsAlive(p) and not p:GetAttribute("AFK") then
 					local st = states[p]
 					if st and st.NightAttack then
 						PowerupService.Tell(p, "Survived Night " .. (day - 1) .. " after a " .. string.lower(st.NightAttack) .. " attack.")
@@ -455,7 +456,7 @@ end
 function PowerupService.Grant(p: Player, xp: number, coins: number, diamonds: number, line: string)
 	local st = states[p]
 	local session = ctx.DataService.Get(p)
-	if not session or not ctx.DataService.CanGrant(p) or not rewardsEnabled() or (xp <= 0 and coins <= 0 and diamonds <= 0) then
+	if not session or not ctx.DataService.CanGrant(p) or not rewardsEnabled() or p:GetAttribute("AFK") or (xp <= 0 and coins <= 0 and diamonds <= 0) then
 		return
 	end
 	local res = ProfileRules.AddXP(session.Profile, xp)
@@ -619,6 +620,9 @@ function PowerupService.CommitMatch(p: Player, profile: any, place: number?, fir
 			ctx.Util.AwardBadge(p, "Explorer")
 		end
 	end
+	if place == 1 and st and st.FinalLife then
+		profile.Stats.FinalLifeWins = (profile.Stats.FinalLifeWins or 0) + 1
+	end
 	if place == 1 then
 		profile.Stats.WinStreak = (profile.Stats.WinStreak or 0) + 1
 		profile.Stats.BestStreak = math.max(profile.Stats.BestStreak or 0, profile.Stats.WinStreak)
@@ -631,6 +635,12 @@ function PowerupService.CommitMatch(p: Player, profile: any, place: number?, fir
 		end
 	else
 		profile.Stats.WinStreak = 0
+	end
+	for _, id in ProfileRules.GrantMasteryCosmetics(profile) do
+		local def = Cosmetics.ById[id]
+		if def then
+			ctx.Util.Notify(p, "Unlocked: " .. def.Name .. " (" .. (def.Mastery and def.Mastery.Label or "") .. ")", "success")
+		end
 	end
 end
 

@@ -43,6 +43,7 @@ Net.Events = {
 	"ClientReady",
 	"Sprint", -- (bool) hold-to-sprint state
 	"LeaveMatch", -- eliminated players go back to the lobby early
+	"PlayAgain", -- queue straight into the next match on returning to the lobby
 	"SetSetting", -- (key, value) player settings, validated by ProfileRules.SetSetting
 	"DrawState", -- (bool) bow/crossbow drawn (visual only; the server still times the shot)
 }

@@ -79,6 +79,7 @@ function CampService.Init(c)
 		end
 		ctx.CraftService.OpenFor(player)
 	end)
+	ctx.ChannelService.OnPrompt("InspectCamp", CampService._onInspect)
 end
 
 function CampService.Start()
@@ -264,6 +265,11 @@ function CampService._setup(map: any)
 		fires[team] = FireRules.New(FIRE)
 		warned[team] = false
 		local core = camp.Fire:FindFirstChild("FireCore") :: BasePart
+		-- scouting: enemies can size up a camp from a little way off (estimates, never contents)
+		local bench = camp.Workbench and camp.Workbench.PrimaryPart
+		if bench then
+			ctx.ChannelService.MakePrompt(bench, "InspectCamp", "Size up", Config.Teams[team].Name .. " camp", 28, "Enemy", team)
+		end
 		local pour = ctx.ChannelService.MakePrompt(core, "Pour", "Hold: Snuff Fire", Config.Teams[team].Name .. " Campfire", Config.Fire.PourRange, "Enemy", team)
 		pour.KeyboardKeyCode = Enum.KeyCode.E
 		pour:SetAttribute("Snuff", true)
@@ -330,6 +336,33 @@ function CampService.AddTrophy(team: number, kind: string)
 	m:SetAttribute("Label", look.Label)
 	m.Parent = camp.Folder
 	Net.FireAll("Fx", "Built", { Pos = plate.Position })
+end
+
+-- Camp scouting (enemy only): rough reads a sharp-eyed raider could make by looking.
+-- Fire strength, Workbench tier, how well-built the storage looks and how walled-in it is.
+-- Never inventory, never traps, never where the owners are.
+function CampService._onInspect(p: Player, prompt: ProximityPrompt)
+	local team = prompt:GetAttribute("Team") :: number?
+	if not team or team == ctx.Util.Team(p) or not camps[team] or not p:GetAttribute("InMatch") then
+		return
+	end
+	local fire = fires[team]
+	local burning = ctx.MatchService.FireBurning(team)
+	local fuelWord = if not burning then "out" elseif not fire then "?" elseif fire.Fuel > 0.6 then "burning strong" elseif fire.Fuel > 0.25 then "steady" else "running low"
+	local bestStore, stores, walls = 0, 0, 0
+	for _, s in ctx.BuildService.TeamStructures(team) do
+		local def = Items[s.Id]
+		if def and def.Limit == "Storage" then
+			stores += 1
+			bestStore = math.max(bestStore, def.Tier or 1)
+		elseif def and string.find(s.Id, "Wall", 1, true) then
+			walls += 1
+		end
+	end
+	local storeWord = if stores == 0 then "no storage in sight" else string.format("%s storage (best looks %s)", if stores == 1 then "one" elseif stores <= 3 then "a few" else "lots of", ({ "flimsy", "sturdy", "tough", "very tough" })[bestStore] or "sturdy")
+	local wallWord = if walls == 0 then "no walls" elseif walls <= 3 then "light defences" elseif walls <= 9 then "moderate defences" else "heavy defences"
+	local roman = ({ "I", "II", "III", "IV", "V" })[levels[team] or 1] or "I"
+	ctx.Util.Notify(p, string.format("%s camp: fire L%d, %s · Workbench %s · %s · %s.", Config.Teams[team].Name, if fire then fire.Level else 1, fuelWord, roman, storeWord, wallWord), "info")
 end
 
 function CampService.GetCamp(team: number): any

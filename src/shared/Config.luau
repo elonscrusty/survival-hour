@@ -250,6 +250,16 @@ Config.Noise = {
 	StormMult = 0.7,
 }
 
+-- AFK handling: short pauses are never punished. In a match an idle player is warned, then stops
+-- earning survival rewards, then is sent back to the lobby so nobody is held hostage. In the lobby
+-- an idle player who is readied up is un-readied (so AFK players aren't dragged into matches).
+Config.Afk = {
+	WarnAfter = 150,
+	NoRewardsAfter = 240,
+	RemoveAfter = 480,
+	LobbyUnreadyAfter = 180,
+}
+
 Config.Combat = {
 	MeleeTolerance = 3, -- extra studs of reach allowed for latency
 	AimAssistAngle = 6, -- degrees (touch only)

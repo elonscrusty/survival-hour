@@ -16,6 +16,7 @@ local Products = require(Shared.Products)
 local Classes = require(Shared.Classes)
 local Perks = require(Shared.Perks)
 local Net = require(Shared.Net)
+local Tips = require(Shared.Tips)
 local UI = require("../UI/UI")
 local Theme = require("../UI/Theme")
 local State = require("../State")
@@ -349,6 +350,36 @@ function Hud.Announce(text: string, subtext: string?, color: Color3?, hold: numb
 end
 Hud._announceToken = nil :: any
 
+-- Loading tips: one rotating line while the forest builds and during the intro.
+local tipLabel: TextLabel? = nil
+local tipToken = 0
+function Hud.ShowTips(on: boolean)
+	tipToken += 1
+	local token = tipToken
+	if not tipLabel then
+		tipLabel = UI.text("", { Name = "Tip", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -120), Size = UDim2.new(0.8, 0, 0, 22), TextSize = 15, TextColor3 = C.TextDim, TextXAlignment = Enum.TextXAlignment.Center, TextStrokeTransparency = 0.6, TextTransparency = 1, Parent = gui })
+	end
+	local lbl = tipLabel :: TextLabel
+	if not on then
+		TweenService:Create(lbl, TweenInfo.new(0.5), { TextTransparency = 1 }):Play()
+		return
+	end
+	task.spawn(function()
+		local i = math.random(1, #Tips)
+		while token == tipToken do
+			lbl.Text = "TIP  ·  " .. Tips[i]
+			TweenService:Create(lbl, TweenInfo.new(0.5), { TextTransparency = 0 }):Play()
+			task.wait(6)
+			local phase = matchState:GetAttribute("Phase")
+			if token ~= tipToken or (phase ~= "Loading" and phase ~= "Intro" and phase ~= "Waiting") then
+				TweenService:Create(lbl, TweenInfo.new(0.5), { TextTransparency = 1 }):Play()
+				return
+			end
+			i = i % #Tips + 1
+		end
+	end)
+end
+
 -- Kill feed -------------------------------------------------------------------------------------------------
 
 local feed: Frame
@@ -574,7 +605,14 @@ local function showEnd(data: any)
 			UI.text(r[2], { Position = UDim2.fromScale(0.64, 0), Size = UDim2.fromScale(0.36, 1), TextSize = 13, Font = Theme.FontBold, TextXAlignment = Enum.TextXAlignment.Right, Parent = cell })
 		end
 	end
-	UI.text("Returning to the lobby shortly…", { Position = UDim2.new(0, 0, 1, -24), TextSize = 14, TextColor3 = C.TextDim, TextXAlignment = Enum.TextXAlignment.Center, Parent = frame })
+	-- PLAY AGAIN: land back in the lobby already queued for the next match
+	local againBtn: TextButton
+	againBtn = UI.Buttons.action("▶ PLAY AGAIN", { Size = UDim2.fromOffset(200, 40), AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, 0, 1, 0), Tone = "Green", Parent = frame }, function()
+		Net.Event("PlayAgain"):FireServer()
+		UI.Buttons.setState(againBtn, "Selected")
+		againBtn.Text = "✓ QUEUED"
+	end)
+	UI.text("Returning to the lobby shortly…", { Position = UDim2.new(0, 0, 1, -30), Size = UDim2.new(1, -210, 0, 24), TextSize = 14, TextColor3 = C.TextDim, TextXAlignment = Enum.TextXAlignment.Left, Parent = frame })
 	-- YOUR SURVIVAL STORY: a short factual timeline beside the result card (below it on narrow screens)
 	local story = sum.Story
 	local storyFrame: Frame? = nil
@@ -619,8 +657,10 @@ local function onMatchEvent(ev: any)
 		end
 	elseif name == "Intro" then
 		Hud.Announce("SURVIVAL HOUR", "Protect your fire. Last clan with a flame wins.", C.Accent, 5)
+		Hud.ShowTips(true)
 	elseif name == "Loading" then
 		Hud.Announce("PREPARING THE FOREST…", "Building a new forest layout", C.TextDim, 6)
+		Hud.ShowTips(true)
 	elseif name == "FireOut" then
 		local def = Config.Teams[d.Team]
 		local mine = d.Team == player:GetAttribute("Team")

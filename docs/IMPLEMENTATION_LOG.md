@@ -259,3 +259,29 @@ Reworked the roughest pack models (Survival Wars chests, storage, walls, Workben
 - Rare match items: the survivor cache's bonus Rare roll delivers the "not every match" loot moment with existing items. New items need balance playtesting first.
 
 **Tested:** 158 unit tests (new: `MatchEvents`, `Challenges`), 34 skins/lobby checks, type check clean, Rojo build OK. Not playtested in Studio.
+
+## Advanced expansion pass 2
+
+| Area | Change | Where |
+|---|---|---|
+| Match Director | Every 20 s it reads the match: survivors left, player spread, time since the last PvP hit/raid/snuff/elimination, recent wildlife fights, recent events, and how much of the map is explored. A busy match gets longer quiet gaps. A long lull brings the next event forward and favours caches and herds. Spread-out players get a cache placed between them. A late-game daytime standoff gets a cache at the map centre plus one extra supply drop. It never spawns threats on players, never touches damage and never favours anyone | `Logic/Director` (tested), `EventService` |
+| Survival story | End screen shows a factual timeline built from real server events: first tools, nights survived (and what attacked you), rare places, takedowns and eliminations, who put out your fire, enemy fires you snuffed, bears, Workbench III/V, caches, close calls ("with only 9 HP left") and the result | `PowerupService.Tell/Story`, `Hud.showEnd` |
+| Revenge | Your fire-out banner names who did it (never where they are) | `Hud` |
+| Rivalries | Two players who have each killed the other (or three kills in a pair) get a RIVALRY tag in the feed, plus a story line. No bonuses | `PowerupService.RecordFight`, `LivesService` |
+| Perfect block | Raising the guard ≤0.28 s before a melee or animal hit (after ≥0.45 s lowered, so mashing doesn't work) blocks 85% for 40% of the stamina, can't be guard-broken by that hit, and delays the attacker's next swing by 0.45 s. No stun | `CombatRules.IsParry` (tested), `CombatService`, `Config.Combat` |
+| Noise | One table (`Config.Noise`) turns existing server sounds into gameplay noise: chopping, felling, building, breaching, shots, blocks and sprinting. Prey inside the radius bolt; idle wolves at night and bears in their territory come to look. Storms muffle noise. Walking, hand-gathering and crafting stay silent | `Util.PlaySound`, `WildlifeService.Noise`, `StaminaService` |
+| Play again | PLAY AGAIN on the end screen and on the spectator bar. You land back in the lobby already queued and skip the title screen | `MatchService`, `LobbyService.AutoReady`, `Hud`, `Spectate`, `Lobby` |
+| AFK | Movement or any input counts as activity. In a match: a warning at 2.5 min, survival rewards paused at 4 min, back to the lobby at 8 min. In the lobby, button-readied players are un-readied after 3 min (never kicked) | `MatchService._afkTick`, `LobbyService._afkTick`, `Config.Afk` |
+| Mastery & prestige | Earned-only titles and nameplates from lifetime records: Woodsman, Hunter, Bearbane, Raider, Firestarter, Explorer, Last Breath (5 Final Life wins), Unbroken (5-win streak), Survivor / Seasoned / Veteran / Centurion at 10 / 25 / 50 / 100 wins. Can't be bought | `Cosmetics` (Mastery), `ProfileRules.GrantMasteryCosmetics` |
+| Win streak | Shown on the lobby profile card at 2+ | `Lobby` |
+| Camp scouting | Enemies can "Size up" a camp at its Workbench: fire level and fuel state, Workbench tier, roughly how much storage and how tough it looks, and how walled-in it is. Never contents, traps or player positions | `CampService._onInspect` |
+| Loading tips | Rotating general tips while the forest builds and during the intro. No secrets | `Tips`, `Hud.ShowTips` |
+
+**Deferred or rejected (and why):**
+- Treasure maps, keys and locked rooms, multi-stage discoveries, generators, breakable entrances, dens, secret shortcuts, water-crossing mechanics and resource hotspots all need new map geometry. It has to be walked and validated in Studio (colliders, nav, reachability), so building them blind would ship broken content. They're the next pass once Studio testing is possible.
+- Dodge: rejected. It fights the grounded combat, and the perfect block gives the skill ceiling instead.
+- Decoys, flares and new traps: new items need models and balance playtesting first.
+- Weapon inspect, photo mode, lobby inspect/showcase and server records: lower value than the systems above.
+- Footprints: players can't read them without a decal/texture pass; the noise and sound ranges carry the tracking role for now.
+
+**Tested:** 167 unit tests (new: `Director`, parry window), 34 skins/lobby checks, type check clean, Rojo build OK. Not playtested in Studio.

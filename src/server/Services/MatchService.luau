@@ -37,6 +37,7 @@ MatchService.State = (nil :: any) :: Folder -- ReplicatedStorage.MatchState, set
 local phaseToken = 0
 local ending = false
 local matchStartedAt = os.clock()
+local playAgain: { [Player]: boolean } = setmetatable({}, { __mode = "k" }) :: any -- queue again on return
 local lastRemaining = 0 -- standing clans at the last outcome check (for Final Three / Two)
 local elimOrder: { number } = {} -- teams in the order they were eliminated (for placements)
 
@@ -60,6 +61,12 @@ end
 function MatchService.Init(c)
 	ctx = c
 	ctx.Util.Connect("LeaveMatch", "Lobby", MatchService._onLeaveMatch)
+	ctx.Util.Connect("PlayAgain", "Lobby", function(p: Player)
+		if p:GetAttribute("InMatch") then
+			playAgain[p] = true
+			ctx.Util.Notify(p, "You'll be queued for the next match as soon as you're back.", "success")
+		end
+	end)
 	state = Instance.new("Folder")
 	state.Name = "MatchState"
 	state.Parent = ReplicatedStorage
@@ -68,7 +75,64 @@ function MatchService.Init(c)
 	ctx.Util.OnPlayerRemoving(MatchService._onLeave)
 end
 
+-- AFK watch (Config.Afk): movement or any remote counts as activity. Warn, then stop survival
+-- rewards (AFK attribute), then send the player back to the lobby so the match can finish.
+local lastPos: { [Player]: Vector3 } = setmetatable({}, { __mode = "k" }) :: any
+function MatchService._afkTick()
+	local A = Config.Afk
+	local now = os.clock()
+	for _, p in Players:GetPlayers() do
+		local root = ctx.Util.Root(p)
+		if root then
+			local before = lastPos[p]
+			if not before or (root.Position - before).Magnitude > 2 then
+				ctx.Util.LastActive[p] = now
+			end
+			lastPos[p] = root.Position
+		end
+		local last = ctx.Util.LastActive[p]
+		if not last then
+			ctx.Util.LastActive[p] = now
+			last = now
+		end
+		local idle = now - last
+		local playing = MatchService.IsPlaying() and p:GetAttribute("InMatch") and p:GetAttribute("LifeState") == "Alive"
+		if not playing then
+			p:SetAttribute("AFK", nil)
+			p:SetAttribute("AfkWarned", nil)
+			continue
+		end
+		if idle >= A.RemoveAfter then
+			ctx.Util.LastActive[p] = now
+			p:SetAttribute("AFK", nil)
+			MatchService.ReturnToLobby({ p }, "You were away too long and were returned to the Refuge.")
+		elseif idle >= A.NoRewardsAfter then
+			if not p:GetAttribute("AFK") then
+				p:SetAttribute("AFK", true)
+				ctx.Util.Notify(p, "AFK: survival rewards are paused until you move.", "warn")
+			end
+		elseif idle >= A.WarnAfter then
+			if not p:GetAttribute("AfkWarned") then
+				p:SetAttribute("AfkWarned", true)
+				ctx.Util.Notify(p, "Still there? Move or you'll stop earning survival rewards.", "warn")
+			end
+		else
+			p:SetAttribute("AFK", nil)
+			p:SetAttribute("AfkWarned", nil)
+		end
+	end
+end
+
 function MatchService.Start()
+	task.spawn(function()
+		while true do
+			task.wait(5)
+			local ok, err = pcall(MatchService._afkTick)
+			if not ok then
+				warn("[MatchService] afk:", err)
+			end
+		end
+	end)
 	if ctx.Mode == "Match" then
 		MatchService._runReserved()
 	end
@@ -497,23 +561,43 @@ function MatchService.ReturnToLobby(players: { Player }, message: string?, prior
 		for _, p in players do
 			p:SetAttribute("InMatch", false)
 			ctx.LivesService.SpawnInLobby(p)
+			if playAgain[p] then
+				playAgain[p] = nil
+				task.delay(2, function()
+					ctx.LobbyService.AutoReady(p)
+				end)
+			end
 		end
 		return
 	end
-	local options = Instance.new("TeleportOptions")
-	options:SetTeleportData({ ReturnFromMatch = true, Priority = priority == true })
-	for attempt = 1, 3 do
-		local ok, err = pcall(function()
-			TeleportService:TeleportAsync(game.PlaceId, players, options)
-		end)
-		if ok then
-			return
-		end
-		warn("[MatchService] return teleport failed:", err)
-		task.wait(attempt * 2)
-	end
+	-- two groups: players who pressed PLAY AGAIN land in the lobby already queued
+	local groups: { [boolean]: { Player } } = { [true] = {}, [false] = {} }
 	for _, p in players do
-		p:Kick("Match over — please rejoin Survival Hour.")
+		table.insert(groups[playAgain[p] == true], p)
+		playAgain[p] = nil
+	end
+	for again, group in groups do
+		if #group > 0 then
+			local options = Instance.new("TeleportOptions")
+			options:SetTeleportData({ ReturnFromMatch = true, Priority = priority == true, AutoReady = again })
+			local sent = false
+			for attempt = 1, 3 do
+				local ok, err = pcall(function()
+					TeleportService:TeleportAsync(game.PlaceId, group, options)
+				end)
+				if ok then
+					sent = true
+					break
+				end
+				warn("[MatchService] return teleport failed:", err)
+				task.wait(attempt * 2)
+			end
+			if not sent then
+				for _, p in group do
+					p:Kick("Match over — please rejoin Survival Hour.")
+				end
+			end
+		end
 	end
 end
 

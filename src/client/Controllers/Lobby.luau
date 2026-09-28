@@ -33,6 +33,7 @@ local statusLabel: TextLabel
 local partyStrip: Frame
 local diamondsLabel: TextLabel
 local levelLabel: TextLabel
+local streakLabel: TextLabel? = nil
 local coinPill: TextLabel
 local diamondPill: TextLabel
 local xpSet: (number, string?) -> () = function() end
@@ -89,6 +90,11 @@ local function renderHud()
 		local perk = profile.Perk and Perks.ById[profile.Perk]
 		diamondsLabel.Text = string.format("%s %s · %s", if cls then cls.Glyph else "", if cls then cls.Name else "?", if perk then perk.Glyph .. " " .. perk.Name else "no power-up")
 		levelLabel.Text = tostring(profile.Level or 1)
+		-- win streak: a small flame on the profile card at 2+ (prestige only)
+		local streak = (profile.Records and profile.Records.WinStreak) or 0
+		if streakLabel then
+			streakLabel.Text = if streak >= 2 then "🔥 " .. streak .. " win streak" else ""
+		end
 		if (profile.LevelNeed or 0) > 0 then
 			xpSet(profile.LevelInto / profile.LevelNeed, string.format("%d / %d XP", profile.LevelInto, profile.LevelNeed))
 		else
@@ -303,7 +309,7 @@ local function renderLocker()
 				UI.text("✎", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, Parent = sw })
 			end
 			UI.text(def.Name .. (if def.Text then '  "' .. def.Text .. '"' else ""), { Position = UDim2.fromOffset(52, 0), Size = UDim2.new(0.6, -52, 0, 22), TextSize = 15, Font = Theme.FontBold, Parent = cd })
-			UI.text(def.Rarity .. (if def.Level then " · level " .. def.Level .. " reward" elseif def.Price > 0 then " · " .. def.Price .. " Coins" else " · bundle"), { Position = UDim2.fromOffset(52, 22), Size = UDim2.new(0.6, -52, 0, 18), TextSize = 12, TextColor3 = rarity, Parent = cd })
+			UI.text(def.Rarity .. (if def.Level then " · level " .. def.Level .. " reward" elseif def.Mastery then " · " .. def.Mastery.Label elseif def.Price > 0 then " · " .. def.Price .. " Coins" else " · bundle"), { Position = UDim2.fromOffset(52, 22), Size = UDim2.new(0.6, -52, 0, 18), TextSize = 12, TextColor3 = rarity, Parent = cd })
 			local row = buttonRow(cd)
 			if owned then
 				if def.Type == "Emote" then
@@ -319,7 +325,7 @@ local function renderLocker()
 					send("BuyCosmetic", { Id = def.Id })
 				end)
 			else
-				UI.text(if def.Level then "🔒 Lv " .. def.Level else "🔒 bundle", { Size = UDim2.fromOffset(110, 40), TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = C.TextDim, Parent = row })
+				UI.text(if def.Level then "🔒 Lv " .. def.Level elseif def.Mastery then "🔒 earn" else "🔒 bundle", { Size = UDim2.fromOffset(110, 40), TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = C.TextDim, Parent = row })
 			end
 		end
 	end
@@ -518,6 +524,13 @@ local function titleScreen()
 	if workspace:GetAttribute("ServerMode") == "Match" or player:GetAttribute("InMatch") then
 		return
 	end
+	-- coming straight back from a match: skip the title and go to the lobby
+	local okTd, td = pcall(function()
+		return game:GetService("TeleportService"):GetLocalPlayerTeleportData()
+	end)
+	if okTd and type(td) == "table" and td.ReturnFromMatch then
+		return
+	end
 	local lobbyFolder = workspace:WaitForChild("Lobby", 20)
 	local fire = lobbyFolder and lobbyFolder:WaitForChild("LobbyFire", 10) :: Model?
 	if not fire then
@@ -615,6 +628,7 @@ function Lobby.Start()
 	UI.text("LVL", { Size = UDim2.new(1, 0, 0, 14), Position = UDim2.fromOffset(0, 10), TextSize = 11, Font = Theme.FontBold, TextColor3 = C.TextDim, TextXAlignment = Enum.TextXAlignment.Center, Parent = badge })
 	levelLabel = UI.text("1", { Name = "Level", Size = UDim2.new(1, 0, 0, 24), Position = UDim2.fromOffset(0, 24), TextSize = 22, Font = Theme.FontBlack, TextXAlignment = Enum.TextXAlignment.Center, Parent = badge })
 	UI.text(player.DisplayName, { Position = UDim2.fromOffset(82, 8), Size = UDim2.new(1, -90, 0, 22), TextSize = 18, Font = Theme.FontBlack, Parent = card })
+	streakLabel = UI.text("", { Position = UDim2.fromOffset(82, 8), Size = UDim2.new(1, -94, 0, 22), TextSize = 13, Font = Theme.FontBold, TextColor3 = C.Warn, TextXAlignment = Enum.TextXAlignment.Right, Parent = card })
 	diamondsLabel = UI.text("", { Position = UDim2.fromOffset(82, 30), Size = UDim2.new(1, -90, 0, 16), TextSize = 13, Font = Theme.FontBold, TextColor3 = C.Accent, Parent = card })
 	local xpHolder = UI.new("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(82, 52), Size = UDim2.new(1, -94, 0, 16), Parent = card })
 	Buttons.icon("⚙", { Size = UDim2.fromOffset(32, 32), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -8, 0, 8), TextSize = 18, Parent = card }, function()

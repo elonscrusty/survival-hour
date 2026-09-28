@@ -216,6 +216,7 @@ function ProfileRules.Reconcile(data: any): Profile
 		end
 	end
 	ProfileRules.GrantLevelCosmetics(p)
+	ProfileRules.GrantMasteryCosmetics(p)
 	return p
 end
 
@@ -385,6 +386,19 @@ function ProfileRules.GrantLevelCosmetics(p: Profile): { string }
 	local granted = {}
 	for _, def in Cosmetics.List do
 		if def.Level and p.Level >= def.Level and not p.Cosmetics[def.Id] then
+			p.Cosmetics[def.Id] = true
+			table.insert(granted, def.Id)
+		end
+	end
+	return granted
+end
+
+-- Mastery & prestige cosmetics: unlocked from lifetime records (Cosmetics.Mastery).
+function ProfileRules.GrantMasteryCosmetics(p: Profile): { string }
+	local granted = {}
+	for _, def in Cosmetics.List do
+		local ms = def.Mastery
+		if ms and not p.Cosmetics[def.Id] and Challenges.Stat(p, ms.Stat) >= ms.Need then
 			p.Cosmetics[def.Id] = true
 			table.insert(granted, def.Id)
 		end

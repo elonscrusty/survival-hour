@@ -14,6 +14,7 @@ export type Def = {
 	Color: { number }?,
 	Color2: { number }?,
 	Text: string?, -- titles
+	Mastery: { Stat: string, Need: number, Label: string }?, -- earned from lifetime records (never sold)
 }
 
 local Cosmetics = {}
@@ -102,6 +103,30 @@ local LEVEL_REWARDS: { Def } = {
 	{ Id = "PlateLegend", Name = "Legend Nameplate", Type = "Nameplate", Rarity = "Legendary", Price = 0, Level = 100, Color = { 250, 210, 90 } },
 }
 for _, d in LEVEL_REWARDS do
+	table.insert(Cosmetics.List, d)
+end
+
+-- Mastery & prestige: long-term goals read from lifetime records (Profile.Stats / Wins).
+-- Status only; nothing here changes gameplay. Stat names match Logic/Challenges.Stat.
+local function m(id: string, name: string, typ: string, rarity: string, stat: string, need: number, label: string, text: string?, color: { number }?): Def
+	return { Id = id, Name = name, Type = typ, Rarity = rarity, Price = 0, Text = text, Color = color, Mastery = { Stat = stat, Need = need, Label = label } }
+end
+local MASTERY: { Def } = {
+	m("TitleWoodsman", "Woodsman", "Title", "Uncommon", "Resources", 5000, "Gather 5,000 resources", "Woodsman"),
+	m("TitleHunter", "Hunter", "Title", "Uncommon", "Animals", 100, "Hunt 100 animals", "Hunter"),
+	m("TitleBearbane", "Bearbane", "Title", "Epic", "Bears", 10, "Bring down 10 bears", "Bearbane"),
+	m("TitleRaiderM", "Raider", "Title", "Rare", "Breaches", 25, "Breach 25 storages", "Raider"),
+	m("TitleFirestarter", "Firestarter", "Title", "Rare", "FiresOut", 10, "Put out 10 enemy Campfires", "Firestarter"),
+	m("TitleExplorer", "Explorer", "Title", "Rare", "Pois", 150, "Discover 150 places", "Explorer"),
+	m("TitleLastBreath", "Last Breath", "Title", "Epic", "FinalLifeWins", 5, "Win 5 matches on Final Life", "Last Breath"),
+	m("TitleUnbroken", "Unbroken", "Title", "Epic", "BestStreak", 5, "Win 5 matches in a row", "Unbroken"),
+	-- prestige by wins
+	m("TitleSurvivorP", "Survivor", "Title", "Rare", "Wins", 10, "Win 10 matches", "Survivor"),
+	m("PlateSeasoned", "Seasoned Nameplate", "Nameplate", "Epic", "Wins", 25, "Win 25 matches", nil, { 170, 120, 70 }),
+	m("TitleVeteranP", "Veteran", "Title", "Epic", "Wins", 50, "Win 50 matches", "Veteran"),
+	m("PlateCenturion", "Centurion Nameplate", "Nameplate", "Legendary", "Wins", 100, "Win 100 matches", nil, { 200, 60, 50 }),
+}
+for _, d in MASTERY do
 	table.insert(Cosmetics.List, d)
 end
 

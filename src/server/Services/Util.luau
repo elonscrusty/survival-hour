@@ -58,6 +58,9 @@ function Util.FirePlayerAdded(p: Player)
 	end
 end
 
+-- os.clock() of each player's last remote call or movement (AFK handling).
+Util.LastActive = setmetatable({}, { __mode = "k" }) :: any
+
 -- Connects a client->server remote with rate limiting and error isolation.
 function Util.Connect(remoteName: string, bucket: string, handler: (Player, ...any) -> ())
 	Net.Event(remoteName).OnServerEvent:Connect(function(player: Player, ...)
@@ -65,6 +68,7 @@ function Util.Connect(remoteName: string, bucket: string, handler: (Player, ...a
 			rejectLog[player] = (rejectLog[player] or 0) + 1
 			return
 		end
+		Util.LastActive[player] = os.clock()
 		local ok, err = pcall(handler, player, ...)
 		if not ok then
 			warn(string.format("[%s] handler error from %s: %s", remoteName, player.Name, tostring(err)))
