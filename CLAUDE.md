@@ -16,6 +16,13 @@ Roblox survival game (Rojo + Luau). The owner (kcdrewcarter) plays on a phone wh
 - Unit tests live in `tests/*.spec.luau`; register new specs in `tests/run.luau`. The CLI Luau has no Roblox types (no `Vector3`), so keep testable logic pure in `src/shared/Logic/`.
 - Model work: `SH_WITH_BPY=1 bash tools/setup_env.sh`, then `python3 blender/build.py --only <Name|Category> --samples 12`, then `python3 tools/check_bounds.py`.
 
+## Helpers (subagents in .claude/agents)
+- After every feature, before pushing: run **reviewer** and **rules-guard** in parallel on the diff since the last reviewed commit, then fix what they find.
+- After changing tuning numbers, loot, events, challenges or combat: run **balance-analyst**.
+- After a feature pass, or when the owner is about to playtest: run **studio-test-planner** (updates `docs/STUDIO_TESTS.md`).
+- For big multi-system passes: split independent systems across parallel general-purpose subagents (isolation: worktree), then merge, run `bash tools/check.sh` and the reviewer.
+- Skip helpers for small one-file fixes (not worth the usage).
+
 ## Architecture (where things are)
 - Server services: `src/server/Services/*`. Init order is in `src/server/Main.server.luau`; each service gets `ctx.<Service>`.
   - Remotes: `Util.Connect(name, bucket, fn)` (rate-limited, pcall). Remote names are registered in `src/shared/Net.luau`.
