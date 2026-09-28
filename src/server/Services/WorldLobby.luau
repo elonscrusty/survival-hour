@@ -171,15 +171,17 @@ return function(WorldService: any)
 	}
 
 	-- Voxel island for the lobby. Surface at O.Y (4-stud aligned), 12 studs thick,
-	-- rock underneath; noise-picked forest-floor materials; dirt cross paths; a
+	-- rock underneath; clean grass with dirt cross paths; a
 	-- stream falling off the edge into a pond; a second quiet pond.
 	function WorldService._lobbyTerrain(O: Vector3)
 		local R = 74
+		-- same clean cartoon ground as the match map (bright grass, warm dirt, no grass blades)
 		pcall(function()
-			terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(88, 122, 62))
-			terrain:SetMaterialColor(Enum.Material.LeafyGrass, Color3.fromRGB(70, 106, 52))
-			terrain:SetMaterialColor(Enum.Material.Ground, Color3.fromRGB(104, 84, 60))
-			terrain:SetMaterialColor(Enum.Material.Mud, Color3.fromRGB(74, 60, 46))
+			terrain.Decoration = false
+			terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(104, 166, 70))
+			terrain:SetMaterialColor(Enum.Material.LeafyGrass, Color3.fromRGB(96, 156, 64))
+			terrain:SetMaterialColor(Enum.Material.Ground, Color3.fromRGB(146, 108, 70))
+			terrain:SetMaterialColor(Enum.Material.Mud, Color3.fromRGB(128, 94, 60))
 		end)
 		-- body + rocky underside
 		terrain:FillCylinder(CFrame.new(O + Vector3.new(0, -8, 0)), 16, R, Enum.Material.Ground)
@@ -190,12 +192,7 @@ return function(WorldService: any)
 		for x = -R, R, STEP do
 			for z = -R, R, STEP do
 				if x * x + z * z <= R * R then
-					local nA = math.noise(x / 26, z / 26, 3.7)
-					local nB = math.noise(x / 11 + 20, z / 11, 8.2)
-					local mat = if nA > 0.22 then Enum.Material.LeafyGrass
-						elseif nA < -0.3 then Enum.Material.Ground
-						elseif nB > 0.4 then Enum.Material.Mud
-						else Enum.Material.Grass
+					local mat = Enum.Material.Grass
 					if math.abs(x) <= 5 or math.abs(z) <= 5 then
 						mat = Enum.Material.Ground -- cross paths
 					end

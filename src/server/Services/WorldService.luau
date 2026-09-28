@@ -235,21 +235,20 @@ local function writeTerrain(map: MapInfo)
 	local pathLists = layout.Paths
 	local streams = layout.Streams
 	local ponds = {}
-	local glades = {}
 	for _, f in layout.Features do
 		if f.Type == "Pond" then
 			table.insert(ponds, f)
-		elseif f.Type == "Glade" then
-			table.insert(glades, f)
 		end
 	end
 
-	-- Forest palette: mossy LeafyGrass, leaf-litter Ground, dark Mud, cool Slate.
+	-- Clean cartoon palette (owner: "like 99 Nights"): bright even grass, warm dirt paths,
+	-- and no 3D grass blades, so the ground reads smooth and "plastic" but still grassy.
 	pcall(function()
-		terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(88, 122, 62))
-		terrain:SetMaterialColor(Enum.Material.LeafyGrass, Color3.fromRGB(70, 106, 52))
-		terrain:SetMaterialColor(Enum.Material.Ground, Color3.fromRGB(104, 84, 60))
-		terrain:SetMaterialColor(Enum.Material.Mud, Color3.fromRGB(74, 60, 46))
+		terrain.Decoration = false
+		terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(104, 166, 70))
+		terrain:SetMaterialColor(Enum.Material.LeafyGrass, Color3.fromRGB(96, 156, 64))
+		terrain:SetMaterialColor(Enum.Material.Ground, Color3.fromRGB(146, 108, 70))
+		terrain:SetMaterialColor(Enum.Material.Mud, Color3.fromRGB(128, 94, 60))
 		terrain:SetMaterialColor(Enum.Material.Slate, Color3.fromRGB(96, 98, 102))
 		terrain:SetMaterialColor(Enum.Material.Rock, Color3.fromRGB(118, 114, 108))
 	end)
@@ -274,14 +273,10 @@ local function writeTerrain(map: MapInfo)
 				for iz = 1, nz do
 					local wz = -H + (cz0 + iz - 0.5) * RES
 					local h = LayoutGen.Height(layout, wx, wz)
-					-- Forest floor variety (spec: moss, leaf litter, dirt, grass patches; not one
-					-- stretched green): two noise fields pick the ground material.
-					local nA = math.noise(wx / 38, wz / 38, 5.3)
+					-- Clean, even grass everywhere (owner: 99 Nights style ground); dirt only on
+					-- paths, camps and the centre. nB still varies the cliff rock.
 					local nB = math.noise(wx / 17 + 40, wz / 17, 9.1)
-					local surface = if nA > 0.28 then Enum.Material.LeafyGrass
-						elseif nA < -0.3 then Enum.Material.Ground -- leaf litter / dirt
-						elseif nB > 0.35 then Enum.Material.Mud -- damp hollows
-						else Enum.Material.Grass
+					local surface = Enum.Material.Grass
 					-- cliff rim: bare rock and slate on the slopes
 					local rim = LayoutGen.RimFactor(wx, wz)
 					if rim > 0.35 then
@@ -292,8 +287,6 @@ local function writeTerrain(map: MapInfo)
 						local d = math.sqrt((wx - c.X) ^ 2 + (wz - c.Z) ^ 2)
 						if d < 26 then
 							surface = Enum.Material.Ground
-						elseif d < 60 then
-							surface = Enum.Material.LeafyGrass
 						end
 					end
 					local dc = math.sqrt(wx * wx + wz * wz)
@@ -304,13 +297,8 @@ local function writeTerrain(map: MapInfo)
 					end
 					for _, p in pathLists do
 						if LayoutGen.DistToPolyline(wx, wz, p.Points) < p.Width / 2 then
-							surface = Enum.Material.Mud
+							surface = Enum.Material.Ground -- dirt path
 							break
-						end
-					end
-					for _, g in glades do
-						if (wx - g.X) ^ 2 + (wz - g.Z) ^ 2 < g.R * g.R then
-							surface = Enum.Material.LeafyGrass
 						end
 					end
 					-- water carving (+ muddy, rocky banks: forest -> grass/moss -> mud/rock -> water)
@@ -321,10 +309,8 @@ local function writeTerrain(map: MapInfo)
 						if d < half then
 							local t = d / half
 							waterDepth = math.max(waterDepth, s.Depth * (1 - t * t))
-						elseif d < half + 3 then
-							surface = if nB > 0.2 then Enum.Material.Rock else Enum.Material.Mud
-						elseif d < half + 7 and surface == Enum.Material.Grass then
-							surface = Enum.Material.LeafyGrass
+						elseif d < half + 2 then
+							surface = Enum.Material.Ground -- simple dirt bank
 						end
 					end
 					for _, pd in ponds do
@@ -340,7 +326,7 @@ local function writeTerrain(map: MapInfo)
 						surface = Enum.Material.Sand
 					end
 					if math.abs(wx) > layout.HalfSize or math.abs(wz) > layout.HalfSize then
-						surface = Enum.Material.LeafyGrass
+						surface = Enum.Material.Grass
 					end
 					for iy = 1, YCELLS do
 						local y0 = (iy - 1) * RES
@@ -720,6 +706,10 @@ function WorldService.BuildMatch(seed: number): MapInfo
 		end
 	end
 	for i, d in layout.GroundCover do
+		-- flat litter / moss patches muddy the clean ground look; skip them
+		if d.Kind == "LeafLitter" or d.Kind == "MossPatch" then
+			continue
+		end
 		Decor.Place(d.Kind, ground(d.X, d.Z) * CFrame.Angles(0, math.rad(d.Rot), 0) + Vector3.new(0, 0.25, 0), drng, 1, decor)
 		if i % 200 == 0 then
 			task.wait()
