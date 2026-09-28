@@ -23,6 +23,8 @@ local Net = require(Shared:WaitForChild("Net"))
 local Progression = require(Shared:WaitForChild("Progression"))
 local ProfileRules = require(Shared:WaitForChild("Logic"):WaitForChild("ProfileRules"))
 local Challenges = require(Shared:WaitForChild("Logic"):WaitForChild("Challenges"))
+local ClassLevels = require(Shared:WaitForChild("Logic"):WaitForChild("ClassLevels"))
+local Classes = require(Shared:WaitForChild("Classes"))
 
 export type Session = {
 	Player: Player,
@@ -370,6 +372,13 @@ function DataService.Push(player: Player)
 			Amount = Progression.WeeklyCoins(weekly.Wins),
 		},
 		Settings = p.Settings,
+		ClassLevels = (function()
+			local out = {}
+			for _, def in Classes.List do
+				out[def.Id] = ClassLevels.View(p.Stats, def.Id)
+			end
+			return out
+		end)(),
 		State = s.State,
 		Challenges = Challenges.View(p.Challenges, p),
 		Records = {

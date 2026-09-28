@@ -408,6 +408,12 @@ local function grant(p: Player, n: Node, items: { [string]: number }): { string 
 	for id, count in items do
 		local added = ctx.InventoryService.AddResource(p, id, count)
 		ctx.PowerupService.Tally(p, "Resources", count)
+		-- class level tasks (Logic/ClassLevels): Lumberjack chops, Miner mines
+		if n.Def.RequiredTool == "Axe" then
+			ctx.PowerupService.Tally(p, "Chopped", count)
+		elseif n.Def.RequiredTool == "Pickaxe" then
+			ctx.PowerupService.Tally(p, "Mined", count)
+		end
 		if added > 0 then
 			table.insert(lines, string.format("+%d %s", added, Items[id] and Items[id].Name or id))
 		end

@@ -18,6 +18,7 @@ local Classes = require(Shared.Classes)
 local Progression = require(Shared.Progression)
 local ClassDeals = require(Shared.Logic.ClassDeals)
 local ClassHallLayout = require(Shared.Logic.ClassHallLayout)
+local ClassLevels = require(Shared.Logic.ClassLevels)
 local UI = require("../UI/UI")
 local Theme = require("../UI/Theme")
 local Buttons = require("../UI/Buttons")
@@ -299,13 +300,42 @@ local function perkGlyph(line: string): string
 	return "✦"
 end
 
-local function renderPerks(def: Classes.Def)
+-- "AxeSpeed" -> "Axe speed"
+local function prettyKey(k: string): string
+	local s = string.gsub(k, "(%l)(%u)", function(a, b)
+		return a .. " " .. string.lower(b)
+	end)
+	return s
+end
+
+local function renderPerks(def: Classes.Def, profile: any)
 	UI.clear(perksBody)
 	local color = rgb(def.Color)
 	local order = 0
 	local function nextOrder(): number
 		order += 1
 		return order
+	end
+	-- Class level (Logic/ClassLevels): earned by playing the class, never bought.
+	local view = profile and profile.ClassLevels and profile.ClassLevels[def.Id]
+	if view then
+		local head = UI.new("Frame", { LayoutOrder = nextOrder(), BackgroundColor3 = C.PanelLighter, BackgroundTransparency = 0.2, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BorderSizePixel = 0, Parent = perksBody }, {
+			UI.corner(UDim.new(0, 8)),
+			UI.padding(8),
+			UI.list(Enum.FillDirection.Vertical, 4),
+		})
+		UI.text(string.format("CLASS LEVEL %d / %d", view.Level, ClassLevels.Max), { LayoutOrder = 1, TextSize = 16, Font = Theme.FontBlack, TextColor3 = color:Lerp(Color3.new(1, 1, 1), 0.35), Parent = head })
+		if view.Need then
+			UI.text(string.format("Level %d: %s while playing %s", view.Level + 1, string.lower(view.Label), def.Name), { LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextSize = 13, Parent = head })
+			local holder = UI.new("Frame", { LayoutOrder = 3, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 18), Parent = head })
+			local _bar, set = UI.bar({ Size = UDim2.fromScale(1, 1), Parent = holder }, color)
+			set(math.clamp(view.Progress / view.Need, 0, 1), string.format("%d / %d", view.Progress, view.Need))
+			for i, b in ClassLevels.Boosts(def.Effects, view.Level) do
+				UI.text(string.format("⬆ %s %d%% → %d%%", prettyKey(b.Key), b.From, b.To), { LayoutOrder = 3 + i, TextSize = 12, TextColor3 = C.TextDim, Parent = head })
+			end
+		else
+			UI.text("Max level: percentage perks are 50% stronger.", { LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextSize = 13, Parent = head })
+		end
 	end
 	for _, line in def.Lines do
 		local row = UI.new("Frame", { LayoutOrder = nextOrder(), BackgroundColor3 = C.PanelLighter, BackgroundTransparency = 0.3, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BorderSizePixel = 0, Parent = perksBody }, {
@@ -466,7 +496,7 @@ function ClassHall.Render()
 	rarityLabel.Text = starsText(stars) .. "  " .. (RARITY[stars] or "")
 	tint(def)
 	renderAction(def, profile, deals, day)
-	renderPerks(def)
+	renderPerks(def, profile)
 end
 
 -- Layout ----------------------------------------------------------------------------------------------------

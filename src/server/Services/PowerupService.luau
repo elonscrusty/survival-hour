@@ -25,6 +25,7 @@ local Challenges = require(Shared:WaitForChild("Logic"):WaitForChild("Challenges
 local ProfileRules = require(Shared:WaitForChild("Logic"):WaitForChild("ProfileRules"))
 local Cosmetics = require(Shared:WaitForChild("Cosmetics"))
 local Seasons = require(Shared:WaitForChild("Logic"):WaitForChild("Seasons"))
+local ClassLevels = require(Shared:WaitForChild("Logic"):WaitForChild("ClassLevels"))
 
 local PowerupService = {}
 
@@ -159,7 +160,8 @@ function PowerupService._lock(p: Player)
 	local classId = if profile and Classes.ById[profile.Class] and profile.OwnedClasses[profile.Class] then profile.Class else Classes.Default
 	local perkId = if profile and profile.Perk and Perks.ById[profile.Perk] and profile.OwnedPerks[profile.Perk] then profile.Perk else nil
 	local effects = {}
-	merge(effects, Classes.ById[classId].Effects)
+	local level = if profile then ClassLevels.Level(profile.Stats, classId) else 1
+	merge(effects, ClassLevels.Effects(Classes.ById[classId].Effects, level))
 	if perkId then
 		merge(effects, Perks.ById[perkId].Effects)
 	end
@@ -629,6 +631,14 @@ function PowerupService.CommitMatch(p: Player, profile: any, place: number?, fir
 	end
 	-- seasonal event: matches played during it count toward its earned title (Cosmetics, Season)
 	local season = ctx.Util.Season()
+	-- class level task (Logic/ClassLevels): counted for the class played this match
+	if st then
+		local up = ClassLevels.Commit(profile.Stats, st.Class, st.Stats)
+		local def = Classes.ById[st.Class]
+		if up and def then
+			ctx.Util.Notify(p, string.format("%s %s reached Level %d! Its perks got a little stronger.", def.Glyph, def.Name, up), "success")
+		end
+	end
 	local played = st ~= nil and Seasons.CountsMatch(ctx.MatchService.Day or 0, p:GetAttribute("AFK") == true, st.Stats.Resources or 0)
 	if season and played then
 		local key = Seasons.StatKey(season.Id)

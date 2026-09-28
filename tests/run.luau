@@ -26,6 +26,7 @@ local specs = {
 	"./AnimClips.spec",
 	"./Seasons.spec",
 	"./ClassDeals.spec",
+	"./ClassLevels.spec",
 }
 
 local passed, failed = 0, 0
