@@ -47,7 +47,7 @@ export type MapInfo = {
 	-- Survival Wars world layers
 	ChestSpots: { { CF: CFrame, Tier: string, Poi: string, Key: string } },
 	NoBuild: { { X: number, Z: number, R: number, Label: string } },
-	Caves: { { CF: CFrame, Length: number, Width: number, FloorY: number, Size: string } },
+	Caves: { { Feature: any, CF: CFrame, Length: number, Width: number, FloorY: number, Size: string } },
 	Pois: { { Type: string, Tier: string, Pos: Vector3 } },
 	TerrainReady: boolean?, -- terrain written: GroundY snaps to the real surface
 }
@@ -602,6 +602,15 @@ function WorldService._carveCaves(map: MapInfo)
 		if f.Type == "Cave" then
 			local floorY = O.Y + LayoutGen.Height(map.Layout, f.X, f.Z) - 0.2
 			local cf = CFrame.new(f.X + O.X, floorY, f.Z + O.Z) * CFrame.Angles(0, math.rad(f.Rot), 0)
+			-- Slide the mouth along the cave axis to where the cliff face really is, so the
+			-- entrance arch sits against the wall instead of out on the open ground.
+			for z = -10, 40 do
+				local p = (cf * CFrame.new(0, 0, z)).Position
+				if O.Y + LayoutGen.Height(map.Layout, p.X - O.X, p.Z - O.Z) > floorY + 9 then
+					cf = cf * CFrame.new(0, 0, z - 1.5)
+					break
+				end
+			end
 			local w = CAVE_WIDTH[f.Size] or 9
 			local len = f.Length or 22
 			for z = 0, len, 4 do
@@ -615,7 +624,7 @@ function WorldService._carveCaves(map: MapInfo)
 			end
 			-- flat slate floor all the way in
 			terrain:FillBlock(cf * CFrame.new(0, -1, len / 2), Vector3.new(w + 6, 2, len + 12), Enum.Material.Slate)
-			table.insert(map.Caves, { CF = cf, Length = len, Width = w + (if f.Size == "Large" then 10 else 0), FloorY = floorY, Size = f.Size or "Small" })
+			table.insert(map.Caves, { Feature = f, CF = cf, Length = len, Width = w + (if f.Size == "Large" then 10 else 0), FloorY = floorY, Size = f.Size or "Small" })
 		end
 	end
 end
@@ -623,8 +632,7 @@ end
 function WorldService._buildCave(map: MapInfo, f: any, rng: Random, parent: Instance)
 	local cave
 	for _, c in map.Caves do
-		local d = (c.CF.Position - Vector3.new(f.X + map.Origin.X, c.CF.Position.Y, f.Z + map.Origin.Z)).Magnitude
-		if d < 1 then
+		if c.Feature == f then
 			cave = c
 		end
 	end
