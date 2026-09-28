@@ -12,6 +12,7 @@ import math
 
 from mathutils import Vector
 
+from sh import trees as T
 from sh.pipeline import asset
 
 GROUND = "Bottom centre on the ground (Z=0)."
@@ -319,36 +320,41 @@ def sapling01(m):
         m.blob("leaves", r, loc=(m.rng.uniform(-0.2, 0.2), m.rng.uniform(-0.2, 0.2), z), scale=(1, 1, 0.7), jitter=0.12)
 
 
-def spruce(m, height, tiers):
-    m.sweep("bark_pine", [(0, 0, -0.4), (0.1, 0, height * 0.5), (0, 0, height)], [height * 0.035, height * 0.025, 0.08], 7,
-            cap_mat="end_grain")
-    for i in range(tiers):
-        t = i / tiers
-        z = height * (0.18 + 0.78 * t)
-        r = height * 0.28 * (1 - t) + 0.6
-        m.cone("pine_needles_dark" if i % 2 else "pine_needles", r, height * 0.16, seg=9, loc=(0, 0, z - height * 0.04))
+# Published bounds (Blender lo / hi); the flat low-poly rework is fitted to them.
+SW_TREE_BOUNDS = {
+    "SM_Tree_Spruce01": ((-6.105, -5.828, -0.408), (6.105, 6.202, 20.002)),
+    "SM_Tree_Spruce02": ((-7.21, -6.879, -0.405), (7.21, 7.321, 24.045)),
+    "SM_Tree_Aspen01": ((-3.998, -3.945, -0.306), (3.671, 3.595, 18.914)),
+}
+
+
+def _fit(m, name, build):
+    lo, hi = SW_TREE_BOUNDS[name]
+    build(lo, hi)
+    m.fit_bounds(lo, hi)
 
 
 @asset("SM_Tree_Spruce01", "SW_Landscape", "WorldProp", density=4.0, lod=True, pivot=GROUND, footprint=[9, 9],
        use="Narrow dark spruce (20 studs).")
 def spruce01(m):
-    spruce(m, 20, 8)
+    _fit(m, "SM_Tree_Spruce01", lambda lo, hi: T.conifer(
+        m, lo, hi, T.PALETTES["spruce"], tiers=5, r0=0.55, clear=0.12,
+        shape=(1.0, 0.8, 0.62, 0.45, 0.3), heights=[0, 0.22, 0.42, 0.6, 0.76], col=False))
 
 
 @asset("SM_Tree_Spruce02", "SW_Landscape", "WorldProp", density=4.0, lod=True, pivot=GROUND, footprint=[11, 11],
        use="Broad old spruce (24 studs).")
 def spruce02(m):
-    spruce(m, 24, 10)
+    _fit(m, "SM_Tree_Spruce02", lambda lo, hi: T.conifer(
+        m, lo, hi, T.PALETTES["spruce"], tiers=5, r0=0.7, clear=0.1, seg=12,
+        shape=(1.0, 0.82, 0.64, 0.46, 0.3), heights=[0, 0.22, 0.42, 0.6, 0.76], col=False))
 
 
 @asset("SM_Tree_Aspen01", "SW_Landscape", "WorldProp", density=4.0, lod=True, pivot=GROUND, footprint=[8, 8],
        use="Slim pale aspen with a high round crown (18 studs).")
 def aspen01(m):
-    m.sweep("bark_birch", [(0, 0, -0.3), (0.2, 0, 8), (0, 0.2, 14)], [0.35, 0.28, 0.18], 7, cap_mat="end_grain")
-    for i in range(6):
-        a = i * 1.05
-        m.blob("leaves_birch", 2.3, loc=(math.cos(a) * 1.6, math.sin(a) * 1.6, 13 + (i % 3)), scale=(1, 1, 1.2), jitter=0.4)
-    m.blob("leaves_birch", 2.6, loc=(0, 0, 16.5), jitter=0.4)
+    _fit(m, "SM_Tree_Aspen01", lambda lo, hi: T.pale_tree(
+        m, lo, hi, T.PALETTES["aspen"], r0=0.36, crown_base=0.55, lumps=3, tall=1.1, col=False))
 
 
 # =============================================================== nodes

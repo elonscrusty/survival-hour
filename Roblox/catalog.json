@@ -65,14 +65,13 @@
    2,
    2
   ],
-  "tris": 852,
-  "verts": 454,
+  "tris": 480,
+  "verts": 250,
   "materials": 1,
   "texture_tiles": [
    "bark_pine",
-   "end_grain",
-   "pine_needles",
-   "pine_needles_dark"
+   "fern",
+   "grass"
   ],
   "origin_offset": [
    0.4555,
@@ -87,7 +86,7 @@
    {
     "cframe": [
      0.0,
-     6.0,
+     5.9994,
      0.0,
      1.0,
      0.0,
@@ -100,14 +99,14 @@
      1.0
     ],
     "size": [
-     1.6500000000000001,
-     12.0,
-     1.6500000000000001
+     1.595311392598856,
+     11.998800485229513,
+     1.547129186020706
     ]
    }
   ],
   "parts": [],
-  "lod1_tris": 354,
+  "lod1_tris": 280,
   "files": {
    "fbx": "Export/Meshes/Forest/SM_Tree_Pine_Medium01.fbx",
    "lod1": "Export/LOD/Forest/SM_Tree_Pine_Medium01_LOD1.fbx",
@@ -140,18 +139,17 @@
    2,
    2
   ],
-  "tris": 768,
-  "verts": 410,
+  "tris": 480,
+  "verts": 250,
   "materials": 1,
   "texture_tiles": [
    "bark_pine",
-   "end_grain",
-   "pine_needles",
-   "pine_needles_dark"
+   "fern",
+   "grass"
   ],
   "origin_offset": [
    -0.4075,
-   -8.2665,
+   -8.267,
    0.3285
   ],
   "team_colored": false,
@@ -162,7 +160,7 @@
    {
     "cframe": [
      0.0,
-     5.1,
+     5.1006,
      0.0,
      1.0,
      0.0,
@@ -175,14 +173,14 @@
      1.0
     ],
     "size": [
-     1.4300000000000002,
-     10.2,
-     1.4300000000000002
+     1.3640481697345077,
+     10.20119951477053,
+     1.7952864026695683
     ]
    }
   ],
   "parts": [],
-  "lod1_tris": 306,
+  "lod1_tris": 280,
   "files": {
    "fbx": "Export/Meshes/Forest/SM_Tree_Pine_Medium02.fbx",
    "lod1": "Export/LOD/Forest/SM_Tree_Pine_Medium02_LOD1.fbx",
@@ -215,14 +213,13 @@
    3,
    3
   ],
-  "tris": 1020,
-  "verts": 542,
+  "tris": 564,
+  "verts": 292,
   "materials": 1,
   "texture_tiles": [
    "bark_pine",
-   "end_grain",
-   "pine_needles",
-   "pine_needles_dark"
+   "fern",
+   "grass"
   ],
   "origin_offset": [
    0.0465,
@@ -237,7 +234,7 @@
    {
     "cframe": [
      0.0,
-     9.6,
+     9.6003,
      0.0,
      1.0,
      0.0,
@@ -250,14 +247,14 @@
      1.0
     ],
     "size": [
-     2.53,
-     19.2,
-     2.53
+     2.715186100701983,
+     19.200600329589843,
+     2.376626482692286
     ]
    }
   ],
   "parts": [],
-  "lod1_tris": 450,
+  "lod1_tris": 322,
   "files": {
    "fbx": "Export/Meshes/Forest/SM_Tree_Pine_Large01.fbx",
    "lod1": "Export/LOD/Forest/SM_Tree_Pine_Large01_LOD1.fbx",
@@ -290,19 +287,18 @@
    1.5,
    1.5
   ],
-  "tris": 692,
-  "verts": 372,
+  "tris": 388,
+  "verts": 204,
   "materials": 1,
   "texture_tiles": [
    "bark_pine",
-   "end_grain",
-   "pine_needles",
-   "pine_needles_dark",
+   "fern",
+   "grass",
    "wood_fresh"
   ],
   "origin_offset": [
-   0.3275,
-   -4.7575,
+   0.328,
+   -4.758,
    0.1015
   ],
   "team_colored": false,
@@ -314,7 +310,7 @@
     "cframe": [
      0.0,
      1.1,
-     -0.5,
+     -0.5515,
      1.0,
      0.0,
      0.0,
@@ -331,7 +327,7 @@
    {
     "cframe": [
      0.0,
-     3.0,
+     2.9994,
      0.0,
      1.0,
      0.0,
@@ -344,14 +340,14 @@
      1.0
     ],
     "size": [
-     0.9900000000000001,
-     6.0,
-     0.9900000000000001
+     0.9922730880763481,
+     5.998799913024903,
+     1.0986280783535045
     ]
    }
   ],
   "parts": [],
-  "lod1_tris": 266,
+  "lod1_tris": 228,
   "files": {
    "fbx": "Export/Meshes/Forest/SM_Tree_Pine_Small01.fbx",
    "lod1": "Export/LOD/Forest/SM_Tree_Pine_Small01_LOD1.fbx",
@@ -384,19 +380,19 @@
    2,
    2
   ],
-  "tris": 1980,
-  "verts": 1036,
+  "tris": 476,
+  "verts": 254,
   "materials": 1,
   "texture_tiles": [
    "bark",
-   "end_grain",
+   "grass",
    "leaves",
    "leaves_dark"
   ],
   "origin_offset": [
    -0.5045,
    -7.4035,
-   0.0745
+   0.074
   ],
   "team_colored": false,
   "pivot": "Base of the trunk at ground level (Z=0 is the ground).",
@@ -406,7 +402,7 @@
    {
     "cframe": [
      0.0,
-     4.0,
+     3.6732,
      0.0,
      1.0,
      0.0,
@@ -419,14 +415,14 @@
      1.0
     ],
     "size": [
-     1.87,
-     8.0,
-     1.87
+     2.3468029127958263,
+     7.346318418514942,
+     2.981662330790214
     ]
    }
   ],
   "parts": [],
-  "lod1_tris": 380,
+  "lod1_tris": 168,
   "files": {
    "fbx": "Export/Meshes/Forest/SM_Tree_Oak_Medium01.fbx",
    "lod1": "Export/LOD/Forest/SM_Tree_Oak_Medium01_LOD1.fbx",
@@ -459,12 +455,12 @@
    2,
    2
   ],
-  "tris": 3952,
-  "verts": 2030,
+  "tris": 556,
+  "verts": 296,
   "materials": 1,
   "texture_tiles": [
    "bark",
-   "end_grain",
+   "fern",
    "leaves",
    "leaves_dark"
   ],
@@ -481,7 +477,7 @@
    {
     "cframe": [
      0.0,
-     3.5,
+     3.4885,
      0.0,
      1.0,
      0.0,
@@ -494,14 +490,14 @@
      1.0
     ],
     "size": [
-     1.7600000000000002,
-     7.0,
-     1.7600000000000002
+     2.3112627130767764,
+     6.97709262344431,
+     2.1476681366218875
     ]
    }
   ],
   "parts": [],
-  "lod1_tris": 488,
+  "lod1_tris": 188,
   "files": {
    "fbx": "Export/Meshes/Forest/SM_Tree_Oak_Medium02.fbx",
    "lod1": "Export/LOD/Forest/SM_Tree_Oak_Medium02_LOD1.fbx",
@@ -534,17 +530,17 @@
    3.5,
    3.5
   ],
-  "tris": 6644,
-  "verts": 3384,
+  "tris": 588,
+  "verts": 314,
   "materials": 1,
   "texture_tiles": [
    "bark",
-   "end_grain",
+   "grass",
    "leaves",
    "leaves_dark"
   ],
   "origin_offset": [
-   -0.4205,
+   -0.421,
    -11.8155,
    -0.075
   ],
@@ -556,7 +552,7 @@
    {
     "cframe": [
      0.0,
-     6.0,
+     5.9476,
      0.0,
      1.0,
      0.0,
@@ -569,14 +565,14 @@
      1.0
     ],
     "size": [
-     3.3000000000000003,
-     12.0,
-     3.3000000000000003
+     4.185743991205663,
+     11.895270882807825,
+     3.930503836117565
     ]
    }
   ],
   "parts": [],
-  "lod1_tris": 836,
+  "lod1_tris": 208,
   "files": {
    "fbx": "Export/Meshes/Forest/SM_Tree_Oak_Large01.fbx",
    "lod1": "Export/LOD/Forest/SM_Tree_Oak_Large01_LOD1.fbx",
@@ -609,19 +605,19 @@
    1.5,
    1.5
   ],
-  "tris": 976,
-  "verts": 522,
+  "tris": 372,
+  "verts": 200,
   "materials": 1,
   "texture_tiles": [
    "bark",
-   "end_grain",
+   "grass",
    "leaves",
    "leaves_dark",
    "wood_fresh"
   ],
   "origin_offset": [
-   0.6535,
-   -3.9035,
+   0.654,
+   -3.904,
    0.888
   ],
   "team_colored": false,
@@ -632,8 +628,8 @@
     "name": "HarvestHit_Att",
     "cframe": [
      0.0,
-     1.0,
-     -0.47,
+     1.0363,
+     -0.7587,
      1.0,
      0.0,
      0.0,
@@ -650,7 +646,7 @@
    {
     "cframe": [
      0.0,
-     2.125,
+     2.1591,
      0.0,
      1.0,
      0.0,
@@ -663,14 +659,14 @@
      1.0
     ],
     "size": [
-     0.924,
-     4.25,
-     0.924
+     1.142730560245587,
+     4.318126650482764,
+     1.817741420738347
     ]
    }
   ],
   "parts": [],
-  "lod1_tris": 280,
+  "lod1_tris": 136,
   "files": {
    "fbx": "Export/Meshes/Forest/SM_Tree_Oak_Small01.fbx",
    "lod1": "Export/LOD/Forest/SM_Tree_Oak_Small01_LOD1.fbx",
@@ -703,12 +699,13 @@
    1.5,
    1.5
   ],
-  "tris": 810,
-  "verts": 433,
+  "tris": 476,
+  "verts": 264,
   "materials": 1,
   "texture_tiles": [
    "bark_birch",
-   "end_grain",
+   "charcoal",
+   "leaves",
    "leaves_birch"
   ],
   "origin_offset": [
@@ -724,7 +721,7 @@
    {
     "cframe": [
      0.0,
-     4.8,
+     5.3333,
      0.0,
      1.0,
      0.0,
@@ -737,14 +734,14 @@
      1.0
     ],
     "size": [
-     1.2,
-     9.6,
-     1.2
+     1.3003646097563213,
+     10.666649814814946,
+     1.5054362348493953
     ]
    }
   ],
   "parts": [],
-  "lod1_tris": 220,
+  "lod1_tris": 156,
   "files": {
    "fbx": "Export/Meshes/Forest/SM_Tree_Birch_Medium01.fbx",
    "lod1": "Export/LOD/Forest/SM_Tree_Birch_Medium01_LOD1.fbx",
@@ -777,19 +774,20 @@
    1.2,
    1.2
   ],
-  "tris": 818,
-  "verts": 439,
+  "tris": 404,
+  "verts": 228,
   "materials": 1,
   "texture_tiles": [
    "bark_birch",
-   "end_grain",
+   "charcoal",
+   "leaves",
    "leaves_birch",
    "wood_fresh"
   ],
   "origin_offset": [
    -0.2585,
-   -4.9135,
-   0.4705
+   -4.913,
+   0.47
   ],
   "team_colored": false,
   "pivot": "Base of the trunk at ground level (Z=0 is the ground).",
@@ -799,8 +797,8 @@
     "name": "HarvestHit_Att",
     "cframe": [
      0.0,
-     1.0,
-     -0.37,
+     1.0053,
+     -0.5119,
      1.0,
      0.0,
      0.0,
@@ -817,7 +815,7 @@
    {
     "cframe": [
      0.0,
-     2.7,
+     3.0968,
      0.0,
      1.0,
      0.0,
@@ -830,14 +828,14 @@
      1.0
     ],
     "size": [
-     0.768,
-     5.3999999999999995,
-     0.768
+     0.8256832735353696,
+     6.193558234113701,
+     1.3796577980765365
     ]
    }
   ],
   "parts": [],
-  "lod1_tris": 228,
+  "lod1_tris": 144,
   "files": {
    "fbx": "Export/Meshes/Forest/SM_Tree_Birch_Small01.fbx",
    "lod1": "Export/LOD/Forest/SM_Tree_Birch_Small01_LOD1.fbx",
@@ -859,7 +857,7 @@
   "category": "Forest",
   "kind": "WorldProp",
   "kind_note": "Static world prop (anchor it).",
-  "use": "Gnarled dead tree for the mysterious deep-forest mood.",
+  "use": "Bare dead tree for the mysterious deep-forest mood.",
   "notes": "",
   "size_studs_roblox_XYZ": [
    16.3,
@@ -870,12 +868,11 @@
    2.5,
    2.5
   ],
-  "tris": 1100,
-  "verts": 618,
+  "tris": 340,
+  "verts": 188,
   "materials": 1,
   "texture_tiles": [
-   "bark_dead",
-   "end_grain"
+   "bark_dead"
   ],
   "origin_offset": [
    0.5595,
@@ -890,7 +887,7 @@
    {
     "cframe": [
      0.0,
-     5,
+     5.0332,
      0.0,
      1.0,
      0.0,
@@ -903,14 +900,14 @@
      1.0
     ],
     "size": [
-     2.4,
-     10,
-     2.4
+     2.472339166791114,
+     10.06634431485326,
+     2.3551502867981213
     ]
    }
   ],
   "parts": [],
-  "lod1_tris": 380,
+  "lod1_tris": 188,
   "files": {
    "fbx": "Export/Meshes/Forest/SM_Tree_Dead_Large01.fbx",
    "lod1": "Export/LOD/Forest/SM_Tree_Dead_Large01_LOD1.fbx",
@@ -943,8 +940,8 @@
    3.04,
    3.12
   ],
-  "tris": 214,
-  "verts": 127,
+  "tris": 206,
+  "verts": 125,
   "materials": 1,
   "texture_tiles": [
    "bark_pine",
@@ -977,9 +974,9 @@
      1.0
     ],
     "size": [
-     0.9900000000000001,
-     0.9,
-     0.9900000000000001
+     1.0521033309686625,
+     0.9000000238418585,
+     1.057068971727241
     ]
    }
   ],
@@ -1016,8 +1013,8 @@
    3.17,
    2.86
   ],
-  "tris": 214,
-  "verts": 127,
+  "tris": 206,
+  "verts": 125,
   "materials": 1,
   "texture_tiles": [
    "bark",
@@ -1050,9 +1047,9 @@
      1.0
     ],
     "size": [
-     0.924,
-     0.85,
-     0.924
+     1.1783043851911312,
+     0.8499999761581427,
+     1.1568030923639645
     ]
    }
   ],
@@ -1089,11 +1086,12 @@
    2.94,
    2.67
   ],
-  "tris": 214,
-  "verts": 127,
+  "tris": 242,
+  "verts": 149,
   "materials": 1,
   "texture_tiles": [
    "bark_birch",
+   "charcoal",
    "end_grain",
    "wood_fresh"
   ],
@@ -1123,9 +1121,9 @@
      1.0
     ],
     "size": [
-     0.7040000000000001,
-     0.8,
-     0.7040000000000001
+     0.7488854242792324,
+     0.7999999880790712,
+     0.7348057014279965
     ]
    }
   ],
@@ -13776,14 +13774,13 @@
    9,
    9
   ],
-  "tris": 166,
-  "verts": 101,
+  "tris": 580,
+  "verts": 302,
   "materials": 1,
   "texture_tiles": [
    "bark_pine",
-   "end_grain",
-   "pine_needles",
-   "pine_needles_dark"
+   "fern",
+   "leaves_dark"
   ],
   "origin_offset": [
    0.0,
@@ -13796,7 +13793,7 @@
   "attachments": [],
   "collision_boxes": [],
   "parts": [],
-  "lod1_tris": 84,
+  "lod1_tris": 340,
   "files": {
    "fbx": "Export/Meshes/SW_Landscape/SM_Tree_Spruce01.fbx",
    "lod1": "Export/LOD/SW_Landscape/SM_Tree_Spruce01_LOD1.fbx"
@@ -13828,19 +13825,18 @@
    11,
    11
   ],
-  "tris": 198,
-  "verts": 121,
+  "tris": 684,
+  "verts": 354,
   "materials": 1,
   "texture_tiles": [
    "bark_pine",
-   "end_grain",
-   "pine_needles",
-   "pine_needles_dark"
+   "fern",
+   "leaves_dark"
   ],
   "origin_offset": [
    0.0,
-   -11.8205,
-   -0.2205
+   -11.82,
+   -0.221
   ],
   "team_colored": false,
   "pivot": "Bottom centre on the ground (Z=0).",
@@ -13848,7 +13844,7 @@
   "attachments": [],
   "collision_boxes": [],
   "parts": [],
-  "lod1_tris": 100,
+  "lod1_tris": 392,
   "files": {
    "fbx": "Export/Meshes/SW_Landscape/SM_Tree_Spruce02.fbx",
    "lod1": "Export/LOD/SW_Landscape/SM_Tree_Spruce02_LOD1.fbx"
@@ -13880,18 +13876,19 @@
    8,
    8
   ],
-  "tris": 598,
-  "verts": 315,
+  "tris": 476,
+  "verts": 264,
   "materials": 1,
   "texture_tiles": [
    "bark_birch",
-   "end_grain",
-   "leaves_birch"
+   "charcoal",
+   "leaves_birch",
+   "moss"
   ],
   "origin_offset": [
    -0.1635,
    -9.304,
-   0.1745
+   0.175
   ],
   "team_colored": false,
   "pivot": "Bottom centre on the ground (Z=0).",
@@ -13899,7 +13896,7 @@
   "attachments": [],
   "collision_boxes": [],
   "parts": [],
-  "lod1_tris": 160,
+  "lod1_tris": 156,
   "files": {
    "fbx": "Export/Meshes/SW_Landscape/SM_Tree_Aspen01.fbx",
    "lod1": "Export/LOD/SW_Landscape/SM_Tree_Aspen01_LOD1.fbx"

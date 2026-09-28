@@ -5,36 +5,13 @@ import math
 
 from mathutils import Vector
 
+from sh import trees as T
 from sh.pipeline import asset
 
 TREE_PIVOT = "Base of the trunk at ground level (Z=0 is the ground)."
 
 
 # ------------------------------------------------------------------ helpers
-
-def trunk(m, mat, height, r0, r1, seg=9, lean=0.4, roots=4, root_len=1.6, wobble=0.25):
-    """Tapered, slightly wandering trunk with a root flare. Returns the list
-    of centreline points (for attaching limbs)."""
-    n = 6
-    ang = m.rng.uniform(0, math.tau)
-    pts, radii = [], []
-    for i in range(n + 1):
-        t = i / n
-        off = Vector((math.cos(ang), math.sin(ang), 0)) * lean * t * t
-        off += Vector((m.rng.uniform(-1, 1), m.rng.uniform(-1, 1), 0)) * wobble * (0 < i < n)
-        pts.append(Vector((0, 0, -0.4 + (height + 0.4) * t)) + off)
-        radii.append(r0 + (r1 - r0) * t ** 0.8)
-    radii[0] *= 1.25
-    m.sweep(mat, pts, radii, seg, cap_mat="end_grain")
-    for k in range(roots if not m.lod else max(2, roots - 2)):
-        a = ang + k * math.tau / roots + m.rng.uniform(-0.3, 0.3)
-        d = Vector((math.cos(a), math.sin(a), 0))
-        rl = root_len * m.rng.uniform(0.8, 1.2)
-        m.sweep(mat, [Vector((0, 0, 0.9)) + d * r0 * 0.3, Vector((0, 0, 0.35)) + d * (r0 + rl * 0.45),
-                      Vector((0, 0, -0.25)) + d * (r0 + rl)],
-                [r0 * 0.5, r0 * 0.33, 0.06], 5)
-    return pts
-
 
 def point_on(pts, t):
     f = t * (len(pts) - 1)
@@ -55,193 +32,124 @@ def limb(m, mat, start, direction, length, r0, seg=6, rise=0.25, kinks=3):
     return pts[-1]
 
 
-def pine_tier(m, z, r, h, mat="pine_needles", droop=0.7, lobes=7):
-    seg = 14
-    prof = [(0, z + h * 0.28), (r, z), (r * 0.9, z + h * 0.1), (r * 0.45, z + h * 0.55), (0, z + h)]
-    verts = m.lathe(mat, prof, seg, rot=(m.rng.uniform(-5, 5), m.rng.uniform(-5, 5),
-                                         m.rng.uniform(0, 360)))
-    lobes = m.rng.choice((5, 6, 7))
-    phase = m.rng.uniform(0, math.tau)
-    for v in verts:
-        rad = math.hypot(v.co.x, v.co.y)
-        if rad < 1e-4:
-            continue
-        a = math.atan2(v.co.y, v.co.x)
-        f = 1 + 0.24 * math.cos(lobes * a + phase) + m.rng.uniform(-0.1, 0.1)
-        v.co.x *= f
-        v.co.y *= f
-        v.co.z -= droop * (rad / r) ** 2 + m.rng.uniform(0, 0.12)
+# Published bounds (Blender space, lo / hi) of every tree: the rework is fitted to
+# them exactly so the uploaded asset IDs stay valid (tools/check_bounds.py).
+TREE_BOUNDS = {
+    "SM_Tree_Pine_Small01": ((-3.002, -3.677, -0.482), (3.658, 3.474, 9.998)),
+    "SM_Tree_Pine_Medium01": ((-5.32, -5.267, -0.492), (6.231, 6.113, 19.998)),
+    "SM_Tree_Pine_Medium02": ((-4.478, -5.333, -0.468), (3.663, 4.676, 17.002)),
+    "SM_Tree_Pine_Large01": ((-8.723, -7.143, -0.42), (8.816, 8.226, 32.001)),
+    "SM_Tree_Oak_Small01": ((-2.171, -4.058, -0.526), (3.479, 2.282, 8.334)),
+    "SM_Tree_Oak_Medium01": ((-8.009, -7.724, -0.571), (7.0, 7.576, 15.378)),
+    "SM_Tree_Oak_Medium02": ((-6.547, -6.707, -0.564), (7.413, 6.174, 14.087)),
+    "SM_Tree_Oak_Large01": ((-11.196, -9.93, -0.554), (10.354, 10.08, 24.185)),
+    "SM_Tree_Birch_Small01": ((-2.444, -2.49, -0.442), (1.927, 1.55, 10.268)),
+    "SM_Tree_Birch_Medium01": ((-2.744, -3.058, -0.403), (2.536, 3.541, 17.717)),
+    "SM_Tree_Dead_Large01": ((-7.591, -7.973, -0.576), (8.71, 7.597, 19.483)),
+    "SM_Tree_Pine_Small01_Stump": ((-1.454, -1.453, -0.3), (1.586, 1.667, 0.9)),
+    "SM_Tree_Oak_Small01_Stump": ((-1.443, -1.43, -0.3), (1.727, 1.43, 0.85)),
+    "SM_Tree_Birch_Small01_Stump": ((-1.338, -1.335, -0.3), (1.602, 1.335, 0.8)),
+}
 
 
-def canopy(m, centers, mat="leaves", jitter=0.35, flat=0.8):
-    for (c, r) in centers:
-        m.blob(mat, r, loc=c, scale=(1, 1, flat), jitter=jitter * r / 3, subdiv=3 if r > 2.2 else 2)
+def fitted(name):
+    """Decorator body wrapper: build the tree in its published box, then snap to it."""
+    lo, hi = TREE_BOUNDS[name]
 
-
-def harvest_notch(m, height=1.1, r=0.5):
-    """Fresh axe notch on the tree's front: the 'this can be chopped' cue."""
-    m.prism("wood_fresh", [(-r * 0.8, -0.35), (r * 0.8, -0.35), (0, 0.35)], 0.5,
-            loc=(0, -r * 0.82, height), rot=(0, 0, 0))
-    m.attach("HarvestHit", (0, -r - 0.05, height), (0, 0, 0))
+    def wrap(fn):
+        def build(m):
+            fn(m, lo, hi)
+            m.fit_bounds(lo, hi)
+        return build
+    return wrap
 
 
 # ------------------------------------------------------------------- pines
 
-def pine(m, height, r0, tiers, spread, notch=False):
-    pts = trunk(m, "bark_pine", height * 0.92, r0, r0 * 0.25, seg=9, lean=0.25, roots=5,
-                root_len=r0 * 2)
-    base = height * 0.22
-    n = tiers if not m.lod else max(3, tiers - 2)
-    for i in range(n):
-        t = i / (n - 1)
-        z = base + (height - base - 2.4) * t
-        c = point_on(pts, min(z / height, 1))
-        r = spread * (1 - t * 0.8) * m.rng.uniform(0.92, 1.08)
-        h = (2.6 + 1.2 * (1 - t)) * max(0.5, min(1.0, height / 20))
-        m.transform(pine_tier_at(m, z, r, h),
-                    _tr(c.x + m.rng.uniform(-0.3, 0.3), c.y + m.rng.uniform(-0.3, 0.3)))
-    top = point_on(pts, 1.0)
-    m.cone("pine_needles", spread * 0.18, 2.6, seg=7, loc=(top.x, top.y, height - 2.6))
-    if notch:
-        harvest_notch(m, 1.1, r0)
-    m.col_box((0, 0, height * 0.3), (r0 * 2.2, r0 * 2.2, height * 0.6))
-
-
-def pine_tier_at(m, z, r, h):
-    before = set(m.bm.verts)
-    pine_tier(m, z, r, h, mat=m.rng.choice(("pine_needles", "pine_needles_dark")))
-    return [v for v in m.bm.verts if v not in before]
-
-
-def _tr(x, y):
-    from mathutils import Matrix
-    return Matrix.Translation((x, y, 0))
-
-
 @asset("SM_Tree_Pine_Medium01", "Forest", "WorldProp", lod=True, use="Common medium pine.",
        pivot=TREE_PIVOT, footprint=[2, 2],
        notes="Collide with the trunk only (collision box / COL_ file). Needles: CanCollide off.")
-def pine_medium01(m):
-    pine(m, 20, 0.75, 7, 5.2)
+@fitted("SM_Tree_Pine_Medium01")
+def pine_medium01(m, lo, hi):
+    T.conifer(m, lo, hi, T.PALETTES["pine"], tiers=4, r0=0.7)
 
 
 @asset("SM_Tree_Pine_Medium02", "Forest", "WorldProp", lod=True, pivot=TREE_PIVOT, footprint=[2, 2],
        use="Medium pine, narrower.")
-def pine_medium02(m):
-    pine(m, 17, 0.65, 6, 4.2)
+@fitted("SM_Tree_Pine_Medium02")
+def pine_medium02(m, lo, hi):
+    T.conifer(m, lo, hi, T.PALETTES["pine"], tiers=4, r0=0.62, clear=0.15)
 
 
 @asset("SM_Tree_Pine_Large01", "Forest", "WorldProp", lod=True, pivot=TREE_PIVOT, footprint=[3, 3],
        use="Tall landmark pine.")
-def pine_large01(m):
-    pine(m, 32, 1.15, 9, 7.0)
+@fitted("SM_Tree_Pine_Large01")
+def pine_large01(m, lo, hi):
+    T.conifer(m, lo, hi, T.PALETTES["pine"], tiers=4, r0=1.05, clear=0.2, seg=12)
 
 
 @asset("SM_Tree_Pine_Small01", "Forest", "Harvestable", lod=True, pivot=TREE_PIVOT,
        footprint=[1.5, 1.5], use="Harvestable small pine: gives wood. Axe notch = harvest cue.",
        notes="Swap for SM_Tree_Pine_Small01_Stump when depleted.")
-def pine_small01(m):
-    pine(m, 10, 0.45, 5, 2.9, notch=True)
+@fitted("SM_Tree_Pine_Small01")
+def pine_small01(m, lo, hi):
+    T.conifer(m, lo, hi, T.PALETTES["pine"], tiers=3, r0=0.45, clear=0.2)
+    T.notch(m, 1.1, 0.45)
 
 
 # ------------------------------------------------------------ broadleaves
 
-def broadleaf(m, height, r0, limbs, crown, bark="bark", leaf="leaves", leaf2="leaves_dark",
-              notch=False, clumps_per=3):
-    pts = trunk(m, bark, height * 0.55, r0, r0 * 0.55, seg=9, lean=0.5, roots=5, root_len=r0 * 2.2)
-    top = pts[-1]
-    centers = [(top + Vector((0, 0, crown * 0.55)), crown * 0.75)]
-    for k in range(limbs):
-        a = k * math.tau / limbs + m.rng.uniform(-0.4, 0.4)
-        start = point_on(pts, m.rng.uniform(0.7, 0.95))
-        d = Vector((math.cos(a), math.sin(a), m.rng.uniform(0.6, 1.1)))
-        end = limb(m, bark, start, d, height * m.rng.uniform(0.3, 0.42), r0 * 0.5, seg=7)
-        for j in range(clumps_per if not m.lod else 1):
-            off = Vector((m.rng.uniform(-1, 1), m.rng.uniform(-1, 1), m.rng.uniform(-0.3, 0.6)))
-            centers.append((end + off * crown * 0.3, crown * m.rng.uniform(0.42, 0.6)))
-    for i, (c, r) in enumerate(centers):
-        m.blob(leaf if i % 2 == 0 else leaf2, r, loc=c, scale=(1, 1, 0.78), jitter=0.14 * r,
-               subdiv=3 if r > 2.5 else 2)
-    if notch:
-        harvest_notch(m, 1.0, r0)
-    m.col_box((0, 0, height * 0.25), (r0 * 2.2, r0 * 2.2, height * 0.5))
-
-
 @asset("SM_Tree_Oak_Medium01", "Forest", "WorldProp", lod=True, pivot=TREE_PIVOT, footprint=[2, 2],
        use="Medium broadleaf tree.")
-def oak_medium01(m):
-    broadleaf(m, 16, 0.85, 4, 4.2)
+@fitted("SM_Tree_Oak_Medium01")
+def oak_medium01(m, lo, hi):
+    T.broadleaf(m, lo, hi, T.PALETTES["oak"], r0=1.0, lumps=3)
 
 
 @asset("SM_Tree_Oak_Medium02", "Forest", "WorldProp", lod=True, pivot=TREE_PIVOT, footprint=[2, 2],
        use="Medium broadleaf tree, wider crown.")
-def oak_medium02(m):
-    broadleaf(m, 14, 0.8, 5, 4.6, leaf="leaves_dark", leaf2="leaves")
+@fitted("SM_Tree_Oak_Medium02")
+def oak_medium02(m, lo, hi):
+    T.broadleaf(m, lo, hi, T.PALETTES["oak_dark"], r0=0.95, lumps=4, crown_base=0.38)
 
 
 @asset("SM_Tree_Oak_Large01", "Forest", "WorldProp", lod=True, pivot=TREE_PIVOT, footprint=[3.5, 3.5],
        use="Large old broadleaf: clearing centrepiece.")
-def oak_large01(m):
-    broadleaf(m, 24, 1.5, 6, 6.5, clumps_per=3)
+@fitted("SM_Tree_Oak_Large01")
+def oak_large01(m, lo, hi):
+    T.broadleaf(m, lo, hi, T.PALETTES["oak"], r0=1.7, lumps=4, limbs=4)
 
 
 @asset("SM_Tree_Oak_Small01", "Forest", "Harvestable", lod=True, pivot=TREE_PIVOT,
        footprint=[1.5, 1.5], use="Harvestable small broadleaf: gives wood.",
        notes="Swap for SM_Tree_Oak_Small01_Stump when depleted.")
-def oak_small01(m):
-    broadleaf(m, 8.5, 0.42, 3, 2.3, notch=True, clumps_per=2)
-
-
-def birch(m, height, r0, crown, notch=False):
-    pts = trunk(m, "bark_birch", height * 0.85, r0, r0 * 0.45, seg=8, lean=0.6, roots=3,
-                root_len=r0 * 1.5, wobble=0.15)
-    centers = []
-    for i in range(5 if not m.lod else 3):
-        t = 0.45 + 0.55 * i / 4
-        c = point_on(pts, t)
-        a = m.rng.uniform(0, math.tau)
-        if i < 4:
-            end = limb(m, "bark_birch", c, (math.cos(a), math.sin(a), 1.4), crown * 0.9, r0 * 0.3, seg=5)
-        else:
-            end = c
-        centers.append((end + Vector((0, 0, 0.4)), crown * m.rng.uniform(0.55, 0.75)))
-    centers.append((pts[-1] + Vector((0, 0, crown * 0.5)), crown * 0.7))
-    for i, (c, r) in enumerate(centers):
-        m.blob("leaves_birch", r, loc=c, scale=(0.85, 0.85, 1.15), jitter=0.12 * r)
-    if notch:
-        harvest_notch(m, 1.0, r0)
-    m.col_box((0, 0, height * 0.3), (r0 * 2.4, r0 * 2.4, height * 0.6))
+@fitted("SM_Tree_Oak_Small01")
+def oak_small01(m, lo, hi):
+    T.broadleaf(m, lo, hi, T.PALETTES["oak"], r0=0.5, lumps=2, limbs=2)
+    T.notch(m, 1.0, 0.5)
 
 
 @asset("SM_Tree_Birch_Medium01", "Forest", "WorldProp", lod=True, pivot=TREE_PIVOT, footprint=[1.5, 1.5],
        use="Pale birch: breaks up the darker pines.")
-def birch_medium01(m):
-    birch(m, 16, 0.5, 3.0)
+@fitted("SM_Tree_Birch_Medium01")
+def birch_medium01(m, lo, hi):
+    T.pale_tree(m, lo, hi, T.PALETTES["birch"], r0=0.5, crown_base=0.4, lumps=3)
 
 
 @asset("SM_Tree_Birch_Small01", "Forest", "Harvestable", lod=True, pivot=TREE_PIVOT,
        footprint=[1.2, 1.2], use="Harvestable small birch: gives wood.",
        notes="Swap for SM_Tree_Birch_Small01_Stump when depleted.")
-def birch_small01(m):
-    birch(m, 9, 0.32, 2.0, notch=True)
+@fitted("SM_Tree_Birch_Small01")
+def birch_small01(m, lo, hi):
+    T.pale_tree(m, lo, hi, T.PALETTES["birch"], r0=0.32, crown_base=0.4, lumps=2)
+    T.notch(m, 1.0, 0.32)
 
 
 @asset("SM_Tree_Dead_Large01", "Forest", "WorldProp", lod=True, pivot=TREE_PIVOT, footprint=[2.5, 2.5],
-       use="Gnarled dead tree for the mysterious deep-forest mood.")
-def dead_large01(m):
-    pts = trunk(m, "bark_dead", 15, 1.1, 0.35, seg=9, lean=1.2, roots=5, root_len=2.2, wobble=0.4)
-
-    def grow(start, d, length, r, depth):
-        end = limb(m, "bark_dead", start, d, length, r, seg=6 if depth == 0 else 4, rise=0.1)
-        if depth < (2 if not m.lod else 1):
-            for k in range(2):
-                a = math.atan2(d[1], d[0]) + m.rng.uniform(-0.9, 0.9)
-                grow(end, (math.cos(a), math.sin(a), m.rng.uniform(0.2, 0.9)), length * 0.55, r * 0.5,
-                     depth + 1)
-    for k in range(4):
-        a = k * math.tau / 4 + m.rng.uniform(-0.5, 0.5)
-        grow(point_on(pts, m.rng.uniform(0.55, 0.95)), (math.cos(a), math.sin(a), 0.7), 5.5, 0.45, 0)
-    m.col_box((0, 0, 5), (2.4, 2.4, 10))
+       use="Bare dead tree for the mysterious deep-forest mood.")
+@fitted("SM_Tree_Dead_Large01")
+def dead_large01(m, lo, hi):
+    T.dead_tree(m, lo, hi)
 
 
 # --------------------------------------------------------- stumps (depleted)
@@ -268,20 +176,23 @@ def stump(m, r, h, bark="bark", fresh=True, chips=True, moss=False):
 
 @asset("SM_Tree_Pine_Small01_Stump", "Forest", "Harvestable", pivot=TREE_PIVOT,
        use="Depleted state of SM_Tree_Pine_Small01 (fresh cut + chips).")
-def pine_small_stump(m):
-    stump(m, 0.45, 0.9, "bark_pine")
+@fitted("SM_Tree_Pine_Small01_Stump")
+def pine_small_stump(m, lo, hi):
+    T.cut_stump(m, lo, hi, T.BARK["pine"], 0.45)
 
 
 @asset("SM_Tree_Oak_Small01_Stump", "Forest", "Harvestable", pivot=TREE_PIVOT,
        use="Depleted state of SM_Tree_Oak_Small01.")
-def oak_small_stump(m):
-    stump(m, 0.42, 0.85, "bark")
+@fitted("SM_Tree_Oak_Small01_Stump")
+def oak_small_stump(m, lo, hi):
+    T.cut_stump(m, lo, hi, T.BARK["oak"], 0.5)
 
 
 @asset("SM_Tree_Birch_Small01_Stump", "Forest", "Harvestable", pivot=TREE_PIVOT,
        use="Depleted state of SM_Tree_Birch_Small01.")
-def birch_small_stump(m):
-    stump(m, 0.32, 0.8, "bark_birch")
+@fitted("SM_Tree_Birch_Small01_Stump")
+def birch_small_stump(m, lo, hi):
+    T.cut_stump(m, lo, hi, T.BARK["birch"], 0.32)
 
 
 @asset("SM_Stump_Old01", "Forest", "WorldProp", pivot=TREE_PIVOT, use="Old mossy stump (decor).")
