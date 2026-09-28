@@ -76,4 +76,23 @@ return {
 		t.eq(s.DayClaimed.B, nil)
 		t.eq(s.Week, -1)
 	end,
+	every_challenge_gets_picked = function(t)
+		local seen = {}
+		for day = 20000, 20400 do
+			for _, d in Challenges.ForDay(day) do
+				seen[d.Id] = (seen[d.Id] or 0) + 1
+			end
+		end
+		for week = 2800, 2900 do
+			for _, d in Challenges.ForWeek(week) do
+				seen[d.Id] = (seen[d.Id] or 0) + 1
+			end
+		end
+		for _, d in Challenges.Daily do
+			t.ok((seen[d.Id] or 0) > 60, d.Id .. " " .. tostring(seen[d.Id]))
+		end
+		for _, d in Challenges.Weekly do
+			t.ok((seen[d.Id] or 0) > 10, d.Id .. " " .. tostring(seen[d.Id]))
+		end
+	end,
 }

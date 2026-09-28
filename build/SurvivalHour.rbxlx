@@ -1433,10 +1433,14 @@ local function pick(pool: { Def }, n: number, k: number): { Def }
 	for i = 1, #pool do
 		idx[i] = i
 	end
-	-- small LCG shuffle seeded by the period number
-	local seed = (k * 1103515245 + 12345) % 2147483648
+	-- Park-Miller shuffle seeded by the period number (products stay far below 2^53, so the
+	-- arithmetic is exact in doubles and every entry can be picked)
+	local seed = k % 2147483646 + 1
+	for _ = 1, 3 do
+		seed = (seed * 16807) % 2147483647
+	end
 	for i = #idx, 2, -1 do
-		seed = (seed * 1103515245 + 12345) % 2147483648
+		seed = (seed * 16807) % 2147483647
 		local j = seed % i + 1
 		idx[i], idx[j] = idx[j], idx[i]
 	end
@@ -10524,7 +10528,7 @@ return SoundLib
 return {
 	"Your Campfire is your respawn. Keep feeding it Wood, especially before night.",
 	"When your fire goes out you're on Final Life: one more death and you're out.",
-	"Hold block just as a hit lands for a perfect block: it stops more and costs less stamina.",
+	"Raise your block just before a hit lands for a perfect block: it stops more and costs less stamina.",
 	"Chopping and felling carry a long way. Someone may be listening.",
 	"Sprinting is loud. Deer bolt, and at night wolves come to see what made the noise.",
 	"A big fire throws up a tall smoke column. Great for warmth, bad for hiding.",
@@ -10535,7 +10539,7 @@ return {
 	"Fog and storms hide you as well as them.",
 	"Lost caches are never marked. Follow the dropped gear.",
 	"Bears guard their ground. Leave their territory and they'll let you go.",
-	"A flare of howling in the distance means wolves are gathering there.",
+	"Howling from one direction means wolves are gathering there.",
 	"Bandages heal over time. Find cover first.",
 }
 ]]></string>
@@ -62001,6 +62005,7 @@ function CampService.SetLevel(team: number, level: number)
 	nb.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
 	nb:SetAttribute("Team", team)
 	ctx.ChannelService.MakePrompt(nb.PrimaryPart, "Workbench", "Craft", "Workbench", 10, "Team", team)
+	ctx.ChannelService.MakePrompt(nb.PrimaryPart, "InspectCamp", "Size up", Config.Teams[team].Name .. " camp", 28, "Enemy", team)
 	camp.Workbench = nb
 	old:Destroy()
 	ctx.CosmeticService.OnWorkbenchRebuilt(team)
@@ -62535,19 +62540,7 @@ function CombatService.Init(c)
 		local def = Items[id]
 		local broken = (p:GetAttribute("GuardBrokenUntil") or 0) > workspace:GetServerTimeNow()
 		local can = def ~= nil and not def.Ranged and (def.Kind == "Weapon" or def.Kind == "Tool") and not broken
-		local was = p:GetAttribute("Blocking") == true
-		local now = workspace:GetServerTimeNow()
-		local g = guard[p] or { RaisedAt = nil, DownFor = math.huge, LoweredAt = -math.huge }
-		guard[p] = g
-		p:SetAttribute("Blocking", on == true and can and ctx.Util.IsAlive(p) and ctx.StaminaService.Get(p) > 1)
-		local is = p:GetAttribute("Blocking") == true
-		if is and not was then
-			g.DownFor = now - g.LoweredAt
-			g.RaisedAt = now
-		elseif was and not is then
-			g.LoweredAt = now
-			g.RaisedAt = nil
-		end
+		CombatService._setBlocking(p, on == true and can and ctx.Util.IsAlive(p) and ctx.StaminaService.Get(p) > 1)
 	end)
 	ctx.Util.Connect("DrawState", "Default", function(p: Player, on: any)
 		local def = Items[(ctx.InventoryService.EquippedItem(p))]
@@ -62567,6 +62560,24 @@ end
 -- Damage pipeline ----------------------------------------------------------------------------
 
 -- Returns the damage actually dealt.
+-- Every Blocking change goes through here so the parry timing (guard raised / lowered) is
+-- always right, including when the server drops the guard (attacking, guard break).
+-- A guard that was never lowered counts as lowered at the start (no free first parry).
+function CombatService._setBlocking(p: Player, on: boolean)
+	local was = p:GetAttribute("Blocking") == true
+	local now = workspace:GetServerTimeNow()
+	local g = guard[p] or { RaisedAt = nil, DownFor = 0, LoweredAt = now }
+	guard[p] = g
+	p:SetAttribute("Blocking", on)
+	if on and not was then
+		g.DownFor = now - g.LoweredAt
+		g.RaisedAt = now
+	elseif was and not on then
+		g.LoweredAt = now
+		g.RaisedAt = nil
+	end
+end
+
 function CombatService.DamagePlayer(victim: Player, amount: number, source: Source): number
 	local phase = ctx.MatchService.Phase
 	if amount <= 0 or not victim:GetAttribute("InMatch") or not ctx.MatchService.Active or (phase ~= "Day" and phase ~= "Night") then
@@ -62629,7 +62640,7 @@ function CombatService.DamagePlayer(victim: Player, amount: number, source: Sour
 			dmg = r.Taken
 			Net.FireAll("Fx", "Block", { Pos = root.Position })
 			if r.GuardBroken then
-				victim:SetAttribute("Blocking", false)
+				CombatService._setBlocking(victim, false)
 				victim:SetAttribute("GuardBrokenUntil", workspace:GetServerTimeNow() + CFG.GuardBreakTime)
 				Net.FireClient("HitFeedback", victim, "GuardBreak", 0, source.Pos)
 				if source.By then
@@ -62784,7 +62795,7 @@ function CombatService._onAttack(p: Player, payload: any)
 		ctx.ChannelService.Cancel(p, "Attacked")
 	end
 	if p:GetAttribute("Blocking") then
-		p:SetAttribute("Blocking", false)
+		CombatService._setBlocking(p, false)
 	end
 	nextAttack[p] = t + cd * 0.9 -- small tolerance for latency jitter
 	char:SetAttribute("Action", "Attack")
@@ -64564,8 +64575,10 @@ function EventService.Start()
 					-- the "Lost Survivors" condition guarantees extra caches before random picks
 					local started
 					if bonusCaches > 0 and not ctx.MatchService.IsNight() then
-						bonusCaches -= 1
 						started = EventService._tryStart("SurvivorCache")
+						if started then
+							bonusCaches -= 1 -- only spend the guaranteed cache once one actually spawned
+						end
 					else
 						started = rng:NextNumber() < E.Chance and EventService._tryStart(nil)
 					end
@@ -65895,6 +65908,16 @@ local function now(): number
 	return workspace:GetServerTimeNow()
 end
 
+-- A player who left the match (disconnected, went back to the lobby, AFK-removed) no longer
+-- counts as standing for their clan.
+function LivesService.MarkLeft(p: Player)
+	local life = lives[p.UserId]
+	if life and life.State ~= "Eliminated" then
+		life.State = "Left"
+	end
+	lastDamage[p] = nil
+end
+
 function LivesService.Init(c)
 	ctx = c
 	ctx.Util.OnPlayerAdded(function(p: Player)
@@ -65910,11 +65933,7 @@ function LivesService.Init(c)
 		end
 	end)
 	ctx.Util.OnPlayerRemoving(function(p: Player)
-		local life = lives[p.UserId]
-		if life and life.State ~= "Eliminated" then
-			life.State = "Left"
-		end
-		lastDamage[p] = nil
+		LivesService.MarkLeft(p)
 	end)
 
 	ctx.MatchService.On("MatchStarting", function()
@@ -66352,7 +66371,7 @@ function LobbyService.Init(c)
 		-- PLAY AGAIN from the last match: straight back into the queue
 		local join = p:GetJoinData()
 		local td = join and join.TeleportData
-		if type(td) == "table" and td.AutoReady == true then
+		if type(td) == "table" and type(td.AutoReady) == "table" and table.find(td.AutoReady, p.UserId) then
 			task.delay(4, function()
 				LobbyService.AutoReady(p)
 			end)
@@ -67370,6 +67389,7 @@ local phaseToken = 0
 local ending = false
 local matchStartedAt = os.clock()
 local playAgain: { [Player]: boolean } = setmetatable({}, { __mode = "k" }) :: any -- queue again on return
+local committed: { [number]: boolean } = {} -- userIds whose match result is already in their profile (left early)
 local lastRemaining = 0 -- standing clans at the last outcome check (for Final Three / Two)
 local elimOrder: { number } = {} -- teams in the order they were eliminated (for placements)
 
@@ -67405,6 +67425,25 @@ function MatchService.Init(c)
 	MatchService.State = state
 	MatchService._setPhase("Idle", 0)
 	ctx.Util.OnPlayerRemoving(MatchService._onLeave)
+	ctx.Util.OnPlayerRemoving(MatchService._commitEarly, true) -- before DataService saves
+end
+
+-- A participant leaving before the end (back to the lobby, AFK-removed, disconnected) still
+-- gets the match counted: a loss (win streak resets) plus this match's lifetime stats. Runs
+-- before the profile is saved on leave, once per player per match.
+function MatchService._commitEarly(p: Player)
+	if not MatchService.Active or ending or committed[p.UserId] or not MatchService.Participants[p.UserId] then
+		return
+	end
+	local team = MatchService.Roster[p.UserId]
+	local session = ctx.DataService.Get(p)
+	if not team or not session or not ctx.DataService.CanGrant(p) then
+		return
+	end
+	committed[p.UserId] = true
+	session.Profile.Matches += 1
+	ProfileRules.NoteMatch(session.Profile, os.time(), false)
+	ctx.PowerupService.CommitMatch(p, session.Profile, nil, MatchService.FireBurning(team))
 end
 
 -- AFK watch (Config.Afk): movement or any remote counts as activity. Warn, then stop survival
@@ -67575,6 +67614,10 @@ function MatchService.Begin(assignment: { [Player]: number }, matchId: string?)
 	MatchService.Active = true
 	matchStartedAt = os.clock()
 	lastRemaining = 0
+	committed = {}
+	for p in playAgain do
+		playAgain[p] = nil
+	end
 	ending = false
 	MatchService.MatchId = matchId or HttpService:GenerateGUID(false)
 	MatchService.Day = 0
@@ -67810,7 +67853,7 @@ function MatchService.End(winner: number?)
 			local session = ctx.DataService.Get(p)
 			local earned = ctx.PowerupService.Earned(p) or { XP = 0, Coins = 0, Diamonds = 0, Levels = 0 }
 			local sum = { Place = place, Of = started, XP = earned.XP, Coins = earned.Coins, Diamonds = earned.Diamonds, Levels = earned.Levels, Stats = ctx.PowerupService.Stats(p), Nights = MatchService.Day or 0, Bench = ctx.CampService.GetLevel(team), Duration = math.floor(os.clock() - matchStartedAt) }
-			if session and ctx.DataService.CanGrant(p) then
+			if session and ctx.DataService.CanGrant(p) and not committed[p.UserId] then
 				session.Profile.Matches += 1
 				ProfileRules.NoteMatch(session.Profile, os.time(), place == 1)
 				ctx.PowerupService.CommitMatch(p, session.Profile, place, MatchService.FireBurning(team))
@@ -67874,6 +67917,12 @@ function MatchService._teardown()
 			if p.Parent then
 				ctx.LivesService.SpawnInLobby(p)
 				Net.FireClient("MatchEvent", p, "ReturnedToLobby", {})
+				if playAgain[p] then
+					playAgain[p] = nil
+					task.delay(2, function()
+						ctx.LobbyService.AutoReady(p)
+					end)
+				end
 			end
 		end
 	end
@@ -67888,11 +67937,19 @@ function MatchService.ReturnToLobby(players: { Player }, message: string?, prior
 		if message then
 			ctx.Util.Notify(p, message, "info")
 		end
+		MatchService._commitEarly(p) -- leaving mid-match (no-op once the match has ended)
 	end
 	if ctx.Mode ~= "Match" or ctx.IsStudio then
+		local midMatch = MatchService.Active and not ending
 		for _, p in players do
+			if midMatch then
+				-- same as a leaver: the clan stops counting them as standing
+				ctx.LivesService.MarkLeft(p)
+				p:SetAttribute("Team", 0)
+			end
 			p:SetAttribute("InMatch", false)
 			ctx.LivesService.SpawnInLobby(p)
+			Net.FireClient("MatchEvent", p, "ReturnedToLobby", {})
 			if playAgain[p] then
 				playAgain[p] = nil
 				task.delay(2, function()
@@ -67900,36 +67957,34 @@ function MatchService.ReturnToLobby(players: { Player }, message: string?, prior
 				end)
 			end
 		end
+		if midMatch then
+			task.defer(MatchService.CheckOutcome)
+		end
 		return
 	end
-	-- two groups: players who pressed PLAY AGAIN land in the lobby already queued
-	local groups: { [boolean]: { Player } } = { [true] = {}, [false] = {} }
+	-- one teleport for everyone (parties land together); players who pressed PLAY AGAIN
+	-- are listed so the lobby re-queues just them
+	local again = {}
 	for _, p in players do
-		table.insert(groups[playAgain[p] == true], p)
-		playAgain[p] = nil
-	end
-	for again, group in groups do
-		if #group > 0 then
-			local options = Instance.new("TeleportOptions")
-			options:SetTeleportData({ ReturnFromMatch = true, Priority = priority == true, AutoReady = again })
-			local sent = false
-			for attempt = 1, 3 do
-				local ok, err = pcall(function()
-					TeleportService:TeleportAsync(game.PlaceId, group, options)
-				end)
-				if ok then
-					sent = true
-					break
-				end
-				warn("[MatchService] return teleport failed:", err)
-				task.wait(attempt * 2)
-			end
-			if not sent then
-				for _, p in group do
-					p:Kick("Match over — please rejoin Survival Hour.")
-				end
-			end
+		if playAgain[p] then
+			table.insert(again, p.UserId)
+			playAgain[p] = nil
 		end
+	end
+	local options = Instance.new("TeleportOptions")
+	options:SetTeleportData({ ReturnFromMatch = true, Priority = priority == true, AutoReady = again })
+	for attempt = 1, 3 do
+		local ok, err = pcall(function()
+			TeleportService:TeleportAsync(game.PlaceId, players, options)
+		end)
+		if ok then
+			return
+		end
+		warn("[MatchService] return teleport failed:", err)
+		task.wait(attempt * 2)
+	end
+	for _, p in players do
+		p:Kick("Match over — please rejoin Survival Hour.")
 	end
 end
 
@@ -67938,14 +67993,7 @@ function MatchService._onLeaveMatch(p: Player)
 	if not MatchService.Active or not p:GetAttribute("InMatch") or p:GetAttribute("LifeState") ~= "Eliminated" then
 		return
 	end
-	if ctx.Mode == "Match" then
-		MatchService.ReturnToLobby({ p }, nil)
-	else
-		p:SetAttribute("InMatch", false)
-		p:SetAttribute("Team", 0)
-		ctx.LivesService.SpawnInLobby(p)
-		Net.FireClient("MatchEvent", p, "ReturnedToLobby", {})
-	end
+	MatchService.ReturnToLobby({ p }, nil)
 end
 
 -- Leavers --------------------------------------------------------------------------------
@@ -68342,6 +68390,7 @@ local Net = require(Shared:WaitForChild("Net"))
 local Classes = require(Shared:WaitForChild("Classes"))
 local Perks = require(Shared:WaitForChild("Perks"))
 local Progression = require(Shared:WaitForChild("Progression"))
+local Challenges = require(Shared:WaitForChild("Logic"):WaitForChild("Challenges"))
 local ProfileRules = require(Shared:WaitForChild("Logic"):WaitForChild("ProfileRules"))
 local Cosmetics = require(Shared:WaitForChild("Cosmetics"))
 
@@ -68389,6 +68438,15 @@ local fights: { [string]: { [number]: number } } = {} -- kills between each pair
 
 -- Camp trophies (CampService.AddTrophy): at most `cap` of a kind per team per match.
 local TROPHY_CAP = { Bear = 2, Wolf = 1, Raid = 1, Explorer = 1 }
+-- How many distinct POIs a player has discovered this match.
+local function countPois(st: PState): number
+	local n = 0
+	for _ in st.Pois do
+		n += 1
+	end
+	return n
+end
+
 local function trophy(p: Player, kind: string)
 	local team = ctx.Util.Team(p)
 	local t = trophies[team] or {}
@@ -68555,11 +68613,7 @@ function PowerupService._tick()
 						if poi.Tier == "Rare" or poi.Tier == "Uncommon" then
 							PowerupService.Tell(p, "Discovered the " .. string.lower((string.gsub(poi.Type, "(%l)(%u)", "%1 %2"))) .. ".", "poi" .. poi.Type)
 						end
-						local found = 0
-						for _ in st.Pois do
-							found += 1
-						end
-						if found == 5 then
+						if countPois(st) == 5 then
 							trophy(p, "Explorer")
 						end
 					end
@@ -68820,11 +68874,7 @@ function PowerupService.Stats(p: Player): { [string]: number }?
 		return nil
 	end
 	local out = table.clone(st.Stats)
-	local pois = 0
-	for _ in st.Pois do
-		pois += 1
-	end
-	out.Pois = pois
+	out.Pois = countPois(st)
 	return out
 end
 
@@ -68924,6 +68974,10 @@ end
 -- the win badges. Called once per participant with a loaded profile (MatchService.End).
 local LIFETIME = { "Animals", "Bears", "Predators", "Chests", "Resources", "DamageDealt", "FiresOut", "Breaches", "Nights", "Crafts", "BenchUpgrades" }
 function PowerupService.CommitMatch(p: Player, profile: any, place: number?, fireBurning: boolean)
+	-- start today's / this week's challenge window first, so a match that ends after midnight
+	-- counts toward the new day instead of vanishing into the snapshot
+	local now = os.time()
+	Challenges.Refresh(profile.Challenges, profile, Progression.DayNumber(now), Progression.WeekNumber(now))
 	local st = states[p]
 	if st then
 		for _, k in LIFETIME do
@@ -68932,11 +68986,7 @@ function PowerupService.CommitMatch(p: Player, profile: any, place: number?, fir
 				profile.Stats[k] = (profile.Stats[k] or 0) + v
 			end
 		end
-		local pois = 0
-		for _ in st.Pois do
-			pois += 1
-		end
-		profile.Stats.Pois = (profile.Stats.Pois or 0) + pois
+		profile.Stats.Pois = (profile.Stats.Pois or 0) + countPois(st)
 		if profile.Stats.Pois >= Config.ExplorerBadgePlaces then
 			ctx.Util.AwardBadge(p, "Explorer")
 		end
@@ -70021,8 +70071,13 @@ function Util.OnPlayerAdded(fn: (Player) -> ())
 	table.insert(joinHooks, fn)
 end
 
-function Util.OnPlayerRemoving(fn: (Player) -> ())
-	table.insert(leaveHooks, fn)
+-- `first`: run before the other leave hooks (e.g. to update a profile before it is saved).
+function Util.OnPlayerRemoving(fn: (Player) -> (), first: boolean?)
+	if first then
+		table.insert(leaveHooks, 1, fn)
+	else
+		table.insert(leaveHooks, fn)
+	end
 end
 
 function Util.FirePlayerAdded(p: Player)

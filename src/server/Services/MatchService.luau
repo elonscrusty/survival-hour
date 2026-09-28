@@ -38,6 +38,7 @@ local phaseToken = 0
 local ending = false
 local matchStartedAt = os.clock()
 local playAgain: { [Player]: boolean } = setmetatable({}, { __mode = "k" }) :: any -- queue again on return
+local committed: { [number]: boolean } = {} -- userIds whose match result is already in their profile (left early)
 local lastRemaining = 0 -- standing clans at the last outcome check (for Final Three / Two)
 local elimOrder: { number } = {} -- teams in the order they were eliminated (for placements)
 
@@ -73,6 +74,25 @@ function MatchService.Init(c)
 	MatchService.State = state
 	MatchService._setPhase("Idle", 0)
 	ctx.Util.OnPlayerRemoving(MatchService._onLeave)
+	ctx.Util.OnPlayerRemoving(MatchService._commitEarly, true) -- before DataService saves
+end
+
+-- A participant leaving before the end (back to the lobby, AFK-removed, disconnected) still
+-- gets the match counted: a loss (win streak resets) plus this match's lifetime stats. Runs
+-- before the profile is saved on leave, once per player per match.
+function MatchService._commitEarly(p: Player)
+	if not MatchService.Active or ending or committed[p.UserId] or not MatchService.Participants[p.UserId] then
+		return
+	end
+	local team = MatchService.Roster[p.UserId]
+	local session = ctx.DataService.Get(p)
+	if not team or not session or not ctx.DataService.CanGrant(p) then
+		return
+	end
+	committed[p.UserId] = true
+	session.Profile.Matches += 1
+	ProfileRules.NoteMatch(session.Profile, os.time(), false)
+	ctx.PowerupService.CommitMatch(p, session.Profile, nil, MatchService.FireBurning(team))
 end
 
 -- AFK watch (Config.Afk): movement or any remote counts as activity. Warn, then stop survival
@@ -243,6 +263,10 @@ function MatchService.Begin(assignment: { [Player]: number }, matchId: string?)
 	MatchService.Active = true
 	matchStartedAt = os.clock()
 	lastRemaining = 0
+	committed = {}
+	for p in playAgain do
+		playAgain[p] = nil
+	end
 	ending = false
 	MatchService.MatchId = matchId or HttpService:GenerateGUID(false)
 	MatchService.Day = 0
@@ -478,7 +502,7 @@ function MatchService.End(winner: number?)
 			local session = ctx.DataService.Get(p)
 			local earned = ctx.PowerupService.Earned(p) or { XP = 0, Coins = 0, Diamonds = 0, Levels = 0 }
 			local sum = { Place = place, Of = started, XP = earned.XP, Coins = earned.Coins, Diamonds = earned.Diamonds, Levels = earned.Levels, Stats = ctx.PowerupService.Stats(p), Nights = MatchService.Day or 0, Bench = ctx.CampService.GetLevel(team), Duration = math.floor(os.clock() - matchStartedAt) }
-			if session and ctx.DataService.CanGrant(p) then
+			if session and ctx.DataService.CanGrant(p) and not committed[p.UserId] then
 				session.Profile.Matches += 1
 				ProfileRules.NoteMatch(session.Profile, os.time(), place == 1)
 				ctx.PowerupService.CommitMatch(p, session.Profile, place, MatchService.FireBurning(team))
@@ -542,6 +566,12 @@ function MatchService._teardown()
 			if p.Parent then
 				ctx.LivesService.SpawnInLobby(p)
 				Net.FireClient("MatchEvent", p, "ReturnedToLobby", {})
+				if playAgain[p] then
+					playAgain[p] = nil
+					task.delay(2, function()
+						ctx.LobbyService.AutoReady(p)
+					end)
+				end
 			end
 		end
 	end
@@ -556,11 +586,19 @@ function MatchService.ReturnToLobby(players: { Player }, message: string?, prior
 		if message then
 			ctx.Util.Notify(p, message, "info")
 		end
+		MatchService._commitEarly(p) -- leaving mid-match (no-op once the match has ended)
 	end
 	if ctx.Mode ~= "Match" or ctx.IsStudio then
+		local midMatch = MatchService.Active and not ending
 		for _, p in players do
+			if midMatch then
+				-- same as a leaver: the clan stops counting them as standing
+				ctx.LivesService.MarkLeft(p)
+				p:SetAttribute("Team", 0)
+			end
 			p:SetAttribute("InMatch", false)
 			ctx.LivesService.SpawnInLobby(p)
+			Net.FireClient("MatchEvent", p, "ReturnedToLobby", {})
 			if playAgain[p] then
 				playAgain[p] = nil
 				task.delay(2, function()
@@ -568,36 +606,34 @@ function MatchService.ReturnToLobby(players: { Player }, message: string?, prior
 				end)
 			end
 		end
+		if midMatch then
+			task.defer(MatchService.CheckOutcome)
+		end
 		return
 	end
-	-- two groups: players who pressed PLAY AGAIN land in the lobby already queued
-	local groups: { [boolean]: { Player } } = { [true] = {}, [false] = {} }
+	-- one teleport for everyone (parties land together); players who pressed PLAY AGAIN
+	-- are listed so the lobby re-queues just them
+	local again = {}
 	for _, p in players do
-		table.insert(groups[playAgain[p] == true], p)
-		playAgain[p] = nil
-	end
-	for again, group in groups do
-		if #group > 0 then
-			local options = Instance.new("TeleportOptions")
-			options:SetTeleportData({ ReturnFromMatch = true, Priority = priority == true, AutoReady = again })
-			local sent = false
-			for attempt = 1, 3 do
-				local ok, err = pcall(function()
-					TeleportService:TeleportAsync(game.PlaceId, group, options)
-				end)
-				if ok then
-					sent = true
-					break
-				end
-				warn("[MatchService] return teleport failed:", err)
-				task.wait(attempt * 2)
-			end
-			if not sent then
-				for _, p in group do
-					p:Kick("Match over — please rejoin Survival Hour.")
-				end
-			end
+		if playAgain[p] then
+			table.insert(again, p.UserId)
+			playAgain[p] = nil
 		end
+	end
+	local options = Instance.new("TeleportOptions")
+	options:SetTeleportData({ ReturnFromMatch = true, Priority = priority == true, AutoReady = again })
+	for attempt = 1, 3 do
+		local ok, err = pcall(function()
+			TeleportService:TeleportAsync(game.PlaceId, players, options)
+		end)
+		if ok then
+			return
+		end
+		warn("[MatchService] return teleport failed:", err)
+		task.wait(attempt * 2)
+	end
+	for _, p in players do
+		p:Kick("Match over — please rejoin Survival Hour.")
 	end
 end
 
@@ -606,14 +642,7 @@ function MatchService._onLeaveMatch(p: Player)
 	if not MatchService.Active or not p:GetAttribute("InMatch") or p:GetAttribute("LifeState") ~= "Eliminated" then
 		return
 	end
-	if ctx.Mode == "Match" then
-		MatchService.ReturnToLobby({ p }, nil)
-	else
-		p:SetAttribute("InMatch", false)
-		p:SetAttribute("Team", 0)
-		ctx.LivesService.SpawnInLobby(p)
-		Net.FireClient("MatchEvent", p, "ReturnedToLobby", {})
-	end
+	MatchService.ReturnToLobby({ p }, nil)
 end
 
 -- Leavers --------------------------------------------------------------------------------

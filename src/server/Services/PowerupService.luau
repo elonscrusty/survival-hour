@@ -21,6 +21,7 @@ local Net = require(Shared:WaitForChild("Net"))
 local Classes = require(Shared:WaitForChild("Classes"))
 local Perks = require(Shared:WaitForChild("Perks"))
 local Progression = require(Shared:WaitForChild("Progression"))
+local Challenges = require(Shared:WaitForChild("Logic"):WaitForChild("Challenges"))
 local ProfileRules = require(Shared:WaitForChild("Logic"):WaitForChild("ProfileRules"))
 local Cosmetics = require(Shared:WaitForChild("Cosmetics"))
 
@@ -68,6 +69,15 @@ local fights: { [string]: { [number]: number } } = {} -- kills between each pair
 
 -- Camp trophies (CampService.AddTrophy): at most `cap` of a kind per team per match.
 local TROPHY_CAP = { Bear = 2, Wolf = 1, Raid = 1, Explorer = 1 }
+-- How many distinct POIs a player has discovered this match.
+local function countPois(st: PState): number
+	local n = 0
+	for _ in st.Pois do
+		n += 1
+	end
+	return n
+end
+
 local function trophy(p: Player, kind: string)
 	local team = ctx.Util.Team(p)
 	local t = trophies[team] or {}
@@ -234,11 +244,7 @@ function PowerupService._tick()
 						if poi.Tier == "Rare" or poi.Tier == "Uncommon" then
 							PowerupService.Tell(p, "Discovered the " .. string.lower((string.gsub(poi.Type, "(%l)(%u)", "%1 %2"))) .. ".", "poi" .. poi.Type)
 						end
-						local found = 0
-						for _ in st.Pois do
-							found += 1
-						end
-						if found == 5 then
+						if countPois(st) == 5 then
 							trophy(p, "Explorer")
 						end
 					end
@@ -499,11 +505,7 @@ function PowerupService.Stats(p: Player): { [string]: number }?
 		return nil
 	end
 	local out = table.clone(st.Stats)
-	local pois = 0
-	for _ in st.Pois do
-		pois += 1
-	end
-	out.Pois = pois
+	out.Pois = countPois(st)
 	return out
 end
 
@@ -603,6 +605,10 @@ end
 -- the win badges. Called once per participant with a loaded profile (MatchService.End).
 local LIFETIME = { "Animals", "Bears", "Predators", "Chests", "Resources", "DamageDealt", "FiresOut", "Breaches", "Nights", "Crafts", "BenchUpgrades" }
 function PowerupService.CommitMatch(p: Player, profile: any, place: number?, fireBurning: boolean)
+	-- start today's / this week's challenge window first, so a match that ends after midnight
+	-- counts toward the new day instead of vanishing into the snapshot
+	local now = os.time()
+	Challenges.Refresh(profile.Challenges, profile, Progression.DayNumber(now), Progression.WeekNumber(now))
 	local st = states[p]
 	if st then
 		for _, k in LIFETIME do
@@ -611,11 +617,7 @@ function PowerupService.CommitMatch(p: Player, profile: any, place: number?, fir
 				profile.Stats[k] = (profile.Stats[k] or 0) + v
 			end
 		end
-		local pois = 0
-		for _ in st.Pois do
-			pois += 1
-		end
-		profile.Stats.Pois = (profile.Stats.Pois or 0) + pois
+		profile.Stats.Pois = (profile.Stats.Pois or 0) + countPois(st)
 		if profile.Stats.Pois >= Config.ExplorerBadgePlaces then
 			ctx.Util.AwardBadge(p, "Explorer")
 		end

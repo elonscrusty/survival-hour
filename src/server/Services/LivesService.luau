@@ -28,6 +28,16 @@ local function now(): number
 	return workspace:GetServerTimeNow()
 end
 
+-- A player who left the match (disconnected, went back to the lobby, AFK-removed) no longer
+-- counts as standing for their clan.
+function LivesService.MarkLeft(p: Player)
+	local life = lives[p.UserId]
+	if life and life.State ~= "Eliminated" then
+		life.State = "Left"
+	end
+	lastDamage[p] = nil
+end
+
 function LivesService.Init(c)
 	ctx = c
 	ctx.Util.OnPlayerAdded(function(p: Player)
@@ -43,11 +53,7 @@ function LivesService.Init(c)
 		end
 	end)
 	ctx.Util.OnPlayerRemoving(function(p: Player)
-		local life = lives[p.UserId]
-		if life and life.State ~= "Eliminated" then
-			life.State = "Left"
-		end
-		lastDamage[p] = nil
+		LivesService.MarkLeft(p)
 	end)
 
 	ctx.MatchService.On("MatchStarting", function()

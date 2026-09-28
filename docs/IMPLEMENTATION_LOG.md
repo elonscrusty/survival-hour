@@ -285,3 +285,17 @@ Reworked the roughest pack models (Survival Wars chests, storage, walls, Workben
 - Footprints: players can't read them without a decal/texture pass; the noise and sound ranges carry the tracking role for now.
 
 **Tested:** 167 unit tests (new: `Director`, parry window), 34 skins/lobby checks, type check clean, Rojo build OK. Not playtested in Studio.
+
+## Review fixes (passes 1-2)
+
+| Bug | Fix |
+|---|---|
+| The challenge shuffle overflowed double precision, so some challenges (Gather 250, Win 2) could never be picked | Exact Park-Miller shuffle; a new test checks every daily and weekly challenge comes up |
+| Parry anti-mash could be skipped: the server drops the guard on attack or guard break without updating the timing, so swing then re-block gave a free perfect block | Every Blocking change goes through `CombatService._setBlocking`; a guard never lowered counts as just lowered |
+| Camp scouting prompt disappeared after the first Workbench upgrade | The new bench gets the prompt too |
+| Leaving a match early (lobby, AFK removal, disconnect) skipped the result, so it protected win streaks and lost match stats | `MatchService._commitEarly` records a loss plus the match's stats before the profile saves |
+| Play Again split parties (two teleports) | One teleport; the lobby re-queues only the listed players |
+| AFK removal and Play Again didn't work in single-server/Studio matches (the player stayed "standing", the flag was never read) | The local return path marks the player as left, re-checks the outcome and honours Play Again |
+| A failed "Lost Survivors" bonus cache was used up anyway | Only spent once a cache actually spawns |
+| A match ending after midnight didn't count toward that day's challenges | The challenge window refreshes before the match stats are added |
+| POI counting copied three times | `countPois` helper |

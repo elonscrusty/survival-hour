@@ -41,19 +41,7 @@ function CombatService.Init(c)
 		local def = Items[id]
 		local broken = (p:GetAttribute("GuardBrokenUntil") or 0) > workspace:GetServerTimeNow()
 		local can = def ~= nil and not def.Ranged and (def.Kind == "Weapon" or def.Kind == "Tool") and not broken
-		local was = p:GetAttribute("Blocking") == true
-		local now = workspace:GetServerTimeNow()
-		local g = guard[p] or { RaisedAt = nil, DownFor = math.huge, LoweredAt = -math.huge }
-		guard[p] = g
-		p:SetAttribute("Blocking", on == true and can and ctx.Util.IsAlive(p) and ctx.StaminaService.Get(p) > 1)
-		local is = p:GetAttribute("Blocking") == true
-		if is and not was then
-			g.DownFor = now - g.LoweredAt
-			g.RaisedAt = now
-		elseif was and not is then
-			g.LoweredAt = now
-			g.RaisedAt = nil
-		end
+		CombatService._setBlocking(p, on == true and can and ctx.Util.IsAlive(p) and ctx.StaminaService.Get(p) > 1)
 	end)
 	ctx.Util.Connect("DrawState", "Default", function(p: Player, on: any)
 		local def = Items[(ctx.InventoryService.EquippedItem(p))]
@@ -73,6 +61,24 @@ end
 -- Damage pipeline ----------------------------------------------------------------------------
 
 -- Returns the damage actually dealt.
+-- Every Blocking change goes through here so the parry timing (guard raised / lowered) is
+-- always right, including when the server drops the guard (attacking, guard break).
+-- A guard that was never lowered counts as lowered at the start (no free first parry).
+function CombatService._setBlocking(p: Player, on: boolean)
+	local was = p:GetAttribute("Blocking") == true
+	local now = workspace:GetServerTimeNow()
+	local g = guard[p] or { RaisedAt = nil, DownFor = 0, LoweredAt = now }
+	guard[p] = g
+	p:SetAttribute("Blocking", on)
+	if on and not was then
+		g.DownFor = now - g.LoweredAt
+		g.RaisedAt = now
+	elseif was and not on then
+		g.LoweredAt = now
+		g.RaisedAt = nil
+	end
+end
+
 function CombatService.DamagePlayer(victim: Player, amount: number, source: Source): number
 	local phase = ctx.MatchService.Phase
 	if amount <= 0 or not victim:GetAttribute("InMatch") or not ctx.MatchService.Active or (phase ~= "Day" and phase ~= "Night") then
@@ -135,7 +141,7 @@ function CombatService.DamagePlayer(victim: Player, amount: number, source: Sour
 			dmg = r.Taken
 			Net.FireAll("Fx", "Block", { Pos = root.Position })
 			if r.GuardBroken then
-				victim:SetAttribute("Blocking", false)
+				CombatService._setBlocking(victim, false)
 				victim:SetAttribute("GuardBrokenUntil", workspace:GetServerTimeNow() + CFG.GuardBreakTime)
 				Net.FireClient("HitFeedback", victim, "GuardBreak", 0, source.Pos)
 				if source.By then
@@ -290,7 +296,7 @@ function CombatService._onAttack(p: Player, payload: any)
 		ctx.ChannelService.Cancel(p, "Attacked")
 	end
 	if p:GetAttribute("Blocking") then
-		p:SetAttribute("Blocking", false)
+		CombatService._setBlocking(p, false)
 	end
 	nextAttack[p] = t + cd * 0.9 -- small tolerance for latency jitter
 	char:SetAttribute("Action", "Attack")

@@ -513,8 +513,10 @@ function EventService.Start()
 					-- the "Lost Survivors" condition guarantees extra caches before random picks
 					local started
 					if bonusCaches > 0 and not ctx.MatchService.IsNight() then
-						bonusCaches -= 1
 						started = EventService._tryStart("SurvivorCache")
+						if started then
+							bonusCaches -= 1 -- only spend the guaranteed cache once one actually spawned
+						end
 					else
 						started = rng:NextNumber() < E.Chance and EventService._tryStart(nil)
 					end

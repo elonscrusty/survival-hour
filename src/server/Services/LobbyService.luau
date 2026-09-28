@@ -46,7 +46,7 @@ function LobbyService.Init(c)
 		-- PLAY AGAIN from the last match: straight back into the queue
 		local join = p:GetJoinData()
 		local td = join and join.TeleportData
-		if type(td) == "table" and td.AutoReady == true then
+		if type(td) == "table" and type(td.AutoReady) == "table" and table.find(td.AutoReady, p.UserId) then
 			task.delay(4, function()
 				LobbyService.AutoReady(p)
 			end)

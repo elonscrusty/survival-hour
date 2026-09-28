@@ -39,8 +39,13 @@ function Util.OnPlayerAdded(fn: (Player) -> ())
 	table.insert(joinHooks, fn)
 end
 
-function Util.OnPlayerRemoving(fn: (Player) -> ())
-	table.insert(leaveHooks, fn)
+-- `first`: run before the other leave hooks (e.g. to update a profile before it is saved).
+function Util.OnPlayerRemoving(fn: (Player) -> (), first: boolean?)
+	if first then
+		table.insert(leaveHooks, 1, fn)
+	else
+		table.insert(leaveHooks, fn)
+	end
 end
 
 function Util.FirePlayerAdded(p: Player)

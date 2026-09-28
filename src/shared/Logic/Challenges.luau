@@ -57,10 +57,14 @@ local function pick(pool: { Def }, n: number, k: number): { Def }
 	for i = 1, #pool do
 		idx[i] = i
 	end
-	-- small LCG shuffle seeded by the period number
-	local seed = (k * 1103515245 + 12345) % 2147483648
+	-- Park-Miller shuffle seeded by the period number (products stay far below 2^53, so the
+	-- arithmetic is exact in doubles and every entry can be picked)
+	local seed = k % 2147483646 + 1
+	for _ = 1, 3 do
+		seed = (seed * 16807) % 2147483647
+	end
 	for i = #idx, 2, -1 do
-		seed = (seed * 1103515245 + 12345) % 2147483648
+		seed = (seed * 16807) % 2147483647
 		local j = seed % i + 1
 		idx[i], idx[j] = idx[j], idx[i]
 	end

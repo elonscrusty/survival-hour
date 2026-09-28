@@ -384,6 +384,7 @@ function CampService.SetLevel(team: number, level: number)
 	nb.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
 	nb:SetAttribute("Team", team)
 	ctx.ChannelService.MakePrompt(nb.PrimaryPart, "Workbench", "Craft", "Workbench", 10, "Team", team)
+	ctx.ChannelService.MakePrompt(nb.PrimaryPart, "InspectCamp", "Size up", Config.Teams[team].Name .. " camp", 28, "Enemy", team)
 	camp.Workbench = nb
 	old:Destroy()
 	ctx.CosmeticService.OnWorkbenchRebuilt(team)
