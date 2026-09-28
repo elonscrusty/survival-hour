@@ -39,18 +39,23 @@ KINDS = {
     "Reference": "Scale reference; not for gameplay.",
     "Projectile": "Projectile mesh fired by a weapon (no collision; use raycasts).",
     "Debris": "Lightweight destruction debris: unanchored, short lifetime, CanCollide on, CanTouch off.",
+    "RigPart": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
 }
 
 
 def asset(name, category, kind, *, density=4.0, lod=False, grain=None, smooth=38.0, seed=None,
           dummy=True, use="", pivot="Bottom centre, on the ground.", fidelity="Box",
-          footprint=None, notes="", icon=False, cast_shadow=True, uv_box=False):
+          footprint=None, notes="", icon=False, cast_shadow=True, uv_box=False, preview=True,
+          special=False):
+    """preview=False skips the per-asset render; special=True hands fn the build
+    context instead of a Model (like rigs and scenes) and it returns catalog records."""
     def reg(fn):
         REGISTRY.append(dict(name=name, category=category, kind=kind, fn=fn, density=density,
                              lod=lod, grain=grain, smooth=smooth,
                              seed=seed if seed is not None else len(REGISTRY) * 7919 + 13,
                              dummy=dummy, uv_box=uv_box, use=use, pivot=pivot, fidelity=fidelity,
-                             footprint=footprint, notes=notes, icon=icon))
+                             footprint=footprint, notes=notes, icon=icon, preview=preview,
+                             special=special))
         return fn
     return reg
 

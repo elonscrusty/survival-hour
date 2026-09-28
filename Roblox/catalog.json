@@ -11402,6 +11402,1328 @@
   }
  },
  {
+  "name": "SM_Wolf_Body",
+  "category": "Animals",
+  "kind": "RigPart",
+  "kind_note": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
+  "use": "Wolf rig: weld onto Torso (Models/Animals.luau).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   1.48,
+   1.6,
+   4.2
+  ],
+  "footprint_studs": [
+   1.48,
+   4.2
+  ],
+  "tris": 202,
+  "verts": 103,
+  "materials": 1,
+  "texture_tiles": [
+   "fur_bat",
+   "fur_grey",
+   "fur_light"
+  ],
+  "origin_offset": [
+   0.0,
+   0.0,
+   0.02
+  ],
+  "team_colored": false,
+  "pivot": "Centre of the Wolf rig's Torso part (Animals.luau).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Animals/SM_Wolf_Body.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {}
+ },
+ {
+  "name": "SM_Wolf_Head",
+  "category": "Animals",
+  "kind": "RigPart",
+  "kind_note": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
+  "use": "Wolf rig: weld onto Head (Models/Animals.luau).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   0.93,
+   1.7,
+   2.51
+  ],
+  "footprint_studs": [
+   0.93,
+   2.51
+  ],
+  "tris": 532,
+  "verts": 294,
+  "materials": 1,
+  "texture_tiles": [
+   "bone",
+   "eye",
+   "eye_glow",
+   "fur_bat",
+   "fur_grey",
+   "fur_light",
+   "nose"
+  ],
+  "origin_offset": [
+   0.0,
+   -0.2395,
+   0.377
+  ],
+  "team_colored": false,
+  "pivot": "Centre of the Wolf rig's Head part (Animals.luau).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Animals/SM_Wolf_Head.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {}
+ },
+ {
+  "name": "SM_Wolf_LegF",
+  "category": "Animals",
+  "kind": "RigPart",
+  "kind_note": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
+  "use": "Wolf rig: weld onto LegFL, LegFR (Models/Animals.luau).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   0.61,
+   2.91,
+   0.61
+  ],
+  "footprint_studs": [
+   0.61,
+   0.61
+  ],
+  "tris": 236,
+  "verts": 124,
+  "materials": 1,
+  "texture_tiles": [
+   "fur_grey",
+   "fur_light"
+  ],
+  "origin_offset": [
+   0.0,
+   -0.107,
+   0.0065
+  ],
+  "team_colored": false,
+  "pivot": "Centre of the Wolf rig's LegFL, LegFR part (Animals.luau).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Animals/SM_Wolf_LegF.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {}
+ },
+ {
+  "name": "SM_Wolf_LegB",
+  "category": "Animals",
+  "kind": "RigPart",
+  "kind_note": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
+  "use": "Wolf rig: weld onto LegBL, LegBR (Models/Animals.luau).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   0.75,
+   2.91,
+   0.91
+  ],
+  "footprint_studs": [
+   0.75,
+   0.91
+  ],
+  "tris": 236,
+  "verts": 124,
+  "materials": 1,
+  "texture_tiles": [
+   "fur_grey",
+   "fur_light"
+  ],
+  "origin_offset": [
+   0.0,
+   -0.105,
+   0.0305
+  ],
+  "team_colored": false,
+  "pivot": "Centre of the Wolf rig's LegBL, LegBR part (Animals.luau).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Animals/SM_Wolf_LegB.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {}
+ },
+ {
+  "name": "SM_Wolf_Tail",
+  "category": "Animals",
+  "kind": "RigPart",
+  "kind_note": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
+  "use": "Wolf rig: weld onto TailPart (Models/Animals.luau).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   0.53,
+   0.74,
+   2.87
+  ],
+  "footprint_studs": [
+   0.53,
+   2.87
+  ],
+  "tris": 218,
+  "verts": 111,
+  "materials": 1,
+  "texture_tiles": [
+   "fur_bat",
+   "fur_grey",
+   "fur_light"
+  ],
+  "origin_offset": [
+   0.0,
+   0.178,
+   0.1515
+  ],
+  "team_colored": false,
+  "pivot": "Centre of the Wolf rig's TailPart part (Animals.luau).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Animals/SM_Wolf_Tail.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {}
+ },
+ {
+  "name": "SM_Bear_Body",
+  "category": "Animals",
+  "kind": "RigPart",
+  "kind_note": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
+  "use": "Bear rig: weld onto Torso (Models/Animals.luau).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   3.8,
+   3.7,
+   7.5
+  ],
+  "footprint_studs": [
+   3.8,
+   7.5
+  ],
+  "tris": 388,
+  "verts": 196,
+  "materials": 1,
+  "texture_tiles": [
+   "fur_bat",
+   "fur_brown"
+  ],
+  "origin_offset": [
+   0.0,
+   -0.1,
+   0.1
+  ],
+  "team_colored": false,
+  "pivot": "Centre of the Bear rig's Torso part (Animals.luau).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Animals/SM_Bear_Body.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {}
+ },
+ {
+  "name": "SM_Bear_Head",
+  "category": "Animals",
+  "kind": "RigPart",
+  "kind_note": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
+  "use": "Bear rig: weld onto Head (Models/Animals.luau).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   2.5,
+   2.45,
+   4.08
+  ],
+  "footprint_studs": [
+   2.5,
+   4.08
+  ],
+  "tris": 812,
+  "verts": 434,
+  "materials": 1,
+  "texture_tiles": [
+   "bone",
+   "eye",
+   "eye_glow",
+   "fur_bat",
+   "fur_brown",
+   "fur_light",
+   "nose"
+  ],
+  "origin_offset": [
+   0.0,
+   -0.145,
+   0.582
+  ],
+  "team_colored": false,
+  "pivot": "Centre of the Bear rig's Head part (Animals.luau).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Animals/SM_Bear_Head.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {}
+ },
+ {
+  "name": "SM_Bear_LegF",
+  "category": "Animals",
+  "kind": "RigPart",
+  "kind_note": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
+  "use": "Bear rig: weld onto LegFL, LegFR (Models/Animals.luau).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   1.63,
+   4.7,
+   1.63
+  ],
+  "footprint_studs": [
+   1.63,
+   1.63
+  ],
+  "tris": 232,
+  "verts": 126,
+  "materials": 1,
+  "texture_tiles": [
+   "bone",
+   "fur_bat",
+   "fur_brown"
+  ],
+  "origin_offset": [
+   0.0,
+   -0.188,
+   -0.0075
+  ],
+  "team_colored": false,
+  "pivot": "Centre of the Bear rig's LegFL, LegFR part (Animals.luau).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Animals/SM_Bear_LegF.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {}
+ },
+ {
+  "name": "SM_Bear_LegB",
+  "category": "Animals",
+  "kind": "RigPart",
+  "kind_note": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
+  "use": "Bear rig: weld onto LegBL, LegBR (Models/Animals.luau).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   1.81,
+   4.69,
+   1.81
+  ],
+  "footprint_studs": [
+   1.81,
+   1.81
+  ],
+  "tris": 200,
+  "verts": 110,
+  "materials": 1,
+  "texture_tiles": [
+   "bone",
+   "fur_bat",
+   "fur_brown"
+  ],
+  "origin_offset": [
+   0.0,
+   -0.184,
+   0.1345
+  ],
+  "team_colored": false,
+  "pivot": "Centre of the Bear rig's LegBL, LegBR part (Animals.luau).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Animals/SM_Bear_LegB.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {}
+ },
+ {
+  "name": "SM_Bear_Tail",
+  "category": "Animals",
+  "kind": "RigPart",
+  "kind_note": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
+  "use": "Bear rig: weld onto TailPart (Models/Animals.luau).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   0.58,
+   0.61,
+   0.97
+  ],
+  "footprint_studs": [
+   0.58,
+   0.97
+  ],
+  "tris": 80,
+  "verts": 42,
+  "materials": 1,
+  "texture_tiles": [
+   "fur_brown"
+  ],
+  "origin_offset": [
+   0.0,
+   0.0275,
+   0.065
+  ],
+  "team_colored": false,
+  "pivot": "Centre of the Bear rig's TailPart part (Animals.luau).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Animals/SM_Bear_Tail.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {}
+ },
+ {
+  "name": "SM_Deer_Body",
+  "category": "Animals",
+  "kind": "RigPart",
+  "kind_note": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
+  "use": "Deer rig: weld onto Torso (Models/Animals.luau).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   1.32,
+   1.52,
+   4.25
+  ],
+  "footprint_studs": [
+   1.32,
+   4.25
+  ],
+  "tris": 388,
+  "verts": 196,
+  "materials": 1,
+  "texture_tiles": [
+   "fur_brown",
+   "fur_light"
+  ],
+  "origin_offset": [
+   0.0,
+   -0.02,
+   0.025
+  ],
+  "team_colored": false,
+  "pivot": "Centre of the Deer rig's Torso part (Animals.luau).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Animals/SM_Deer_Body.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {}
+ },
+ {
+  "name": "SM_Deer_Head",
+  "category": "Animals",
+  "kind": "RigPart",
+  "kind_note": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
+  "use": "Deer rig: weld onto Head (Models/Animals.luau).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   1.48,
+   1.59,
+   2.14
+  ],
+  "footprint_studs": [
+   1.48,
+   2.14
+  ],
+  "tris": 496,
+  "verts": 268,
+  "materials": 1,
+  "texture_tiles": [
+   "eye",
+   "eye_glow",
+   "fur_brown",
+   "fur_light",
+   "nose"
+  ],
+  "origin_offset": [
+   0.0,
+   -0.1795,
+   0.129
+  ],
+  "team_colored": false,
+  "pivot": "Centre of the Deer rig's Head part (Animals.luau).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Animals/SM_Deer_Head.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {}
+ },
+ {
+  "name": "SM_Deer_Head_Antlered",
+  "category": "Animals",
+  "kind": "RigPart",
+  "kind_note": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
+  "use": "Deer rig: weld onto Head (Models/Animals.luau).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   1.68,
+   2.75,
+   2.14
+  ],
+  "footprint_studs": [
+   1.68,
+   2.14
+  ],
+  "tris": 700,
+  "verts": 390,
+  "materials": 1,
+  "texture_tiles": [
+   "bone",
+   "eye",
+   "eye_glow",
+   "fur_brown",
+   "fur_light",
+   "nose",
+   "wood_dark"
+  ],
+  "origin_offset": [
+   0.0,
+   -0.762,
+   0.129
+  ],
+  "team_colored": false,
+  "pivot": "Centre of the Deer rig's Head part (Animals.luau).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Animals/SM_Deer_Head_Antlered.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {}
+ },
+ {
+  "name": "SM_Deer_LegF",
+  "category": "Animals",
+  "kind": "RigPart",
+  "kind_note": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
+  "use": "Deer rig: weld onto LegFL, LegFR (Models/Animals.luau).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   0.47,
+   4.05,
+   0.47
+  ],
+  "footprint_studs": [
+   0.47,
+   0.47
+  ],
+  "tris": 280,
+  "verts": 142,
+  "materials": 1,
+  "texture_tiles": [
+   "fur_brown",
+   "nose"
+  ],
+  "origin_offset": [
+   0.0,
+   -0.098,
+   -0.015
+  ],
+  "team_colored": false,
+  "pivot": "Centre of the Deer rig's LegFL, LegFR part (Animals.luau).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Animals/SM_Deer_LegF.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {}
+ },
+ {
+  "name": "SM_Deer_LegB",
+  "category": "Animals",
+  "kind": "RigPart",
+  "kind_note": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
+  "use": "Deer rig: weld onto LegBL, LegBR (Models/Animals.luau).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   0.65,
+   4.05,
+   0.84
+  ],
+  "footprint_studs": [
+   0.65,
+   0.84
+  ],
+  "tris": 248,
+  "verts": 126,
+  "materials": 1,
+  "texture_tiles": [
+   "fur_brown",
+   "fur_light",
+   "nose"
+  ],
+  "origin_offset": [
+   0.0,
+   -0.099,
+   -0.0015
+  ],
+  "team_colored": false,
+  "pivot": "Centre of the Deer rig's LegBL, LegBR part (Animals.luau).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Animals/SM_Deer_LegB.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {}
+ },
+ {
+  "name": "SM_Deer_Tail",
+  "category": "Animals",
+  "kind": "RigPart",
+  "kind_note": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
+  "use": "Deer rig: weld onto TailPart (Models/Animals.luau).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   0.25,
+   0.18,
+   0.54
+  ],
+  "footprint_studs": [
+   0.25,
+   0.54
+  ],
+  "tris": 144,
+  "verts": 74,
+  "materials": 1,
+  "texture_tiles": [
+   "fur_brown",
+   "fur_light"
+  ],
+  "origin_offset": [
+   0.0,
+   0.0,
+   0.02
+  ],
+  "team_colored": false,
+  "pivot": "Centre of the Deer rig's TailPart part (Animals.luau).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Animals/SM_Deer_Tail.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {}
+ },
+ {
+  "name": "SM_Rabbit_Body",
+  "category": "Animals",
+  "kind": "RigPart",
+  "kind_note": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
+  "use": "Rabbit rig: weld onto Torso (Models/Animals.luau).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   0.6,
+   0.6,
+   1.1
+  ],
+  "footprint_studs": [
+   0.6,
+   1.1
+  ],
+  "tris": 196,
+  "verts": 100,
+  "materials": 1,
+  "texture_tiles": [
+   "fur_grey",
+   "fur_light"
+  ],
+  "origin_offset": [
+   0.0,
+   0.0,
+   0.01
+  ],
+  "team_colored": false,
+  "pivot": "Centre of the Rabbit rig's Torso part (Animals.luau).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Animals/SM_Rabbit_Body.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {}
+ },
+ {
+  "name": "SM_Rabbit_Head",
+  "category": "Animals",
+  "kind": "RigPart",
+  "kind_note": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
+  "use": "Rabbit rig: weld onto Head (Models/Animals.luau).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   0.35,
+   0.77,
+   0.53
+  ],
+  "footprint_studs": [
+   0.35,
+   0.53
+  ],
+  "tris": 572,
+  "verts": 310,
+  "materials": 1,
+  "texture_tiles": [
+   "eye",
+   "eye_glow",
+   "fur_grey",
+   "fur_light",
+   "nose"
+  ],
+  "origin_offset": [
+   -0.0005,
+   -0.236,
+   0.119
+  ],
+  "team_colored": false,
+  "pivot": "Centre of the Rabbit rig's Head part (Animals.luau).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Animals/SM_Rabbit_Head.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {}
+ },
+ {
+  "name": "SM_Rabbit_LegF",
+  "category": "Animals",
+  "kind": "RigPart",
+  "kind_note": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
+  "use": "Rabbit rig: weld onto LegFL, LegFR (Models/Animals.luau).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   0.18,
+   0.7,
+   0.19
+  ],
+  "footprint_studs": [
+   0.18,
+   0.19
+  ],
+  "tris": 104,
+  "verts": 54,
+  "materials": 1,
+  "texture_tiles": [
+   "fur_grey",
+   "fur_light"
+  ],
+  "origin_offset": [
+   0.0,
+   -0.0355,
+   0.0145
+  ],
+  "team_colored": false,
+  "pivot": "Centre of the Rabbit rig's LegFL, LegFR part (Animals.luau).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Animals/SM_Rabbit_LegF.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {}
+ },
+ {
+  "name": "SM_Rabbit_LegB",
+  "category": "Animals",
+  "kind": "RigPart",
+  "kind_note": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
+  "use": "Rabbit rig: weld onto LegBL, LegBR (Models/Animals.luau).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   0.35,
+   0.72,
+   0.36
+  ],
+  "footprint_studs": [
+   0.35,
+   0.36
+  ],
+  "tris": 104,
+  "verts": 54,
+  "materials": 1,
+  "texture_tiles": [
+   "fur_grey",
+   "fur_light"
+  ],
+  "origin_offset": [
+   0.0,
+   -0.0435,
+   -0.046
+  ],
+  "team_colored": false,
+  "pivot": "Centre of the Rabbit rig's LegBL, LegBR part (Animals.luau).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Animals/SM_Rabbit_LegB.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {}
+ },
+ {
+  "name": "SM_Rabbit_Tail",
+  "category": "Animals",
+  "kind": "RigPart",
+  "kind_note": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
+  "use": "Rabbit rig: weld onto TailPart (Models/Animals.luau).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   0.2,
+   0.19,
+   0.21
+  ],
+  "footprint_studs": [
+   0.2,
+   0.21
+  ],
+  "tris": 80,
+  "verts": 42,
+  "materials": 1,
+  "texture_tiles": [
+   "fur_light"
+  ],
+  "origin_offset": [
+   0.0015,
+   0.0165,
+   0.119
+  ],
+  "team_colored": false,
+  "pivot": "Centre of the Rabbit rig's TailPart part (Animals.luau).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Animals/SM_Rabbit_Tail.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {}
+ },
+ {
+  "name": "SM_Boar_Body",
+  "category": "Animals",
+  "kind": "RigPart",
+  "kind_note": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
+  "use": "Boar rig: weld onto Torso (Models/Animals.luau).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   1.8,
+   1.97,
+   3.8
+  ],
+  "footprint_studs": [
+   1.8,
+   3.8
+  ],
+  "tris": 360,
+  "verts": 199,
+  "materials": 1,
+  "texture_tiles": [
+   "fur_bat",
+   "fur_brown"
+  ],
+  "origin_offset": [
+   0.0,
+   -0.1375,
+   0.05
+  ],
+  "team_colored": false,
+  "pivot": "Centre of the Boar rig's Torso part (Animals.luau).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Animals/SM_Boar_Body.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {}
+ },
+ {
+  "name": "SM_Boar_Head",
+  "category": "Animals",
+  "kind": "RigPart",
+  "kind_note": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
+  "use": "Boar rig: weld onto Head (Models/Animals.luau).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   0.98,
+   1.34,
+   1.99
+  ],
+  "footprint_studs": [
+   0.98,
+   1.99
+  ],
+  "tris": 480,
+  "verts": 268,
+  "materials": 1,
+  "texture_tiles": [
+   "bone",
+   "eye",
+   "eye_glow",
+   "fur_bat",
+   "fur_brown",
+   "leather",
+   "nose"
+  ],
+  "origin_offset": [
+   0.0,
+   -0.14,
+   0.3405
+  ],
+  "team_colored": false,
+  "pivot": "Centre of the Boar rig's Head part (Animals.luau).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Animals/SM_Boar_Head.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {}
+ },
+ {
+  "name": "SM_Boar_LegF",
+  "category": "Animals",
+  "kind": "RigPart",
+  "kind_note": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
+  "use": "Boar rig: weld onto LegFL, LegFR (Models/Animals.luau).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   0.71,
+   2.11,
+   0.71
+  ],
+  "footprint_studs": [
+   0.71,
+   0.71
+  ],
+  "tris": 208,
+  "verts": 106,
+  "materials": 1,
+  "texture_tiles": [
+   "fur_bat",
+   "nose"
+  ],
+  "origin_offset": [
+   0.0,
+   -0.1115,
+   -0.005
+  ],
+  "team_colored": false,
+  "pivot": "Centre of the Boar rig's LegFL, LegFR part (Animals.luau).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Animals/SM_Boar_LegF.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {}
+ },
+ {
+  "name": "SM_Boar_LegB",
+  "category": "Animals",
+  "kind": "RigPart",
+  "kind_note": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
+  "use": "Boar rig: weld onto LegBL, LegBR (Models/Animals.luau).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   0.84,
+   2.11,
+   0.84
+  ],
+  "footprint_studs": [
+   0.84,
+   0.84
+  ],
+  "tris": 208,
+  "verts": 106,
+  "materials": 1,
+  "texture_tiles": [
+   "fur_bat",
+   "nose"
+  ],
+  "origin_offset": [
+   0.0,
+   -0.1095,
+   0.0695
+  ],
+  "team_colored": false,
+  "pivot": "Centre of the Boar rig's LegBL, LegBR part (Animals.luau).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Animals/SM_Boar_LegB.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {}
+ },
+ {
+  "name": "SM_Boar_Tail",
+  "category": "Animals",
+  "kind": "RigPart",
+  "kind_note": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
+  "use": "Boar rig: weld onto TailPart (Models/Animals.luau).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   0.18,
+   0.65,
+   0.67
+  ],
+  "footprint_studs": [
+   0.18,
+   0.67
+  ],
+  "tris": 144,
+  "verts": 74,
+  "materials": 1,
+  "texture_tiles": [
+   "fur_bat"
+  ],
+  "origin_offset": [
+   0.0,
+   0.2105,
+   0.2515
+  ],
+  "team_colored": false,
+  "pivot": "Centre of the Boar rig's TailPart part (Animals.luau).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Animals/SM_Boar_Tail.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {}
+ },
+ {
+  "name": "SM_Bat_Body",
+  "category": "Animals",
+  "kind": "RigPart",
+  "kind_note": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
+  "use": "Bat rig: weld onto Body (covers head, ears and eyes).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   1.44,
+   1.95,
+   2.49
+  ],
+  "footprint_studs": [
+   1.44,
+   2.49
+  ],
+  "tris": 448,
+  "verts": 252,
+  "materials": 1,
+  "texture_tiles": [
+   "bone",
+   "eye",
+   "eye_glow",
+   "fur_bat",
+   "fur_light",
+   "membrane",
+   "nose"
+  ],
+  "origin_offset": [
+   0.0,
+   -0.3545,
+   0.296
+  ],
+  "team_colored": false,
+  "pivot": "Centre of the bat rig's Body ball (Animals.luau).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Animals/SM_Bat_Body.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {}
+ },
+ {
+  "name": "SM_Bat_Wing",
+  "category": "Animals",
+  "kind": "RigPart",
+  "kind_note": "One segment of a procedural creature rig: weld it to the matching rig part (no collision).",
+  "use": "Bat rig: weld onto WingRPart; WingLPart uses it turned 180 deg about the forward axis.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   4.67,
+   0.22,
+   1.88
+  ],
+  "footprint_studs": [
+   4.67,
+   1.88
+  ],
+  "tris": 184,
+  "verts": 100,
+  "materials": 1,
+  "texture_tiles": [
+   "bone",
+   "fur_bat",
+   "membrane"
+  ],
+  "origin_offset": [
+   -0.617,
+   -0.0115,
+   -0.0605
+  ],
+  "team_colored": false,
+  "pivot": "Centre of the bat rig's WingRPart (Animals.luau).",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Animals/SM_Bat_Wing.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {}
+ },
+ {
   "name": "SM_Lobby_GatheringArea",
   "category": "Lobby",
   "kind": "Lobby",

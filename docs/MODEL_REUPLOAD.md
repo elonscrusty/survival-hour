@@ -98,3 +98,47 @@ the atlas does not change. Each model keeps its **exact published size and pivot
 Upload these 17 the same way as the table above (Open Cloud `PATCH .../assets/v1/assets/{assetId}`,
 new version of the existing asset, no new assets). The ChatGPT prompt above works as is: tell it to
 use this table instead.
+
+
+## New models: animals (upload as NEW assets)
+
+28 part meshes that give the wolf, bear, deer, rabbit, boar and bat a proper look
+(`blender/assets/animals.py`, preview: `Renders/ContactSheet_Animals.png`). Each mesh sits on one part
+of the in-game rig, so the existing walk / look-around / attack animation moves it. Upload each file as a
+**new** model asset (same Open Cloud call and creator as the first upload), then send Claude the IDs:
+they go into `Roblox/uploaded_model_ids.json` (keys `Animals/<name>`) and
+`python3 tools/gen_asset_ids.py` regenerates `src/shared/AssetIds.luau`.
+
+A species switches to meshes only when **all** of its files are uploaded (the deer needs both heads:
+does and antlered bucks); until then it keeps the old block look.
+
+| File | Asset ID |
+|---|---|
+| `Export/Meshes/Animals/SM_Wolf_Body.fbx` | new |
+| `Export/Meshes/Animals/SM_Wolf_Head.fbx` | new |
+| `Export/Meshes/Animals/SM_Wolf_LegF.fbx` | new |
+| `Export/Meshes/Animals/SM_Wolf_LegB.fbx` | new |
+| `Export/Meshes/Animals/SM_Wolf_Tail.fbx` | new |
+| `Export/Meshes/Animals/SM_Bear_Body.fbx` | new |
+| `Export/Meshes/Animals/SM_Bear_Head.fbx` | new |
+| `Export/Meshes/Animals/SM_Bear_LegF.fbx` | new |
+| `Export/Meshes/Animals/SM_Bear_LegB.fbx` | new |
+| `Export/Meshes/Animals/SM_Bear_Tail.fbx` | new |
+| `Export/Meshes/Animals/SM_Deer_Body.fbx` | new |
+| `Export/Meshes/Animals/SM_Deer_Head.fbx` | new |
+| `Export/Meshes/Animals/SM_Deer_Head_Antlered.fbx` | new |
+| `Export/Meshes/Animals/SM_Deer_LegF.fbx` | new |
+| `Export/Meshes/Animals/SM_Deer_LegB.fbx` | new |
+| `Export/Meshes/Animals/SM_Deer_Tail.fbx` | new |
+| `Export/Meshes/Animals/SM_Rabbit_Body.fbx` | new |
+| `Export/Meshes/Animals/SM_Rabbit_Head.fbx` | new |
+| `Export/Meshes/Animals/SM_Rabbit_LegF.fbx` | new |
+| `Export/Meshes/Animals/SM_Rabbit_LegB.fbx` | new |
+| `Export/Meshes/Animals/SM_Rabbit_Tail.fbx` | new |
+| `Export/Meshes/Animals/SM_Boar_Body.fbx` | new |
+| `Export/Meshes/Animals/SM_Boar_Head.fbx` | new |
+| `Export/Meshes/Animals/SM_Boar_LegF.fbx` | new |
+| `Export/Meshes/Animals/SM_Boar_LegB.fbx` | new |
+| `Export/Meshes/Animals/SM_Boar_Tail.fbx` | new |
+| `Export/Meshes/Animals/SM_Bat_Body.fbx` | new |
+| `Export/Meshes/Animals/SM_Bat_Wing.fbx` | new |
