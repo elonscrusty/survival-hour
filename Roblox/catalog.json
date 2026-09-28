@@ -5521,6 +5521,166 @@
   }
  },
  {
+  "name": "SM_Camp_Hut",
+  "category": "Camp",
+  "kind": "Structure",
+  "kind_note": "Player-placed building piece (anchored, collidable).",
+  "use": "Clan shack behind each camp: open-front log cabin with a plank gable roof, bedrolls, a supply crate and a lantern. Replaces the procedural Camp.Hut look; its parts stay as the hidden colliders.",
+  "notes": "Front (open side) faces -Y (Roblox -Z). Team accent: bedrolls and door pennant (team_cloth).",
+  "size_studs_roblox_XYZ": [
+   13.6,
+   11.71,
+   12.01
+  ],
+  "footprint_studs": [
+   12,
+   10
+  ],
+  "tris": 1444,
+  "verts": 836,
+  "materials": 1,
+  "texture_tiles": [
+   "bark",
+   "cloth",
+   "cloth_dark",
+   "end_grain",
+   "fire",
+   "metal_dark",
+   "team_cloth",
+   "wood",
+   "wood_dark"
+  ],
+  "origin_offset": [
+   0.0,
+   -5.8115,
+   0.042
+  ],
+  "team_colored": true,
+  "pivot": "Bottom centre of the floor, on the ground.",
+  "collision_fidelity": "Box",
+  "attachments": [
+   {
+    "name": "Light_Att",
+    "cframe": [
+     4.4,
+     6.0,
+     -4.2,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   }
+  ],
+  "collision_boxes": [
+   {
+    "cframe": [
+     0.0,
+     0.45,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     12.0,
+     0.9,
+     10.0
+    ]
+   },
+   {
+    "cframe": [
+     0.0,
+     4.2,
+     4.6,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     12.0,
+     7.0,
+     0.9
+    ]
+   },
+   {
+    "cframe": [
+     5.6,
+     4.2,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     0.9,
+     7.0,
+     10.0
+    ]
+   },
+   {
+    "cframe": [
+     -5.6,
+     4.2,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     0.9,
+     7.0,
+     10.0
+    ]
+   }
+  ],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Camp/SM_Camp_Hut.fbx",
+   "collision": "Export/Collision/Camp/COL_Camp_Hut.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/Camp/SM_Camp_Hut.png"
+  }
+ },
+ {
   "name": "SM_WoodenWall",
   "category": "Crafting_L1",
   "kind": "Structure",

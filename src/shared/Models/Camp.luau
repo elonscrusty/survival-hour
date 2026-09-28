@@ -336,7 +336,12 @@ function Camp.Hut(cf: CFrame, motif: string, teamColor: Color3, parent: Instance
 	for _, x in { -3, 0, 3 } do
 		Build.Decor({ Name = "Bedroll", Size = Vector3.new(2.2, 0.5, 5), CFrame = CFrame.new(x, 0.85, 1.4), Color = Build.Tint(teamColor, 0.85), Material = Enum.Material.Fabric, Parent = m })
 	end
-	return place(m, floor, cf, parent)
+	place(m, floor, cf, parent)
+	-- Blender log cabin once uploaded (SM_Camp_Hut); the parts above stay as hidden colliders
+	if Skins.Enabled() and Skins.Has("SM_Camp_Hut") then
+		Skins.Dress(m, "SM_Camp_Hut")
+	end
+	return m
 end
 
 function Camp.Lantern(cf: CFrame, teamColor: Color3, parent: Instance?): Model

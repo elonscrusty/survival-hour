@@ -55,3 +55,11 @@ assets** (same IDs).
 If the update call is refused for any asset, upload that file as a new asset instead, and send the new
 ID. Only in that case does `Roblox/uploaded_model_ids.json` need the new ID and
 `python3 tools/gen_asset_ids.py` needs to run again.
+
+## New model: camp shack (upload as a NEW asset)
+
+| File | Asset ID |
+|---|---|
+| `Export/Meshes/Camp/SM_Camp_Hut.fbx` | new: send Claude the ID after uploading |
+
+The log cabin behind each camp. Until it's uploaded the game keeps the old block shack.

@@ -229,3 +229,68 @@ def workbench3(m):
     m.col_box((0, 0, top / 2), (8.0, 3.4, top))
     m.col_box((-5.3, -0.3, 1.2), (1.6, 1.6, 2.4))
     m.col_box((0, 1.55, top + 2.1), (8.0, 0.5, 4.8))
+
+
+@asset("SM_Camp_Hut", "Camp", "Structure", density=2.5, pivot="Bottom centre of the floor, on the ground.",
+       footprint=[12, 10],
+       use="Clan shack behind each camp: open-front log cabin with a plank gable roof, bedrolls, "
+           "a supply crate and a lantern. Replaces the procedural Camp.Hut look; its parts stay "
+           "as the hidden colliders.",
+       notes="Front (open side) faces -Y (Roblox -Z). Team accent: bedrolls and door pennant (team_cloth).")
+def camp_hut(m):
+    W, D, WALL = 12.0, 10.0, 7.0  # outer width (X), depth (Y), wall height
+    hx, hy = W / 2 - 0.4, D / 2 - 0.4
+    # plank floor on two sill logs
+    for y in (-hy + 0.3, hy - 0.3):
+        m.cylinder("bark", 0.35, 0.35, W, seg=7, loc=(-W / 2, y, 0.3), rot=(0, 90, 0), cap="end_grain")
+    m.box("wood_dark", (W - 0.4, D - 0.6, 0.3), loc=(0, 0, 0.6), bevel=0.03)
+    # stacked log walls: back (along X) and sides (along Y); the front stays open
+    r = 0.42
+    n = int(WALL / (r * 2 * 0.95))
+    for i in range(n):
+        z = 0.9 + r + i * r * 1.9
+        m.cylinder("bark", r, r, W + 0.5, seg=7, loc=(-(W + 0.5) / 2, hy, z), rot=(0, 90, 0), cap="end_grain")
+        for x in (-hx, hx):
+            m.cylinder("bark", r, r, D - 0.2, seg=7, loc=(x, -(D - 0.2) / 2 + 0.1, z + r * 0.95),
+                       rot=(-90, 0, 0), cap="end_grain")
+    # front corner posts and the lintel log
+    for x in (-hx, hx):
+        m.cylinder("bark", 0.45, 0.4, WALL + 0.9, seg=8, loc=(x, -hy, 0.3), cap="end_grain")
+    m.cylinder("bark", 0.4, 0.4, W + 0.6, seg=7, loc=(-(W + 0.6) / 2, -hy, WALL + 0.8), rot=(0, 90, 0),
+               cap="end_grain")
+    # gables on the side walls (the ridge runs along X), then the plank roof and ridge log
+    top = WALL + 0.8
+    peak = top + 3.3
+    for x in (-hx, hx):
+        m.prism("wood", [(-hy - 0.3, top), (hy + 0.3, top), (0, peak - 0.2)], 0.5, loc=(x, 0, 0), rot=(0, 0, 90))
+    run = D / 2 + 0.9
+    rise = peak - top + 0.4
+    ang = math.degrees(math.atan2(rise, run))
+    slab = math.hypot(run, rise)
+    for s in (-1, 1):
+        m.box("wood_dark", (W + 1.2, slab, 0.32), loc=(0, s * run / 2, top - 0.2 + rise / 2 + 0.25),
+              rot=(s * -ang, 0, 0), bevel=0.04)
+        # shingle rows for texture
+        for k in range(4):
+            t = (k + 0.5) / 4
+            m.box("wood", (W + 1.3, 0.12, 0.1), loc=(0, s * run * t, top - 0.2 + rise * (1 - t) + 0.45),
+                  rot=(s * -ang, 0, 0))
+    m.cylinder("bark", 0.38, 0.38, W + 1.6, seg=7, loc=(-(W + 1.6) / 2, 0, peak + 0.15), rot=(0, 90, 0),
+               cap="end_grain")
+    # inside: bedrolls, a crate and a hanging lantern
+    for x in (-3.2, 0, 3.2):
+        m.box("cloth_dark", (2.0, 4.4, 0.16), loc=(x, 1.6, 0.85), bevel=0.05)
+        m.box("team_cloth", (1.9, 3.0, 0.12), loc=(x, 2.2, 0.98), bevel=0.04)
+        m.cylinder("cloth", 0.28, 0.28, 1.9, seg=8, loc=(x - 0.95, -0.4, 1.05), rot=(0, 90, 0))
+    m.box("wood", (1.6, 1.2, 1.1), loc=(4.2, -2.8, 1.3), bevel=0.05)
+    m.box("metal_dark", (1.65, 0.1, 0.12), loc=(4.2, -3.4, 1.6))
+    m.cylinder("metal_dark", 0.25, 0.25, 0.1, seg=8, loc=(-4.4, -hy + 0.4, WALL - 0.6))
+    m.cylinder("fire", 0.2, 0.2, 0.45, seg=8, loc=(-4.4, -hy + 0.4, WALL - 1.05))
+    # team pennant on the right front post
+    v = m.box("team_cloth", (0.06, 1.4, 1.0), loc=(hx + 0.5, -hy - 0.7, WALL - 0.2))
+    m.jitter(v, 0.05)
+    m.attach("Light", (-4.4, -hy + 0.4, WALL - 1.0))
+    m.col_box((0, 0, 0.45), (W, D, 0.9))
+    m.col_box((0, hy, 4.2), (W, 0.9, WALL))
+    for x in (-hx, hx):
+        m.col_box((x, 0, 4.2), (0.9, D, WALL))
