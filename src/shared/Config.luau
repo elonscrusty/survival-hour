@@ -178,6 +178,31 @@ Config.Craft = {
 	PerTier = 0.5,
 }
 
+-- World events and match conditions (Logic/MatchEvents, EventService). Events are occasional:
+-- the first can't start before FirstDelay, at most one runs at a time, and each is followed by a
+-- quiet gap. Conditions are small per-match twists announced at the start; they never change rules.
+Config.Events = {
+	FirstDelay = 150, -- seconds into Day 1 before any event can start
+	GapMin = 150, -- quiet time between the end of one event and the next roll
+	GapMax = 300,
+	Chance = 0.65, -- chance an event starts when the gap ends (else wait another gap)
+	Weights = { Thunderstorm = 3, Fog = 3, PredatorSurge = 2, SurvivorCache = 3, Migration = 2 },
+	Duration = {
+		Thunderstorm = { 120, 180 },
+		Fog = { 150, 240 },
+		PredatorSurge = { 100, 140 },
+		SurvivorCache = { 420, 420 }, -- how long the cache waits to be found
+		Migration = { 90, 120 },
+	},
+	NotOnDay1 = { Thunderstorm = true, PredatorSurge = true },
+	SurgeWolves = 3, -- extra wolves allowed above the species cap during a surge
+	SurgeRadius = 45,
+	MigrationHerd = { 4, 6 },
+	CacheTrail = 4, -- dropped-supply clues leading to the cache
+	CacheTier = "Uncommon", -- loot table; one bonus roll from Rare on top
+	ConditionChance = 0.7, -- chance a match gets a condition at all
+}
+
 Config.CarePackage = {
 	FreeDropDelayMin = 20,
 	FreeDropDelayMax = 40,

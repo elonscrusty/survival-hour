@@ -57,6 +57,7 @@ local order = {
 	"StorageService",
 	"WildlifeService",
 	"LootService",
+	"EventService",
 	"CosmeticService",
 	"PowerupService",
 	"DevService",

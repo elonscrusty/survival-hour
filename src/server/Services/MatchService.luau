@@ -273,9 +273,8 @@ end
 
 function MatchService._enterPhase(phase: string)
 	MatchService._setPhase(phase, phaseLength(phase))
-	-- weather: an occasional rain shower for the whole phase (visual only, never on Day 1)
-	local rain = MatchService.Day > 1 and math.random() < Config.Lighting.RainChance
-	state:SetAttribute("Weather", if rain then "Rain" else "Clear")
+	-- weather for the phase (visual only, never on Day 1); an event (storm/fog) can hold it
+	ctx.WorldService.SetWeather(ctx.EventService.PhaseWeather(MatchService.Day))
 	if phase == "Day" then
 		-- Dawn -> Day -> Sunset across the day (cancelled if the phase changes).
 		ctx.WorldService.ApplyLighting("Dawn", false)

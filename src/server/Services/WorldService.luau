@@ -125,9 +125,62 @@ end
 local atmosphere: Atmosphere? = nil
 local colorFx: ColorCorrectionEffect? = nil
 
+WorldService.Weather = "Clear"
+local lastPreset = "Day"
+
+-- Weather reshapes the current preset: storms darken and close in, fog swallows the distance.
+-- Returns a modified copy; the preset table itself is never changed.
+local function weathered(L: any, weather: string, preset: string): any
+	if weather == "Clear" or preset == "Lobby" then
+		return L
+	end
+	local o = table.clone(L)
+	local grey = Color3.fromRGB(150, 158, 162)
+	if weather == "Cloudy" then
+		o.Brightness = L.Brightness * 0.88
+		o.Saturation = L.Saturation - 0.05
+	elseif weather == "Rain" then
+		o.Brightness = L.Brightness * 0.8
+		o.Density = L.Density + 0.06
+		o.Saturation = L.Saturation - 0.08
+	elseif weather == "Storm" then
+		o.Brightness = L.Brightness * 0.55
+		o.OutdoorAmbient = L.OutdoorAmbient:Lerp(Color3.fromRGB(70, 76, 86), 0.5)
+		o.FogStart = L.FogStart * 0.5
+		o.FogEnd = L.FogEnd * 0.55
+		o.Density = L.Density + 0.14
+		o.Haze = L.Haze + 1
+		o.AtmoColor = L.AtmoColor:Lerp(grey, 0.5)
+		o.Saturation = L.Saturation - 0.14
+	elseif weather == "Fog" then
+		o.FogStart = 8
+		o.FogEnd = math.min(L.FogEnd, if preset == "Night" then 140 else 190)
+		o.Density = math.max(L.Density, 0.62)
+		o.Haze = L.Haze + 2.5
+		o.AtmoColor = L.AtmoColor:Lerp(Color3.fromRGB(205, 210, 212), 0.6)
+		o.FogColor = L.FogColor:Lerp(grey, if preset == "Night" then 0.15 else 0.5)
+		o.Saturation = L.Saturation - 0.06
+	end
+	return o
+end
+
+-- Sets the match weather (MatchState.Weather for clients) and re-grades the current lighting.
+function WorldService.SetWeather(weather: string)
+	if weather == WorldService.Weather then
+		return
+	end
+	WorldService.Weather = weather
+	local state = game:GetService("ReplicatedStorage"):FindFirstChild("MatchState")
+	if state then
+		state:SetAttribute("Weather", weather)
+	end
+	WorldService.ApplyLighting(lastPreset, false)
+end
+
 -- `preset` is a Config.Lighting key: Dawn | Day | Sunset | Night | Lobby.
 function WorldService.ApplyLighting(preset: string, instant: boolean?)
-	local L = (Config.Lighting :: any)[preset] or Config.Lighting.Day
+	lastPreset = preset
+	local L = weathered((Config.Lighting :: any)[preset] or Config.Lighting.Day, WorldService.Weather, preset)
 	if not atmosphere then
 		local a = Instance.new("Atmosphere")
 		a.Density = 0.32

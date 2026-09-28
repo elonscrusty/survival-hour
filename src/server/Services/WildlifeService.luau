@@ -55,6 +55,7 @@ type Animal = {
 	Home: Vector3, -- territorial animals defend around here
 	FleeUntil: number,
 	FleeFrom: Vector3?,
+	MigrateTo: Vector3?, -- migrating herd (EventService): walks toward this, then roams
 }
 
 local ctx: any
@@ -100,7 +101,7 @@ function WildlifeService.Start()
 		if ctx.MatchService.Active and folder then
 			spawnAcc += dt
 			local pressure = WildlifeService.Pressure()
-			if spawnAcc >= Config.Wildlife.SpawnInterval * pressure.IntervalMult then
+			if spawnAcc >= Config.Wildlife.SpawnInterval * pressure.IntervalMult * ctx.EventService.WildlifeIntervalMult() then
 				spawnAcc = 0
 				local phase = ctx.MatchService.Phase
 				if phase == "Day" or phase == "Night" then
@@ -145,7 +146,11 @@ end
 -- Current escalation (Logic/WildlifeRules).
 function WildlifeService.Pressure(): WildlifeRules.Pressure
 	local night = WildlifeRules.NightNumber(ctx.MatchService.Phase, ctx.MatchService.Day)
-	return WildlifeRules.Pressure(night, Config.Wildlife)
+	local p = WildlifeRules.Pressure(night, Config.Wildlife)
+	if night > 0 then
+		p.AggroMult *= ctx.EventService.PredatorAggroMult()
+	end
+	return p
 end
 
 -- Spawning --------------------------------------------------------------------------------
@@ -207,6 +212,33 @@ function WildlifeService._denSpawns()
 			end
 		end
 	end
+end
+
+-- Event spawns (EventService): a group placed around `center`, allowed `extra` above the
+-- species cap. Returns how many spawned. `migrate` sends a herd walking toward that point.
+function WildlifeService.SpawnGroup(species: string, center: Vector3, n: number, radius: number, extra: number, migrate: Vector3?): number
+	if not folder or not WildlifeService.Species[species] then
+		return 0
+	end
+	local cap = (Config.Wildlife.MaxPerSpecies[species] or 0) + extra
+	local made = 0
+	for i = 1, n do
+		if count(species) >= cap then
+			break
+		end
+		local a = rng:NextNumber() * math.pi * 2
+		local d = rng:NextNumber(0, radius)
+		local x, z = center.X + math.cos(a) * d, center.Z + math.sin(a) * d
+		local pos = Vector3.new(x, ctx.WorldService.GroundY(x, z), z)
+		if not ctx.CampService.InFireLight(pos, 20) then
+			local an = WildlifeService._spawn(species, pos)
+			if an then
+				an.MigrateTo = migrate and (migrate + Vector3.new((i % 3 - 1) * 6, 0, (i % 2) * 6)) or nil
+				made += 1
+			end
+		end
+	end
+	return made
 end
 
 function WildlifeService._trySpawn(pressure: WildlifeRules.Pressure)
@@ -457,7 +489,20 @@ function WildlifeService._think(a: Animal, dt: number)
 		else
 			a.State = "Roam"
 			a.Hum.WalkSpeed = sp.Speed * 0.5
-			if not a.Waypoint or flatDist(pos, a.Waypoint) < 5 then
+			local mig = a.MigrateTo
+			if mig and flatDist(pos, mig) < 12 then
+				a.MigrateTo = nil -- arrived: back to normal grazing
+				mig = nil
+			end
+			if mig then
+				-- herd on the move: steady walk toward the far side, a little spread
+				a.Hum.WalkSpeed = sp.Speed * 0.75
+				if not a.Waypoint or flatDist(pos, a.Waypoint) < 5 then
+					local dir = (mig - pos) * Vector3.new(1, 0, 1)
+					local step = pos + dir.Unit * math.min(dir.Magnitude, 24) + Vector3.new(rng:NextNumber(-4, 4), 0, rng:NextNumber(-4, 4))
+					a.Waypoint = safeGoal(Vector3.new(step.X, ctx.WorldService.GroundY(step.X, step.Z), step.Z))
+				end
+			elseif not a.Waypoint or flatDist(pos, a.Waypoint) < 5 then
 				local wp = pos + Vector3.new(rng:NextNumber(-30, 30), 0, rng:NextNumber(-30, 30))
 				a.Waypoint = safeGoal(Vector3.new(wp.X, ctx.WorldService.GroundY(wp.X, wp.Z), wp.Z))
 			end

@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundLib = require(ReplicatedStorage.Shared.Sounds)
 local State = require("../State")
 local UI = require("../UI/UI")
+local Weather = require("./Weather")
 
 local SoundCtl = {}
 
@@ -61,6 +62,9 @@ end
 
 
 function SoundCtl.Start()
+	Weather.Thunder = function(_near: boolean)
+		SoundCtl.Play("Thunder")
+	end
 	UI.ClickSound = function()
 		if settings().UiSounds ~= false then
 			SoundCtl.Play("UiClick")
@@ -89,6 +93,13 @@ function SoundCtl.Start()
 		if name == "Phase" then
 			SoundCtl.Play(if ev.Data.Phase == "Night" then "Dusk" else "Dawn")
 			setAmbient(if ev.Data.Phase == "Night" then "AmbientNight" else "AmbientDay")
+		elseif name == "WorldEvent" then
+			local d = ev.Data or {}
+			if d.Stage == "Start" and d.Kind ~= "Condition" then
+				SoundCtl.Play(if d.Kind == "Thunderstorm" then "Thunder" elseif d.Kind == "PredatorSurge" then "WolfGrowl" else "Sunset")
+			elseif d.Stage == "Found" then
+				SoundCtl.Play("Reward")
+			end
 		elseif name == "FireUnderAttack" then
 			SoundCtl.Play("Alarm")
 		elseif name == "Upgraded" then
@@ -125,6 +136,7 @@ function SoundCtl.Start()
 	}
 	local rainLoop: Sound? = nil
 	local nextHowl = os.clock() + 25
+	local nextSurgeHowl = 0
 	local defaultRun: { [Sound]: string } = setmetatable({}, { __mode = "k" }) :: any
 	local acc = 0
 	RunService.Heartbeat:Connect(function(dt)
@@ -141,9 +153,34 @@ function SoundCtl.Start()
 		else
 			setAmbient(if ms:GetAttribute("Phase") == "Night" then "AmbientNight" else "AmbientDay")
 		end
+		-- wolf surge: howls from the real direction of the pack (the clue that lets players
+		-- choose to go hunting or steer clear); stops when the surge ends
+		local surge = ms:GetAttribute("SurgePos")
+		if inMatch and typeof(surge) == "Vector3" and workspace:GetServerTimeNow() < ((ms:GetAttribute("SurgeUntil") :: number?) or 0) and os.clock() > nextSurgeHowl then
+			nextSurgeHowl = os.clock() + math.random(10, 18)
+			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			local s = SoundLib.Make("WolfGrowl")
+			if root and s then
+				local flat = (surge - root.Position) * Vector3.new(1, 0, 1)
+				local dist = math.min(flat.Magnitude, 110)
+				local spot = Instance.new("Part")
+				spot.Anchored = true
+				spot.CanCollide = false
+				spot.CanQuery = false
+				spot.Transparency = 1
+				spot.Size = Vector3.one
+				spot.Position = root.Position + (if flat.Magnitude > 1 then flat.Unit else Vector3.xAxis) * dist + Vector3.new(0, 8, 0)
+				spot.Parent = workspace.CurrentCamera
+				s.RollOffMaxDistance = 500
+				s.RollOffMinDistance = 70
+				s.Parent = spot
+				s:Play()
+				game:GetService("Debris"):AddItem(spot, 6)
+			end
+		end
 		-- night soundscape: now and then a distant howl or growl from somewhere in the dark
 		-- (a random far bearing — atmosphere, never a real position, so it gives nothing away)
-		if inMatch and ms:GetAttribute("Phase") == "Night" and os.clock() > nextHowl then
+		if inMatch and ms:GetAttribute("Phase") == "Night" and ms:GetAttribute("Event") ~= "PredatorSurge" and os.clock() > nextHowl then
 			nextHowl = os.clock() + math.random(20, 45)
 			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 			local s = SoundLib.Make(if math.random() < 0.7 then "WolfGrowl" else "BearRoar")
@@ -166,7 +203,7 @@ function SoundCtl.Start()
 			end
 		end
 		-- rain loop layered over the ambience during showers
-		local wantRain = inMatch and ms:GetAttribute("Weather") == "Rain"
+		local wantRain = inMatch and (ms:GetAttribute("Weather") == "Rain" or ms:GetAttribute("Weather") == "Storm")
 		if wantRain and not rainLoop then
 			rainLoop = SoundLib.Make("Rain")
 			if rainLoop then

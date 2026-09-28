@@ -602,6 +602,13 @@ local function onMatchEvent(ev: any)
 		pushFeed(teamTag(d.Team) .. (def and def.Name or "") .. " clan eliminated", C.Bad)
 	elseif name == "TeammateNeedsRevive" then
 		pendingRevives[d.UserId] = { Name = d.Name, Ends = d.Ends }
+	elseif name == "WorldEvent" then
+		-- world events: a short banner when they begin, a quiet feed line when they end
+		if d.Stage == "Start" and d.Title then
+			Hud.Announce(tostring(d.Title), d.Sub, if d.Kind == "Condition" then C.Info elseif d.Kind == "PredatorSurge" or d.Kind == "Thunderstorm" then C.Warn else C.Accent, if d.Kind == "Condition" then 5 else 4)
+		elseif d.Sub then
+			pushFeed(tostring(d.Sub), C.TextDim)
+		end
 	elseif name == "FireUnderAttack" then
 		local dirs = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" }
 		local dir = if d.Bearing then dirs[math.floor(((d.Bearing + 22.5) % 360) / 45) + 1] else nil

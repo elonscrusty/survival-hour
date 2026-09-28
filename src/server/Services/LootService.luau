@@ -24,7 +24,7 @@ local LootService = {}
 
 type Package = { Id: number, Model: Model, Pos: Vector3, Landed: boolean, Opened: boolean, Source: string, Buyer: string? }
 type Crate = { Id: number, Model: Model, Pos: Vector3, Spot: number }
-type Chest = { Key: string, Model: Model, Pos: Vector3, Tier: string, Poi: string, Opened: boolean }
+type Chest = { Key: string, Model: Model, Pos: Vector3, Tier: string, Poi: string, Opened: boolean, Bonus: string?, OnOpened: ((Player) -> ())? }
 
 local ctx: any
 local queue: { { Source: string, Buyer: string?, BuyerId: number? } } = {}
@@ -388,6 +388,37 @@ function LootService._spawnChests(map: any)
 	end
 end
 
+-- Survivor cache (EventService): a chest with no light and a bonus roll from `bonus`.
+-- `onOpened(player)` runs once when someone finishes searching it.
+function LootService.AddCache(cf: CFrame, tier: string, bonus: string?, onOpened: ((Player) -> ())?): (string?, Model?)
+	if not folder then
+		return nil, nil
+	end
+	local model = Landmarks.Chest(cf, tier, folder)
+	for _, d in model:GetDescendants() do
+		if d:IsA("PointLight") then
+			d:Destroy()
+		end
+	end
+	model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
+	local key = "Cache" .. tostring(math.floor(os.clock() * 1000))
+	local prompt = ctx.ChannelService.MakePrompt(model.PrimaryPart, "OpenChest", "Search", "Survivor's Cache", Config.Crates.OpenRange)
+	prompt:SetAttribute("ChestKey", key)
+	prompt:SetAttribute("Rarity", tier)
+	chests[key] = { Key = key, Model = model, Pos = model:GetPivot().Position, Tier = tier, Poi = "Cache", Opened = false, Bonus = bonus, OnOpened = onOpened }
+	return key, model
+end
+
+function LootService.RemoveCache(key: string)
+	local c = chests[key]
+	if c then
+		chests[key] = nil
+		if c.Model then
+			c.Model:Destroy()
+		end
+	end
+end
+
 function LootService._onOpenChest(p: Player, prompt: ProximityPrompt)
 	local key = prompt:GetAttribute("ChestKey") :: string?
 	local chest = key and chests[key]
@@ -420,6 +451,11 @@ function LootService._onOpenChest(p: Player, prompt: ProximityPrompt)
 			local roll = Loot.RollChest(chest.Tier, function()
 				return rng:NextNumber()
 			end)
+			if chest.Bonus and Loot.Chest[chest.Bonus] then
+				table.insert(roll, Loot.Roll(Loot.Chest[chest.Bonus], function()
+					return rng:NextNumber()
+				end))
+			end
 			-- Scavenger: small chance of an extra common roll
 			if rng:NextNumber() < ctx.PowerupService.ExtraLootChance(p) then
 				table.insert(roll, Loot.Roll(Loot.Chest.Common, function()
@@ -445,6 +481,9 @@ function LootService._onOpenChest(p: Player, prompt: ProximityPrompt)
 			ctx.Util.PlaySound("ChestOpen", chest.Model.PrimaryPart)
 			Net.FireAll("Fx", "ChestOpened", { Pos = chest.Pos, Tier = chest.Tier })
 			ctx.PowerupService.OnChestOpened(p, chest.Tier, chest.Poi)
+			if chest.OnOpened then
+				task.spawn(chest.OnOpened, p)
+			end
 		end,
 	})
 end

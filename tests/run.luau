@@ -20,6 +20,7 @@ local specs = {
 	"./PlacementRules.spec",
 	"./ResourceRules.spec",
 	"./AssetFit.spec",
+	"./MatchEvents.spec",
 }
 
 local passed, failed = 0, 0

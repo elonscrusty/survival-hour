@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Items = require(Shared:WaitForChild("Items"))
+local Config = require(Shared:WaitForChild("Config"))
 
 local DevService = {}
 
@@ -69,6 +70,8 @@ function DevService._onCommand(p: Player, cmd: any, arg: any)
 		if root then
 			ctx.WildlifeService._spawn(arg, root.Position + root.CFrame.LookVector * 30)
 		end
+	elseif cmd == "ForceEvent" and type(arg) == "string" and Config.Events.Weights[arg] then
+		ctx.EventService.Force(arg)
 	elseif cmd == "DropPackage" then
 		ctx.LootService._drop({ Source = "Free" })
 	elseif cmd == "Damage" then
