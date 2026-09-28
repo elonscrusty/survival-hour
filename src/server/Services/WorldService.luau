@@ -107,12 +107,15 @@ function WorldService.GroundY(x: number, z: number): number
 end
 
 -- Raycast down onto terrain/geometry (used for dynamic spawns).
-function WorldService.RaycastGround(pos: Vector3, ignore: { Instance }?): (Vector3?, Vector3?)
+-- `up` = how far above `pos` the ray starts (default 60). Use a small value for things
+-- dropped indoors, so they land on the floor under them, not on the roof.
+function WorldService.RaycastGround(pos: Vector3, ignore: { Instance }?, up: number?): (Vector3?, Vector3?)
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = ignore or {}
 	params.IgnoreWater = false
-	local r = workspace:Raycast(pos + Vector3.new(0, 60, 0), Vector3.new(0, -200, 0), params)
+	local from = up or 60
+	local r = workspace:Raycast(pos + Vector3.new(0, from, 0), Vector3.new(0, -(from + 140), 0), params)
 	if r then
 		return r.Position, r.Normal
 	end

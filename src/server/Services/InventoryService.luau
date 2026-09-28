@@ -2,6 +2,7 @@
 -- Per-player match inventories, world pickups, supply bags, held-item visuals,
 -- canteens and bandages. Inventories only exist while a player is in a match.
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -218,7 +219,14 @@ function InventoryService.SpawnPickup(id: string, count: number, pos: Vector3, s
 	if not def or count <= 0 then
 		return nil
 	end
-	local ground = ctx.WorldService.RaycastGround(pos, { folder() })
+	local ignore: { Instance } = { folder() }
+	for _, pl in Players:GetPlayers() do
+		if pl.Character then
+			table.insert(ignore, pl.Character)
+		end
+	end
+	-- start just above the drop point: loot from a chest indoors lands on the floor, not the roof
+	local ground = ctx.WorldService.RaycastGround(pos, ignore, 3)
 	local at = if ground then ground else pos
 	local m = ItemModels.Pickup(id, count, CFrame.new(at) * CFrame.Angles(0, math.random() * 6.28, 0), folder())
 	m.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
@@ -283,7 +291,7 @@ end
 function InventoryService.SpawnBag(contents: { [string]: number }, pos: Vector3, color: Color3, label: string, ignore: { Instance }?): Model
 	local ig = ignore or {}
 	table.insert(ig, folder())
-	local ground = ctx.WorldService.RaycastGround(pos, ig)
+	local ground = ctx.WorldService.RaycastGround(pos, ig, 3)
 	local m = ItemModels.SupplyBag(CFrame.new(ground or pos), color, folder())
 	m.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
 	local pr = ctx.ChannelService.MakePrompt(m.PrimaryPart, "Bag", "Loot", label, Config.Inventory.PickupRange)

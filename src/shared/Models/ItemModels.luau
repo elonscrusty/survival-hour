@@ -320,8 +320,6 @@ function ItemModels.Pickup(id: string, count: number, cf: CFrame, parent: Instan
 	if look and PICKUP_SKINS[id] and Skins.Enabled() then
 		Skins.Dress(m, PICKUP_SKINS[id], { scale = 1.4, offset = CFrame.new(0, 0.1, 0) })
 	end
-	local glow = Build.Decor({ Name = "Glow", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.1, 3, 3), CFrame = CFrame.new(0, 0.08, 0) * CFrame.Angles(0, 0, math.rad(90)), Color = Color3.fromRGB(255, 230, 150), Material = Enum.Material.Neon, Transparency = 0.6, Parent = m, CastShadow = false })
-	glow.Name = "Glow"
 	Build.SetPivot(m, m.PrimaryPart :: BasePart, CFrame.new())
 	m:PivotTo(cf)
 	if parent then
