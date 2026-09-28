@@ -226,3 +226,7 @@ gaps. No locked numbers were changed.
 | Kill feedback | The attacker gets a centre "⚔ YOU DOWNED …" / "✖ ELIMINATED …" confirm; the victim's respawn screen says who or what killed them | `LivesService` (`KillerId`), `Hud` |
 | Match recap | End screen adds a personal line: day reached, kills, animals, chests (tallied even when rewards are off) | `PowerupService.Stats`, `MatchService`, `Hud.showEnd` |
 | Gamepad | Inventory (Y), Craft (D-pad up) and Build (D-pad down) were unreachable on a controller; now bound. Stale "ability" key notes removed from the controls header | `Input` |
+
+## Model polish (20 meshes)
+
+Reworked the roughest pack models (Survival Wars chests, storage, walls, Workbench IV/V, seven POIs and three held tools) in `blender/assets/survival_wars.py`. Every model keeps its published bounds and pivot (`tools/check_bounds.py`), so `AssetIds.luau` is unchanged and old or new uploads both fit. `verify_exports.py`: 368 files, 0 issues. The new versions need uploading over the same asset IDs: see `docs/MODEL_REUPLOAD.md`. Checked and left alone: the flame mesh (the game uses particle fire), wildlife rigs (creatures are procedural), and the leaf-litter/moss "dark rim" (a Blender-only preview artifact from downward faces that Roblox culls).

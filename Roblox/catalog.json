@@ -15020,24 +15020,26 @@
   "use": "Crowbar (breaching tool). Tool > Handle.",
   "notes": "",
   "size_studs_roblox_XYZ": [
-   0.14,
+   0.17,
    3.5,
    0.88
   ],
   "footprint_studs": [
-   0.14,
+   0.17,
    0.88
   ],
-  "tris": 60,
-  "verts": 34,
+  "tris": 128,
+  "verts": 72,
   "materials": 1,
   "texture_tiles": [
+   "leather_dark",
+   "metal",
    "metal_dark",
    "red_paint"
   ],
   "origin_offset": [
-   0.0,
-   -0.634,
+   0.0045,
+   -0.6345,
    0.166
   ],
   "team_colored": false,
@@ -15078,12 +15080,14 @@
    0.6,
    1.5
   ],
-  "tris": 156,
-  "verts": 84,
+  "tris": 256,
+  "verts": 140,
   "materials": 1,
   "texture_tiles": [
    "end_grain",
+   "gunmetal",
    "leather_stitch",
+   "metal",
    "metal_dark",
    "wood"
   ],
@@ -15181,14 +15185,16 @@
    3.21,
    3.05
   ],
-  "tris": 126,
-  "verts": 71,
+  "tris": 236,
+  "verts": 134,
   "materials": 1,
   "texture_tiles": [
+   "metal",
    "metal_dark",
    "rope",
    "wood",
-   "wood_dark"
+   "wood_dark",
+   "wood_fresh"
   ],
   "origin_offset": [
    0.0,

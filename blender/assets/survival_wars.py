@@ -784,13 +784,20 @@ def axe_iron(m):
 def crowbar(m):
     m.sweep("red_paint", [(0, 0, -0.8), (0, 0, 1.8), (0, -0.25, 2.3), (0, -0.6, 2.35)], [0.07, 0.07, 0.07, 0.04], 6)
     m.sweep("metal_dark", [(0, 0, -0.8), (0, 0.25, -1.1)], [0.07, 0.03], 5)
+    # worn grip where hands go, bare steel showing through the chipped paint at the claw
+    m.lathe("leather_dark", [(0.085, -0.2), (0.09, -0.1), (0.09, 0.8), (0.085, 0.9)], 7)
+    m.sweep("metal", [(0, -0.3, 2.33), (0, -0.58, 2.35)], [0.05, 0.035], 5)
 
 
 @asset("SM_Sledgehammer", "SW_Tools", "Equippable", density=HELD, pivot=TOOL_PIVOT,
        use="Sledgehammer (breaching tool, heavy vs walls). Tool > Handle.")
 def sledge(m):
     haft(m, 3.4)
-    m.box("metal_dark", (0.6, 1.5, 0.6), loc=(0, 0, 3.2), bevel=0.08)
+    # forged head: octagonal-ish block with bevelled striking faces and a steel collar
+    m.box("metal_dark", (0.6, 1.1, 0.6), loc=(0, 0, 3.2), bevel=0.1)
+    for s in (-1, 1):
+        m.cylinder("metal", 0.27, 0.24, 0.2, seg=8, loc=(0, s * 0.55, 3.2), rot=(-s * 90, 0, 0))
+    m.box("gunmetal", (0.6, 0.3, 0.58), loc=(0, 0, 3.2), bevel=0.04)
 
 
 @asset("SM_HuntingBow", "SW_Tools", "Equippable", density=HELD, pivot=GUNLIKE_PIVOT,
@@ -805,10 +812,16 @@ def hunting_bow(m):
 @asset("SM_Crossbow", "SW_Tools", "Equippable", density=HELD, pivot=GUNLIKE_PIVOT,
        use="Crossbow (Tier IV). Points along -Z; bolts.")
 def crossbow(m):
+    # stock with a butt plate, trigger guard and a loaded bolt
     m.box("wood", (0.35, 3.0, 0.35), loc=(0, -0.9, 0.35), bevel=0.05)
     m.box("wood_dark", (0.4, 0.8, 0.8), loc=(0, 0.2, 0), bevel=0.06)
+    m.box("metal_dark", (0.42, 0.1, 0.8), loc=(0, 0.55, 0))
+    m.box("metal_dark", (0.12, 0.35, 0.05), loc=(0, -0.05, 0.13))
+    m.torus("metal_dark", 0.14, 0.025, seg=8, tseg=4, loc=(0, -0.05, 0.06), rot=(0, 90, 0))
     m.sweep("metal_dark", [(-1.6, -2.4, 0.45), (0, -2.3, 0.45), (1.6, -2.4, 0.45)], [0.05, 0.1, 0.05], 5)
     m.cylinder("rope", 0.02, 0.02, 3.2, seg=4, loc=(-1.6, -2.0, 0.5), rot=(0, 90, 0))
+    m.cylinder("wood_fresh", 0.035, 0.035, 2.0, seg=5, loc=(0, -0.2, 0.49), rot=(90, 0, 0))
+    m.cone("metal", 0.05, 0.2, seg=4, loc=(0, -2.2, 0.49), rot=(90, 0, 0))
 
 
 # =============================================================== base pieces
