@@ -83,6 +83,7 @@ local function releaseBow()
 	if not drawStart then
 		return
 	end
+	Net.Event("DrawState"):FireServer(false)
 	local id = equippedId()
 	local def = Items[id]
 	local charge = math.clamp((os.clock() - drawStart) / drawTime(def), 0, 1)
@@ -144,6 +145,7 @@ function Combat.Start()
 				chargeBar.Visible = true
 				CameraCtl.SetAiming(true)
 				State.Emit("LocalAction", { Kind = "Draw", Item = id })
+				Net.Event("DrawState"):FireServer(true)
 			else
 				releaseBow()
 			end

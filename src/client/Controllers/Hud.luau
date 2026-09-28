@@ -538,6 +538,8 @@ local function onMatchEvent(ev: any)
 		Hud.Announce("✚ CARE PACKAGE INCOMING", (if d.Source == "Paid" and d.Buyer then "Called in by " .. d.Buyer .. " — " else "") .. "Marked on your map", C.Accent, 3)
 	elseif name == "PackageCalled" then
 		pushFeed("✚ " .. tostring(d.Buyer) .. " called a care package" .. (if d.AtDawn then " (arrives at dawn)" else ""), C.Accent)
+	elseif name == "CarePackageLanded" then
+		pushFeed("✚ The care package has landed — race for it!", C.Accent)
 	elseif name == "CarePackageOpened" then
 		pushFeed("✚ " .. teamTag(d.ByTeam) .. tostring(d.By) .. " opened a care package", C.TextDim)
 	elseif name == "MatchEnded" then

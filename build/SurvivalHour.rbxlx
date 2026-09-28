@@ -9091,6 +9091,7 @@ Net.Events = {
 	"Sprint", -- (bool) hold-to-sprint state
 	"LeaveMatch", -- eliminated players go back to the lobby early
 	"SetSetting", -- (key, value) player settings, validated by ProfileRules.SetSetting
+	"DrawState", -- (bool) bow/crossbow drawn (visual only; the server still times the shot)
 }
 
 local folder: Folder
@@ -61874,6 +61875,10 @@ function CombatService.Init(c)
 		local can = def ~= nil and not def.Ranged and (def.Kind == "Weapon" or def.Kind == "Tool") and not broken
 		p:SetAttribute("Blocking", on == true and can and ctx.Util.IsAlive(p) and ctx.StaminaService.Get(p) > 1)
 	end)
+	ctx.Util.Connect("DrawState", "Default", function(p: Player, on: any)
+		local def = Items[(ctx.InventoryService.EquippedItem(p))]
+		p:SetAttribute("Drawing", on == true and def ~= nil and def.Ranged ~= nil and ctx.Util.IsAlive(p))
+	end)
 	ctx.Util.OnPlayerRemoving(function(p)
 		nextAttack[p] = nil
 		lastShot[p] = nil
@@ -62086,6 +62091,7 @@ function CombatService._onAttack(p: Player, payload: any)
 	char:SetAttribute("ActionAt", workspace:GetServerTimeNow())
 	char:SetAttribute("ActionItem", id)
 	char:SetAttribute("ActionHeavy", heavy)
+	p:SetAttribute("Drawing", false)
 	char:SetAttribute("ActionVariant", ((char:GetAttribute("ActionVariant") or 0) + 1) % 2) -- alternate swing direction
 
 	local inMatch = p:GetAttribute("InMatch") == true and ctx.MatchService.IsPlaying()
@@ -70261,6 +70267,10 @@ local function findRig(char: Model): Rig?
 	}
 end
 
+local function remoteDraw(owner: Player?, isLocal: boolean, held: string): boolean
+	return not isLocal and owner ~= nil and owner:GetAttribute("Drawing") == true and (held == "Bow" or held == "CrudeBow" or held == "HuntingBow" or held == "Crossbow")
+end
+
 local function isBow(item: string): boolean
 	return item == "Bow" or item == "CrudeBow" or item == "HuntingBow"
 end
@@ -70316,7 +70326,16 @@ local function pose(rig: Rig, t: number): (CFrame, CFrame, CFrame, CFrame)
 		return r, l, w, n
 	end
 
-	if char:GetAttribute("Blocking") then
+	if remoteDraw(owner, isLocal, held) then
+		r = raise(85, 1) * CFrame.Angles(0, rad(-35), 0)
+		l = raise(90, -1)
+		w = CFrame.Angles(0, rad(-30), 0)
+		n = CFrame.Angles(0, rad(20), 0)
+		return r, l, w, n
+	end
+
+	-- Blocking is a Player attribute (set by CombatService's BlockState handler)
+	if (owner and owner:GetAttribute("Blocking")) or char:GetAttribute("Blocking") then
 		-- guard: weapon across the body, off hand braced
 		r = raise(78, 1) * CFrame.Angles(0, rad(40), 0)
 		l = raise(55, -1) * CFrame.Angles(0, rad(-25), 0)
@@ -71264,6 +71283,7 @@ local function releaseBow()
 	if not drawStart then
 		return
 	end
+	Net.Event("DrawState"):FireServer(false)
 	local id = equippedId()
 	local def = Items[id]
 	local charge = math.clamp((os.clock() - drawStart) / drawTime(def), 0, 1)
@@ -71325,6 +71345,7 @@ function Combat.Start()
 				chargeBar.Visible = true
 				CameraCtl.SetAiming(true)
 				State.Emit("LocalAction", { Kind = "Draw", Item = id })
+				Net.Event("DrawState"):FireServer(true)
 			else
 				releaseBow()
 			end
@@ -73002,6 +73023,8 @@ local function onMatchEvent(ev: any)
 		Hud.Announce("✚ CARE PACKAGE INCOMING", (if d.Source == "Paid" and d.Buyer then "Called in by " .. d.Buyer .. " — " else "") .. "Marked on your map", C.Accent, 3)
 	elseif name == "PackageCalled" then
 		pushFeed("✚ " .. tostring(d.Buyer) .. " called a care package" .. (if d.AtDawn then " (arrives at dawn)" else ""), C.Accent)
+	elseif name == "CarePackageLanded" then
+		pushFeed("✚ The care package has landed — race for it!", C.Accent)
 	elseif name == "CarePackageOpened" then
 		pushFeed("✚ " .. teamTag(d.ByTeam) .. tostring(d.By) .. " opened a care package", C.TextDim)
 	elseif name == "MatchEnded" then

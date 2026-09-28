@@ -44,6 +44,7 @@ Net.Events = {
 	"Sprint", -- (bool) hold-to-sprint state
 	"LeaveMatch", -- eliminated players go back to the lobby early
 	"SetSetting", -- (key, value) player settings, validated by ProfileRules.SetSetting
+	"DrawState", -- (bool) bow/crossbow drawn (visual only; the server still times the shot)
 }
 
 local folder: Folder

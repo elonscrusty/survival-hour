@@ -42,6 +42,10 @@ function CombatService.Init(c)
 		local can = def ~= nil and not def.Ranged and (def.Kind == "Weapon" or def.Kind == "Tool") and not broken
 		p:SetAttribute("Blocking", on == true and can and ctx.Util.IsAlive(p) and ctx.StaminaService.Get(p) > 1)
 	end)
+	ctx.Util.Connect("DrawState", "Default", function(p: Player, on: any)
+		local def = Items[(ctx.InventoryService.EquippedItem(p))]
+		p:SetAttribute("Drawing", on == true and def ~= nil and def.Ranged ~= nil and ctx.Util.IsAlive(p))
+	end)
 	ctx.Util.OnPlayerRemoving(function(p)
 		nextAttack[p] = nil
 		lastShot[p] = nil
@@ -254,6 +258,7 @@ function CombatService._onAttack(p: Player, payload: any)
 	char:SetAttribute("ActionAt", workspace:GetServerTimeNow())
 	char:SetAttribute("ActionItem", id)
 	char:SetAttribute("ActionHeavy", heavy)
+	p:SetAttribute("Drawing", false)
 	char:SetAttribute("ActionVariant", ((char:GetAttribute("ActionVariant") or 0) + 1) % 2) -- alternate swing direction
 
 	local inMatch = p:GetAttribute("InMatch") == true and ctx.MatchService.IsPlaying()

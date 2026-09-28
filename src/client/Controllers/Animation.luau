@@ -94,6 +94,10 @@ local function findRig(char: Model): Rig?
 	}
 end
 
+local function remoteDraw(owner: Player?, isLocal: boolean, held: string): boolean
+	return not isLocal and owner ~= nil and owner:GetAttribute("Drawing") == true and (held == "Bow" or held == "CrudeBow" or held == "HuntingBow" or held == "Crossbow")
+end
+
 local function isBow(item: string): boolean
 	return item == "Bow" or item == "CrudeBow" or item == "HuntingBow"
 end
@@ -149,7 +153,16 @@ local function pose(rig: Rig, t: number): (CFrame, CFrame, CFrame, CFrame)
 		return r, l, w, n
 	end
 
-	if char:GetAttribute("Blocking") then
+	if remoteDraw(owner, isLocal, held) then
+		r = raise(85, 1) * CFrame.Angles(0, rad(-35), 0)
+		l = raise(90, -1)
+		w = CFrame.Angles(0, rad(-30), 0)
+		n = CFrame.Angles(0, rad(20), 0)
+		return r, l, w, n
+	end
+
+	-- Blocking is a Player attribute (set by CombatService's BlockState handler)
+	if (owner and owner:GetAttribute("Blocking")) or char:GetAttribute("Blocking") then
 		-- guard: weapon across the body, off hand braced
 		r = raise(78, 1) * CFrame.Angles(0, rad(40), 0)
 		l = raise(55, -1) * CFrame.Angles(0, rad(-25), 0)
