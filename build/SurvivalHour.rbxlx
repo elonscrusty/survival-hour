@@ -61290,6 +61290,11 @@ function CampService._onFireUpgrade(player: Player, prompt: ProximityPrompt)
 	if levelled then
 		ctx.Util.NotifyTeam(team, string.format("Campfire upgraded to Level %d! It burns longer and takes %d s to snuff.", fire.Level, FireRules.SnuffTime(fire, FIRE)), "success")
 		ctx.Util.PlaySound("Craft", camps[team].Fire.PrimaryPart)
+		ctx.Util.SetAction(player, "Feed")
+		Net.FireAll("Fx", "FireUpgraded", { Pos = camps[team].FirePos, Level = fire.Level })
+		for _, mate in ctx.Util.TeamPlayers(team) do
+			Net.FireClient("MatchEvent", mate, "Upgraded", { What = "Campfire", Level = fire.Level })
+		end
 		print(string.format("[Camp] %s fire L%d -> L%d", Config.Teams[team].Name, before, fire.Level))
 	else
 		ctx.Util.Notify(player, "Added to the fire upgrade. Still needs " .. needsText(fire) .. ".", "info")
@@ -62782,6 +62787,9 @@ function CraftService._onUpgrade(p: Player)
 	ctx.CampService.SetLevel(team, level + 1)
 	ctx.PowerupService.OnWorkbenchLevel(p, team, level + 1)
 	ctx.Util.SetAction(p, "Craft")
+	for _, mate in ctx.Util.TeamPlayers(team) do
+		Net.FireClient("MatchEvent", mate, "Upgraded", { What = "Workbench", Level = level + 1 })
+	end
 	Net.FireAll("Fx", "BenchUpgrade", { Pos = ctx.CampService.GetCamp(team).WorkbenchCF.Position, Level = level + 1 })
 	ctx.InventoryService.Sync(p)
 	ctx.StorageService.SyncTeam(team)
@@ -64450,6 +64458,7 @@ function InventoryService._onEat(p: Player, id: any)
 	hum.Health = math.min(hum.MaxHealth, hum.Health + food.Heal)
 	InventoryService.Sync(p)
 	ctx.Util.PlaySound("Eat", ctx.Util.Root(p))
+	ctx.Util.SetAction(p, "Eat")
 	ctx.Util.Notify(p, string.format("Ate %s  +%d HP", Items[id].Name, food.Heal), "gain")
 end
 
@@ -64466,6 +64475,11 @@ function InventoryService.Wear(p: Player, slot: string, amount: number)
 	if InventoryModel.Wear(inv, slot, amount) then
 		ctx.Util.Notify(p, (name or "Item") .. " broke!", "warn")
 		ctx.Util.PlaySound("Break", ctx.Util.Root(p))
+		local br = ctx.Util.Root(p)
+		if br then
+			Net.FireAll("Fx", "ToolBroke", { Pos = br.Position + Vector3.new(0, 1.5, 0) })
+		end
+		Net.FireClient("MatchEvent", p, "ToolBroke", { Name = name or "Item" })
 	end
 	InventoryService.Sync(p)
 end
@@ -65896,6 +65910,14 @@ function LootService._onOpenChest(p: Player, prompt: ProximityPrompt)
 					return rng:NextNumber()
 				end))
 			end
+			-- item reveal for the searcher (rarer chests get a richer card)
+			local found = {}
+			for _, entry in roll do
+				for _, g in entry.Grants do
+					table.insert(found, { Id = g.Item, Count = g.Count })
+				end
+			end
+			Net.FireClient("MatchEvent", p, "LootReveal", { Tier = chest.Tier, Items = found })
 			local k = 0
 			for _, entry in roll do
 				for _, g in entry.Grants do
@@ -68879,6 +68901,10 @@ function WildlifeService._think(a: Animal, dt: number)
 	if sp.Role == "Prey" then
 		local threat = nearestThreat(pos, (Config.Wildlife.FleeRange[a.Species] or 25) * WildlifeService.Pressure().AggroMult)
 		if threat then
+			if now >= a.FleeUntil then
+				-- startled: head snaps up (client) as it bolts
+				a.Model:SetAttribute("AlertAt", workspace:GetServerTimeNow())
+			end
 			a.FleeUntil = now + 3
 			a.FleeFrom = threat
 		end
@@ -69622,6 +69648,39 @@ end
 
 local POI_SCALE = 1.35
 
+-- Distant cues that make players wonder "what's over there?": a thin smoke
+-- column over lived-in buildings by day, and a lantern glow at the bigger
+-- sites that reads through the trees at night. No map markers — just curiosity.
+local SMOKE_POIS = { Cabin = true, SmallCabin = true, RangerStation = true, AbandonedHouse = true, Campsite = true, LoggingCamp = true }
+local LIGHT_POIS = { RangerStation = true, Outpost = true, Bunker = true, IndustrialSite = true, LargeMine = true, MineEntrance = true, Campsite = true }
+
+function WorldService._poiBeacon(m: Model, kind: string)
+	local cf, size = m:GetBoundingBox()
+	if SMOKE_POIS[kind] then
+		local anchor = Build.Part({ Name = "BeaconSmoke", Size = Vector3.new(0.5, 0.5, 0.5), CFrame = cf * CFrame.new(size.X * 0.2, size.Y / 2 + 1, 0), Transparency = 1, CanCollide = false, CanQuery = false, Parent = m })
+		local pe = Instance.new("ParticleEmitter")
+		pe.Color = ColorSequence.new(Color3.fromRGB(200, 200, 205), Color3.fromRGB(150, 150, 160))
+		pe.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(1, 1) })
+		pe.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.5), NumberSequenceKeypoint.new(1, 7) })
+		pe.Lifetime = NumberRange.new(6, 9)
+		pe.Speed = NumberRange.new(3, 5)
+		pe.Rate = 2.5
+		pe.Acceleration = Vector3.new(1.2, 0.6, 0)
+		pe.SpreadAngle = Vector2.new(8, 8)
+		pe.LightInfluence = 1
+		pe.Parent = anchor
+	end
+	if LIGHT_POIS[kind] then
+		local lamp = Build.Part({ Name = "BeaconLamp", Size = Vector3.new(0.6, 0.8, 0.6), CFrame = cf * CFrame.new(0, size.Y * 0.1, -size.Z / 2 - 0.4), Color = Color3.fromRGB(255, 196, 120), Material = Enum.Material.Neon, CanCollide = false, CanQuery = false, Parent = m })
+		local light = Instance.new("PointLight")
+		light.Color = Color3.fromRGB(255, 180, 110)
+		light.Range = 22
+		light.Brightness = 1.4
+		light.Shadows = false
+		light.Parent = lamp
+	end
+end
+
 function WorldService._buildPoi(map: MapInfo, f: any, cf: CFrame, rng: Random, parent: Instance)
 	local m = Landmarks.Build(f.Type, cf, rng, parent)
 	if not m then
@@ -69630,6 +69689,7 @@ function WorldService._buildPoi(map: MapInfo, f: any, cf: CFrame, rng: Random, p
 	-- Buildings were a bit small next to players: scale the whole POI (colliders,
 	-- meshes and chest mounts together) about its ground pivot.
 	m:ScaleTo(POI_SCALE)
+	WorldService._poiBeacon(m, f.Type)
 	m:SetAttribute("Poi", f.Type)
 	m:SetAttribute("Tier", f.Tier)
 	addChests(map, m, f)
@@ -70190,6 +70250,7 @@ local RunService = game:GetService("RunService")
 
 local State = require("../State")
 local Input = require("./Input")
+local Items = require(game:GetService("ReplicatedStorage").Shared.Items)
 
 local Animation = {}
 
@@ -70346,6 +70407,22 @@ local function pose(rig: Rig, t: number): (CFrame, CFrame, CFrame, CFrame)
 		l = if held == "Pistol" then ID else raise(30, -1)
 	elseif isBow(held) then
 		l = raise(25, -1)
+	else
+		-- weapons are carried at the ready; tools hang relaxed
+		local hdef = Items[held]
+		if hdef and hdef.Kind == "Weapon" and not hdef.Ranged then
+			r = raise(28, 1) * CFrame.Angles(0, rad(15), 0)
+			l = raise(12, -1)
+		end
+	end
+	-- crossbow reload: after the shot, pull the string back down
+	if action == "Attack" and item == "Crossbow" and elapsed > 0.25 and elapsed < 1.3 then
+		local k = math.sin(math.clamp((elapsed - 0.25) / 1.05, 0, 1) * math.pi)
+		r = raise(45, 1)
+		l = raise(40 + 35 * k, -1) * CFrame.Angles(0, rad(-25 * k), 0)
+		w = CFrame.Angles(rad(-12 * k), 0, 0)
+		n = CFrame.Angles(rad(-18 * k), 0, 0)
+		return r, l, w, n
 	end
 
 	local swingLen = if heavy then 0.62 else 0.38
@@ -70439,6 +70516,11 @@ local function pose(rig: Rig, t: number): (CFrame, CFrame, CFrame, CFrame)
 		r = raise(a, 1)
 		l = raise(a, -1)
 		w = CFrame.Angles(rad(-20 * math.sin(k * math.pi)), 0, 0)
+	elseif action == "Eat" and elapsed < 0.9 then
+		-- hand to mouth twice
+		local k = (elapsed / 0.45) % 1
+		r = raise(95 + 25 * math.sin(k * math.pi), 1) * CFrame.Angles(0, rad(35), 0)
+		n = CFrame.Angles(rad(-8), 0, 0)
 	elseif action == "Open" or action == "Steal" then
 		w = CFrame.Angles(rad(-30), 0, 0)
 		r = raise(55 + 30 * math.sin(phase * 2), 1)
@@ -71725,6 +71807,13 @@ local function animate(r: Rig, dt: number)
 	elseif tele == "Strike" and teleAge < 0.25 then
 		neck = CFrame.Angles(math.rad(-25), 0, 0)
 	end
+	-- startled: head up, body tense for a moment
+	local alertAge = workspace:GetServerTimeNow() - ((m:GetAttribute("AlertAt") :: number?) or 0)
+	if alertAge < 0.45 and tele ~= "Dead" then
+		local k = math.sin(math.clamp(alertAge / 0.45, 0, 1) * math.pi)
+		neck = CFrame.Angles(math.rad(35 * k), 0, 0)
+		body = CFrame.Angles(math.rad(6 * k), 0, 0) * body
+	end
 	-- hit flinch
 	local hitAge = workspace:GetServerTimeNow() - ((m:GetAttribute("HitAt") :: number?) or 0)
 	if hitAge < 0.25 and tele ~= "Dead" then
@@ -72039,7 +72128,12 @@ local function onFx(ev: any)
 	elseif name == "ResourceHit" then
 		-- chips fly back toward the swinger, like a real strike
 		local toward = if d.From then (d.From - d.Pos) * Vector3.new(1, 0, 1) + Vector3.new(0, 1.2, 0) else nil
-		emitAt(d.Kind or "Dust", d.Pos, if d.Kind == "Leaves" or d.Kind == "Spores" then 8 else 12, toward)
+		-- the final blow on a node is noticeably bigger than a normal hit
+		local mult = if d.Last then 2.5 else 1
+		emitAt(d.Kind or "Dust", d.Pos, math.floor((if d.Kind == "Leaves" or d.Kind == "Spores" then 8 else 12) * mult), toward)
+		if d.Last then
+			emitAt("Dust", d.Pos, 6)
+		end
 		if d.Kind == "Stone" then
 			emitAt("Dust", d.Pos, 3)
 			emitAt("Sparks", d.Pos, 4, toward)
@@ -72062,6 +72156,13 @@ local function onFx(ev: any)
 	elseif name == "Built" then
 		emitAt("Dust", d.Pos + Vector3.new(0, 1, 0), 8)
 		emitAt("Splinter", d.Pos + Vector3.new(0, 2, 0), 6)
+	elseif name == "ToolBroke" then
+		emitAt("Splinter", d.Pos, 14)
+		emitAt("Sparks", d.Pos, 6)
+	elseif name == "FireUpgraded" then
+		-- a column of sparks and a warm burst: the fire just grew
+		emitAt("Sparks", d.Pos + Vector3.new(0, 2, 0), 40)
+		burst(d.Pos + Vector3.new(0, 4, 0), Color3.fromRGB(255, 170, 70), 30, 12, 0.6)
 	elseif name == "Healed" then
 		-- soft green motes rising around the healed player
 		burst(d.Pos + Vector3.new(0, 1, 0), Color3.fromRGB(120, 240, 140), math.clamp((d.Amount or 20) // 4, 6, 25), 5, 0.35)
@@ -72674,6 +72775,21 @@ local function refreshVitals()
 		livesLabel.Text = "✖ FIRE OUT — FINAL LIFE"
 		livesLabel.TextColor3 = C.Bad
 	end
+	-- Final Life: a thin, slowly breathing red frame round the screen edge (never covers play)
+	local finalLife = not fire and player:GetAttribute("LifeState") == "Alive"
+	local edge = gui:FindFirstChild("FinalLifeEdge") :: Frame?
+	if finalLife and not edge then
+		edge = UI.new("Frame", { Name = "FinalLifeEdge", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Active = false, ZIndex = 40, Parent = gui }, {
+			UI.new("UIStroke", { Color = C.Bad, Thickness = 6, Transparency = 0.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+		})
+	end
+	if edge then
+		edge.Visible = finalLife
+		local stroke = edge:FindFirstChildOfClass("UIStroke")
+		if stroke then
+			stroke.Transparency = 0.45 + 0.35 * (0.5 + 0.5 * math.sin(os.clock() * 2.4))
+		end
+	end
 	local inv = State.Get("Inventory")
 	if inv then
 		local total = 0
@@ -72945,6 +73061,53 @@ end
 
 -- End screen ------------------------------------------------------------------------------------------------
 
+-- Brief full-screen colour flash (fire out, snuff alarm). Never blocks input.
+local flashFrame: Frame? = nil
+function Hud.Flash(color: Color3, from: number, duration: number)
+	if not flashFrame then
+		flashFrame = UI.new("Frame", { Name = "Flash", Size = UDim2.fromScale(1, 1), BorderSizePixel = 0, BackgroundTransparency = 1, Active = false, ZIndex = 50, Parent = gui })
+	end
+	local f = flashFrame :: Frame
+	f.BackgroundColor3 = color
+	f.BackgroundTransparency = from
+	TweenService:Create(f, TweenInfo.new(duration, Enum.EasingStyle.Quad), { BackgroundTransparency = 1 }):Play()
+end
+
+-- Chest item reveal: a small card listing what was found, framed in the chest's
+-- rarity colour. Common chests get a quiet card; rare ones a brighter frame.
+local RARITY = {
+	Common = Color3.fromRGB(190, 190, 190),
+	Uncommon = Color3.fromRGB(110, 200, 110),
+	Rare = Color3.fromRGB(90, 150, 240),
+	VeryRare = Color3.fromRGB(190, 120, 255),
+}
+function Hud.LootReveal(d: any)
+	local color = RARITY[d.Tier] or RARITY.Common
+	local rare = d.Tier == "Rare" or d.Tier == "VeryRare"
+	local n = #(d.Items or {})
+	local card = UI.panel({ Name = "LootReveal", Size = UDim2.fromOffset(300, 46 + 24 * n), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.58, 0), Parent = gui }, { UI.padding(10) })
+	local stroke = card:FindFirstChildOfClass("UIStroke")
+	if stroke then
+		stroke.Color = color
+		stroke.Thickness = if rare then 3 else 1.5
+	end
+	local label = ({ Common = "COMMON CHEST", Uncommon = "UNCOMMON CHEST", Rare = "RARE CHEST", VeryRare = "VERY RARE CHEST" })[d.Tier] or "CHEST"
+	UI.text(label, { Size = UDim2.new(1, 0, 0, 20), TextSize = 15, Font = Theme.FontBlack, TextColor3 = color, TextXAlignment = Enum.TextXAlignment.Center, Parent = card })
+	for i, it in d.Items or {} do
+		local def = Items[it.Id]
+		UI.text(string.format("%s%s", if (it.Count or 1) > 1 then it.Count .. "× " else "", if def then def.Name else tostring(it.Id)), {
+			Position = UDim2.fromOffset(0, 4 + 22 * i), Size = UDim2.new(1, 0, 0, 20), TextSize = 14, Font = Theme.FontBold, TextXAlignment = Enum.TextXAlignment.Center, Parent = card,
+		})
+	end
+	local pop = UI.new("UIScale", { Scale = 0.7, Parent = card })
+	TweenService:Create(pop, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	task.delay(if rare then 4 else 2.6, function()
+		if card.Parent then
+			card:Destroy()
+		end
+	end)
+end
+
 local function showEnd(data: any)
 	local won = data.Won
 	local winner = data.Winner
@@ -72994,7 +73157,13 @@ local function onMatchEvent(ev: any)
 	elseif name == "FireOut" then
 		local def = Config.Teams[d.Team]
 		local mine = d.Team == player:GetAttribute("Team")
-		Hud.Announce((def and def.Symbol or "") .. " " .. (def and def.Name or "?") .. " FIRE EXTINGUISHED", if mine then "No more respawns for your clan!" elseif d.By then "Put out by " .. d.By else nil, if mine then C.Bad else C.Warn, 4)
+		if mine then
+			-- this is the moment everything changes: a dark-red flash and a lingering banner
+			Hud.Announce("YOUR FIRE IS OUT", "No more respawns. One death and you're eliminated.", C.Bad, 6)
+			Hud.Flash(Color3.fromRGB(120, 0, 0), 0.35, 1.6)
+		else
+			Hud.Announce((def and def.Symbol or "") .. " " .. (def and def.Name or "?") .. " FIRE EXTINGUISHED", if d.By then "Put out by " .. d.By else nil, C.Warn, 4)
+		end
 		pushFeed("✖🔥 " .. teamTag(d.Team) .. (def and def.Name or "") .. " fire is out", C.Warn)
 	elseif name == "Death" then
 		local killer = if d.Killer then teamTag(d.KillerTeam) .. d.Killer else tostring(d.Cause)
@@ -73008,6 +73177,18 @@ local function onMatchEvent(ev: any)
 		local dirs = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" }
 		local dir = if d.Bearing then dirs[math.floor(((d.Bearing + 22.5) % 360) / 45) + 1] else nil
 		Hud.Announce("⚠ YOUR FIRE IS BEING SNUFFED!", (if dir then "Raider on the " .. dir .. " side — " else "") .. "hit them or make them move to stop it", C.Bad, 3)
+		Hud.Flash(Color3.fromRGB(200, 40, 20), 0.75, 0.6)
+	elseif name == "Upgraded" then
+		local roman = ({ "I", "II", "III", "IV", "V" })[d.Level or 1] or tostring(d.Level)
+		if d.What == "Workbench" then
+			Hud.Announce("⚒ WORKBENCH TIER " .. roman, "New recipes unlocked — open CRAFT", C.Good, 3.5)
+		else
+			Hud.Announce("🔥 CAMPFIRE LEVEL " .. tostring(d.Level), "Burns longer and takes longer to snuff", C.Accent, 3.5)
+		end
+	elseif name == "ToolBroke" then
+		pushFeed("⚒ " .. tostring(d.Name) .. " broke — craft a new one", C.Warn)
+	elseif name == "LootReveal" then
+		Hud.LootReveal(d)
 	elseif name == "StorageRaided" then
 		local dirs = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" }
 		local dir = if d.Bearing then dirs[math.floor(((d.Bearing + 22.5) % 360) / 45) + 1] else nil
@@ -73109,7 +73290,7 @@ function Hud.Start()
 		waiting.Visible = not inMatch and workspace:GetAttribute("ServerMode") == "Match"
 		for _, c in gui:GetChildren() do
 			if c:IsA("GuiObject") and c.Name ~= "Announce" and c.Name ~= "Sub" and c.Name ~= "EndScreen" then
-				if c.Name == "Death" or c.Name == "Channel" or c.Name == "Ability" or c.Name == "Waiting" then
+				if c.Name == "Death" or c.Name == "Channel" or c.Name == "Ability" or c.Name == "Waiting" or c.Name == "FinalLifeEdge" then
 					continue
 				end
 				c.Visible = inMatch
@@ -73133,6 +73314,10 @@ function Hud.Start()
 			deathFrame.Visible = false
 			abilityFrame.Visible = false
 			teamRevive.Visible = false
+			local edge = gui:FindFirstChild("FinalLifeEdge") :: GuiObject?
+			if edge then
+				edge.Visible = false
+			end
 		end
 		teamRevive.Visible = inMatch
 	end)
@@ -75176,6 +75361,13 @@ function SoundCtl.Start()
 		if name == "Phase" then
 			SoundCtl.Play(if ev.Data.Phase == "Night" then "Dusk" else "Dawn")
 			setAmbient(if ev.Data.Phase == "Night" then "AmbientNight" else "AmbientDay")
+		elseif name == "FireUnderAttack" then
+			SoundCtl.Play("Alarm")
+		elseif name == "Upgraded" then
+			SoundCtl.Play("LevelUp")
+		elseif name == "LootReveal" then
+			local d = ev.Data or {}
+			SoundCtl.Play(if d.Tier == "Rare" or d.Tier == "VeryRare" then "LevelUp" else "Reward")
 		elseif name == "FireOut" then
 			SoundCtl.Play("FireOut")
 		elseif name == "MatchEnded" then
@@ -75204,6 +75396,7 @@ function SoundCtl.Start()
 		[Enum.Material.Metal] = "FootMetal", [Enum.Material.DiamondPlate] = "FootMetal",
 	}
 	local rainLoop: Sound? = nil
+	local nextHowl = os.clock() + 25
 	local defaultRun: { [Sound]: string } = setmetatable({}, { __mode = "k" }) :: any
 	local acc = 0
 	RunService.Heartbeat:Connect(function(dt)
@@ -75219,6 +75412,30 @@ function SoundCtl.Start()
 			setAmbient("AmbientCave")
 		else
 			setAmbient(if ms:GetAttribute("Phase") == "Night" then "AmbientNight" else "AmbientDay")
+		end
+		-- night soundscape: now and then a distant howl or growl from somewhere in the dark
+		-- (a random far bearing — atmosphere, never a real position, so it gives nothing away)
+		if inMatch and ms:GetAttribute("Phase") == "Night" and os.clock() > nextHowl then
+			nextHowl = os.clock() + math.random(20, 45)
+			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			local s = SoundLib.Make(if math.random() < 0.7 then "WolfGrowl" else "BearRoar")
+			if root and s then
+				local a = math.random() * math.pi * 2
+				local spot = Instance.new("Part")
+				spot.Anchored = true
+				spot.CanCollide = false
+				spot.CanQuery = false
+				spot.Transparency = 1
+				spot.Size = Vector3.one
+				spot.Position = root.Position + Vector3.new(math.cos(a) * 90, 10, math.sin(a) * 90)
+				spot.Parent = workspace.CurrentCamera
+				s.RollOffMaxDistance = 400
+				s.RollOffMinDistance = 60
+				s.Volume *= 0.7
+				s.Parent = spot
+				s:Play()
+				game:GetService("Debris"):AddItem(spot, 6)
+			end
 		end
 		-- rain loop layered over the ambience during showers
 		local wantRain = inMatch and ms:GetAttribute("Weather") == "Rain"
