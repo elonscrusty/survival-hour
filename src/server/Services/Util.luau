@@ -224,6 +224,14 @@ local SoundLib = require(Shared:WaitForChild("Sounds"))
 function Util.PlaySound(name: string, parent: Instance?)
 	if parent then
 		SoundLib.PlayAt(name, parent)
+		-- the same sound is gameplay noise for wildlife (Config.Noise)
+		local r = (Config.Noise :: any)[name]
+		if r and ctx and ctx.WildlifeService then
+			local pos = if parent:IsA("BasePart") then parent.Position elseif parent:IsA("Attachment") then parent.WorldPosition else nil
+			if pos then
+				ctx.WildlifeService.Noise(pos, r)
+			end
+		end
 	end
 end
 

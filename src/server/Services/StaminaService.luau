@@ -13,7 +13,7 @@ local Config = require(Shared:WaitForChild("Config"))
 
 local StaminaService = {}
 
-type St = { Value: number, Want: boolean, Sprinting: boolean, Exhausted: boolean, LastSpend: number, Pushed: number }
+type St = { Value: number, Want: boolean, Sprinting: boolean, Exhausted: boolean, LastSpend: number, Pushed: number, LastNoise: number? }
 
 local ctx: any
 local states: { [Player]: St } = {}
@@ -62,6 +62,14 @@ function StaminaService.Start()
 			local moving = hum.MoveDirection.Magnitude > 0.1
 			st.Sprinting = st.Want and moving and not st.Exhausted and st.Value > 0
 			if st.Sprinting then
+				-- running is noisy (wildlife hears it; once a second)
+				if t - (st.LastNoise or 0) >= 1 then
+					st.LastNoise = t
+					local root = ctx.Util.Root(p)
+					if root then
+						ctx.WildlifeService.Noise(root.Position, Config.Noise.Sprint)
+					end
+				end
 				st.Value = math.max(0, st.Value - S.SprintDrain * step)
 				st.LastSpend = t
 				if st.Value <= 0 then

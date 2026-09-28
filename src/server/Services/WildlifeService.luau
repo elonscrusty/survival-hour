@@ -439,6 +439,38 @@ local function hitIfClose(a: Animal, target: Player, reach: number)
 	end
 end
 
+-- Noise (Util.PlaySound / Config.Noise): prey inside the radius bolt away from it; an idle
+-- wolf (at night) or a bear whose territory it falls in comes over to look. Never reveals
+-- anything to players; it only changes how animals behave.
+function WildlifeService.Noise(pos: Vector3, radius: number)
+	if not folder then
+		return
+	end
+	if ctx.WorldService.Weather == "Storm" then
+		radius *= Config.Noise.StormMult
+	end
+	local now = os.clock()
+	for _, a in animals do
+		if not a.Dead and not a.Leaving then
+			local d = (a.Root.Position - pos).Magnitude
+			if d <= radius then
+				local role = WildlifeService.Species[a.Species].Role
+				if role == "Prey" then
+					if now >= a.FleeUntil then
+						a.Model:SetAttribute("AlertAt", workspace:GetServerTimeNow())
+					end
+					a.FleeUntil = now + 3
+					a.FleeFrom = pos
+				elseif not a.Target and ((a.Species == "Wolf" and ctx.MatchService.IsNight()) or (a.Species == "Bear" and (pos - a.Home).Magnitude <= Config.Wildlife.Territory * 1.6)) then
+					local j = Vector3.new(rng:NextNumber(-6, 6), 0, rng:NextNumber(-6, 6))
+					a.Waypoint = safeGoal(Vector3.new(pos.X + j.X, ctx.WorldService.GroundY(pos.X + j.X, pos.Z + j.Z), pos.Z + j.Z))
+					a.Model:SetAttribute("AlertAt", workspace:GetServerTimeNow())
+				end
+			end
+		end
+	end
+end
+
 function WildlifeService._think(a: Animal, dt: number)
 	local now = os.clock()
 	local pos = a.Root.Position

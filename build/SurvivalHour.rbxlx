@@ -569,6 +569,16 @@ Config.Wildlife = {
 	ThinkRate = 0.2, -- seconds between AI decisions
 }
 
+-- Gameplay noise (studs). Server sounds listed here also wake wildlife: prey bolt, predators come
+-- to look. Storms muffle noise. Walking, hand-gathering and crafting are silent; sprinting is not.
+Config.Noise = {
+	Chop = 40, ChopHeavy = 55, TreeCreak = 45, TreeFall = 80, Build = 45, Repair = 35,
+	HitStructure = 60, Breach = 90, Explosion = 150, Gunshot = 160, BowRelease = 10,
+	HitFlesh = 30, Block = 25,
+	Sprint = 22, -- per second while sprinting
+	StormMult = 0.7,
+}
+
 Config.Combat = {
 	MeleeTolerance = 3, -- extra studs of reach allowed for latency
 	AimAssistAngle = 6, -- degrees (touch only)
@@ -69113,7 +69123,7 @@ local Config = require(Shared:WaitForChild("Config"))
 
 local StaminaService = {}
 
-type St = { Value: number, Want: boolean, Sprinting: boolean, Exhausted: boolean, LastSpend: number, Pushed: number }
+type St = { Value: number, Want: boolean, Sprinting: boolean, Exhausted: boolean, LastSpend: number, Pushed: number, LastNoise: number? }
 
 local ctx: any
 local states: { [Player]: St } = {}
@@ -69162,6 +69172,14 @@ function StaminaService.Start()
 			local moving = hum.MoveDirection.Magnitude > 0.1
 			st.Sprinting = st.Want and moving and not st.Exhausted and st.Value > 0
 			if st.Sprinting then
+				-- running is noisy (wildlife hears it; once a second)
+				if t - (st.LastNoise or 0) >= 1 then
+					st.LastNoise = t
+					local root = ctx.Util.Root(p)
+					if root then
+						ctx.WildlifeService.Noise(root.Position, Config.Noise.Sprint)
+					end
+				end
 				st.Value = math.max(0, st.Value - S.SprintDrain * step)
 				st.LastSpend = t
 				if st.Value <= 0 then
@@ -69936,6 +69954,14 @@ local SoundLib = require(Shared:WaitForChild("Sounds"))
 function Util.PlaySound(name: string, parent: Instance?)
 	if parent then
 		SoundLib.PlayAt(name, parent)
+		-- the same sound is gameplay noise for wildlife (Config.Noise)
+		local r = (Config.Noise :: any)[name]
+		if r and ctx and ctx.WildlifeService then
+			local pos = if parent:IsA("BasePart") then parent.Position elseif parent:IsA("Attachment") then parent.WorldPosition else nil
+			if pos then
+				ctx.WildlifeService.Noise(pos, r)
+			end
+		end
 	end
 end
 
@@ -70428,6 +70454,38 @@ local function hitIfClose(a: Animal, target: Player, reach: number)
 		ctx.CombatService.DamagePlayer(target, sp.Damage * ctx.PowerupService.WildlifeDamageMult(target), { Kind = "Animal", Name = a.Species, Pos = a.Root.Position })
 		a.Model:SetAttribute("Telegraph", "Strike")
 		a.Model:SetAttribute("TelegraphAt", workspace:GetServerTimeNow())
+	end
+end
+
+-- Noise (Util.PlaySound / Config.Noise): prey inside the radius bolt away from it; an idle
+-- wolf (at night) or a bear whose territory it falls in comes over to look. Never reveals
+-- anything to players; it only changes how animals behave.
+function WildlifeService.Noise(pos: Vector3, radius: number)
+	if not folder then
+		return
+	end
+	if ctx.WorldService.Weather == "Storm" then
+		radius *= Config.Noise.StormMult
+	end
+	local now = os.clock()
+	for _, a in animals do
+		if not a.Dead and not a.Leaving then
+			local d = (a.Root.Position - pos).Magnitude
+			if d <= radius then
+				local role = WildlifeService.Species[a.Species].Role
+				if role == "Prey" then
+					if now >= a.FleeUntil then
+						a.Model:SetAttribute("AlertAt", workspace:GetServerTimeNow())
+					end
+					a.FleeUntil = now + 3
+					a.FleeFrom = pos
+				elseif not a.Target and ((a.Species == "Wolf" and ctx.MatchService.IsNight()) or (a.Species == "Bear" and (pos - a.Home).Magnitude <= Config.Wildlife.Territory * 1.6)) then
+					local j = Vector3.new(rng:NextNumber(-6, 6), 0, rng:NextNumber(-6, 6))
+					a.Waypoint = safeGoal(Vector3.new(pos.X + j.X, ctx.WorldService.GroundY(pos.X + j.X, pos.Z + j.Z), pos.Z + j.Z))
+					a.Model:SetAttribute("AlertAt", workspace:GetServerTimeNow())
+				end
+			end
+		end
 	end
 end
 

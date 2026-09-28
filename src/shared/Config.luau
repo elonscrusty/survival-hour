@@ -240,6 +240,16 @@ Config.Wildlife = {
 	ThinkRate = 0.2, -- seconds between AI decisions
 }
 
+-- Gameplay noise (studs). Server sounds listed here also wake wildlife: prey bolt, predators come
+-- to look. Storms muffle noise. Walking, hand-gathering and crafting are silent; sprinting is not.
+Config.Noise = {
+	Chop = 40, ChopHeavy = 55, TreeCreak = 45, TreeFall = 80, Build = 45, Repair = 35,
+	HitStructure = 60, Breach = 90, Explosion = 150, Gunshot = 160, BowRelease = 10,
+	HitFlesh = 30, Block = 25,
+	Sprint = 22, -- per second while sprinting
+	StormMult = 0.7,
+}
+
 Config.Combat = {
 	MeleeTolerance = 3, -- extra studs of reach allowed for latency
 	AimAssistAngle = 6, -- degrees (touch only)
