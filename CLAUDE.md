@@ -3,6 +3,7 @@
 Roblox survival game (Rojo + Luau). The owner (kcdrewcarter) plays on a phone while away from their PC and isn't a programmer.
 
 ## How to work here
+- **Caveman mode is always on.** From the first reply of every session, write chat replies in the style of `.claude/skills/caveman/SKILL.md` at level **lite**, without waiting for `/caveman`. The owner can switch with `/caveman full|ultra` or turn it off with "normal mode". Code, commits and docs stay in normal prose.
 - **Keep replies short.** Do the work, then give a 2-4 line plain-English summary. Don't narrate each step.
 - Work autonomously; don't ask for approval on routine steps. Ask only when a real decision belongs to the owner.
 - Read only the files a task needs; this file and `docs/IMPLEMENTATION_LOG.md` cover the history.
