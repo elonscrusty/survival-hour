@@ -27,8 +27,10 @@ local function fit(p: Entry)
 	local inset = GuiService:GetGuiInset()
 	local s = if uiScale then uiScale.Scale else 1
 	if p.OnFit then
-		-- full-screen panel: fills the safe area; the owner lays itself out in UI units
-		local w, h = math.max(320, (vp.X - 16) / s), math.max(240, (vp.Y - inset.Y - 16) / s)
+		-- full-screen panel: fills the device safe area (notches, rounded corners, top bar);
+		-- the owner lays itself out in UI units
+		local area = if gui and gui.ScreenInsets == Enum.ScreenInsets.DeviceSafeInsets then gui.AbsoluteSize else Vector2.new(vp.X, vp.Y - inset.Y)
+		local w, h = math.max(320, (area.X - 16) / s), math.max(240, (area.Y - 16) / s)
 		p.Frame.Size = UDim2.fromOffset(w, h)
 		p.OnFit(w, h)
 		return
@@ -101,7 +103,9 @@ function Panels.CreateScreen(name: string, onFit: (number, number) -> (), onOpen
 	while not gui do
 		task.wait()
 	end
-	local frame = UI.panel({ Name = name, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Visible = false, BackgroundTransparency = 0.04, Parent = gui })
+	gui.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets
+	-- Active: taps on gaps must not fall through to the lobby tiles underneath
+	local frame = UI.panel({ Name = name, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Visible = false, Active = true, BackgroundTransparency = 0.04, Parent = gui })
 	panels[name] = { Frame = frame, OnOpen = onOpen, OnClose = onClose, Want = Vector2.zero, OnFit = onFit }
 	fit(panels[name])
 	return frame

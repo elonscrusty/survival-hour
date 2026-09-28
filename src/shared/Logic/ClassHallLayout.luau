@@ -1,5 +1,5 @@
 --!strict
--- Class Hall screen layout maths (pure, tested in tests/ClassHallLayout.spec.luau).
+-- Class Hall screen layout maths (pure, tested in tests/ClassDeals.spec.luau).
 -- Input is the hall's size in UI units (after the Panels UIScale), so a phone in
 -- landscape (~800x400 px) arrives as roughly 1100x490. Wide screens get three
 -- columns (card grid | avatar | perks); narrow ones (portrait) stack the avatar

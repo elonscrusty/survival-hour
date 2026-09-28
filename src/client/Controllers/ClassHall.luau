@@ -330,11 +330,12 @@ local function renderPerks(def: Classes.Def, profile: any)
 			local holder = UI.new("Frame", { LayoutOrder = 3, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 18), Parent = head })
 			local _bar, set = UI.bar({ Size = UDim2.fromScale(1, 1), Parent = holder }, color)
 			set(math.clamp(view.Progress / view.Need, 0, 1), string.format("%d / %d", view.Progress, view.Need))
-			for i, b in ClassLevels.Boosts(def.Effects, view.Level) do
-				UI.text(string.format("⬆ %s %d%% → %d%%", prettyKey(b.Key), b.From, b.To), { LayoutOrder = 3 + i, TextSize = 12, TextColor3 = C.TextDim, Parent = head })
+			for i, b in ClassLevels.Boosts(def.Id, def.Effects, view.Level) do
+				local unit = if b.Percent then "%" else ""
+				UI.text(string.format("⬆ %s %d%s → %d%s", prettyKey(b.Key), b.From, unit, b.To, unit), { LayoutOrder = 3 + i, TextSize = 12, TextColor3 = C.TextDim, Parent = head })
 			end
 		else
-			UI.text("Max level: percentage perks are 50% stronger.", { LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextSize = 13, Parent = head })
+			UI.text("Max level: this class's perks are at full strength.", { LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextSize = 13, Parent = head })
 		end
 	end
 	for _, line in def.Lines do

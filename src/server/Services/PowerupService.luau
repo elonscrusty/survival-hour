@@ -161,7 +161,7 @@ function PowerupService._lock(p: Player)
 	local perkId = if profile and profile.Perk and Perks.ById[profile.Perk] and profile.OwnedPerks[profile.Perk] then profile.Perk else nil
 	local effects = {}
 	local level = if profile then ClassLevels.Level(profile.Stats, classId) else 1
-	merge(effects, ClassLevels.Effects(Classes.ById[classId].Effects, level))
+	merge(effects, ClassLevels.Effects(classId, Classes.ById[classId].Effects, level))
 	if perkId then
 		merge(effects, Perks.ById[perkId].Effects)
 	end
@@ -300,7 +300,7 @@ function PowerupService._sense(p: Player, st: PState, pos: Vector3)
 		local t = now()
 		local list = {}
 		for _, b in blood do
-			if b.UserId ~= p.UserId and t - b.At >= BLOOD_DELAY and (b.Pos - pos).Magnitude <= TRACK_RADIUS then
+			if b.UserId ~= p.UserId and t - b.At >= BLOOD_DELAY * (1 - (fx.TrailDelay or 0)) and (b.Pos - pos).Magnitude <= TRACK_RADIUS then
 				table.insert(list, b.Pos)
 			end
 		end
@@ -564,6 +564,21 @@ function PowerupService.RecordFight(killer: Player, victim: Player): boolean
 	return rival
 end
 
+-- Tallies `key` once per `thing` per match (e.g. each storage breached counts once).
+function PowerupService.TallyOnce(p: Player, key: string, thing: any)
+	local st = states[p]
+	if not st then
+		return
+	end
+	st.Once = st.Once or {}
+	local seen = st.Once[key] or {}
+	st.Once[key] = seen
+	if not seen[thing] then
+		seen[thing] = true
+		PowerupService.Tally(p, key, 1)
+	end
+end
+
 function PowerupService.Tally(p: Player?, key: string, n: number)
 	local st = p and states[p]
 	if st and n > 0 then
@@ -704,6 +719,9 @@ function PowerupService.OnPlayerKill(killer: Player, victim: Player, eliminated:
 	addNotoriety(killer, if eliminated then 2 else 1)
 	local n = st.KillsOn[victim.UserId] or 0
 	st.KillsOn[victim.UserId] = n + 1
+	if n < KILL_REWARDS_PER_VICTIM then
+		PowerupService.Tally(killer, "Takedowns", 1) -- Tracker level task (capped per victim)
+	end
 	local session = ctx.DataService.Get(killer)
 	if session and ctx.DataService.CanGrant(killer) then
 		session.Profile.Kills += 1
