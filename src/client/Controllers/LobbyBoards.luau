@@ -72,7 +72,7 @@ local function drawBoard()
 	if not b then
 		return
 	end
-	b.reset.Text = LobbyText.ResetText(os.time())
+	b.reset.Text = LobbyText.ResetText(math.floor(workspace:GetServerTimeNow()))
 	for _, c in b.rows:GetChildren() do
 		if c:IsA("Frame") then
 			c:Destroy()

@@ -21,6 +21,8 @@ _Updated: 2026-09-28. The full history is in [IMPLEMENTATION_LOG.md](IMPLEMENTAT
   rarity stars and an owned filter, the player's avatar on a turning pedestal in class colours,
   perks + play-style tips. Daily deals (`Logic/ClassDeals`): each UTC day two paid classes get
   -20% / -10%, same on every server; the server charges the deal price.
+- Class levels (`Logic/ClassLevels`): one task per class, Level 2/3 make its percentage perks x1.25/x1.5
+  (bow draw never grows, breach capped x1.2; Hunter gets hides, Tracker shorter trail delay). Earned only.
 - Lobby hub pass: a lit Class Hall cabin west of the fire (a mannequin per class in its windows,
   neon CLASSES sign, counter opens the classes panel), a per-player Daily Challenges board near
   spawn with a reset timer (`Controllers/LobbyBoards` + `Logic/LobbyBoards`), a live
@@ -28,7 +30,7 @@ _Updated: 2026-09-28. The full history is in [IMPLEMENTATION_LOG.md](IMPLEMENTAT
 - Animation loader: paste uploaded clip ids into `AnimationIds.luau` (names in `Logic/AnimClips`);
   missing clips keep the procedural animation. ChatGPT prompt for making the clips is in chat history.
 
-**Checks:** `bash tools/check.sh` covers the type check, 194 unit tests, 34 skins/lobby checks and the build. All pass.
+**Checks:** `bash tools/check.sh` covers the type check, 205 unit tests, 35 skins/lobby checks and the build. All pass.
 
 **Not done yet: nothing has been playtested in Roblox Studio.** All numbers are working targets.
 

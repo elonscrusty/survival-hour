@@ -54,7 +54,8 @@ function LobbyBoards.DailyRows(list: any): { Row }
 end
 
 -- Queue counter over the ready ring: a big title ("READY UP · 1/4") and a status line.
--- The count is players searching on this server's queue against the match start size;
+-- The count is players searching in the matchmaking queue (all servers when live, via
+-- MatchmakingService) against the match start size;
 -- once a match could start it counts toward the full size instead.
 function LobbyBoards.QueueText(view: any): (string, string)
 	if type(view) ~= "table" then

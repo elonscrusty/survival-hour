@@ -236,8 +236,9 @@ function Refuge.Dress(folder: Instance, O: Vector3, readyCenter: Vector3, statio
 				if not poleClear(pos) then
 					continue
 				end
-				local pole = Build.Cyl("LanternPole", 6, 0.35, CFrame.new(pos + Vector3.new(0, 3, 0)), Color3.fromRGB(70, 56, 44), Enum.Material.Wood, deco)
-				local glow = Build.Part({ Name = "Lantern", Size = Vector3.new(0.8, 1, 0.8), CFrame = CFrame.new(pos + Vector3.new(0, 6.3, 0)), Color = Color3.fromRGB(255, 190, 110), Material = Enum.Material.Neon, Parent = deco, CanCollide = false })
+				-- tall poles so the string lights hang well above head height (~7 studs at the dip)
+				local pole = Build.Cyl("LanternPole", 9, 0.35, CFrame.new(pos + Vector3.new(0, 4.5, 0)), Color3.fromRGB(70, 56, 44), Enum.Material.Wood, deco)
+				local glow = Build.Part({ Name = "Lantern", Size = Vector3.new(0.8, 1, 0.8), CFrame = CFrame.new(pos + Vector3.new(0, 9.3, 0)), Color = Color3.fromRGB(255, 190, 110), Material = Enum.Material.Neon, Parent = deco, CanCollide = false })
 				if ri == 1 then
 					local light = Instance.new("PointLight")
 					light.Color = Color3.fromRGB(255, 180, 110)
@@ -442,7 +443,7 @@ end
 
 function Refuge.ClassHall(parent: Instance, O: Vector3, classes: { ClassDef }, makeRig: ((Color3) -> Model?)?): Model
 	local m = Build.Model("Classes", parent)
-	local hallCF = CFrame.lookAt(O + Vector3.new(-42, 0, 0), O)
+	local hallCF = CFrame.lookAt(O + Vector3.new(-42, 0, 1.5), O + Vector3.new(0, 0, 1.5)) -- clear of the SW pond bank
 	local function at(x: number, y: number, z: number): CFrame
 		return hallCF * CFrame.new(x, y, z)
 	end
