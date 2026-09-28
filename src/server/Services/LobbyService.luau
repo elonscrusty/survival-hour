@@ -334,6 +334,7 @@ function LobbyService._ringCheck()
 			local inside = root ~= nil and Vector3.new(root.Position.X - center.X, 0, root.Position.Z - center.Z).Magnitude <= radius and math.abs(root.Position.Y - center.Y) < 12
 			if inside and not ready[p] then
 				ready[p] = "Ring"
+				ctx.TelemetryService.Onboard(p, 2)
 				LobbyService._checkParty(partyOf[p] :: Party)
 			elseif not inside and ready[p] == "Ring" then
 				ready[p] = nil

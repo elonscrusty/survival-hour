@@ -5,7 +5,7 @@
 
 local Config = {}
 
-Config.Version = "1.0.0"
+Config.Version = "1.0.0" -- at most 32 characters (ProfileRules.MaxSettingText); add Changelog.luau notes when bumping
 
 -- Development / Studio switches. None of these apply in live servers except
 -- where noted; `IsStudioLocal` is resolved at runtime by the server.

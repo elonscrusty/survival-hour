@@ -93,6 +93,12 @@ function TelemetryService.Wallet(p: Player, before: { Coins: number, Diamonds: n
 	for _, currency in { "Coins", "Diamonds" } do
 		local now = session.Profile[currency]
 		local delta = now - before[currency]
+		-- Keep the match baseline in step so a purchase or claim during a match
+		-- isn't counted again as match earnings.
+		local base = matchStart[p]
+		if base and base ~= before then
+			base[currency] += delta
+		end
 		if delta ~= 0 then
 			safe(function()
 				AnalyticsService:LogEconomyEvent(

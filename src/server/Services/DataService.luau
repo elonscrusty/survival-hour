@@ -297,10 +297,10 @@ end
 
 function DataService._onClose()
 	-- Servers close for updates ("Restart servers" / "Migrate to latest update" on the
-	-- Creator Dashboard). Tell players their progress is safe before saving.
+	-- Creator Dashboard). Tell players it's saving.
 	if not ctx.IsStudio then
 		for _, p in Players:GetPlayers() do
-			ctx.Util.Notify(p, "The server is restarting for an update. Your progress is saved; rejoin to play the new version.", "warn")
+			ctx.Util.Notify(p, "This server is closing (usually for an update). Saving your progress now; rejoin to keep playing.", "warn")
 		end
 	end
 	local pending = 0

@@ -64,7 +64,7 @@ ProfileRules.SettingDefaults = {
 	FavAsked = false, -- the "favourite the game" prompt was shown
 } :: { [string]: any }
 
-ProfileRules.MaxSettingText = 16
+ProfileRules.MaxSettingText = 32 -- must fit Config.Version (SeenVersion)
 
 -- Old (v1) powerups: unlock price and upgrade multipliers, for the refund.
 local OLD_POWERUPS = { Trailblazer = 100, Scavenger = 175, Hunter = 150, Climber = 200, Craftsman = 125, Sharpshooter = 250 }
