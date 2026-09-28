@@ -9,6 +9,9 @@
 -- `Blocking` and `HeldId` attributes; every client animates every nearby
 -- character from them. The local player also gets instant predicted swings.
 --
+-- Uploaded clips (Shared/AnimationIds, chosen by Logic/AnimClips) take over an
+-- action when one exists; everything without a clip stays procedural.
+--
 -- Supports R15 (RightShoulder/LeftShoulder/Waist/Neck) and R6 joints, as
 -- Motor6D or AnimationConstraint.
 
@@ -16,6 +19,8 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local State = require("../State")
+local AnimTracks = require("../AnimTracks")
+local AnimClips = require(game:GetService("ReplicatedStorage").Shared.Logic.AnimClips)
 local Input = require("./Input")
 local Items = require(game:GetService("ReplicatedStorage").Shared.Items)
 
@@ -44,6 +49,7 @@ type Rig = {
 	EquipAt: number,
 	WasAir: boolean,
 	LandAt: number,
+	DrawAt: number?, -- when the current bow / crossbow draw started (clips)
 }
 
 local rigs: { [Model]: Rig } = {}
@@ -380,7 +386,50 @@ local function offset(rig: Rig, joint: Joint?, off: CFrame)
 	joint.Transform = out
 end
 
+-- Uploaded clip for the character's current state (see Logic/AnimClips).
+local function clipFor(rig: Rig, t: number): (AnimClips.Pick, any)
+	local char = rig.Char
+	local owner = Players:GetPlayerFromCharacter(char)
+	local isLocal = char == player.Character
+	local held = (char:GetAttribute("HeldId") :: string?) or "Fists"
+	local action = char:GetAttribute("Action") :: string?
+	local at = (char:GetAttribute("ActionAt") :: number?) or 0
+	local item = (char:GetAttribute("ActionItem") :: string?) or held
+	local heavy = char:GetAttribute("ActionHeavy") == true
+	local elapsed = workspace:GetServerTimeNow() - at
+	local key: any = at
+	if isLocal and os.clock() - localSwingAt < 0.6 then
+		action, item, heavy, elapsed, key = "Attack", localSwingItem, localSwingHeavy, os.clock() - localSwingAt, localSwingAt
+	elseif isLocal and action == "Attack" and os.clock() - localSwingAt < 1 then
+		key = localSwingAt -- the server's copy of a predicted swing mustn't restart the clip
+	end
+	local drawing = (isLocal and localDraw) or remoteDraw(owner, isLocal, held)
+	if drawing and not rig.DrawAt then
+		rig.DrawAt = t
+	elseif not drawing then
+		rig.DrawAt = nil
+	end
+	return AnimClips.Player({
+		Action = action,
+		Item = item,
+		Held = held,
+		Heavy = heavy,
+		Elapsed = elapsed,
+		Blocking = (owner ~= nil and owner:GetAttribute("Blocking") == true) or char:GetAttribute("Blocking") == true,
+		Drawing = drawing,
+		DrawAge = if rig.DrawAt then t - rig.DrawAt else 0,
+	}), if drawing then rig.DrawAt else key
+end
+
 local function apply(rig: Rig, dt: number, t: number)
+	if AnimTracks.Enabled then
+		local pick, key = clipFor(rig, t)
+		if AnimTracks.Set(rig.Char, pick, key) then
+			-- the clip owns the joints; ease back in from neutral when it ends
+			rig.Cur = { r = ID, l = ID, w = ID, n = ID }
+			return
+		end
+	end
 	local r, l, w, n = pose(rig, t)
 	local a = math.clamp(dt * 18, 0, 1)
 	rig.Cur.r = rig.Cur.r:Lerp(r, a)

@@ -6,6 +6,9 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
+local AnimTracks = require("../AnimTracks")
+local AnimClips = require(game:GetService("ReplicatedStorage").Shared.Logic.AnimClips)
+
 local Creatures = {}
 
 local player = Players.LocalPlayer
@@ -92,6 +95,14 @@ local function animate(r: Rig, dt: number)
 			M.WingR.Transform = CFrame.Angles(0, 0, -flap)
 		end
 		return
+	end
+
+	-- An uploaded clip (walk / run / telegraph / death) replaces the procedural pose.
+	if AnimTracks.Enabled then
+		local pick = AnimClips.Animal({ Species = species, Tele = tele, TeleAge = teleAge, Speed = speed })
+		if AnimTracks.Set(m, pick, m:GetAttribute("TelegraphAt")) then
+			return
+		end
 	end
 
 	r.Phase += dt * math.clamp(speed / 3, 0, 9)
