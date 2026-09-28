@@ -23,6 +23,7 @@ local UI = require("../UI/UI")
 local Theme = require("../UI/Theme")
 local State = require("../State")
 local Panels = require("./Panels")
+local ClassHall = require("./ClassHall")
 local Hud = require("./Hud")
 local Buttons = require("../UI/Buttons")
 local Season = require("./Season")
@@ -71,7 +72,6 @@ local function countTo(label: TextLabel, from: number, to: number)
 	end)
 end
 local partyBody: ScrollingFrame
-local classBody: ScrollingFrame
 local perkBody: ScrollingFrame
 local lockerBody: ScrollingFrame
 local profileBody: ScrollingFrame
@@ -220,39 +220,6 @@ local function buttonRow(parent: Instance): Frame
 	return UI.new("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, 0, 1, 0), Size = UDim2.new(0.5, 0, 0, 44), Parent = parent }, { UI.list(Enum.FillDirection.Horizontal, 6, Enum.HorizontalAlignment.Right) })
 end
 
-
--- Classes panel ----------------------------------------------------------------------------------
-
-local function renderClasses()
-	UI.clear(classBody)
-	local profile = State.Get("Profile")
-	if not profile then
-		UI.text("Loading your profile…", { Parent = classBody })
-		return
-	end
-	UI.text(string.format("◆ %d Diamonds · one class per match, locked when the match starts · a win gives exactly %d ◆, +1 ◆ every 10 levels", profile.Diamonds, Progression.WinDiamonds), { LayoutOrder = 0, Size = UDim2.new(1, -8, 0, 34), TextWrapped = true, TextSize = 13, TextColor3 = C.Diamond, Parent = classBody })
-	for i, def in Classes.List do
-		local owned = profile.OwnedClasses[def.Id] == true
-		local color = rgb(def.Color)
-		local sel = profile.Class == def.Id
-		local cd = card(classBody, i, 124, color, sel)
-		local ic = UI.icon(def.Glyph, color, 56, "Round")
-		ic.Parent = cd
-		UI.text(def.Name .. (if owned then "" else "   🔒 " .. def.Price .. " ◆"), { Position = UDim2.fromOffset(68, 0), Size = UDim2.new(1, -68, 0, 22), TextSize = 18, Font = Theme.FontBlack, TextColor3 = color, Parent = cd })
-		UI.text(def.Summary, { Position = UDim2.fromOffset(68, 22), Size = UDim2.new(1, -68, 0, 18), TextSize = 13, TextColor3 = C.TextDim, Parent = cd })
-		UI.text("• " .. table.concat(def.Lines, "\n• "), { Position = UDim2.fromOffset(68, 40), Size = UDim2.new(0.55, -68, 0, 64), TextSize = 12, TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top, Parent = cd })
-		local row = buttonRow(cd)
-		if owned then
-			Buttons.action(if sel then "Selected" else "Select", { Size = UDim2.fromOffset(130, 40), Tone = "Green", State = if sel then "Selected" else nil, Parent = row }, function()
-				send("EquipClass", { Id = def.Id })
-			end)
-		else
-			Buttons.action("Unlock", { Size = UDim2.fromOffset(150, 40), Tone = "Green", Price = { Kind = "Diamonds", Amount = def.Price }, State = if profile.Diamonds >= def.Price then nil else "Disabled", Parent = row }, function()
-				send("BuyClass", { Id = def.Id })
-			end)
-		end
-	end
-end
 
 -- Power-ups panel ------------------------------------------------------------------------------------
 
@@ -806,8 +773,8 @@ function Lobby.Start()
 
 	partyBody = Panels.Create("Party", "PARTY", Vector2.new(560, 560), renderParty)
 	UI.list(Enum.FillDirection.Vertical, 6).Parent = partyBody
-	classBody = Panels.Create("Classes", "CLASSES", Vector2.new(700, 640), renderClasses)
-	UI.list(Enum.FillDirection.Vertical, 8).Parent = classBody
+	-- Classes: the full-screen Class Hall (Controllers/ClassHall)
+	task.spawn(ClassHall.Build, send)
 	perkBody = Panels.Create("Perks", "POWER-UPS", Vector2.new(640, 640), renderPerks)
 	UI.list(Enum.FillDirection.Vertical, 6).Parent = perkBody
 	lockerBody = Panels.Create("Locker", "LOCKER", Vector2.new(640, 640), renderLocker)
@@ -830,7 +797,7 @@ function Lobby.Start()
 			renderParty()
 		end
 	end)
-	local RENDER = { Classes = renderClasses, Perks = renderPerks, Locker = renderLocker, Profile = renderProfile, LobbyShop = renderShop, Settings = renderSettings }
+	local RENDER = { Classes = ClassHall.Render, Perks = renderPerks, Locker = renderLocker, Profile = renderProfile, LobbyShop = renderShop, Settings = renderSettings }
 	State.On("Profile", function()
 		renderHud()
 		for name, fn in RENDER do

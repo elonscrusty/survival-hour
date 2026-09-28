@@ -88,6 +88,17 @@ return {
 		t.ok(P.EquipClass(p, "Miner"))
 		t.eq(p.Class, "Miner")
 	end,
+	buy_class_at_deal_price = function(t)
+		local p = P.New()
+		p.Diamonds = 60
+		t.no(P.BuyClass(p, "Hunter"), "list price 75 is too much")
+		t.ok(P.BuyClass(p, "Hunter", 60), "today's deal price")
+		t.eq(p.Diamonds, 0, "charged the deal price")
+		local q = P.New()
+		q.Diamonds = 100
+		t.ok(P.BuyClass(q, "Hunter", 500), "a higher price is capped at the list price")
+		t.eq(q.Diamonds, 25)
+	end,
 	buy_and_equip_perk = function(t)
 		local p = P.New()
 		p.Diamonds = Perks.ById.Runner.Price

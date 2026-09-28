@@ -17,10 +17,14 @@ _Updated: 2026-09-28. The full history is in [IMPLEMENTATION_LOG.md](IMPLEMENTAT
   "Hallowed" title (5 matches in season), lobby banner + Locker "LIMITED" tags, client-only
   spooky grade, mist and jack-o'-lanterns (`Controllers/Season`). Preview in Studio with
   `Config.Dev.ForceSeason = "Halloween2026"`.
+- Class Hall: full-screen class picker (`Controllers/ClassHall`): card grid with hex badges,
+  rarity stars and an owned filter, the player's avatar on a turning pedestal in class colours,
+  perks + play-style tips. Daily deals (`Logic/ClassDeals`): each UTC day two paid classes get
+  -20% / -10%, same on every server; the server charges the deal price.
 - Animation loader: paste uploaded clip ids into `AnimationIds.luau` (names in `Logic/AnimClips`);
   missing clips keep the procedural animation. ChatGPT prompt for making the clips is in chat history.
 
-**Checks:** `bash tools/check.sh` covers the type check, 184 unit tests, 34 skins/lobby checks and the build. All pass.
+**Checks:** `bash tools/check.sh` covers the type check, 194 unit tests, 34 skins/lobby checks and the build. All pass.
 
 **Not done yet: nothing has been playtested in Roblox Studio.** All numbers are working targets.
 

@@ -14,6 +14,8 @@ local Products = require(Shared:WaitForChild("Products"))
 local ProfileRules = require(Shared:WaitForChild("Logic"):WaitForChild("ProfileRules"))
 local Challenges = require(Shared:WaitForChild("Logic"):WaitForChild("Challenges"))
 local Progression = require(Shared:WaitForChild("Progression"))
+local Classes = require(Shared:WaitForChild("Classes"))
+local ClassDeals = require(Shared:WaitForChild("Logic"):WaitForChild("ClassDeals"))
 
 local LobbyService = {}
 
@@ -347,7 +349,6 @@ end
 -- Shop --------------------------------------------------------------------------------------
 
 local ACTION_FN = {
-	BuyClass = ProfileRules.BuyClass,
 	EquipClass = ProfileRules.EquipClass,
 	BuyPerk = ProfileRules.BuyPerk,
 	EquipPerk = ProfileRules.EquipPerk,
@@ -404,6 +405,19 @@ function LobbyService._profileAction(p: Player, action: string, req: any)
 			return
 		end
 		ok, why = ProfileRules.WearCosmetic(profile, req.Type, id)
+	elseif action == "BuyClass" then
+		local def = if type(id) == "string" then Classes.ById[id] else nil
+		if not def then
+			return
+		end
+		-- daily deals: the server's clock sets the price; refuse if it went up since the
+		-- client looked (a deal ended at midnight UTC) instead of charging more than shown
+		local price = ClassDeals.Price(def, Progression.DayNumber(os.time()))
+		if type(req.Price) == "number" and price > req.Price then
+			ok, why = false, "Today's deal just ended; check the new price."
+		else
+			ok, why = ProfileRules.BuyClass(profile, def.Id, price)
+		end
 	elseif action == "EquipPerk" then
 		ok, why = ProfileRules.EquipPerk(profile, id)
 	elseif action == "BuyCosmetic" then

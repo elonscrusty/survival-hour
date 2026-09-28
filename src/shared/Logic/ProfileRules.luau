@@ -303,7 +303,9 @@ end
 
 -- Classes & power-ups (Diamonds) -----------------------------------------------------
 
-function ProfileRules.BuyClass(p: Profile, id: string): (boolean, string?)
+-- `price` is today's price (ClassDeals.Price, computed by the server); it can only
+-- lower the list price, never raise it. Omitted = list price.
+function ProfileRules.BuyClass(p: Profile, id: string, price: number?): (boolean, string?)
 	local def = Classes.ById[id]
 	if not def then
 		return false, "Unknown class"
@@ -311,10 +313,11 @@ function ProfileRules.BuyClass(p: Profile, id: string): (boolean, string?)
 	if p.OwnedClasses[id] then
 		return false, "Already owned"
 	end
-	if p.Diamonds < def.Price then
+	local cost = if price then math.clamp(math.floor(price), 0, def.Price) else def.Price
+	if p.Diamonds < cost then
 		return false, "Not enough Diamonds"
 	end
-	p.Diamonds -= def.Price
+	p.Diamonds -= cost
 	p.OwnedClasses[id] = true
 	return true, nil
 end

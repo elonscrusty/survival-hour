@@ -16,15 +16,23 @@ local Panels = {}
 
 local player = Players.LocalPlayer
 local gui: ScreenGui
-local panels: { [string]: { Frame: Frame, Body: ScrollingFrame, OnOpen: (() -> ())?, OnClose: (() -> ())?, Want: Vector2 } } = {}
+type Entry = { Frame: Frame, Body: ScrollingFrame?, OnOpen: (() -> ())?, OnClose: (() -> ())?, Want: Vector2, OnFit: ((number, number) -> ())? }
+local panels: { [string]: Entry } = {}
 local uiScale: UIScale
 
 -- Fits a panel inside the screen (phones in landscape are short): the body
 -- scrolls, so shrinking the height never hides content.
-local function fit(p: { Frame: Frame, Want: Vector2 })
+local function fit(p: Entry)
 	local vp = workspace.CurrentCamera.ViewportSize
 	local inset = GuiService:GetGuiInset()
 	local s = if uiScale then uiScale.Scale else 1
+	if p.OnFit then
+		-- full-screen panel: fills the safe area; the owner lays itself out in UI units
+		local w, h = math.max(320, (vp.X - 16) / s), math.max(240, (vp.Y - inset.Y - 16) / s)
+		p.Frame.Size = UDim2.fromOffset(w, h)
+		p.OnFit(w, h)
+		return
+	end
 	local maxH = math.max(200, (vp.Y - inset.Y - 24) / s)
 	local maxW = math.max(260, (vp.X - 24) / s)
 	p.Frame.Size = UDim2.fromOffset(math.min(p.Want.X, maxW), math.min(p.Want.Y, maxH))
@@ -84,6 +92,19 @@ function Panels.Create(name: string, title: string, size: Vector2, onOpen: (() -
 	panels[name] = { Frame = frame, Body = body, OnOpen = onOpen, OnClose = onClose, Want = size }
 	fit(panels[name])
 	return body
+end
+
+-- Creates (once) a full-screen panel with no title bar (the Class Hall). `onFit(w, h)`
+-- runs with the size in UI units whenever the screen changes; the caller owns the
+-- whole frame, including its own exit button.
+function Panels.CreateScreen(name: string, onFit: (number, number) -> (), onOpen: (() -> ())?, onClose: (() -> ())?): Frame
+	while not gui do
+		task.wait()
+	end
+	local frame = UI.panel({ Name = name, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Visible = false, BackgroundTransparency = 0.04, Parent = gui })
+	panels[name] = { Frame = frame, OnOpen = onOpen, OnClose = onClose, Want = Vector2.zero, OnFit = onFit }
+	fit(panels[name])
+	return frame
 end
 
 function Panels.Open(name: string)
