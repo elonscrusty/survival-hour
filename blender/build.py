@@ -25,10 +25,10 @@ from mathutils import Vector  # noqa: E402
 from sh import kit, pipeline as P, reference, textures as tx  # noqa: E402
 
 ASSET_MODULES = ["reference_assets", "world", "stream", "camp", "crafting", "pickups", "loot",
-                 "firearms", "armor", "lobby", "wildlife", "scenes", "survival_wars"]
+                 "firearms", "armor", "lobby", "wildlife", "animals", "scenes", "survival_wars"]
 
 CATEGORY_ORDER = ["Reference", "Forest", "Stream", "Camp", "Crafting_L1", "Crafting_L2",
-                  "Crafting_L3", "Armor", "Pickups", "Loot", "Firearms", "Wildlife", "Lobby",
+                  "Crafting_L3", "Armor", "Pickups", "Loot", "Firearms", "Wildlife", "Animals", "Lobby",
                   "SW_Landscape", "SW_POI", "SW_Loot", "SW_Tools", "SW_Base"]
 
 
@@ -124,7 +124,7 @@ def main():
     catalog, sheets = [], {}
     special = []
     for e in entries:
-        if e["kind"] == "Rig" or e["category"] == "Scenes":
+        if e["kind"] == "Rig" or e["category"] == "Scenes" or e["special"]:
             special.append(e)
             continue
         col = ctx.collection(e["category"])
@@ -186,7 +186,7 @@ def main():
               f"size {rec['size_studs_roblox_XYZ']}  open={m.stats['open_edges']} "
               f"dup={m.stats['duplicate_faces']}")
 
-        if renderer:
+        if renderer and e["preview"]:
             render_entry(ctx, e, obj, part_objs, rec)
 
     for e in special:

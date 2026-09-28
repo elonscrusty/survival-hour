@@ -29,14 +29,17 @@ _Updated: 2026-09-28. The full history is in [IMPLEMENTATION_LOG.md](IMPLEMENTAT
   "READY UP · n/4" counter and hazard stripes on the ready ring, string lights along the paths.
 - Animation loader: paste uploaded clip ids into `AnimationIds.luau` (names in `Logic/AnimClips`);
   missing clips keep the procedural animation. ChatGPT prompt for making the clips is in chat history.
+- Animal meshes: 28 segmented part meshes (wolf, bear, deer with doe/buck heads, rabbit, boar, bat;
+  `blender/assets/animals.py`, `Renders/ContactSheet_Animals.png`). `Animals.Build` welds one onto
+  each rig part once a species' meshes are all uploaded, so the procedural Motor6D animation moves them.
 
-**Checks:** `bash tools/check.sh` covers the type check, 205 unit tests, 35 skins/lobby checks and the build. All pass.
+**Checks:** `bash tools/check.sh` covers the type check, 205 unit tests, 36 skins/lobby checks and the build. All pass.
 
 **Not done yet: nothing has been playtested in Roblox Studio.** All numbers are working targets.
 
 ## Next (owner)
 1. Playtest in Studio: follow `docs/STUDIO_TESTS.md`.
-2. Re-upload 20 models (`docs/MODEL_REUPLOAD.md`).
+2. Re-upload 20 models and upload the new camp shack + 28 animal meshes (`docs/MODEL_REUPLOAD.md`).
 3. Create 9 badges and 6 Robux products, then send the IDs.
 4. Make animation clips (ChatGPT prompt) and send the ids.
 5. Choose licensed audio. Delete the API key. Publish (`docs/PUBLISH_CHECKLIST.md`).

@@ -318,6 +318,38 @@ test("Wildlife rigs: deer, rabbit, boar", function()
 	check(Animals.Build("Deer"):FindFirstChild("Antler"), "deer antlers")
 	check(Animals.Build("Boar"):FindFirstChild("Tusk"), "boar tusks")
 end)
+test("Wildlife meshes weld onto every rig part", function()
+	local parts = {
+		Torso = "Body", Head = "Head", LegFL = "LegF", LegFR = "LegF", LegBL = "LegB", LegBR = "LegB", TailPart = "Tail",
+	}
+	for _, sp in { "Wolf", "Bear", "Deer", "Rabbit", "Boar", "Bat" } do
+		local m = Animals.Build(sp)
+		local want = if sp == "Bat" then { Body = "Body", WingLPart = "Wing", WingRPart = "Wing" } else parts
+		local on = {}
+		for _, p in skins(m) do
+			check(not p.Anchored and p.Massless and not p.CanCollide and not p.CanQuery, sp .. " skin is a loose visual")
+			local w = p:FindFirstChildOfClass("WeldConstraint")
+			check(w and w.Part1 == p and w.Part0, sp .. " skin welded")
+			local rigPart = w.Part0.Name
+			local asset = p:GetAttribute("SkinOf")
+			check(want[rigPart] and string.find(asset, "^SM_" .. sp .. "_" .. want[rigPart]), sp .. " " .. rigPart .. " got " .. asset)
+			on[rigPart] = true
+		end
+		for rigPart in want do
+			check(on[rigPart], sp .. " " .. rigPart .. " has a mesh")
+			local part = m:FindFirstChild(rigPart)
+			check(part.Transparency == 1 and part.CanQuery, sp .. " " .. rigPart .. " hidden but still a hitbox")
+		end
+		check(visibleProcedural(m) == 0, sp .. " primitives hidden")
+		local motors = 0
+		for _, d in m:GetDescendants() do
+			if d:IsA("Motor6D") then
+				motors += 1
+			end
+		end
+		check(motors == (if sp == "Bat" then 2 else 7), sp .. " motors intact")
+	end
+end)
 test("Ranged tiers + armour pieces build", function()
 	for _, id in { "HuntingBow", "Crossbow", "Bolt" } do
 		check(ItemModels.Held(id), id)

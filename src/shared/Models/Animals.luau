@@ -7,8 +7,14 @@
 -- DECISIONS D34). Motor6D names used by the animator: LegFL, LegFR, LegBL,
 -- LegBR, Neck, Tail.
 -- Bat: a physics-driven flyer (AlignPosition/AlignOrientation) with WingL/WingR motors.
+--
+-- Mesh look: once a species' part meshes are uploaded (blender/assets/animals.py,
+-- SM_<Species>_Body/Head/LegF/LegB/Tail, SM_Bat_Body/Wing), each one is welded to
+-- its rig part and the primitive parts are hidden. The parts keep their joints,
+-- names and hitbox role, so the procedural animation moves the meshes.
 
 local Build = require("./Build")
+local Skins = require("./Skins")
 
 local Animals = {}
 
@@ -168,9 +174,66 @@ function Animals.Boar(): Model
 	return m
 end
 
+-- Rig part -> mesh asset. Left and right legs share a mesh; the left bat wing is
+-- the right one turned over (a rotation about the forward axis).
+local FLIP = CFrame.Angles(0, 0, math.pi)
+
+local function meshesFor(species: string): ({ [string]: string }, { [string]: CFrame })
+	if species == "Bat" then
+		return { Body = "SM_Bat_Body", WingLPart = "SM_Bat_Wing", WingRPart = "SM_Bat_Wing" }, { WingLPart = FLIP }
+	end
+	local head = "SM_" .. species .. "_Head"
+	if species == "Deer" and math.random() < 0.5 then
+		head = "SM_Deer_Head_Antlered" -- bucks and does
+	end
+	local p = "SM_" .. species .. "_"
+	return {
+		Torso = p .. "Body",
+		Head = head,
+		LegFL = p .. "LegF",
+		LegFR = p .. "LegF",
+		LegBL = p .. "LegB",
+		LegBR = p .. "LegB",
+		TailPart = p .. "Tail",
+	}, {}
+end
+
+-- Welds each part's mesh onto it (visual only: massless, no collision or queries).
+-- Needs every mesh of the set; otherwise the primitive look stays.
+local function dress(m: Model, species: string)
+	local set, offsets = meshesFor(species)
+	for _, asset in set do
+		if not Skins.Has(asset) then
+			return
+		end
+	end
+	Skins.Hide(m)
+	for partName, asset in set do
+		local part = m:FindFirstChild(partName) :: BasePart?
+		local skin = if part then Skins.Visual(asset) else nil
+		if part and skin then
+			skin:PivotTo(part.CFrame * (offsets[partName] or CFrame.new()))
+			for _, p in skin:GetChildren() do
+				if p:IsA("BasePart") then
+					p.Anchored = false
+					p.Massless = true
+					p.Parent = m
+					local w = Instance.new("WeldConstraint")
+					w.Part0 = part
+					w.Part1 = p
+					w.Parent = p
+				end
+			end
+			skin:Destroy()
+		end
+	end
+end
+
 function Animals.Build(species: string): Model
 	local f = (Animals :: any)[species]
-	return f()
+	local m = f()
+	dress(m, species)
+	return m
 end
 
 function Animals.Bat(): Model
