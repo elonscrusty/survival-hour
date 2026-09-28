@@ -60,6 +60,24 @@ type check and the Rojo build.
 - **Mining played the "gather" (hands) pose** because the channel sent `Gather` for pickaxe nodes. **Fixed**: it
   now sends `Mine`. Storage breaching now sends `Breach` (a heavy overhead) instead of `Chop`.
 
+## Later rounds (fixed)
+- **Block pose never showed**: the server sets `Blocking` on the Player but the animator read it from the
+  character. Fixed. Other players now also see bow and crossbow draws (`DrawState`).
+- **Panels overflowed short phone screens**: they now fit the viewport and their bodies scroll.
+- **Corrupt or infinite saved numbers** are rejected on load (capped at 1e9); covered by persistence tests.
+- **Added**:
+  - Settings (reduce motion, survival guide, UI sounds, ambience volume), validated and saved.
+  - Visual rain showers with night lightning.
+  - Natural ground-cover clustering and dressing around POI edges.
+  - A build-zone ring while building.
+  - Damage numbers, a grey screen while dead, and heal, craft and rare-chest effects.
+  - Return to Lobby for eliminated players.
+  - Wildlife flinch, idle behaviour and topple death.
+  - A protection shimmer and a victory camera.
+  - Store art (`Marketing/`) and `docs/PUBLISH_CHECKLIST.md`.
+- **Static cross-checks** (all clean): remote names and registrations, cross-module function calls, `ctx.Util`
+  calls, attributes read versus set (and on which object), client state keys, match events, and sound cue names.
+
 ## MISSING (needs the owner or Studio)
 - **Robux product IDs**: `Products.luau` IDs are 0 until the six products are created in Creator Hub. The
   experience has to be published first.

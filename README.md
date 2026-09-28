@@ -20,6 +20,9 @@ Docs:
 | [docs/MESH_SKINS.md](docs/MESH_SKINS.md) | How the 3D asset pack meshes are wired into the game |
 | [docs/SPEC_AUDIT.md](docs/SPEC_AUDIT.md) | Survival Wars spec: what's done / partial / missing |
 | [docs/IMPLEMENTATION_LOG.md](docs/IMPLEMENTATION_LOG.md) | What changed in each Survival Wars phase |
+| [docs/POLISH_AUDIT.md](docs/POLISH_AUDIT.md) | Final polish audit: working / fixed / partial / missing / risks |
+| [docs/PUBLISH_CHECKLIST.md](docs/PUBLISH_CHECKLIST.md) | Step-by-step publishing, store description, pre-launch tests |
+| `Marketing/` | Game icon and store thumbnails (`python3 tools/make_marketing.py`) |
 
 ## 3D asset pack
 
