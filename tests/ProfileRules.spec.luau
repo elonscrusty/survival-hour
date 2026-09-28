@@ -230,4 +230,16 @@ return {
 		t.eq(q.Settings.Bad, nil)
 		t.eq(q.Settings.Ambience, 0.8, "NaN rejected, default kept")
 	end,
+	prompt_flags_saved_with_text_cap = function(t)
+		local p = P.New()
+		t.eq(p.Settings.SeenVersion, "")
+		t.eq(p.Settings.FavAsked, false)
+		t.ok(P.SetSetting(p, "SeenVersion", "1.0.1"))
+		t.no(P.SetSetting(p, "SeenVersion", string.rep("x", 17)), "too long")
+		t.eq(p.Settings.SeenVersion, "1.0.1")
+		t.ok(P.SetSetting(p, "FavAsked", true))
+		local q = P.Reconcile({ Version = 2, Settings = { SeenVersion = "1.0.1", FavAsked = true } })
+		t.eq(q.Settings.SeenVersion, "1.0.1")
+		t.eq(q.Settings.FavAsked, true)
+	end,
 }

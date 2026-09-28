@@ -567,6 +567,10 @@ function PowerupService.Tally(p: Player?, key: string, n: number)
 		st.Stats[key] = (st.Stats[key] or 0) + n
 		if key == "Breaches" then
 			trophy(p :: Player, "Raid")
+		elseif key == "Resources" then
+			ctx.TelemetryService.Onboard(p :: Player, 4)
+		elseif key == "Crafts" then
+			ctx.TelemetryService.Onboard(p :: Player, 5)
 		end
 	end
 end

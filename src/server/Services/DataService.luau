@@ -14,6 +14,7 @@
 
 local DataStoreService = game:GetService("DataStoreService")
 local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -295,6 +296,13 @@ function DataService._onLeave(player: Player)
 end
 
 function DataService._onClose()
+	-- Servers close for updates ("Restart servers" / "Migrate to latest update" on the
+	-- Creator Dashboard). Tell players their progress is safe before saving.
+	if not ctx.IsStudio then
+		for _, p in Players:GetPlayers() do
+			ctx.Util.Notify(p, "The server is restarting for an update. Your progress is saved; rejoin to play the new version.", "warn")
+		end
+	end
 	local pending = 0
 	for p, s in sessions do
 		if s.State == "Loaded" and not s.Released then

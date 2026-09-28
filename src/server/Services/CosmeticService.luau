@@ -13,6 +13,7 @@
 --   EliminationFx burst where you eliminate someone
 --   VictoryPose   pose on the end screen when you win
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -49,6 +50,11 @@ function CosmeticService.Init(c)
 	end)
 	ctx.Util.OnPlayerRemoving(function(p)
 		lastEmote[p] = nil
+	end)
+	-- Premium members get a gold star on their tag (cosmetic only; Roblox pays
+	-- Premium Payouts for their playtime automatically).
+	Players.PlayerMembershipChanged:Connect(function(p: Player)
+		CosmeticService.Apply(p)
 	end)
 	ctx.MatchService.On("PlayerJoinedMatch", function(p: Player)
 		task.delay(2, function()
@@ -111,13 +117,16 @@ function CosmeticService.Apply(p: Player)
 			label.Font = Enum.Font.GothamBold
 			label.TextColor3 = Color3.new(1, 1, 1)
 			label.TextStrokeTransparency = 0.4
+			label.AutoLocalize = false -- titles and levels stay as written
 			label.Parent = tag
 			local corner = Instance.new("UICorner")
 			corner.CornerRadius = UDim.new(0, 6)
 			corner.Parent = label
 		end
 		local label = (tag :: BillboardGui):FindFirstChild("Text") :: TextLabel
-		label.Text = (if title then title.Text .. " · " else "") .. "Lv " .. tostring(level)
+		local premium = p.MembershipType == Enum.MembershipType.Premium
+		label.Text = (if premium then "★ " else "") .. (if title then title.Text .. " · " else "") .. "Lv " .. tostring(level)
+		label.TextColor3 = if premium then Color3.fromRGB(255, 220, 120) else Color3.new(1, 1, 1)
 		label.BackgroundColor3 = rgb(plate and plate.Color) or Color3.fromRGB(30, 30, 30)
 		label.BackgroundTransparency = if plate then 0.15 else 0.7
 	end

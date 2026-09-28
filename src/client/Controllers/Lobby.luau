@@ -5,6 +5,7 @@
 -- how-to-play page.
 
 local Players = game:GetService("Players")
+local AvatarEditorService = game:GetService("AvatarEditorService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -15,6 +16,8 @@ local Perks = require(Shared.Perks)
 local Cosmetics = require(Shared.Cosmetics)
 local Progression = require(Shared.Progression)
 local Products = require(Shared.Products)
+local Config = require(Shared.Config)
+local Changelog = require(Shared.Changelog)
 local Net = require(Shared.Net)
 local UI = require("../UI/UI")
 local Theme = require("../UI/Theme")
@@ -123,6 +126,7 @@ local function renderHud()
 	UI.clear(partyStrip)
 	for i, m in lobby.Members do
 		UI.text((if m.Ready then "✓ " else "○ ") .. m.Name .. (if m.Leader then " ★" else ""), {
+			AutoLocalize = false,
 			LayoutOrder = i,
 			Size = UDim2.fromOffset(150, 24),
 			TextSize = 14,
@@ -145,7 +149,7 @@ local function renderParty()
 	UI.text("Your party (" .. #lobby.Members .. "/4)", { LayoutOrder = 1, TextSize = 18, Font = Theme.FontBlack, TextColor3 = C.Accent, Parent = partyBody })
 	for i, m in lobby.Members do
 		local r = UI.new("Frame", { LayoutOrder = 1 + i, Size = UDim2.new(1, -8, 0, 48), BackgroundColor3 = C.PanelLight, BorderSizePixel = 0, Parent = partyBody }, { UI.corner(UDim.new(0, 8)) })
-		UI.text((if m.Leader then "★ " else "") .. m.Name .. (if m.Ready then "   ✓ ready" else "   not ready"), { Position = UDim2.fromOffset(10, 12), Size = UDim2.new(1, -120, 0, 24), TextSize = 16, Parent = r })
+		UI.text((if m.Leader then "★ " else "") .. m.Name .. (if m.Ready then "   ✓ ready" else "   not ready"), { AutoLocalize = false, Position = UDim2.fromOffset(10, 12), Size = UDim2.new(1, -120, 0, 24), TextSize = 16, Parent = r })
 		if lobby.IsLeader and m.UserId ~= player.UserId then
 			Buttons.action("👤 Kick", { Size = UDim2.fromOffset(100, 38), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), Tone = "Red", Parent = r }, function()
 				send("Kick", { UserId = m.UserId })
@@ -172,7 +176,7 @@ local function renderParty()
 		if not inMine then
 			local r = UI.new("Frame", { LayoutOrder = order, Size = UDim2.new(1, -8, 0, 46), BackgroundColor3 = C.PanelLight, BorderSizePixel = 0, Parent = partyBody }, { UI.corner(UDim.new(0, 8)) })
 			order += 1
-			UI.text(pl.Name .. (if pl.InParty then "  (in a party)" else ""), { Position = UDim2.fromOffset(10, 12), Size = UDim2.new(1, -120, 0, 22), TextSize = 15, Parent = r })
+			UI.text(pl.Name .. (if pl.InParty then "  (in a party)" else ""), { AutoLocalize = false, Position = UDim2.fromOffset(10, 12), Size = UDim2.new(1, -120, 0, 22), TextSize = 15, Parent = r })
 			if lobby.IsLeader and #lobby.Members < 4 then
 				Buttons.action("+ Invite", { Size = UDim2.fromOffset(110, 38), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), Tone = "Neutral", Parent = r }, function()
 					send("Invite", { UserId = pl.UserId })
@@ -409,7 +413,7 @@ local function renderProfile()
 		end
 		for rank, e in list do
 			local v = if spec[1] == "XP" then "Lv " .. (Progression.LevelFromXP(e.Value)) else tostring(e.Value)
-			UI.text(string.format("%d. %s — %s", rank, e.Name, v), { Size = UDim2.new(1, 0, 0, 18), TextSize = 12, TextColor3 = if e.UserId == player.UserId then C.Accent else C.Text, Parent = col })
+			UI.text(string.format("%d. %s — %s", rank, e.Name, v), { AutoLocalize = false, Size = UDim2.new(1, 0, 0, 18), TextSize = 12, TextColor3 = if e.UserId == player.UserId then C.Accent else C.Text, Parent = col })
 		end
 	end
 end
@@ -495,6 +499,54 @@ local function renderHelp()
 	for i, h in HELP do
 		UI.text(h[1], { LayoutOrder = i * 2, TextSize = 17, Font = Theme.FontBlack, TextColor3 = C.Accent, Parent = helpBody })
 		UI.text(h[2], { LayoutOrder = i * 2 + 1, Size = UDim2.new(1, -8, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextSize = 14, Parent = helpBody })
+	end
+end
+
+-- What's new + favourite prompt ---------------------------------------------------------------------------
+
+local newsBody: ScrollingFrame
+
+local function renderNews()
+	UI.clear(newsBody)
+	local entry = Changelog[1]
+	if not entry then
+		return
+	end
+	UI.text("Version " .. entry.Version, { LayoutOrder = 0, TextSize = 17, Font = Theme.FontBlack, TextColor3 = C.Accent, Parent = newsBody })
+	for i, line in entry.Lines do
+		UI.text("• " .. line, { LayoutOrder = i, Size = UDim2.new(1, -8, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextSize = 15, Parent = newsBody })
+	end
+end
+
+-- Once per session, after the title screen: returning players see "What's new" when
+-- Config.Version changed; players who have won once or played 3 matches are asked
+-- once to favourite the game. Both are remembered in the profile settings.
+local function lobbyPrompts()
+	local profile = State.Get("Profile")
+	while titleUp or not profile or profile.State == "Loading" do
+		task.wait(1)
+		profile = State.Get("Profile")
+	end
+	if not (profile.State == "Loaded" or profile.State == "Memory") or player:GetAttribute("InMatch") or workspace:GetAttribute("ServerMode") == "Match" then
+		return
+	end
+	local st = profile.Settings or {}
+	if st.SeenVersion ~= Config.Version then
+		Net.Event("SetSetting"):FireServer("SeenVersion", Config.Version)
+		if (profile.Matches or 0) > 0 and Changelog[1] and Changelog[1].Version == Config.Version then
+			Panels.Open("News")
+			return -- one prompt per visit
+		end
+	end
+	if st.FavAsked ~= true and ((profile.Wins or 0) >= 1 or (profile.Matches or 0) >= 3) then
+		task.wait(4)
+		if player:GetAttribute("InMatch") then
+			return
+		end
+		Net.Event("SetSetting"):FireServer("FavAsked", true)
+		pcall(function()
+			AvatarEditorService:PromptSetFavorite(game.PlaceId, Enum.AvatarItemType.Asset, true)
+		end)
 	end
 end
 
@@ -627,7 +679,7 @@ function Lobby.Start()
 	local badge = UI.new("Frame", { Size = UDim2.fromOffset(60, 60), Position = UDim2.fromOffset(10, 10), BackgroundColor3 = C.PanelLight, Parent = card }, { UI.corner(UDim.new(0.5, 0)), UI.new("UIStroke", { Color = C.Accent, Thickness = 3 }) })
 	UI.text("LVL", { Size = UDim2.new(1, 0, 0, 14), Position = UDim2.fromOffset(0, 10), TextSize = 11, Font = Theme.FontBold, TextColor3 = C.TextDim, TextXAlignment = Enum.TextXAlignment.Center, Parent = badge })
 	levelLabel = UI.text("1", { Name = "Level", Size = UDim2.new(1, 0, 0, 24), Position = UDim2.fromOffset(0, 24), TextSize = 22, Font = Theme.FontBlack, TextXAlignment = Enum.TextXAlignment.Center, Parent = badge })
-	UI.text(player.DisplayName, { Position = UDim2.fromOffset(82, 8), Size = UDim2.new(1, -90, 0, 22), TextSize = 18, Font = Theme.FontBlack, Parent = card })
+	UI.text(player.DisplayName, { AutoLocalize = false, Position = UDim2.fromOffset(82, 8), Size = UDim2.new(1, -90, 0, 22), TextSize = 18, Font = Theme.FontBlack, Parent = card })
 	streakLabel = UI.text("", { Position = UDim2.fromOffset(82, 8), Size = UDim2.new(1, -94, 0, 22), TextSize = 13, Font = Theme.FontBold, TextColor3 = C.Warn, TextXAlignment = Enum.TextXAlignment.Right, Parent = card })
 	diamondsLabel = UI.text("", { Position = UDim2.fromOffset(82, 30), Size = UDim2.new(1, -90, 0, 16), TextSize = 13, Font = Theme.FontBold, TextColor3 = C.Accent, Parent = card })
 	local xpHolder = UI.new("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(82, 52), Size = UDim2.new(1, -94, 0, 16), Parent = card })
@@ -709,6 +761,9 @@ function Lobby.Start()
 	UI.list(Enum.FillDirection.Vertical, 8).Parent = shopBody
 	helpBody = Panels.Create("Help", "HOW TO PLAY", Vector2.new(640, 600), renderHelp)
 	UI.list(Enum.FillDirection.Vertical, 4).Parent = helpBody
+	newsBody = Panels.Create("News", "WHAT'S NEW", Vector2.new(520, 360), renderNews)
+	UI.list(Enum.FillDirection.Vertical, 6).Parent = newsBody
+	task.spawn(lobbyPrompts)
 
 	State.On("Lobby", function()
 		renderHud()

@@ -60,6 +60,7 @@ local order = {
 	"EventService",
 	"CosmeticService",
 	"PowerupService",
+	"TelemetryService",
 	"DevService",
 }
 

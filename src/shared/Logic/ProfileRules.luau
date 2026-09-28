@@ -59,7 +59,12 @@ ProfileRules.SettingDefaults = {
 	ShowGuide = true, -- Survival Guide tracker
 	Ambience = 0.8, -- 0..1 ambience/music volume
 	UiSounds = true,
+	-- Not shown in the Settings panel: one-time lobby prompts.
+	SeenVersion = "", -- last Config.Version whose "What's new" the player saw
+	FavAsked = false, -- the "favourite the game" prompt was shown
 } :: { [string]: any }
+
+ProfileRules.MaxSettingText = 16
 
 -- Old (v1) powerups: unlock price and upgrade multipliers, for the refund.
 local OLD_POWERUPS = { Trailblazer = 100, Scavenger = 175, Hunter = 150, Climber = 200, Craftsman = 125, Sharpshooter = 250 }
@@ -93,7 +98,7 @@ function ProfileRules.New(): Profile
 	}
 end
 
--- Validates and stores one setting (same type as its default; numbers 0..1).
+-- Validates and stores one setting (same type as its default; numbers 0..1, short strings).
 function ProfileRules.SetSetting(p: Profile, key: any, value: any): boolean
 	local default = if type(key) == "string" then ProfileRules.SettingDefaults[key] else nil
 	if default == nil or type(value) ~= type(default) then
@@ -104,6 +109,8 @@ function ProfileRules.SetSetting(p: Profile, key: any, value: any): boolean
 			return false
 		end
 		value = math.clamp(value, 0, 1)
+	elseif type(value) == "string" and #value > ProfileRules.MaxSettingText then
+		return false
 	end
 	p.Settings[key] = value
 	return true

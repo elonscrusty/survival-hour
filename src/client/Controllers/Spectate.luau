@@ -58,7 +58,7 @@ function Spectate.Start()
 	UI.Buttons.action("🏠 Lobby", { Size = UDim2.fromOffset(150, 42), Tone = "Neutral", LayoutOrder = 2, Parent = leave }, function()
 		Net.Event("LeaveMatch"):FireServer()
 	end)
-	nameLabel = UI.text("", { Position = UDim2.fromOffset(70, 0), Size = UDim2.new(1, -140, 1, 0), TextSize = 16, Font = Theme.FontBold, TextXAlignment = Enum.TextXAlignment.Center, Parent = bar })
+	nameLabel = UI.text("", { AutoLocalize = false, Position = UDim2.fromOffset(70, 0), Size = UDim2.new(1, -140, 1, 0), TextSize = 16, Font = Theme.FontBold, TextXAlignment = Enum.TextXAlignment.Center, Parent = bar })
 
 	local acc = 0
 	RunService.Heartbeat:Connect(function(dt)

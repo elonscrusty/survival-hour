@@ -10,8 +10,10 @@ _Updated: 2026-09-28. The full history is in [IMPLEMENTATION_LOG.md](IMPLEMENTAT
 - AFK handling and Play Again.
 - Camp scouting and trophies.
 - 20 reworked models.
+- Launch extras: Roblox Analytics (funnel, economy, results), Premium ★ tag, one-time favourite
+  prompt, "What's new" panel (`Changelog.luau`), update-restart notice, translation-safe name labels.
 
-**Checks:** `bash tools/check.sh` covers the type check, 168 unit tests, 34 skins/lobby checks and the build. All pass.
+**Checks:** `bash tools/check.sh` covers the type check, 169 unit tests, 34 skins/lobby checks and the build. All pass.
 
 **Not done yet: nothing has been playtested in Roblox Studio.** All numbers are working targets.
 

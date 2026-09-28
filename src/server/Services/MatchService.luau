@@ -93,6 +93,7 @@ function MatchService._commitEarly(p: Player)
 	session.Profile.Matches += 1
 	ProfileRules.NoteMatch(session.Profile, os.time(), false)
 	ctx.PowerupService.CommitMatch(p, session.Profile, nil, MatchService.FireBurning(team))
+	ctx.TelemetryService.MatchCommitted(p, nil, true)
 end
 
 -- AFK watch (Config.Afk): movement or any remote counts as activity. Warn, then stop survival
@@ -515,6 +516,7 @@ function MatchService.End(winner: number?)
 					sum.Levels += session.Profile.Level - before
 				end
 				sum.Level = session.Profile.Level
+				ctx.TelemetryService.MatchCommitted(p, place, false)
 				task.spawn(function()
 					ctx.DataService.Save(p, false)
 					ctx.DataService.Push(p)

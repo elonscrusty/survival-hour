@@ -244,6 +244,9 @@ function LobbyService._onAction(p: Player, req: any)
 			return
 		end
 		ready[p] = if req.Value == true then "Button" else nil
+		if ready[p] then
+			ctx.TelemetryService.Onboard(p, 2)
+		end
 		LobbyService._checkParty(party)
 	elseif a == "Cancel" then
 		unreadyParty(party)
@@ -376,6 +379,7 @@ function LobbyService._profileAction(p: Player, action: string, req: any)
 	end
 	local ok, why = false, nil
 	local note: string? = nil
+	local wallet = ctx.TelemetryService.Snap(p)
 	if action == "ClaimDaily" then
 		local coins = ProfileRules.ClaimDaily(profile, os.time())
 		ok, why = coins > 0, "Already claimed today."
@@ -406,6 +410,8 @@ function LobbyService._profileAction(p: Player, action: string, req: any)
 		ok, why = ACTION_FN[action](profile, id)
 	end
 	if ok then
+		local tx = if action == "ClaimDaily" or action == "ClaimWeekly" then "TimedReward" elseif action == "ClaimChallenge" then "Gameplay" else "Shop"
+		ctx.TelemetryService.Wallet(p, wallet, tx, id or action)
 		task.spawn(ctx.DataService.Save, p, false)
 		ctx.Util.Notify(p, note or ACTION_DONE[action] or "Done!", "success")
 		ctx.Util.PlaySound("UiReady", ctx.Util.Root(p))

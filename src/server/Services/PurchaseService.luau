@@ -182,6 +182,7 @@ function PurchaseService._grant(player: Player, product: any, purchaseId: string
 	if not session then
 		return false
 	end
+	local wallet = ctx.TelemetryService.Snap(player)
 	local status = ProfileRules.ApplyReceipt(session.Profile, purchaseId, product, Config.Data.ProcessedReceiptMemory)
 	local saved = ctx.DataService.Save(player, false)
 	if not saved then
@@ -190,6 +191,7 @@ function PurchaseService._grant(player: Player, product: any, purchaseId: string
 	end
 	ctx.DataService.Push(player)
 	if status == "Granted" then
+		ctx.TelemetryService.Wallet(player, wallet, "IAP", product.Key)
 		local intent = pending[player.UserId]
 		local data: { [string]: any }? = nil
 		if intent and intent.Key == product.Key and os.clock() - intent.Time < 600 then

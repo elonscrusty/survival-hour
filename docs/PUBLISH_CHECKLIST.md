@@ -40,7 +40,21 @@ product IDs to Claude, who puts them in `Products.luau`. Then re-publish.
 > 🔥 From Night 3 enemy fires can be snuffed. Raid, defend, and be the last one standing.
 > ⭐ Level up, earn Coins and Diamonds, unlock classes, power-ups and cosmetics. Robux only buys cosmetics.
 
-## 5. Before going public
+## 5. Free extras (Creator Dashboard, 5 min)
+- **Translation**: Localization → turn on *Automatic Text Capture* and *Automatic Translation*
+  (Spanish, Portuguese, German, French at least). Player names are excluded in code.
+- **Analytics**: nothing to set up. Analytics → *Funnels* shows the new-player steps (lobby → ready →
+  match → first gather → first craft → first match finished → second match). *Economy* shows where
+  Coins and Diamonds come from and go.
+- **Premium Payouts**: automatic. Premium members get a gold ★ on their name tag (cosmetic only).
+
+## 6. Publishing an update later
+1. Bump `Config.Version` and add notes at the top of `src/shared/Changelog.luau`. Returning
+   players see them once in the lobby.
+2. Publish, then Creator Dashboard → Places → **Migrate to latest update** (moves players without
+   kicking them). Players get a "restarting for an update" notice and their progress is saved.
+
+## 7. Before going public
 - [ ] Play a full match with 3 friends (4 players starts a real match).
 - [ ] Buy one Coin pack with a test account and check the Coins arrive and survive a rejoin.
 - [ ] Rejoin and check Coins, Diamonds, level, class, power-up and cosmetics all persisted.
