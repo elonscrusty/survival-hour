@@ -207,7 +207,20 @@ local function dress(m: Model, species: string)
 			return
 		end
 	end
+	-- both deer heads must be in, or some deer would dress and others not
+	if species == "Deer" and not (Skins.Has("SM_Deer_Head") and Skins.Has("SM_Deer_Head_Antlered")) then
+		return
+	end
 	Skins.Hide(m)
+	-- a doe's hidden primitive antlers must not take hits above its head
+	if set.Head == "SM_Deer_Head" then
+		for _, d in m:GetDescendants() do
+			if d:IsA("BasePart") and d.Name == "Antler" then
+				d.CanQuery = false
+				d.CanTouch = false
+			end
+		end
+	end
 	for partName, asset in set do
 		local part = m:FindFirstChild(partName) :: BasePart?
 		local skin = if part then Skins.Visual(asset) else nil
