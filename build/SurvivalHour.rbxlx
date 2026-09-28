@@ -3297,8 +3297,10 @@ function ProfileRules.New(): Profile
 	}
 end
 
+local MAX_VALUE = 1e9 -- sanity cap for any stored number (corrupt / tampered saves)
+
 local function num(v: any, default: number): number
-	return if type(v) == "number" and v == v then v else default
+	return if type(v) == "number" and v == v and math.abs(v) <= MAX_VALUE then v else default
 end
 
 -- Fills in missing fields from older/partial saves without discarding data.
@@ -61220,6 +61222,7 @@ function CampService._onFeed(player: Player, prompt: ProximityPrompt)
 	end
 	FireRules.AddWood(fire, n, FIRE, fuelMult)
 	ctx.Util.SetAction(player, "Feed")
+	ctx.Util.PlaySound("Pickup", camps[team].Fire.PrimaryPart)
 	Net.FireAll("Fx", "FireFed", { Pos = camps[team].FirePos, Amount = n })
 	ctx.InventoryService.Sync(player)
 	CampService._syncFire(team)
@@ -62705,6 +62708,10 @@ function CraftService._craftNow(p: Player, recipeId: string)
 		end
 	end
 	ctx.Util.PlaySound("Craft", ctx.Util.Root(p))
+	local cr = ctx.Util.Root(p)
+	if cr then
+		Net.FireAll("Fx", "Crafted", { Pos = cr.Position })
+	end
 	ctx.Util.Notify(p, "Crafted " .. (if recipe.Count > 1 then recipe.Count .. " " else "") .. def.Name, "success")
 	CraftService.Push(p)
 end
@@ -64340,6 +64347,10 @@ function InventoryService.Heal(p: Player, itemId: string)
 			end
 			h.Health = math.min(h.MaxHealth, h.Health + spec.Heal)
 			InventoryService.Sync(p)
+			local hr = ctx.Util.Root(p)
+			if hr then
+				Net.FireAll("Fx", "Healed", { Pos = hr.Position, Amount = spec.Heal })
+			end
 			ctx.Util.PlaySound("Heal", ctx.Util.Root(p))
 		end,
 	})
@@ -65844,6 +65855,7 @@ function LootService._onOpenChest(p: Player, prompt: ProximityPrompt)
 				end
 			end
 			ctx.Util.PlaySound("ChestOpen", chest.Model.PrimaryPart)
+			Net.FireAll("Fx", "ChestOpened", { Pos = chest.Pos, Tier = chest.Tier })
 			ctx.PowerupService.OnChestOpened(p, chest.Tier, chest.Poi)
 		end,
 	})
@@ -69498,6 +69510,62 @@ local function addChests(map: MapInfo, model: Model, f: any)
 	end
 end
 
+-- Natural clustering: small ground-cover companions gathered around the props
+-- they'd really grow by (mushrooms and moss on fallen logs, pebbles and ferns at
+-- boulders, twigs round stumps, ferns and roots at tree bases, stones along the
+-- water) instead of everything spread evenly. Non-colliding, capped.
+local COMPANIONS = {
+	FallenLog = { "Mushrooms", "MossPatch", "Fern" },
+	Boulder = { "Pebbles", "Fern", "MossPatch" },
+	Stump = { "Twigs", "Mushrooms", "Fern" },
+	DeadSnag = { "Twigs", "Roots" },
+	Roots = { "LeafLitter", "Mushrooms" },
+}
+local COMPANION_CAP = 700
+
+function WorldService._companions(layout: any, ground: (number, number) -> CFrame, rng: Random, parent: Instance)
+	local placed = 0
+	local function near(kind: string, x: number, z: number, r0: number, r1: number)
+		if placed >= COMPANION_CAP then
+			return
+		end
+		local a = rng:NextNumber(0, math.pi * 2)
+		local d = rng:NextNumber(r0, r1)
+		local px, pz = x + math.cos(a) * d, z + math.sin(a) * d
+		if math.abs(px) > layout.HalfSize - 4 or math.abs(pz) > layout.HalfSize - 4 then
+			return
+		end
+		Decor.Place(kind, ground(px, pz) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0) + Vector3.new(0, 0.2, 0), rng, 1, parent)
+		placed += 1
+	end
+	for i, d in layout.Middle do
+		local list = COMPANIONS[d.Kind]
+		if list then
+			for _ = 1, rng:NextInteger(1, 3) do
+				near(list[rng:NextInteger(1, #list)], d.X, d.Z, 1.5 * (d.Scale or 1), 3.5 * (d.Scale or 1))
+			end
+		end
+		if i % 100 == 0 then
+			task.wait()
+		end
+	end
+	for i, t in layout.Trees do
+		if rng:NextNumber() < 0.3 then
+			near(if rng:NextNumber() < 0.5 then "Fern" else "Roots", t.X, t.Z, 1.8, 3)
+		end
+		if i % 150 == 0 then
+			task.wait()
+		end
+	end
+	for _, st in layout.Streams do
+		local pts = st.Points
+		for i = 1, #pts - 1, 2 do
+			local p = pts[i]
+			near(if rng:NextNumber() < 0.6 then "Pebbles" else "Fern", p.X, p.Z, st.Width / 2 + 2, st.Width / 2 + 5)
+		end
+	end
+end
+
 local POI_SCALE = 1.35
 
 function WorldService._buildPoi(map: MapInfo, f: any, cf: CFrame, rng: Random, parent: Instance)
@@ -69514,6 +69582,19 @@ function WorldService._buildPoi(map: MapInfo, f: any, cf: CFrame, rng: Random, p
 	local O = map.Origin
 	table.insert(map.NoBuild, { X = f.X + O.X, Z = f.Z + O.Z, R = f.R * POI_SCALE + 4, Label = "a " .. f.Type })
 	table.insert(map.Pois, { Type = f.Type, Tier = f.Tier or "Common", Pos = cf.Position })
+	-- lived-in surroundings: a woodpile of stumps and logs, scattered twigs and
+	-- overgrowth creeping back in around the edge of the site
+	local SITE = { "Stump", "Twigs", "FallenLog", "Twigs", "Fern", "Mushrooms", "Bush" }
+	for k = 1, rng:NextInteger(4, 7) do
+		local a = rng:NextNumber(0, math.pi * 2)
+		local d = (f.R or 10) * POI_SCALE * rng:NextNumber(0.95, 1.35)
+		local x, z = f.X + math.cos(a) * d, f.Z + math.sin(a) * d
+		if math.abs(x) < map.Layout.HalfSize - 6 and math.abs(z) < map.Layout.HalfSize - 6 then
+			local gy = WorldService.GroundY(x + map.Origin.X, z + map.Origin.Z)
+			local pcf = CFrame.new(x + map.Origin.X, gy - 0.3, z + map.Origin.Z) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0)
+			Decor.Place(SITE[(k % #SITE) + 1], pcf, rng, rng:NextNumber(0.8, 1.1), parent)
+		end
+	end
 end
 
 -- Caves: carve the tunnel (and chambers) into the cliff rim before anything is placed.
@@ -69626,6 +69707,7 @@ function WorldService.BuildMatch(seed: number): MapInfo
 			task.wait()
 		end
 	end
+	WorldService._companions(layout, ground, drng, decor)
 	for i, d in layout.Undergrowth do
 		Decor.Place(d.Kind, ground(d.X, d.Z) * CFrame.Angles(0, math.rad(d.Rot), 0), drng, d.Scale, decor)
 		if i % 150 == 0 then
@@ -70477,6 +70559,7 @@ local Build = {}
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
 Build.Active = false
+local zoneRing: Part? = nil
 local currentId: string? = nil
 local ghost: Model? = nil
 local yaw = 0
@@ -70587,7 +70670,10 @@ local function update()
 	local rects = existingRects()
 	pos = snap(pos, currentId, rects)
 	ghostPos = pos
-	ghost:PivotTo(CFrame.new(pos) * CFrame.Angles(0, math.rad(yaw), 0))
+	-- ease the ghost toward the target so it glides instead of teleporting
+	local target = CFrame.new(pos) * CFrame.Angles(0, math.rad(yaw), 0)
+	local cur = ghost:GetPivot()
+	ghost:PivotTo(if (cur.Position - pos).Magnitude > 12 then target else cur:Lerp(target, 0.45))
 	local map = State.Get("Map")
 	local camp = map and map.MyCamp
 	local valid, reason = false, "No camp"
@@ -70648,6 +70734,27 @@ function Build.Begin(id: string)
 		end
 	end
 	ghost = g
+	-- show the build zone around your fire while placing
+	local map = State.Get("Map")
+	local camp = map and map.MyCamp
+	if camp then
+		local rootY = (player.Character and player.Character:GetPivot().Position.Y) or 0
+		local ring = Instance.new("Part")
+		ring.Name = "BuildZone"
+		ring.Shape = Enum.PartType.Cylinder
+		ring.Size = Vector3.new(0.3, Config.Build.ZoneRadius * 2, Config.Build.ZoneRadius * 2)
+		ring.CFrame = CFrame.new(camp.X, rootY - 2.8, camp.Z) * CFrame.Angles(0, 0, math.rad(90))
+		ring.Anchored = true
+		ring.CanCollide = false
+		ring.CanQuery = false
+		ring.CanTouch = false
+		ring.CastShadow = false
+		ring.Material = Enum.Material.ForceField
+		ring.Color = Config.Teams[team].Color
+		ring.Transparency = 0.2
+		ring.Parent = workspace.CurrentCamera
+		zoneRing = ring
+	end
 	touchBar.Visible = true
 	conn = RunService.RenderStepped:Connect(update)
 end
@@ -70663,6 +70770,10 @@ function Build.Stop()
 	if ghost then
 		ghost:Destroy()
 		ghost = nil
+	end
+	if zoneRing then
+		zoneRing:Destroy()
+		zoneRing = nil
 	end
 	if touchBar then
 		touchBar.Visible = false
@@ -70796,6 +70907,7 @@ local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
 
 CameraCtl.Aiming = false
+local deadUntil = 0
 local crosshair: Frame? = nil
 
 local function character(): Model?
@@ -70807,7 +70919,10 @@ function CameraCtl.Start()
 	player.CameraMinZoomDistance = Config.Camera.MinZoom
 	CameraCtl._feel()
 	State.On("MatchEvent", function(ev)
-		if ev.Name == "MatchEnded" and ev.Data and ev.Data.Won then
+		if ev.Name == "Died" then
+			-- the world drains of colour while you wait to respawn
+			deadUntil = os.clock() + ((ev.Data and ev.Data.Respawn) or 6)
+		elseif ev.Name == "MatchEnded" and ev.Data and ev.Data.Won then
 			CameraCtl.Victory(math.max(3, Config.Match.EndScreenLength - 1))
 		end
 	end)
@@ -70886,7 +71001,8 @@ function CameraCtl._feel()
 		local inMatch = player:GetAttribute("InMatch") == true
 		local low = inMatch and hum ~= nil and hum.Health > 0 and hum.Health < hum.MaxHealth * 0.3
 		local tired = inMatch and player:GetAttribute("Exhausted") == true
-		local sat = (if tired then -0.25 else 0) + (if low then -0.3 else 0)
+		local dead = os.clock() < deadUntil or player:GetAttribute("LifeState") == "Eliminated"
+		local sat = if dead then -0.85 else (if tired then -0.25 else 0) + (if low then -0.3 else 0)
 		cc.Saturation += (sat - cc.Saturation) * math.clamp(dt * 4, 0, 1)
 		local tint = if low then Color3.fromRGB(255, 225 + 15 * math.sin(os.clock() * 4), 225) else Color3.new(1, 1, 1)
 		cc.TintColor = cc.TintColor:Lerp(tint, math.clamp(dt * 4, 0, 1))
@@ -71869,12 +71985,50 @@ local function onFx(ev: any)
 	elseif name == "Built" then
 		emitAt("Dust", d.Pos + Vector3.new(0, 1, 0), 8)
 		emitAt("Splinter", d.Pos + Vector3.new(0, 2, 0), 6)
+	elseif name == "Healed" then
+		-- soft green motes rising around the healed player
+		burst(d.Pos + Vector3.new(0, 1, 0), Color3.fromRGB(120, 240, 140), math.clamp((d.Amount or 20) // 4, 6, 25), 5, 0.35)
+	elseif name == "Crafted" then
+		emitAt("Sparks", d.Pos + Vector3.new(0, 1.5, 0), 10)
+	elseif name == "ChestOpened" then
+		local rare = d.Tier == "Rare" or d.Tier == "VeryRare"
+		if rare then
+			-- rare loot: a golden (very rare: violet) flare so it reads as special
+			burst(d.Pos + Vector3.new(0, 2, 0), if d.Tier == "VeryRare" then Color3.fromRGB(190, 130, 255) else Color3.fromRGB(255, 205, 90), 45, 14, 0.5)
+		end
+		emitAt("Dust", d.Pos + Vector3.new(0, 1, 0), if rare then 6 else 3)
 	elseif name == "Blood" then
 		emitAt("Blood", d.Pos, 8, d.Dir)
 	end
 end
 
+-- Floating damage number above what you hit (world space, fades up and out).
+local function damageNumber(pos: Vector3, amount: number, color: Color3, big: boolean)
+	local anchor = part({ Name = "DmgNum", Size = Vector3.new(0.2, 0.2, 0.2), Transparency = 1, Position = pos + Vector3.new(math.random() - 0.5, 2.5, math.random() - 0.5) })
+	local bb = Instance.new("BillboardGui")
+	bb.Size = UDim2.fromOffset(if big then 110 else 70, if big then 40 else 30)
+	bb.AlwaysOnTop = true
+	bb.LightInfluence = 0
+	bb.MaxDistance = 120
+	bb.Parent = anchor
+	local tl = Instance.new("TextLabel")
+	tl.BackgroundTransparency = 1
+	tl.Size = UDim2.fromScale(1, 1)
+	tl.Font = Theme.FontBlack
+	tl.TextScaled = true
+	tl.Text = tostring(amount)
+	tl.TextColor3 = color
+	tl.TextStrokeTransparency = 0.2
+	tl.Parent = bb
+	TweenService:Create(bb, TweenInfo.new(0.7, Enum.EasingStyle.Quad), { StudsOffset = Vector3.new(0, 2.2, 0) }):Play()
+	TweenService:Create(tl, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+	Debris:AddItem(anchor, 0.8)
+end
+
 local function onHit(h: any)
+	if h.Pos and h.Amount and (h.Kind == "Player" or h.Kind == "Animal" or h.Kind == "Headshot") then
+		damageNumber(h.Pos, h.Amount, if h.Kind == "Headshot" then Color3.fromRGB(255, 205, 80) elseif h.Kind == "Animal" then Color3.fromRGB(240, 240, 240) else Color3.fromRGB(255, 120, 100), h.Kind == "Headshot")
+	end
 	if h.Kind == "Hurt" then
 		vignette.BackgroundTransparency = 0.55
 		TweenService:Create(vignette, TweenInfo.new(0.5), { BackgroundTransparency = 1 }):Play()
@@ -74858,6 +75012,8 @@ function SoundCtl.Start()
 			SoundCtl.Play(if ev.Data.Won then "Victory" else "Defeat")
 		elseif name == "Died" or name == "Eliminated" then
 			SoundCtl.Play("Death")
+		elseif name == "FireCritical" then
+			SoundCtl.Play("Alarm")
 		elseif name == "Sunset" then
 			SoundCtl.Play("Sunset")
 		elseif name == "Reward" then

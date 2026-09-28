@@ -504,6 +504,10 @@ function InventoryService.Heal(p: Player, itemId: string)
 			end
 			h.Health = math.min(h.MaxHealth, h.Health + spec.Heal)
 			InventoryService.Sync(p)
+			local hr = ctx.Util.Root(p)
+			if hr then
+				Net.FireAll("Fx", "Healed", { Pos = hr.Position, Amount = spec.Heal })
+			end
 			ctx.Util.PlaySound("Heal", ctx.Util.Root(p))
 		end,
 	})

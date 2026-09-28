@@ -79,8 +79,10 @@ function ProfileRules.New(): Profile
 	}
 end
 
+local MAX_VALUE = 1e9 -- sanity cap for any stored number (corrupt / tampered saves)
+
 local function num(v: any, default: number): number
-	return if type(v) == "number" and v == v then v else default
+	return if type(v) == "number" and v == v and math.abs(v) <= MAX_VALUE then v else default
 end
 
 -- Fills in missing fields from older/partial saves without discarding data.

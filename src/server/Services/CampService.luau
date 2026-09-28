@@ -212,6 +212,7 @@ function CampService._onFeed(player: Player, prompt: ProximityPrompt)
 	end
 	FireRules.AddWood(fire, n, FIRE, fuelMult)
 	ctx.Util.SetAction(player, "Feed")
+	ctx.Util.PlaySound("Pickup", camps[team].Fire.PrimaryPart)
 	Net.FireAll("Fx", "FireFed", { Pos = camps[team].FirePos, Amount = n })
 	ctx.InventoryService.Sync(player)
 	CampService._syncFire(team)

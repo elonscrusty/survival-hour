@@ -213,12 +213,50 @@ local function onFx(ev: any)
 	elseif name == "Built" then
 		emitAt("Dust", d.Pos + Vector3.new(0, 1, 0), 8)
 		emitAt("Splinter", d.Pos + Vector3.new(0, 2, 0), 6)
+	elseif name == "Healed" then
+		-- soft green motes rising around the healed player
+		burst(d.Pos + Vector3.new(0, 1, 0), Color3.fromRGB(120, 240, 140), math.clamp((d.Amount or 20) // 4, 6, 25), 5, 0.35)
+	elseif name == "Crafted" then
+		emitAt("Sparks", d.Pos + Vector3.new(0, 1.5, 0), 10)
+	elseif name == "ChestOpened" then
+		local rare = d.Tier == "Rare" or d.Tier == "VeryRare"
+		if rare then
+			-- rare loot: a golden (very rare: violet) flare so it reads as special
+			burst(d.Pos + Vector3.new(0, 2, 0), if d.Tier == "VeryRare" then Color3.fromRGB(190, 130, 255) else Color3.fromRGB(255, 205, 90), 45, 14, 0.5)
+		end
+		emitAt("Dust", d.Pos + Vector3.new(0, 1, 0), if rare then 6 else 3)
 	elseif name == "Blood" then
 		emitAt("Blood", d.Pos, 8, d.Dir)
 	end
 end
 
+-- Floating damage number above what you hit (world space, fades up and out).
+local function damageNumber(pos: Vector3, amount: number, color: Color3, big: boolean)
+	local anchor = part({ Name = "DmgNum", Size = Vector3.new(0.2, 0.2, 0.2), Transparency = 1, Position = pos + Vector3.new(math.random() - 0.5, 2.5, math.random() - 0.5) })
+	local bb = Instance.new("BillboardGui")
+	bb.Size = UDim2.fromOffset(if big then 110 else 70, if big then 40 else 30)
+	bb.AlwaysOnTop = true
+	bb.LightInfluence = 0
+	bb.MaxDistance = 120
+	bb.Parent = anchor
+	local tl = Instance.new("TextLabel")
+	tl.BackgroundTransparency = 1
+	tl.Size = UDim2.fromScale(1, 1)
+	tl.Font = Theme.FontBlack
+	tl.TextScaled = true
+	tl.Text = tostring(amount)
+	tl.TextColor3 = color
+	tl.TextStrokeTransparency = 0.2
+	tl.Parent = bb
+	TweenService:Create(bb, TweenInfo.new(0.7, Enum.EasingStyle.Quad), { StudsOffset = Vector3.new(0, 2.2, 0) }):Play()
+	TweenService:Create(tl, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+	Debris:AddItem(anchor, 0.8)
+end
+
 local function onHit(h: any)
+	if h.Pos and h.Amount and (h.Kind == "Player" or h.Kind == "Animal" or h.Kind == "Headshot") then
+		damageNumber(h.Pos, h.Amount, if h.Kind == "Headshot" then Color3.fromRGB(255, 205, 80) elseif h.Kind == "Animal" then Color3.fromRGB(240, 240, 240) else Color3.fromRGB(255, 120, 100), h.Kind == "Headshot")
+	end
 	if h.Kind == "Hurt" then
 		vignette.BackgroundTransparency = 0.55
 		TweenService:Create(vignette, TweenInfo.new(0.5), { BackgroundTransparency = 1 }):Play()

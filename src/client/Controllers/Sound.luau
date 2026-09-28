@@ -75,6 +75,8 @@ function SoundCtl.Start()
 			SoundCtl.Play(if ev.Data.Won then "Victory" else "Defeat")
 		elseif name == "Died" or name == "Eliminated" then
 			SoundCtl.Play("Death")
+		elseif name == "FireCritical" then
+			SoundCtl.Play("Alarm")
 		elseif name == "Sunset" then
 			SoundCtl.Play("Sunset")
 		elseif name == "Reward" then

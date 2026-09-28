@@ -28,6 +28,7 @@ local Build = {}
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
 Build.Active = false
+local zoneRing: Part? = nil
 local currentId: string? = nil
 local ghost: Model? = nil
 local yaw = 0
@@ -138,7 +139,10 @@ local function update()
 	local rects = existingRects()
 	pos = snap(pos, currentId, rects)
 	ghostPos = pos
-	ghost:PivotTo(CFrame.new(pos) * CFrame.Angles(0, math.rad(yaw), 0))
+	-- ease the ghost toward the target so it glides instead of teleporting
+	local target = CFrame.new(pos) * CFrame.Angles(0, math.rad(yaw), 0)
+	local cur = ghost:GetPivot()
+	ghost:PivotTo(if (cur.Position - pos).Magnitude > 12 then target else cur:Lerp(target, 0.45))
 	local map = State.Get("Map")
 	local camp = map and map.MyCamp
 	local valid, reason = false, "No camp"
@@ -199,6 +203,27 @@ function Build.Begin(id: string)
 		end
 	end
 	ghost = g
+	-- show the build zone around your fire while placing
+	local map = State.Get("Map")
+	local camp = map and map.MyCamp
+	if camp then
+		local rootY = (player.Character and player.Character:GetPivot().Position.Y) or 0
+		local ring = Instance.new("Part")
+		ring.Name = "BuildZone"
+		ring.Shape = Enum.PartType.Cylinder
+		ring.Size = Vector3.new(0.3, Config.Build.ZoneRadius * 2, Config.Build.ZoneRadius * 2)
+		ring.CFrame = CFrame.new(camp.X, rootY - 2.8, camp.Z) * CFrame.Angles(0, 0, math.rad(90))
+		ring.Anchored = true
+		ring.CanCollide = false
+		ring.CanQuery = false
+		ring.CanTouch = false
+		ring.CastShadow = false
+		ring.Material = Enum.Material.ForceField
+		ring.Color = Config.Teams[team].Color
+		ring.Transparency = 0.2
+		ring.Parent = workspace.CurrentCamera
+		zoneRing = ring
+	end
 	touchBar.Visible = true
 	conn = RunService.RenderStepped:Connect(update)
 end
@@ -214,6 +239,10 @@ function Build.Stop()
 	if ghost then
 		ghost:Destroy()
 		ghost = nil
+	end
+	if zoneRing then
+		zoneRing:Destroy()
+		zoneRing = nil
 	end
 	if touchBar then
 		touchBar.Visible = false

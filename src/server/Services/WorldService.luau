@@ -424,6 +424,62 @@ local function addChests(map: MapInfo, model: Model, f: any)
 	end
 end
 
+-- Natural clustering: small ground-cover companions gathered around the props
+-- they'd really grow by (mushrooms and moss on fallen logs, pebbles and ferns at
+-- boulders, twigs round stumps, ferns and roots at tree bases, stones along the
+-- water) instead of everything spread evenly. Non-colliding, capped.
+local COMPANIONS = {
+	FallenLog = { "Mushrooms", "MossPatch", "Fern" },
+	Boulder = { "Pebbles", "Fern", "MossPatch" },
+	Stump = { "Twigs", "Mushrooms", "Fern" },
+	DeadSnag = { "Twigs", "Roots" },
+	Roots = { "LeafLitter", "Mushrooms" },
+}
+local COMPANION_CAP = 700
+
+function WorldService._companions(layout: any, ground: (number, number) -> CFrame, rng: Random, parent: Instance)
+	local placed = 0
+	local function near(kind: string, x: number, z: number, r0: number, r1: number)
+		if placed >= COMPANION_CAP then
+			return
+		end
+		local a = rng:NextNumber(0, math.pi * 2)
+		local d = rng:NextNumber(r0, r1)
+		local px, pz = x + math.cos(a) * d, z + math.sin(a) * d
+		if math.abs(px) > layout.HalfSize - 4 or math.abs(pz) > layout.HalfSize - 4 then
+			return
+		end
+		Decor.Place(kind, ground(px, pz) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0) + Vector3.new(0, 0.2, 0), rng, 1, parent)
+		placed += 1
+	end
+	for i, d in layout.Middle do
+		local list = COMPANIONS[d.Kind]
+		if list then
+			for _ = 1, rng:NextInteger(1, 3) do
+				near(list[rng:NextInteger(1, #list)], d.X, d.Z, 1.5 * (d.Scale or 1), 3.5 * (d.Scale or 1))
+			end
+		end
+		if i % 100 == 0 then
+			task.wait()
+		end
+	end
+	for i, t in layout.Trees do
+		if rng:NextNumber() < 0.3 then
+			near(if rng:NextNumber() < 0.5 then "Fern" else "Roots", t.X, t.Z, 1.8, 3)
+		end
+		if i % 150 == 0 then
+			task.wait()
+		end
+	end
+	for _, st in layout.Streams do
+		local pts = st.Points
+		for i = 1, #pts - 1, 2 do
+			local p = pts[i]
+			near(if rng:NextNumber() < 0.6 then "Pebbles" else "Fern", p.X, p.Z, st.Width / 2 + 2, st.Width / 2 + 5)
+		end
+	end
+end
+
 local POI_SCALE = 1.35
 
 function WorldService._buildPoi(map: MapInfo, f: any, cf: CFrame, rng: Random, parent: Instance)
@@ -440,6 +496,19 @@ function WorldService._buildPoi(map: MapInfo, f: any, cf: CFrame, rng: Random, p
 	local O = map.Origin
 	table.insert(map.NoBuild, { X = f.X + O.X, Z = f.Z + O.Z, R = f.R * POI_SCALE + 4, Label = "a " .. f.Type })
 	table.insert(map.Pois, { Type = f.Type, Tier = f.Tier or "Common", Pos = cf.Position })
+	-- lived-in surroundings: a woodpile of stumps and logs, scattered twigs and
+	-- overgrowth creeping back in around the edge of the site
+	local SITE = { "Stump", "Twigs", "FallenLog", "Twigs", "Fern", "Mushrooms", "Bush" }
+	for k = 1, rng:NextInteger(4, 7) do
+		local a = rng:NextNumber(0, math.pi * 2)
+		local d = (f.R or 10) * POI_SCALE * rng:NextNumber(0.95, 1.35)
+		local x, z = f.X + math.cos(a) * d, f.Z + math.sin(a) * d
+		if math.abs(x) < map.Layout.HalfSize - 6 and math.abs(z) < map.Layout.HalfSize - 6 then
+			local gy = WorldService.GroundY(x + map.Origin.X, z + map.Origin.Z)
+			local pcf = CFrame.new(x + map.Origin.X, gy - 0.3, z + map.Origin.Z) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0)
+			Decor.Place(SITE[(k % #SITE) + 1], pcf, rng, rng:NextNumber(0.8, 1.1), parent)
+		end
+	end
 end
 
 -- Caves: carve the tunnel (and chambers) into the cliff rim before anything is placed.
@@ -552,6 +621,7 @@ function WorldService.BuildMatch(seed: number): MapInfo
 			task.wait()
 		end
 	end
+	WorldService._companions(layout, ground, drng, decor)
 	for i, d in layout.Undergrowth do
 		Decor.Place(d.Kind, ground(d.X, d.Z) * CFrame.Angles(0, math.rad(d.Rot), 0), drng, d.Scale, decor)
 		if i % 150 == 0 then

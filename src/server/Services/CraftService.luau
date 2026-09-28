@@ -169,6 +169,10 @@ function CraftService._craftNow(p: Player, recipeId: string)
 		end
 	end
 	ctx.Util.PlaySound("Craft", ctx.Util.Root(p))
+	local cr = ctx.Util.Root(p)
+	if cr then
+		Net.FireAll("Fx", "Crafted", { Pos = cr.Position })
+	end
 	ctx.Util.Notify(p, "Crafted " .. (if recipe.Count > 1 then recipe.Count .. " " else "") .. def.Name, "success")
 	CraftService.Push(p)
 end

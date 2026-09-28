@@ -435,6 +435,7 @@ function LootService._onOpenChest(p: Player, prompt: ProximityPrompt)
 				end
 			end
 			ctx.Util.PlaySound("ChestOpen", chest.Model.PrimaryPart)
+			Net.FireAll("Fx", "ChestOpened", { Pos = chest.Pos, Tier = chest.Tier })
 			ctx.PowerupService.OnChestOpened(p, chest.Tier, chest.Poi)
 		end,
 	})

@@ -19,6 +19,7 @@ local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
 
 CameraCtl.Aiming = false
+local deadUntil = 0
 local crosshair: Frame? = nil
 
 local function character(): Model?
@@ -30,7 +31,10 @@ function CameraCtl.Start()
 	player.CameraMinZoomDistance = Config.Camera.MinZoom
 	CameraCtl._feel()
 	State.On("MatchEvent", function(ev)
-		if ev.Name == "MatchEnded" and ev.Data and ev.Data.Won then
+		if ev.Name == "Died" then
+			-- the world drains of colour while you wait to respawn
+			deadUntil = os.clock() + ((ev.Data and ev.Data.Respawn) or 6)
+		elseif ev.Name == "MatchEnded" and ev.Data and ev.Data.Won then
 			CameraCtl.Victory(math.max(3, Config.Match.EndScreenLength - 1))
 		end
 	end)
@@ -109,7 +113,8 @@ function CameraCtl._feel()
 		local inMatch = player:GetAttribute("InMatch") == true
 		local low = inMatch and hum ~= nil and hum.Health > 0 and hum.Health < hum.MaxHealth * 0.3
 		local tired = inMatch and player:GetAttribute("Exhausted") == true
-		local sat = (if tired then -0.25 else 0) + (if low then -0.3 else 0)
+		local dead = os.clock() < deadUntil or player:GetAttribute("LifeState") == "Eliminated"
+		local sat = if dead then -0.85 else (if tired then -0.25 else 0) + (if low then -0.3 else 0)
 		cc.Saturation += (sat - cc.Saturation) * math.clamp(dt * 4, 0, 1)
 		local tint = if low then Color3.fromRGB(255, 225 + 15 * math.sin(os.clock() * 4), 225) else Color3.new(1, 1, 1)
 		cc.TintColor = cc.TintColor:Lerp(tint, math.clamp(dt * 4, 0, 1))

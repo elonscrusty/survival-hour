@@ -159,4 +159,62 @@ return {
 		t.eq(P.ClaimWeekly(p, t0), 0, "once a week")
 		t.no(P.CanClaimWeekly(p, t0 + 7 * DAY), "new week resets")
 	end,
+	double_purchase_is_blocked = function(t)
+		local p = P.New()
+		p.Diamonds = 100
+		t.ok(P.BuyClass(p, "Lumberjack"))
+		t.no(P.BuyClass(p, "Lumberjack"), "second click")
+		t.eq(p.Diamonds, 60, "charged once")
+		p.Coins = 1800
+		t.ok(P.BuyCosmetic(p, "OutfitWoodsman"))
+		t.no(P.BuyCosmetic(p, "OutfitWoodsman"))
+		t.eq(p.Coins, 0)
+	end,
+	bundle_receipt_replay_no_double_refund = function(t)
+		local p = P.New()
+		P.ApplyReceipt(p, "b", { Kind = "Bundle", Bundle = "Ember" }, 200)
+		local coins = p.Coins
+		t.eq((P.ApplyReceipt(p, "b", { Kind = "Bundle", Bundle = "Ember" }, 200)), "AlreadyGranted")
+		t.eq(p.Coins, coins, "replay grants nothing")
+	end,
+	save_roundtrip_keeps_everything = function(t)
+		local p = P.New()
+		p.Diamonds, p.Coins = 77, 4321
+		P.AddXP(p, 5000)
+		p.OwnedClasses.Miner = true
+		p.Class = "Miner"
+		p.OwnedPerks.Runner = true
+		p.Perk = "Runner"
+		p.Cosmetics.PlateBark = true
+		p.Wearing.Nameplate = "PlateBark"
+		P.AwardPlacement(p, "m1", 1, 40)
+		P.ClaimDaily(p, 90000 * 86400)
+		local q = P.Reconcile(table.clone(p))
+		t.eq(q.Diamonds, p.Diamonds)
+		t.eq(q.Coins, p.Coins)
+		t.eq(q.XP, p.XP)
+		t.eq(q.Level, p.Level)
+		t.eq(q.Class, "Miner")
+		t.eq(q.Perk, "Runner")
+		t.eq(q.Wearing.Nameplate, "PlateBark")
+		t.eq(q.Wins, 1)
+		t.eq(q.Daily.Streak, 1)
+		t.eq((P.AwardPlacement(q, "m1", 1, 40)), 0, "match reward survives reload")
+	end,
+	corrupted_values_are_sanitised = function(t)
+		local q = P.Reconcile({ Version = 2, Coins = 0 / 0, Diamonds = math.huge, XP = -50, Wearing = { Title = 5 }, Cosmetics = { Fake = true } })
+		t.eq(q.Coins, 0, "NaN coins")
+		t.eq(q.XP, 0)
+		t.eq(q.Wearing.Title, nil)
+		t.eq(q.Cosmetics.Fake, nil)
+		t.eq(q.Diamonds, 0, "infinite diamonds rejected")
+	end,
+	rewarded_matches_bounded = function(t)
+		local p = P.New()
+		for i = 1, 60 do
+			P.AwardPlacement(p, "m" .. i, 3, 40)
+		end
+		t.eq(#p.RewardedMatches, 40)
+		t.eq(p.Coins, 60 * 50)
+	end,
 }
