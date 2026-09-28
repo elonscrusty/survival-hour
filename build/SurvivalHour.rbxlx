@@ -74115,7 +74115,7 @@ function Lobby.Start()
 	local bottom = UI.new("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(460, 140), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12), Parent = gui })
 	partyStrip = UI.new("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 22), Parent = bottom }, { UI.list(Enum.FillDirection.Horizontal, 4, Enum.HorizontalAlignment.Center) })
 	statusLabel = UI.text("", { Position = UDim2.fromOffset(0, 22), Size = UDim2.new(1, 0, 0, 20), TextSize = 13, TextColor3 = C.Text, TextStrokeTransparency = 0.5, TextXAlignment = Enum.TextXAlignment.Center, Parent = bottom })
-	local _, setReadyFn = Buttons.primary("READY UP", { Size = UDim2.new(1, 0, 0, 84), Position = UDim2.fromOffset(0, 50), Parent = bottom }, function()
+	local readyPlate, setReadyFn = Buttons.primary("READY UP", { Size = UDim2.new(1, 0, 0, 84), Position = UDim2.fromOffset(0, 50), Parent = bottom }, function()
 		local lobby = State.Get("Lobby")
 		if lobby and (lobby.Ready or lobby.Queued) then
 			send("Ready", { Value = false })
@@ -74124,6 +74124,21 @@ function Lobby.Start()
 		end
 	end)
 	setReady = setReadyFn
+	-- New players: the READY UP plate breathes (green glow) until their first match.
+	task.spawn(function()
+		local on = false
+		while readyPlate.Parent do
+			task.wait(0.8)
+			local prof = State.Get("Profile")
+			local lobby = State.Get("Lobby")
+			local newbie = prof ~= nil and (prof.Matches or 0) == 0 and not (lobby and (lobby.Queued or lobby.Ready))
+			on = newbie and not on
+			if readyPlate:GetAttribute("Hover") ~= on and not readyPlate:GetAttribute("Down") then
+				readyPlate:SetAttribute("Hover", if on then true else nil)
+				Buttons.refresh(readyPlate)
+			end
+		end
+	end)
 
 	-- Left: menu tiles (icon + title + subtitle), two columns.
 	local nav = UI.new("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(2 * 104 + 8, 4 * 104 + 24), Position = UDim2.fromOffset(12, 100), Parent = gui }, {
