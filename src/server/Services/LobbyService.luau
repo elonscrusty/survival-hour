@@ -12,6 +12,8 @@ local Config = require(Shared:WaitForChild("Config"))
 local Net = require(Shared:WaitForChild("Net"))
 local Products = require(Shared:WaitForChild("Products"))
 local ProfileRules = require(Shared:WaitForChild("Logic"):WaitForChild("ProfileRules"))
+local Challenges = require(Shared:WaitForChild("Logic"):WaitForChild("Challenges"))
+local Progression = require(Shared:WaitForChild("Progression"))
 
 local LobbyService = {}
 
@@ -231,7 +233,7 @@ function LobbyService._onAction(p: Player, req: any)
 		LobbyService._checkParty(party)
 	elseif a == "Cancel" then
 		unreadyParty(party)
-	elseif a == "BuyClass" or a == "EquipClass" or a == "BuyPerk" or a == "EquipPerk" or a == "BuyCosmetic" or a == "WearCosmetic" or a == "ClaimDaily" or a == "ClaimWeekly" then
+	elseif a == "BuyClass" or a == "EquipClass" or a == "BuyPerk" or a == "EquipPerk" or a == "BuyCosmetic" or a == "WearCosmetic" or a == "ClaimDaily" or a == "ClaimWeekly" or a == "ClaimChallenge" then
 		LobbyService._profileAction(p, a, req)
 	elseif a == "Emote" then
 		if canUseLobby(p) and type(req.Id) == "string" then
@@ -333,6 +335,17 @@ function LobbyService._profileAction(p: Player, action: string, req: any)
 		local coins = ProfileRules.ClaimWeekly(profile, os.time())
 		ok, why = coins > 0, "Play more matches this week first."
 		note = "Weekly bonus: +" .. coins .. " Coins"
+	elseif action == "ClaimChallenge" then
+		if type(id) ~= "string" then
+			return
+		end
+		Challenges.Refresh(profile.Challenges, profile, Progression.DayNumber(os.time()), Progression.WeekNumber(os.time()))
+		local coins = Challenges.Claim(profile.Challenges, profile, id)
+		if coins > 0 then
+			ProfileRules.AddCoins(profile, coins)
+		end
+		ok, why = coins > 0, "Finish the challenge first."
+		note = "Challenge complete: +" .. coins .. " Coins"
 	elseif action == "WearCosmetic" then
 		if type(req.Type) ~= "string" then
 			return

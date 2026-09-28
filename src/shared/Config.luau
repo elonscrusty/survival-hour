@@ -417,6 +417,21 @@ Config.Teams = {
 	{ Name = "Hare", Color = Color3.fromRGB(232, 198, 59), Symbol = "■", Motif = "Thatch" },
 }
 
+-- Roblox badges (create them on the Creator Dashboard, then paste each badge id here).
+-- 0 = not created yet: the game skips that award silently.
+Config.Badges = {
+	FirstNight = 0, -- survive your first night
+	FirstBlood = 0, -- take down another survivor
+	FireExtinguisher = 0, -- put out an enemy campfire
+	Explorer = 0, -- discover 25 places (lifetime)
+	BearHunter = 0, -- kill a bear
+	Survivor = 0, -- win a match
+	Untouchable = 0, -- win without ever being on Final Life
+	FinalStand = 0, -- win after your own campfire went out
+	MasterCrafter = 0, -- reach Workbench Tier V
+}
+Config.ExplorerBadgePlaces = 25
+
 Config.Data = {
 	StoreName = "SurvivalHourProfiles_v1",
 	AutosaveInterval = 90,

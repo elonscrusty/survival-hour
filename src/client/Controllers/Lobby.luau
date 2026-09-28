@@ -360,6 +360,35 @@ local function renderProfile()
 	Buttons.action(if wk.Claimed then "Claimed" elseif wk.CanClaim then "🏆 Claim" else "Keep playing", { Size = UDim2.fromOffset(150, 40), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), Tone = if wk.CanClaim then "Gold" else "Green", State = if wk.Claimed then "Selected" elseif wk.CanClaim then nil else "Disabled", Parent = wcard }, function()
 		send("ClaimWeekly")
 	end)
+	-- Challenges (daily set of 3, weekly set of 2; same for everyone, coins only)
+	local challenges = profile.Challenges or {}
+	if #challenges > 0 then
+		UI.text("Challenges", { LayoutOrder = 12, TextSize = 18, Font = Theme.FontBlack, TextColor3 = C.Accent, Parent = profileBody })
+		for i, ch in challenges do
+			local done = ch.Progress >= ch.Need
+			local row = card(profileBody, 12 + i, 56, if ch.Weekly then C.Dev else C.Accent, done and not ch.Claimed)
+			UI.text((if ch.Weekly then "WEEKLY · " else "DAILY · ") .. ch.Text, { Size = UDim2.new(1, -170, 0, 20), TextSize = 14, Font = Theme.FontBold, Parent = row })
+			local barHolder2 = UI.new("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, -170, 0, 16), Parent = row })
+			local _, setBar = UI.bar({ Size = UDim2.fromScale(1, 1), Parent = barHolder2 }, if ch.Weekly then C.Dev else C.Accent)
+			setBar(ch.Progress / math.max(1, ch.Need), string.format("%d / %d", ch.Progress, ch.Need))
+			Buttons.action(if ch.Claimed then "Claimed" elseif done then "Claim +" .. ch.Coins else "+" .. ch.Coins .. " 🪙", { Size = UDim2.fromOffset(150, 38), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), Tone = if done then "Gold" else "Neutral", State = if ch.Claimed then "Selected" elseif done then nil else "Disabled", Parent = row }, function()
+				send("ClaimChallenge", { Id = ch.Id })
+			end)
+		end
+	end
+	-- Records (lifetime; kept off the match HUD)
+	local rec = profile.Records
+	if rec then
+		UI.text("Records", { LayoutOrder = 18, TextSize = 18, Font = Theme.FontBlack, TextColor3 = C.Accent, Parent = profileBody })
+		local winRate = if (profile.Matches or 0) > 0 then math.floor((profile.Wins or 0) / profile.Matches * 100 + 0.5) else 0
+		local lines = {
+			string.format("Win rate %d%% · best win streak %d (current %d)", winRate, rec.BestStreak or 0, rec.WinStreak or 0),
+			string.format("Nights survived %d · places discovered %d · items crafted %d", rec.Nights or 0, rec.Pois or 0, rec.Crafts or 0),
+			string.format("Wildlife hunted %d (bears %d) · resources gathered %d", rec.Animals or 0, rec.Bears or 0, rec.Resources or 0),
+			string.format("Campfires put out %d · storages breached %d", rec.FiresOut or 0, rec.Breaches or 0),
+		}
+		UI.text(table.concat(lines, "\n"), { LayoutOrder = 19, Size = UDim2.new(1, -8, 0, 76), TextSize = 13, TextColor3 = C.TextDim, TextYAlignment = Enum.TextYAlignment.Top, Parent = profileBody })
+	end
 	-- Leaderboards
 	local lobby = State.Get("Lobby")
 	local boards = lobby and lobby.Boards or {}

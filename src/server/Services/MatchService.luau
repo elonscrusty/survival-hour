@@ -417,6 +417,7 @@ function MatchService.End(winner: number?)
 			if session and ctx.DataService.CanGrant(p) then
 				session.Profile.Matches += 1
 				ProfileRules.NoteMatch(session.Profile, os.time(), place == 1)
+				ctx.PowerupService.CommitMatch(p, session.Profile, place, MatchService.FireBurning(team))
 				if place and place <= 3 then
 					local before = session.Profile.Level
 					local xp, coins, diamonds = ProfileRules.AwardPlacement(session.Profile, MatchService.MatchId, place, Config.Data.RewardedMatchMemory)

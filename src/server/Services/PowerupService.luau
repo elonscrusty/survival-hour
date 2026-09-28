@@ -48,6 +48,7 @@ type PState = {
 	WildlifeRewards: number,
 	Stats: { [string]: number }, -- per-match tallies for the recap (Kills, Animals, Bears, Chests, Resources, DamageDealt, DamageTaken, FiresOut, Breaches)
 	Notoriety: number, -- aggressive actions this match (Dangerous Survivor callouts)
+	FinalLife: boolean?, -- was on Final Life at some point this match
 	Pois: { [number]: boolean },
 	SecondWindUsed: boolean,
 	SecondWindUntil: number,
@@ -88,7 +89,17 @@ function PowerupService.Init(c)
 			for p in states do
 				if p.Parent and ctx.Util.IsAlive(p) then
 					PowerupService.Reward(p, "SurviveNight", "Survived night " .. (day - 1))
+					PowerupService.Tally(p, "Nights", 1)
+					ctx.Util.AwardBadge(p, "FirstNight")
 				end
+			end
+		end
+	end)
+	-- Final Life: anyone alive on a team whose fire goes out (Untouchable badge check)
+	ctx.MatchService.On("FireOut", function(team: number)
+		for p, st in states do
+			if p.Parent and ctx.Util.Team(p) == team then
+				st.FinalLife = true
 			end
 		end
 	end)
@@ -460,6 +471,42 @@ function PowerupService.Tally(p: Player?, key: string, n: number)
 	end
 end
 
+-- End of match: fold this match's tallies into lifetime stats, keep the win streak and award
+-- the win badges. Called once per participant with a loaded profile (MatchService.End).
+local LIFETIME = { "Animals", "Bears", "Predators", "Chests", "Resources", "DamageDealt", "FiresOut", "Breaches", "Nights", "Crafts", "BenchUpgrades" }
+function PowerupService.CommitMatch(p: Player, profile: any, place: number?, fireBurning: boolean)
+	local st = states[p]
+	if st then
+		for _, k in LIFETIME do
+			local v = st.Stats[k] or 0
+			if v > 0 then
+				profile.Stats[k] = (profile.Stats[k] or 0) + v
+			end
+		end
+		local pois = 0
+		for _ in st.Pois do
+			pois += 1
+		end
+		profile.Stats.Pois = (profile.Stats.Pois or 0) + pois
+		if profile.Stats.Pois >= Config.ExplorerBadgePlaces then
+			ctx.Util.AwardBadge(p, "Explorer")
+		end
+	end
+	if place == 1 then
+		profile.Stats.WinStreak = (profile.Stats.WinStreak or 0) + 1
+		profile.Stats.BestStreak = math.max(profile.Stats.BestStreak or 0, profile.Stats.WinStreak)
+		ctx.Util.AwardBadge(p, "Survivor")
+		if st and not st.FinalLife and fireBurning then
+			ctx.Util.AwardBadge(p, "Untouchable")
+		end
+		if not fireBurning then
+			ctx.Util.AwardBadge(p, "FinalStand")
+		end
+	else
+		profile.Stats.WinStreak = 0
+	end
+end
+
 -- Dangerous Survivor: kills, eliminations and snuffed fires build notoriety. At each
 -- threshold everyone hears the name (never a position), once per threshold per match.
 local NOTORIETY = { { At = 3, Line = "has taken down several survivors." }, { At = 6, Line = "is hunting everyone. Watch your fire." } }
@@ -485,6 +532,7 @@ function PowerupService.OnPlayerKill(killer: Player, victim: Player, eliminated:
 		return
 	end
 	st.Stats.Kills += 1
+	ctx.Util.AwardBadge(killer, "FirstBlood")
 	if eliminated then
 		st.Stats.Eliminations += 1
 	end
@@ -509,6 +557,7 @@ end
 function PowerupService.OnFireExtinguished(p: Player)
 	PowerupService.Tally(p, "FiresOut", 1)
 	addNotoriety(p, 2)
+	ctx.Util.AwardBadge(p, "FireExtinguisher")
 	PowerupService.Reward(p, "ExtinguishFire", "Snuffed a fire")
 end
 
@@ -518,6 +567,10 @@ function PowerupService.OnWildlifeKill(p: Player, species: string, _night: boole
 		st.Stats.Animals += 1
 		if species == "Bear" then
 			st.Stats.Bears += 1
+			ctx.Util.AwardBadge(p, "BearHunter")
+		end
+		if PREDATORS[species] then
+			st.Stats.Predators = (st.Stats.Predators or 0) + 1
 		end
 	end
 	if not st or st.WildlifeRewards >= WILDLIFE_REWARDS_PER_MATCH then
@@ -537,6 +590,10 @@ end
 
 -- Workbench V: once per camp per match, to the player who finished it.
 function PowerupService.OnWorkbenchLevel(p: Player, team: number, level: number)
+	PowerupService.Tally(p, "BenchUpgrades", 1)
+	if level >= 5 then
+		ctx.Util.AwardBadge(p, "MasterCrafter")
+	end
 	if level >= 5 and not workbenchRewarded[team] then
 		workbenchRewarded[team] = true
 		PowerupService.Reward(p, "WorkbenchV", "Workbench Tier V")

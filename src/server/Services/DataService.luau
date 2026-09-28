@@ -21,6 +21,7 @@ local Config = require(Shared:WaitForChild("Config"))
 local Net = require(Shared:WaitForChild("Net"))
 local Progression = require(Shared:WaitForChild("Progression"))
 local ProfileRules = require(Shared:WaitForChild("Logic"):WaitForChild("ProfileRules"))
+local Challenges = require(Shared:WaitForChild("Logic"):WaitForChild("Challenges"))
 
 export type Session = {
 	Player: Player,
@@ -324,6 +325,8 @@ function DataService.Push(player: Player)
 	local weekly = if p.Weekly.Week == week then p.Weekly else { Matches = 0, Wins = 0, Claimed = false }
 	local canDaily = ProfileRules.CanClaimDaily(p, now)
 	local nextStreak = if p.Daily.Day == Progression.DayNumber(now) - 1 then p.Daily.Streak + 1 else 1
+	Challenges.Refresh(p.Challenges, p, Progression.DayNumber(now), week)
+	local st = p.Stats
 	Net.FireClient("ProfileSync", player, {
 		Diamonds = p.Diamonds,
 		Coins = p.Coins,
@@ -353,6 +356,19 @@ function DataService.Push(player: Player)
 		},
 		Settings = p.Settings,
 		State = s.State,
+		Challenges = Challenges.View(p.Challenges, p),
+		Records = {
+			BestStreak = st.BestStreak or 0,
+			WinStreak = st.WinStreak or 0,
+			Nights = st.Nights or 0,
+			Animals = st.Animals or 0,
+			Bears = st.Bears or 0,
+			FiresOut = st.FiresOut or 0,
+			Breaches = st.Breaches or 0,
+			Resources = st.Resources or 0,
+			Pois = st.Pois or 0,
+			Crafts = st.Crafts or 0,
+		},
 	})
 	player:SetAttribute("Level", level)
 	ctx.CosmeticService.Apply(player)

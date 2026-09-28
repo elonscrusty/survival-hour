@@ -90,7 +90,7 @@ function DevService._onCommand(p: Player, cmd: any, arg: any)
 	elseif cmd == "CompleteChallenges" then
 		local s = ctx.DataService.Get(p)
 		if s then
-			for _, stat in { "DistanceTravelled", "CratesOpened", "AnimalsKilled", "EnemyWallsScaled", "HealthRepaired", "LongArrowHits" } do
+			for _, stat in { "Resources", "Animals", "Pois", "Nights", "Crafts", "Chests", "DamageDealt", "Predators", "BenchUpgrades", "Breaches" } do
 				s.Profile.Stats[stat] = 999999
 			end
 			ctx.DataService.Push(p)

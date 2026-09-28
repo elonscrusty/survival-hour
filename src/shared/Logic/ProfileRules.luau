@@ -11,6 +11,7 @@ local Classes = require("../Classes")
 local Perks = require("../Perks")
 local Cosmetics = require("../Cosmetics")
 local Progression = require("../Progression")
+local Challenges = require("./Challenges")
 
 export type Profile = {
 	Version: number,
@@ -35,6 +36,7 @@ export type Profile = {
 	Daily: { Day: number, Streak: number },
 	Weekly: { Week: number, Matches: number, Wins: number, Claimed: boolean },
 	Settings: { [string]: any },
+	Challenges: Challenges.State, -- daily / weekly gameplay challenges (Logic/Challenges)
 }
 
 
@@ -87,6 +89,7 @@ function ProfileRules.New(): Profile
 		Daily = { Day = -1, Streak = 0 },
 		Weekly = { Week = -1, Matches = 0, Wins = 0, Claimed = false },
 		Settings = table.clone(ProfileRules.SettingDefaults),
+		Challenges = Challenges.New(),
 	}
 end
 
@@ -206,6 +209,7 @@ function ProfileRules.Reconcile(data: any): Profile
 	if type(data.Weekly) == "table" then
 		p.Weekly = { Week = num(data.Weekly.Week, -1), Matches = num(data.Weekly.Matches, 0), Wins = num(data.Weekly.Wins, 0), Claimed = data.Weekly.Claimed == true }
 	end
+	p.Challenges = Challenges.Reconcile(data.Challenges)
 	if type(data.Settings) == "table" then
 		for k, v in data.Settings do
 			ProfileRules.SetSetting(p, k, v)

@@ -235,6 +235,29 @@ function Util.MakeSound(name: string, parent: Instance): Sound?
 	return s
 end
 
+-- Awards a Roblox badge by Config.Badges key (no-op until the badge id is filled in).
+-- Runs in the background and never errors; each badge is tried at most once per session.
+local badgeTried: { [Player]: { [string]: boolean } } = setmetatable({}, { __mode = "k" }) :: any
+function Util.AwardBadge(player: Player, key: string)
+	local id = (Config.Badges :: any)[key]
+	if type(id) ~= "number" or id <= 0 then
+		return
+	end
+	local tried = badgeTried[player] or {}
+	badgeTried[player] = tried
+	if tried[key] then
+		return
+	end
+	tried[key] = true
+	task.spawn(function()
+		local BadgeService = game:GetService("BadgeService")
+		local ok, has = pcall(BadgeService.UserHasBadgeAsync, BadgeService, player.UserId, id)
+		if ok and not has then
+			pcall(BadgeService.AwardBadge, BadgeService, player.UserId, id)
+		end
+	end)
+end
+
 -- Folder helper under workspace
 function Util.Folder(name: string, parent: Instance?): Folder
 	local p = parent or workspace
