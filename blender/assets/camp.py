@@ -233,64 +233,94 @@ def workbench3(m):
 
 @asset("SM_Camp_Hut", "Camp", "Structure", density=2.5, pivot="Bottom centre of the floor, on the ground.",
        footprint=[12, 10],
-       use="Clan shack behind each camp: open-front log cabin with a plank gable roof, bedrolls, "
-           "a supply crate and a lantern. Replaces the procedural Camp.Hut look; its parts stay "
-           "as the hidden colliders.",
-       notes="Front (open side) faces -Y (Roblox -Z). Team accent: bedrolls and door pennant (team_cloth).")
+       use="Clan cabin behind each camp: chunky cartoon log cabin (thick round logs, big overhanging "
+           "roof, stone chimney, glowing windows, open doorway and a small porch). Replaces the "
+           "procedural Camp.Hut look; its parts stay as the hidden colliders.",
+       notes="Front (doorway) faces -Y (Roblox -Z). Team accent: door banner and bedroll (team_cloth).")
 def camp_hut(m):
-    W, D, WALL = 12.0, 10.0, 7.0  # outer width (X), depth (Y), wall height
-    hx, hy = W / 2 - 0.4, D / 2 - 0.4
-    # plank floor on two sill logs
-    for y in (-hy + 0.3, hy - 0.3):
-        m.cylinder("bark", 0.35, 0.35, W, seg=7, loc=(-W / 2, y, 0.3), rot=(0, 90, 0), cap="end_grain")
-    m.box("wood_dark", (W - 0.4, D - 0.6, 0.3), loc=(0, 0, 0.6), bevel=0.03)
-    # stacked log walls: back (along X) and sides (along Y); the front stays open
-    r = 0.42
-    n = int(WALL / (r * 2 * 0.95))
-    for i in range(n):
-        z = 0.9 + r + i * r * 1.9
-        m.cylinder("bark", r, r, W + 0.5, seg=7, loc=(-(W + 0.5) / 2, hy, z), rot=(0, 90, 0), cap="end_grain")
+    W, D, WALL = 11.0, 8.4, 6.6  # wall box (X width, Y depth, height); roof/porch overhang to 12 x 10
+    hx, hy = W / 2, D / 2
+    R = 0.6  # fat cartoon logs
+    # stone footing + plank floor
+    m.box("stone_dark", (W + 0.6, D + 0.6, 0.5), loc=(0, 0.3, 0.25), bevel=0.12)
+    m.box("wood_dark", (W - 0.4, D - 0.4, 0.2), loc=(0, 0.3, 0.6), bevel=0.03)
+    rows = int(WALL / (R * 1.8))
+    door_w, door_h = 2.6, 4.6
+    win_z0, win_z1 = 2.4, 4.6
+    for i in range(rows):
+        z = 0.5 + R + i * R * 1.8
+        alt = (i % 2) * R * 0.9
+        # back wall, full length with log ends poking past the corners
+        m.cylinder("wood", R, R, W + 1.4, seg=8, loc=(-(W + 1.4) / 2, hy, z), rot=(0, 90, 0), cap="end_grain")
+        # side walls (window gap in the middle rows)
         for x in (-hx, hx):
-            m.cylinder("bark", r, r, D - 0.2, seg=7, loc=(x, -(D - 0.2) / 2 + 0.1, z + r * 0.95),
-                       rot=(-90, 0, 0), cap="end_grain")
-    # front corner posts and the lintel log
+            if win_z0 < z < win_z1:
+                for y0, y1 in ((-hy - 0.7, -1.1), (1.1, hy + 0.7)):
+                    m.cylinder("wood", R, R, y1 - y0, seg=8, loc=(x, y0, z + alt), rot=(-90, 0, 0), cap="end_grain")
+            else:
+                m.cylinder("wood", R, R, D + 1.4, seg=8, loc=(x, -hy - 0.7, z + alt), rot=(-90, 0, 0),
+                           cap="end_grain")
+        # front wall, split around the doorway
+        if z < door_h + 0.5:
+            for x0, x1 in ((-hx - 0.7, -door_w / 2), (door_w / 2, hx + 0.7)):
+                m.cylinder("wood", R, R, x1 - x0, seg=8, loc=(x0, -hy, z), rot=(0, 90, 0), cap="end_grain")
+        else:
+            m.cylinder("wood", R, R, W + 1.4, seg=8, loc=(-(W + 1.4) / 2, -hy, z), rot=(0, 90, 0), cap="end_grain")
+    # door frame + an open plank door swung inward, team banner over the door
+    for x in (-door_w / 2, door_w / 2):
+        m.box("wood_dark", (0.35, 0.5, door_h), loc=(x, -hy - 0.1, 0.6 + door_h / 2), bevel=0.05)
+    m.box("wood_dark", (door_w + 0.7, 0.5, 0.4), loc=(0, -hy - 0.1, 0.6 + door_h + 0.2), bevel=0.05)
+    m.box("wood", (0.25, door_w - 0.2, door_h - 0.3), loc=(-door_w / 2 + 0.2, -hy + 1.3, 0.6 + (door_h - 0.3) / 2),
+          bevel=0.04)
+    v = m.box("team_cloth", (1.6, 0.08, 1.2), loc=(0, -hy - 0.45, 0.6 + door_h + 1.1))
+    m.jitter(v, 0.04)
+    # glowing windows with cross frames in the side walls
     for x in (-hx, hx):
-        m.cylinder("bark", 0.45, 0.4, WALL + 0.9, seg=8, loc=(x, -hy, 0.3), cap="end_grain")
-    m.cylinder("bark", 0.4, 0.4, W + 0.6, seg=7, loc=(-(W + 0.6) / 2, -hy, WALL + 0.8), rot=(0, 90, 0),
-               cap="end_grain")
-    # gables on the side walls (the ridge runs along X), then the plank roof and ridge log
-    top = WALL + 0.8
-    peak = top + 3.3
+        s = 1 if x > 0 else -1
+        m.box("glow", (0.1, 2.0, win_z1 - win_z0 - 0.3), loc=(x - s * 0.1, 0, (win_z0 + win_z1) / 2 + 0.3))
+        m.box("wood_dark", (0.3, 2.5, 0.3), loc=(x + s * 0.25, 0, win_z0 + 0.1), bevel=0.04)
+        m.box("wood_dark", (0.3, 2.5, 0.3), loc=(x + s * 0.25, 0, win_z1 + 0.4), bevel=0.04)
+        m.box("wood_dark", (0.2, 0.2, win_z1 - win_z0), loc=(x + s * 0.25, 0, (win_z0 + win_z1) / 2 + 0.3))
+        m.box("wood_dark", (0.2, 2.2, 0.2), loc=(x + s * 0.25, 0, (win_z0 + win_z1) / 2 + 0.3))
+    # log-end gables on the sides, thick overhanging plank roof, ridge beam
+    top = 0.5 + rows * R * 1.8 + 0.2
+    peak = top + 3.6
     for x in (-hx, hx):
-        m.prism("wood", [(-hy - 0.3, top), (hy + 0.3, top), (0, peak - 0.2)], 0.5, loc=(x, 0, 0), rot=(0, 0, 90))
-    run = D / 2 + 0.9
-    rise = peak - top + 0.4
+        m.prism("wood", [(-hy - 0.6, top), (hy + 0.6, top), (0, peak - 0.3)], 1.0, loc=(x, 0, 0), rot=(0, 0, 90))
+    run = hy + 1.5
+    rise = peak - top + 0.5
     ang = math.degrees(math.atan2(rise, run))
     slab = math.hypot(run, rise)
     for s in (-1, 1):
-        m.box("wood_dark", (W + 1.2, slab, 0.32), loc=(0, s * run / 2, top - 0.2 + rise / 2 + 0.25),
-              rot=(s * -ang, 0, 0), bevel=0.04)
-        # shingle rows for texture
-        for k in range(4):
-            t = (k + 0.5) / 4
-            m.box("wood", (W + 1.3, 0.12, 0.1), loc=(0, s * run * t, top - 0.2 + rise * (1 - t) + 0.45),
-                  rot=(s * -ang, 0, 0))
-    m.cylinder("bark", 0.38, 0.38, W + 1.6, seg=7, loc=(-(W + 1.6) / 2, 0, peak + 0.15), rot=(0, 90, 0),
+        m.box("wood_dark", (W + 2.4, slab, 0.55), loc=(0, s * run / 2, top + rise / 2 + 0.1),
+              rot=(s * -ang, 0, 0), bevel=0.12)
+        for k in range(5):  # chunky shingle ridges
+            t = (k + 0.5) / 5
+            m.box("wood", (W + 2.5, 0.35, 0.2), loc=(0, s * run * t, top + rise * (1 - t) + 0.45),
+                  rot=(s * -ang, 0, 0), bevel=0.05)
+    m.cylinder("bark", 0.55, 0.55, W + 2.8, seg=8, loc=(-(W + 2.8) / 2, 0, peak + 0.2), rot=(0, 90, 0),
                cap="end_grain")
-    # inside: bedrolls, a crate and a hanging lantern
-    for x in (-3.2, 0, 3.2):
-        m.box("cloth_dark", (2.0, 4.4, 0.16), loc=(x, 1.6, 0.85), bevel=0.05)
-        m.box("team_cloth", (1.9, 3.0, 0.12), loc=(x, 2.2, 0.98), bevel=0.04)
-        m.cylinder("cloth", 0.28, 0.28, 1.9, seg=8, loc=(x - 0.95, -0.4, 1.05), rot=(0, 90, 0))
-    m.box("wood", (1.6, 1.2, 1.1), loc=(4.2, -2.8, 1.3), bevel=0.05)
-    m.box("metal_dark", (1.65, 0.1, 0.12), loc=(4.2, -3.4, 1.6))
-    m.cylinder("metal_dark", 0.25, 0.25, 0.1, seg=8, loc=(-4.4, -hy + 0.4, WALL - 0.6))
-    m.cylinder("fire", 0.2, 0.2, 0.45, seg=8, loc=(-4.4, -hy + 0.4, WALL - 1.05))
-    # team pennant on the right front post
-    v = m.box("team_cloth", (0.06, 1.4, 1.0), loc=(hx + 0.5, -hy - 0.7, WALL - 0.2))
-    m.jitter(v, 0.05)
-    m.attach("Light", (-4.4, -hy + 0.4, WALL - 1.0))
+    # stone chimney on the back-right with a smoke cap
+    cx, cy = hx - 1.8, hy + 1.0  # outside the back wall
+    for i in range(7):
+        m.blob("stone" if i % 2 else "stone_mossy", 0.75, loc=(cx, cy, 1.0 + i * 1.35), scale=(1.4, 1.2, 0.8),
+               jitter=0.08)
+    m.box("stone_dark", (1.6, 1.4, 0.4), loc=(cx, cy, 10.4), bevel=0.08)
+    m.attach("Smoke", (cx, cy, 10.8))
+    # little porch: plank deck, two posts, a lantern and a firewood stack
+    m.box("wood", (5.5, 1.4, 0.3), loc=(0, -hy - 1.0, 0.45), bevel=0.05)
+    for x in (-2.6, 2.6):
+        m.cylinder("bark", 0.3, 0.3, 0.9, seg=7, loc=(x, -hy - 1.5, 0))
+    m.cylinder("metal_dark", 0.28, 0.28, 0.12, seg=8, loc=(-2.0, -hy - 0.55, 0.6 + door_h - 0.3))
+    m.cylinder("glow", 0.22, 0.22, 0.5, seg=8, loc=(-2.0, -hy - 0.55, 0.6 + door_h - 0.85))
+    m.attach("Light", (-2.0, -hy - 0.55, 0.6 + door_h - 0.6))
+    for k, (x, z) in enumerate(((3.6, 0.9), (4.3, 0.9), (3.95, 1.45))):
+        m.cylinder("bark", 0.3, 0.3, 1.6, seg=7, loc=(x, -hy - 0.9, z), rot=(-90, 0, 0), cap="end_grain")
+    # inside, seen through the door: bedroll and a crate
+    m.box("cloth_dark", (2.0, 4.0, 0.16), loc=(-2.8, 1.2, 0.78), bevel=0.05)
+    m.box("team_cloth", (1.9, 2.7, 0.12), loc=(-2.8, 1.7, 0.9), bevel=0.04)
+    m.box("wood", (1.5, 1.2, 1.1), loc=(3.2, 2.0, 1.25), bevel=0.06)
     m.col_box((0, 0, 0.45), (W, D, 0.9))
-    m.col_box((0, hy, 4.2), (W, 0.9, WALL))
+    m.col_box((0, hy, 3.8), (W, 1.2, WALL))
     for x in (-hx, hx):
-        m.col_box((x, 0, 4.2), (0.9, D, WALL))
+        m.col_box((x, 0, 3.8), (1.2, D, WALL))

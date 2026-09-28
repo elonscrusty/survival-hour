@@ -5525,46 +5525,65 @@
   "category": "Camp",
   "kind": "Structure",
   "kind_note": "Player-placed building piece (anchored, collidable).",
-  "use": "Clan shack behind each camp: open-front log cabin with a plank gable roof, bedrolls, a supply crate and a lantern. Replaces the procedural Camp.Hut look; its parts stay as the hidden colliders.",
-  "notes": "Front (open side) faces -Y (Roblox -Z). Team accent: bedrolls and door pennant (team_cloth).",
+  "use": "Clan cabin behind each camp: chunky cartoon log cabin (thick round logs, big overhanging roof, stone chimney, glowing windows, open doorway and a small porch). Replaces the procedural Camp.Hut look; its parts stay as the hidden colliders.",
+  "notes": "Front (doorway) faces -Y (Roblox -Z). Team accent: door banner and bedroll (team_cloth).",
   "size_studs_roblox_XYZ": [
-   13.6,
-   11.71,
-   12.01
+   13.8,
+   11.53,
+   12.06
   ],
   "footprint_studs": [
    12,
    10
   ],
-  "tris": 1444,
-  "verts": 836,
+  "tris": 2948,
+  "verts": 1640,
   "materials": 1,
   "texture_tiles": [
    "bark",
-   "cloth",
    "cloth_dark",
    "end_grain",
-   "fire",
+   "glow",
    "metal_dark",
+   "stone",
+   "stone_dark",
+   "stone_mossy",
    "team_cloth",
    "wood",
    "wood_dark"
   ],
   "origin_offset": [
    0.0,
-   -5.8115,
-   0.042
+   -5.7665,
+   -0.06
   ],
   "team_colored": true,
   "pivot": "Bottom centre of the floor, on the ground.",
   "collision_fidelity": "Box",
   "attachments": [
    {
+    "name": "Smoke_Att",
+    "cframe": [
+     -3.7,
+     10.8,
+     5.2,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   {
     "name": "Light_Att",
     "cframe": [
-     4.4,
-     6.0,
-     -4.2,
+     2.0,
+     4.6,
+     -4.75,
      1.0,
      0.0,
      0.0,
@@ -5594,16 +5613,16 @@
      1.0
     ],
     "size": [
-     12.0,
+     11.0,
      0.9,
-     10.0
+     8.4
     ]
    },
    {
     "cframe": [
      0.0,
+     3.8,
      4.2,
-     4.6,
      1.0,
      0.0,
      0.0,
@@ -5615,36 +5634,15 @@
      1.0
     ],
     "size": [
-     12.0,
-     7.0,
-     0.9
+     11.0,
+     6.6,
+     1.2
     ]
    },
    {
     "cframe": [
-     5.6,
-     4.2,
-     0.0,
-     1.0,
-     0.0,
-     0.0,
-     0.0,
-     1.0,
-     0.0,
-     0.0,
-     0.0,
-     1.0
-    ],
-    "size": [
-     0.9,
-     7.0,
-     10.0
-    ]
-   },
-   {
-    "cframe": [
-     -5.6,
-     4.2,
+     5.5,
+     3.8,
      0.0,
      1.0,
      0.0,
@@ -5657,9 +5655,30 @@
      1.0
     ],
     "size": [
-     0.9,
-     7.0,
-     10.0
+     1.2,
+     6.6,
+     8.4
+    ]
+   },
+   {
+    "cframe": [
+     -5.5,
+     3.8,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     1.2,
+     6.6,
+     8.4
     ]
    }
   ],
