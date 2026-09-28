@@ -34,4 +34,11 @@ return {
 		end
 		t.eq(C.Headshot(30, false, 1.75), 30)
 	end,
+	parry_window = function(t)
+		t.ok(C.IsParry(10, 1, 10.2, 0.28, 0.45))
+		t.no(C.IsParry(10, 1, 10.4, 0.28, 0.45)) -- too late: a normal block
+		t.no(C.IsParry(10, 0.2, 10.1, 0.28, 0.45)) -- guard was only just lowered (mashing)
+		t.no(C.IsParry(nil, 1, 10.1, 0.28, 0.45))
+		t.no(C.IsParry(10, 1, 9.9, 0.28, 0.45))
+	end,
 }

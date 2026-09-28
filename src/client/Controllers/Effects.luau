@@ -276,10 +276,14 @@ local function onHit(h: any)
 		hitMarker.Text = if h.Kind == "Repair" then "+" .. tostring(h.Amount)
 			elseif h.Kind == "Headshot" then "◎ HEADSHOT " .. tostring(h.Amount)
 			elseif h.Kind == "GuardBreak" then "GUARD BROKEN"
+			elseif h.Kind == "Parry" then "⛨ PERFECT BLOCK"
+			elseif h.Kind == "Parried" then "PARRIED"
 			else "✖ " .. tostring(h.Amount)
 		hitMarker.TextColor3 = if h.Kind == "Repair" then Theme.Colors.Good
 			elseif h.Kind == "Structure" then Theme.Colors.Warn
 			elseif h.Kind == "Headshot" or h.Kind == "GuardBreak" then Color3.fromRGB(255, 200, 80)
+			elseif h.Kind == "Parry" then Color3.fromRGB(140, 210, 255)
+			elseif h.Kind == "Parried" then Color3.fromRGB(255, 150, 120)
 			else Color3.new(1, 1, 1)
 		hitMarker.TextTransparency = 0
 		TweenService:Create(hitMarker, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()

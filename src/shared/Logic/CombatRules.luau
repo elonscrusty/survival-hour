@@ -31,6 +31,16 @@ function CombatRules.Block(dmg: number, reduction: number, stamina: number, drai
 	return { Taken = dmg - partial, Drain = stamina, GuardBroken = true }
 end
 
+-- Perfect block: the guard went up just before the hit (within `window`), after having been
+-- down for at least `rest` seconds (so mashing block can't fish for parries).
+function CombatRules.IsParry(raisedAt: number?, downFor: number, hitAt: number, window: number, rest: number): boolean
+	if not raisedAt then
+		return false
+	end
+	local dt = hitAt - raisedAt
+	return dt >= 0 and dt <= window and downFor >= rest
+end
+
 -- Melee damage for a swing: heavy hits harder; tired (not enough stamina) swings are weak.
 function CombatRules.MeleeDamage(base: number, heavy: boolean, heavyMult: number, tired: boolean): number
 	local d = base * (if heavy then heavyMult else 1)

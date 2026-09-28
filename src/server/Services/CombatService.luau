@@ -22,7 +22,7 @@ local CombatRules = require(Logic:WaitForChild("CombatRules"))
 
 local CombatService = {}
 
-export type Source = { Kind: string, By: Player?, Name: string?, Pos: Vector3?, Weapon: string?, Heavy: boolean?, Head: boolean? }
+export type Source = { Kind: string, By: Player?, Name: string?, Pos: Vector3?, Weapon: string?, Heavy: boolean?, Head: boolean?, Melee: boolean? }
 local CFG = Config.Combat
 
 local ctx: any
@@ -30,6 +30,7 @@ local nextAttack: { [Player]: number } = {}
 local lastShot: { [Player]: number } = {}
 local arrows: { { Owner: Player, Pos: Vector3, Vel: Vector3, T: number, Damage: number, Id: number, Start: Vector3, Weapon: string? } } = {}
 local arrowId = 0
+local guard: { [Player]: { RaisedAt: number?, DownFor: number, LoweredAt: number } } = {} -- parry timing
 
 function CombatService.Init(c)
 	ctx = c
@@ -40,7 +41,19 @@ function CombatService.Init(c)
 		local def = Items[id]
 		local broken = (p:GetAttribute("GuardBrokenUntil") or 0) > workspace:GetServerTimeNow()
 		local can = def ~= nil and not def.Ranged and (def.Kind == "Weapon" or def.Kind == "Tool") and not broken
+		local was = p:GetAttribute("Blocking") == true
+		local now = workspace:GetServerTimeNow()
+		local g = guard[p] or { RaisedAt = nil, DownFor = math.huge, LoweredAt = -math.huge }
+		guard[p] = g
 		p:SetAttribute("Blocking", on == true and can and ctx.Util.IsAlive(p) and ctx.StaminaService.Get(p) > 1)
+		local is = p:GetAttribute("Blocking") == true
+		if is and not was then
+			g.DownFor = now - g.LoweredAt
+			g.RaisedAt = now
+		elseif was and not is then
+			g.LoweredAt = now
+			g.RaisedAt = nil
+		end
 	end)
 	ctx.Util.Connect("DrawState", "Default", function(p: Player, on: any)
 		local def = Items[(ctx.InventoryService.EquippedItem(p))]
@@ -48,6 +61,7 @@ function CombatService.Init(c)
 	end)
 	ctx.Util.OnPlayerRemoving(function(p)
 		nextAttack[p] = nil
+		guard[p] = nil
 		lastShot[p] = nil
 	end)
 end
@@ -91,8 +105,25 @@ function CombatService.DamagePlayer(victim: Player, amount: number, source: Sour
 			local bid, slot = ctx.InventoryService.EquippedItem(victim)
 			local bdef = Items[bid]
 			local isShield = bdef and bdef.BlockReduction ~= nil
-			local r = CombatRules.Block(dmg, if isShield then bdef.BlockReduction else CFG.BlockReduction, ctx.StaminaService.Get(victim),
-				if isShield then CFG.ShieldDrainPerHp else CFG.BlockDrainPerHp, if source.Heavy then CFG.HeavyGuardDrain else 0)
+			-- perfect block: melee or animal hit landing just after the guard went up
+			local g = guard[victim]
+			local parry = (source.Melee == true or source.Kind == "Animal") and g ~= nil
+				and CombatRules.IsParry(g.RaisedAt, g.DownFor, workspace:GetServerTimeNow(), CFG.ParryWindow, CFG.ParryRest)
+			if parry and g then
+				g.RaisedAt = nil -- one parry per raise
+			end
+			local reduction = if isShield then bdef.BlockReduction else CFG.BlockReduction
+			local drainPer = if isShield then CFG.ShieldDrainPerHp else CFG.BlockDrainPerHp
+			local r = CombatRules.Block(dmg, if parry then math.max(reduction, CFG.ParryReduction) else reduction, ctx.StaminaService.Get(victim),
+				if parry then drainPer * CFG.ParryDrainMult else drainPer, if source.Heavy and not parry then CFG.HeavyGuardDrain else 0)
+			if parry then
+				Net.FireClient("HitFeedback", victim, "Parry", 0, source.Pos)
+				if source.By then
+					Net.FireClient("HitFeedback", source.By, "Parried", 0, root.Position)
+					-- the attacker's rhythm is broken for a moment: no stun, just a later next swing
+					nextAttack[source.By] = math.max(nextAttack[source.By] or 0, os.clock() + CFG.ParryStagger)
+				end
+			end
 			ctx.StaminaService.Drain(victim, r.Drain)
 			local bchar = victim.Character
 			if bchar then
@@ -303,7 +334,7 @@ function CombatService._onAttack(p: Player, payload: any)
 	local worn = false
 	if kind == "Player" then
 		dmg = dmg * ctx.PowerupService.DamageMult(p, "Player")
-		if CombatService.DamagePlayer(obj, dmg, { Kind = "Player", By = p, Pos = root.Position, Weapon = id, Heavy = heavy }) > 0 then
+		if CombatService.DamagePlayer(obj, dmg, { Kind = "Player", By = p, Pos = root.Position, Weapon = id, Heavy = heavy, Melee = true }) > 0 then
 			worn = true
 		end
 	elseif kind == "Animal" then

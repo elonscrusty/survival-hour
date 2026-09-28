@@ -261,6 +261,12 @@ Config.Combat = {
 	GuardBreakTime = 1.5, -- seconds you can't block after your guard breaks
 	HeadshotMult = 1.75,
 	ArmorCap = 0.5,
+	-- Perfect block (parry): raise the guard within this window before a melee/animal hit
+	ParryWindow = 0.28, -- seconds (includes a little latency allowance)
+	ParryRest = 0.45, -- the guard must have been down this long before (no block-mashing)
+	ParryReduction = 0.85, -- share of the hit stopped (normal block: BlockReduction)
+	ParryDrainMult = 0.4, -- stamina cost vs a normal block
+	ParryStagger = 0.45, -- attacker's next swing is delayed this long (no stun)
 }
 
 Config.Camera = {

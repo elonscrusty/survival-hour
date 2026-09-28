@@ -590,6 +590,12 @@ Config.Combat = {
 	GuardBreakTime = 1.5, -- seconds you can't block after your guard breaks
 	HeadshotMult = 1.75,
 	ArmorCap = 0.5,
+	-- Perfect block (parry): raise the guard within this window before a melee/animal hit
+	ParryWindow = 0.28, -- seconds (includes a little latency allowance)
+	ParryRest = 0.45, -- the guard must have been down this long before (no block-mashing)
+	ParryReduction = 0.85, -- share of the hit stopped (normal block: BlockReduction)
+	ParryDrainMult = 0.4, -- stamina cost vs a normal block
+	ParryStagger = 0.45, -- attacker's next swing is delayed this long (no stun)
 }
 
 Config.Camera = {
@@ -1547,6 +1553,16 @@ function CombatRules.Block(dmg: number, reduction: number, stamina: number, drai
 	local afford = math.max(0, stamina - extraDrain)
 	local partial = if drainPerHp > 0 then math.min(blocked, afford / drainPerHp) else blocked
 	return { Taken = dmg - partial, Drain = stamina, GuardBroken = true }
+end
+
+-- Perfect block: the guard went up just before the hit (within `window`), after having been
+-- down for at least `rest` seconds (so mashing block can't fish for parries).
+function CombatRules.IsParry(raisedAt: number?, downFor: number, hitAt: number, window: number, rest: number): boolean
+	if not raisedAt then
+		return false
+	end
+	local dt = hitAt - raisedAt
+	return dt >= 0 and dt <= window and downFor >= rest
 end
 
 -- Melee damage for a swing: heavy hits harder; tired (not enough stamina) swings are weak.
@@ -62381,7 +62397,7 @@ local CombatRules = require(Logic:WaitForChild("CombatRules"))
 
 local CombatService = {}
 
-export type Source = { Kind: string, By: Player?, Name: string?, Pos: Vector3?, Weapon: string?, Heavy: boolean?, Head: boolean? }
+export type Source = { Kind: string, By: Player?, Name: string?, Pos: Vector3?, Weapon: string?, Heavy: boolean?, Head: boolean?, Melee: boolean? }
 local CFG = Config.Combat
 
 local ctx: any
@@ -62389,6 +62405,7 @@ local nextAttack: { [Player]: number } = {}
 local lastShot: { [Player]: number } = {}
 local arrows: { { Owner: Player, Pos: Vector3, Vel: Vector3, T: number, Damage: number, Id: number, Start: Vector3, Weapon: string? } } = {}
 local arrowId = 0
+local guard: { [Player]: { RaisedAt: number?, DownFor: number, LoweredAt: number } } = {} -- parry timing
 
 function CombatService.Init(c)
 	ctx = c
@@ -62399,7 +62416,19 @@ function CombatService.Init(c)
 		local def = Items[id]
 		local broken = (p:GetAttribute("GuardBrokenUntil") or 0) > workspace:GetServerTimeNow()
 		local can = def ~= nil and not def.Ranged and (def.Kind == "Weapon" or def.Kind == "Tool") and not broken
+		local was = p:GetAttribute("Blocking") == true
+		local now = workspace:GetServerTimeNow()
+		local g = guard[p] or { RaisedAt = nil, DownFor = math.huge, LoweredAt = -math.huge }
+		guard[p] = g
 		p:SetAttribute("Blocking", on == true and can and ctx.Util.IsAlive(p) and ctx.StaminaService.Get(p) > 1)
+		local is = p:GetAttribute("Blocking") == true
+		if is and not was then
+			g.DownFor = now - g.LoweredAt
+			g.RaisedAt = now
+		elseif was and not is then
+			g.LoweredAt = now
+			g.RaisedAt = nil
+		end
 	end)
 	ctx.Util.Connect("DrawState", "Default", function(p: Player, on: any)
 		local def = Items[(ctx.InventoryService.EquippedItem(p))]
@@ -62407,6 +62436,7 @@ function CombatService.Init(c)
 	end)
 	ctx.Util.OnPlayerRemoving(function(p)
 		nextAttack[p] = nil
+		guard[p] = nil
 		lastShot[p] = nil
 	end)
 end
@@ -62450,8 +62480,25 @@ function CombatService.DamagePlayer(victim: Player, amount: number, source: Sour
 			local bid, slot = ctx.InventoryService.EquippedItem(victim)
 			local bdef = Items[bid]
 			local isShield = bdef and bdef.BlockReduction ~= nil
-			local r = CombatRules.Block(dmg, if isShield then bdef.BlockReduction else CFG.BlockReduction, ctx.StaminaService.Get(victim),
-				if isShield then CFG.ShieldDrainPerHp else CFG.BlockDrainPerHp, if source.Heavy then CFG.HeavyGuardDrain else 0)
+			-- perfect block: melee or animal hit landing just after the guard went up
+			local g = guard[victim]
+			local parry = (source.Melee == true or source.Kind == "Animal") and g ~= nil
+				and CombatRules.IsParry(g.RaisedAt, g.DownFor, workspace:GetServerTimeNow(), CFG.ParryWindow, CFG.ParryRest)
+			if parry and g then
+				g.RaisedAt = nil -- one parry per raise
+			end
+			local reduction = if isShield then bdef.BlockReduction else CFG.BlockReduction
+			local drainPer = if isShield then CFG.ShieldDrainPerHp else CFG.BlockDrainPerHp
+			local r = CombatRules.Block(dmg, if parry then math.max(reduction, CFG.ParryReduction) else reduction, ctx.StaminaService.Get(victim),
+				if parry then drainPer * CFG.ParryDrainMult else drainPer, if source.Heavy and not parry then CFG.HeavyGuardDrain else 0)
+			if parry then
+				Net.FireClient("HitFeedback", victim, "Parry", 0, source.Pos)
+				if source.By then
+					Net.FireClient("HitFeedback", source.By, "Parried", 0, root.Position)
+					-- the attacker's rhythm is broken for a moment: no stun, just a later next swing
+					nextAttack[source.By] = math.max(nextAttack[source.By] or 0, os.clock() + CFG.ParryStagger)
+				end
+			end
 			ctx.StaminaService.Drain(victim, r.Drain)
 			local bchar = victim.Character
 			if bchar then
@@ -62662,7 +62709,7 @@ function CombatService._onAttack(p: Player, payload: any)
 	local worn = false
 	if kind == "Player" then
 		dmg = dmg * ctx.PowerupService.DamageMult(p, "Player")
-		if CombatService.DamagePlayer(obj, dmg, { Kind = "Player", By = p, Pos = root.Position, Weapon = id, Heavy = heavy }) > 0 then
+		if CombatService.DamagePlayer(obj, dmg, { Kind = "Player", By = p, Pos = root.Position, Weapon = id, Heavy = heavy, Melee = true }) > 0 then
 			worn = true
 		end
 	elseif kind == "Animal" then
@@ -73799,10 +73846,14 @@ local function onHit(h: any)
 		hitMarker.Text = if h.Kind == "Repair" then "+" .. tostring(h.Amount)
 			elseif h.Kind == "Headshot" then "◎ HEADSHOT " .. tostring(h.Amount)
 			elseif h.Kind == "GuardBreak" then "GUARD BROKEN"
+			elseif h.Kind == "Parry" then "⛨ PERFECT BLOCK"
+			elseif h.Kind == "Parried" then "PARRIED"
 			else "✖ " .. tostring(h.Amount)
 		hitMarker.TextColor3 = if h.Kind == "Repair" then Theme.Colors.Good
 			elseif h.Kind == "Structure" then Theme.Colors.Warn
 			elseif h.Kind == "Headshot" or h.Kind == "GuardBreak" then Color3.fromRGB(255, 200, 80)
+			elseif h.Kind == "Parry" then Color3.fromRGB(140, 210, 255)
+			elseif h.Kind == "Parried" then Color3.fromRGB(255, 150, 120)
 			else Color3.new(1, 1, 1)
 		hitMarker.TextTransparency = 0
 		TweenService:Create(hitMarker, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()
