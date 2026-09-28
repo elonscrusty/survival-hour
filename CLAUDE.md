@@ -6,7 +6,10 @@ Roblox survival game (Rojo + Luau). The owner (kcdrewcarter) plays on a phone wh
 - **Caveman mode is always on.** From the first reply of every session, write chat replies in the style of `.claude/skills/caveman/SKILL.md` at level **lite**, without waiting for `/caveman`. The owner can switch with `/caveman full|ultra` or turn it off with "normal mode". Code, commits and docs stay in normal prose.
 - **Keep replies short.** Do the work, then give a 2-4 line plain-English summary. Don't narrate each step.
 - Work autonomously; don't ask for approval on routine steps. Ask only when a real decision belongs to the owner.
-- Read only the files a task needs; this file and `docs/IMPLEMENTATION_LOG.md` cover the history.
+- Read only the files a task needs. Start from `docs/STATUS.md` (short); open `docs/IMPLEMENTATION_LOG.md` only for history. Update STATUS.md when a pass finishes.
+- Generated/binary folders (build, Renders, Export, Source, Textures, Marketing) are blocked from reading; use tools and scripts for them.
+- Commit `build/SurvivalHour.rbxlx` (the owner downloads it) once, at the end of a work session, not on every commit: `git restore build/` before intermediate commits.
+- Prefer targeted edits over broad exploration; if a request is vague, do the most likely narrow reading, not a full-project sweep.
 - Branch: `claude/funny-babbage-lp3b6k`. Push with `git push -u origin claude/funny-babbage-lp3b6k`. No PRs unless asked.
 - Commit messages end with the attribution lines the session provides. Never put model names in commits or code.
 

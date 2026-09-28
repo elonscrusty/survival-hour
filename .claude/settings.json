@@ -24,6 +24,15 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)"
+    ],
+    "deny": [
+      "Read(./build/**)",
+      "Read(./Renders/**)",
+      "Read(./Export/**)",
+      "Read(./Source/**)",
+      "Read(./Textures/**)",
+      "Read(./Marketing/**)",
+      "Read(./SurvivalHourAssets.rbxm)"
     ]
   }
 }
