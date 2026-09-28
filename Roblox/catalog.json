@@ -14645,12 +14645,13 @@
    3.4,
    2.2
   ],
-  "tris": 144,
-  "verts": 80,
+  "tris": 1296,
+  "verts": 736,
   "materials": 1,
   "texture_tiles": [
    "metal_dark",
-   "wood"
+   "wood",
+   "wood_dark"
   ],
   "origin_offset": [
    0.0,
@@ -14694,12 +14695,14 @@
    3.4,
    2.2
   ],
-  "tris": 144,
-  "verts": 80,
+  "tris": 1296,
+  "verts": 736,
   "materials": 1,
   "texture_tiles": [
    "crate_paint",
-   "metal"
+   "metal",
+   "metal_dark",
+   "wood_dark"
   ],
   "origin_offset": [
    0.0,
@@ -14743,13 +14746,15 @@
    3.4,
    2.2
   ],
-  "tris": 156,
-  "verts": 88,
+  "tris": 1320,
+  "verts": 752,
   "materials": 1,
   "texture_tiles": [
    "brass",
    "enamel_slate",
-   "glow"
+   "glow",
+   "metal_dark",
+   "wood_dark"
   ],
   "origin_offset": [
    0.0,
@@ -14793,13 +14798,15 @@
    3.4,
    2.2
   ],
-  "tris": 156,
-  "verts": 88,
+  "tris": 1320,
+  "verts": 752,
   "materials": 1,
   "texture_tiles": [
    "brass",
    "enamel_purple",
-   "glow"
+   "glow",
+   "metal_dark",
+   "wood_dark"
   ],
   "origin_offset": [
    0.0,
@@ -15258,13 +15265,15 @@
    4,
    3
   ],
-  "tris": 92,
-  "verts": 56,
+  "tris": 412,
+  "verts": 248,
   "materials": 1,
   "texture_tiles": [
    "brass",
-   "enamel_teal",
-   "metal_dark"
+   "enamel_slate",
+   "metal",
+   "metal_dark",
+   "sign_blank"
   ],
   "origin_offset": [
    0.0,
@@ -15308,13 +15317,14 @@
    4.5,
    4.5
   ],
-  "tris": 100,
-  "verts": 56,
+  "tris": 496,
+  "verts": 276,
   "materials": 1,
   "texture_tiles": [
    "brass",
    "gunmetal",
-   "metal"
+   "metal",
+   "metal_dark"
   ],
   "origin_offset": [
    0.0,
@@ -15352,16 +15362,18 @@
   "size_studs_roblox_XYZ": [
    10.46,
    10.4,
-   1.35
+   1.36
   ],
   "footprint_studs": [
    10,
    2
   ],
-  "tris": 108,
-  "verts": 72,
+  "tris": 516,
+  "verts": 328,
   "materials": 1,
   "texture_tiles": [
+   "gunmetal",
+   "metal",
    "metal_dark",
    "red_paint",
    "wood_dark"
@@ -15369,7 +15381,7 @@
   "origin_offset": [
    -0.0815,
    -5.2,
-   0.325
+   0.32
   ],
   "team_colored": false,
   "pivot": "Bottom centre on the ground (Z=0).",
@@ -15408,11 +15420,12 @@
    10,
    2.6
   ],
-  "tris": 288,
-  "verts": 160,
+  "tris": 1084,
+  "verts": 680,
   "materials": 1,
   "texture_tiles": [
    "gunmetal",
+   "metal",
    "metal_dark"
   ],
   "origin_offset": [
@@ -15655,15 +15668,20 @@
    12,
    4
   ],
-  "tris": 160,
-  "verts": 96,
+  "tris": 864,
+  "verts": 496,
   "materials": 1,
   "texture_tiles": [
+   "charcoal",
    "embers",
+   "leather_dark",
+   "metal",
+   "metal_dark",
    "stone",
    "stone_dark",
    "wood",
-   "wood_dark"
+   "wood_dark",
+   "wood_fresh"
   ],
   "origin_offset": [
    2.05,
@@ -15707,16 +15725,20 @@
    12,
    4
   ],
-  "tris": 208,
-  "verts": 128,
+  "tris": 984,
+  "verts": 576,
   "materials": 1,
   "texture_tiles": [
+   "charcoal",
    "embers",
+   "leather_dark",
    "metal",
+   "metal_dark",
    "stone",
    "stone_dark",
    "wood",
-   "wood_dark"
+   "wood_dark",
+   "wood_fresh"
   ],
   "origin_offset": [
    2.025,

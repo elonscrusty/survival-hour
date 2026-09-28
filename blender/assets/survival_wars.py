@@ -387,12 +387,38 @@ def ore_iron(m):
 # =============================================================== chests
 
 def chest(m, body, trim, glow=False):
-    m.box(body, (3.4, 2.2, 1.6), loc=(0, 0, 0.8), bevel=0.08)
+    """Chest body only (the lid stays procedural in game so it can open). Bounds are
+    locked to the published mesh: X 3.4, depth -1.3..1.175 (+glow), height 2.4."""
+    # plank body on four stubby feet, with a base skirt and a top rim
+    m.box(body, (3.2, 2.1, 1.35), loc=(0, 0, 0.9), bevel=0.06)
+    m.box(body, (3.3, 2.2, 0.22), loc=(0, 0, 0.3), bevel=0.05)
+    m.box("wood_dark", (3.36, 2.24, 0.12), loc=(0, 0, 1.54), bevel=0.03)
+    for x in (-1.4, 1.4):
+        for y in (-0.85, 0.85):
+            m.box("wood_dark", (0.36, 0.36, 0.2), loc=(x, y, 0.1), bevel=0.04)
+    # plank seams on the long faces
+    for z in (0.62, 0.98, 1.3):
+        for y in (-1.07, 1.07):
+            m.box("wood_dark", (3.1, 0.05, 0.05), loc=(0, y, z))
+    # iron corner brackets (L plates) up each vertical edge
+    for x in (-1, 1):
+        for y in (-1, 1):
+            m.box(trim, (0.08, 0.3, 1.3), loc=(x * 1.66, y * 0.97, 0.9), bevel=0.02)
+            m.box(trim, (0.3, 0.08, 1.3), loc=(x * 1.53, y * 1.12, 0.9), bevel=0.02)
+    # two hoop bands that wrap the (procedural) lid, riveted
     for x in (-1.2, 1.2):
-        m.box(trim, (0.3, 2.35, 2.4), loc=(x, 0, 1.2), bevel=0.04)
-    m.box(trim, (0.5, 0.2, 0.6), loc=(0, -1.2, 1.5))
+        for y in (-1, 1):
+            m.box(trim, (0.3, 0.07, 2.36), loc=(x, y * 1.14, 1.18), bevel=0.02)
+        m.box(trim, (0.3, 2.35, 0.07), loc=(x, 0, 2.365), bevel=0.02)
+        for y in (-1.18, 1.14):
+            for z in (0.5, 1.1, 1.7, 2.2):
+                m.box("metal_dark", (0.09, 0.05, 0.09), loc=(x, y if y > 0 else -1.18, z))
+    # lock plate + hasp on the front
+    m.box(trim, (0.5, 0.2, 0.6), loc=(0, -1.2, 1.5), bevel=0.04)
+    m.torus("metal_dark", 0.12, 0.03, seg=8, tseg=4, loc=(0, -1.27, 1.32), rot=(90, 0, 0))
     if glow:
         m.box("glow", (0.5, 0.05, 0.5), loc=(0, -1.33, 0.9))
+        m.box(trim, (0.62, 0.04, 0.62), loc=(0, -1.29, 0.9))
 
 
 @asset("SM_Chest_Common", "SW_Loot", "Structure", density=2.0, pivot=GROUND, footprint=[3.4, 2.2],
@@ -679,28 +705,58 @@ def reinforced_chest(m):
 @asset("SM_MetalLocker", "SW_Base", "Structure", density=2.0, pivot=GROUND, footprint=[4, 3],
        use="Metal Locker storage (Tier III, 30 stacks).")
 def metal_locker(m):
-    m.box("enamel_teal", (4, 3, 7), loc=(0, 0, 3.5), bevel=0.08)
-    for k in range(3):
-        m.box("metal_dark", (2.4, 0.1, 0.15), loc=(0, -1.55, 5.8 + k * 0.3))
-    m.box("brass", (0.5, 0.2, 0.9), loc=(-1.4, -1.6, 3.5))
+    # bounds locked: X +-2, Y -1.7..1.5, Z 0..7
+    m.box("enamel_slate", (4, 3, 6.7), loc=(0, 0, 3.5), bevel=0.08)
+    m.box("metal_dark", (3.9, 2.9, 0.3), loc=(0, 0, 0.15), bevel=0.04)       # kick plate
+    m.box("metal_dark", (4, 3, 0.18), loc=(0, 0, 6.91), bevel=0.04)          # top lip
+    m.box("metal_dark", (0.06, 0.08, 6.2), loc=(0, -1.52, 3.55))             # double-door seam
+    for sx in (-1, 1):
+        for z in (6.1, 5.85, 5.6, 1.4, 1.15):                                  # louvre vents
+            m.box("metal_dark", (1.3, 0.1, 0.1), loc=(sx * 1.0, -1.55, z))
+        m.box("metal", (0.22, 0.1, 0.12), loc=(sx * 1.87, -1.55, 5.4))        # hinges
+        m.box("metal", (0.22, 0.1, 0.12), loc=(sx * 1.87, -1.55, 1.8))
+        m.box("brass", (0.14, 0.2, 0.8), loc=(sx * 0.3, -1.6, 3.5), bevel=0.03)  # handles
+    m.box("sign_blank", (0.9, 0.04, 0.5), loc=(-1.0, -1.52, 4.6))  # name card
 
 
 @asset("SM_SurvivalSafe", "SW_Base", "Structure", density=2.0, pivot=GROUND, footprint=[4.5, 4.5],
        use="Survival Safe storage (Tier IV, 45 stacks).")
 def survival_safe(m):
-    m.box("gunmetal", (4.5, 4.5, 5), loc=(0, 0, 2.5), bevel=0.15)
-    m.cylinder("brass", 0.7, 0.7, 0.3, seg=12, loc=(-0.8, -2.25, 2.8), rot=(90, 0, 0))
+    # bounds locked: X +-2.25, Y -2.55..2.25, Z 0..5
+    m.box("gunmetal", (4.5, 4.5, 4.7), loc=(0, 0, 2.65), bevel=0.15)
+    for x in (-1.9, 1.9):
+        for y in (-1.9, 1.9):
+            m.box("metal_dark", (0.5, 0.5, 0.3), loc=(x, y, 0.15), bevel=0.05)    # feet
+    m.box("metal_dark", (3.7, 0.08, 3.9), loc=(0, -2.28, 2.65), bevel=0.05)       # door plate
+    for z in (1.3, 4.0):
+        m.cylinder("metal", 0.12, 0.12, 0.7, seg=8, loc=(2.05, -2.3, z - 0.35))  # hinge barrels
+    m.cylinder("brass", 0.7, 0.7, 0.2, seg=16, loc=(-0.8, -2.3, 2.8), rot=(90, 0, 0))
+    m.cylinder("metal_dark", 0.35, 0.35, 0.14, seg=12, loc=(-0.8, -2.4, 2.8), rot=(90, 0, 0))
+    for k in range(3):                                                              # locking wheel spokes
+        m.box("metal", (0.08, 0.1, 1.3), loc=(0.9, -2.4, 2.6), rot=(0, k * 60, 0))
+    m.cylinder("metal", 0.14, 0.14, 0.2, seg=8, loc=(0.9, -2.33, 2.6), rot=(90, 0, 0))
     m.box("metal", (0.4, 0.3, 1.4), loc=(1.1, -2.3, 2.6))
+    m.box("metal_dark", (0.3, 0.1, 0.3), loc=(1.1, -2.5, 2.6))
 
 
 @asset("SM_ScrapWall", "SW_Base", "Structure", density=3.0, pivot=GROUND, footprint=[10, 2],
        use="Scrap Wall (Tier III): corrugated sheets on a timber frame, 10 wide.")
 def scrap_wall(m):
+    # same frame and sheet layout as the published mesh (bounds locked); sheets are
+    # now mostly weathered metal with one faded red panel, ribbed and bolted
     for x in (-4.6, 0, 4.6):
-        m.box("wood_dark", (0.8, 0.8, 10.4), loc=(x, -0.6, 5.2))
+        m.box("wood_dark", (0.8, 0.8, 10.4), loc=(x, -0.6, 5.2), bevel=0.05)
+    mats = ["metal_dark", "metal", "red_paint", "gunmetal", "metal_dark"]
     for i in range(5):
-        m.box("metal_dark" if i % 2 else "red_paint", (2.3, 0.3, 9.4), loc=(-4 + i * 2, 0.2, 5), rot=(0, (i % 3 - 1) * 2, 0))
+        rot = (0, (i % 3 - 1) * 2, 0)
+        x = -4 + i * 2
+        m.box(mats[i], (2.3, 0.3, 9.4), loc=(x, 0.2, 5), rot=rot)
+        for k in (-0.7, 0, 0.7):
+            m.box("metal_dark", (0.12, 0.1, 9.2), loc=(x + k, 0.0, 5), rot=rot)
+        for z in (1.2, 8.6):
+            m.box("metal", (0.14, 0.06, 0.14), loc=(x, 0.33, z), rot=rot)
     m.box("wood_dark", (10.2, 0.5, 0.5), loc=(0, -0.6, 8.6))
+    m.box("wood_dark", (10.2, 0.5, 0.5), loc=(0, -0.6, 1.6))
 
 
 @asset("SM_MetalWall", "SW_Base", "Structure", density=3.0, pivot=GROUND, footprint=[10, 2.6],
@@ -708,9 +764,16 @@ def scrap_wall(m):
 def metal_wall(m):
     for row in range(3):
         for i in range(2):
-            m.box("gunmetal" if (row + i) % 2 else "metal_dark", (4.9, 1.6, 3.5), loc=(-2.5 + i * 5, 0, 1.9 + row * 3.6), bevel=0.1)
+            x, z = -2.5 + i * 5, 1.9 + row * 3.6
+            m.box("gunmetal" if (row + i) % 2 else "metal_dark", (4.9, 1.6, 3.5), loc=(x, 0, z), bevel=0.1)
+            for sy in (-1, 1):
+                for dx in (-2.1, 2.1):
+                    for dz in (-1.45, 1.45):
+                        m.box("metal", (0.16, 0.08, 0.16), loc=(x + dx, sy * 0.82, z + dz))
+                m.box("metal_dark", (4.3, 0.08, 0.18), loc=(x, sy * 0.82, z))
     for x in (-5, 5):
-        m.box("metal_dark", (0.8, 2.6, 11), loc=(x, 0, 5.5))
+        m.box("metal_dark", (0.8, 2.6, 11), loc=(x, 0, 5.5), bevel=0.05)
+    m.box("metal_dark", (9.2, 2.0, 0.4), loc=(0, 0, 10.8))
 
 
 @asset("SM_WoodFloor", "SW_Base", "Structure", density=3.0, pivot=GROUND, footprint=[10, 10],
@@ -753,13 +816,34 @@ def tripwire(m):
 @asset("SM_Workbench_Level04", "SW_Base", "Structure", density=2.5, pivot=GROUND, footprint=[12, 4],
        use="Workbench Tier IV: stone forge with coals and chimney beside the bench.")
 def workbench4(m):
+    # bounds locked: X -4..8.1, Y +-2, Z 0..7.7
     m.box("wood", (8, 4, 0.8), loc=(0, 0, 3.4), bevel=0.06)
     for x in (-3.4, 3.4):
         for y in (-1.5, 1.5):
-            m.box("wood_dark", (0.7, 0.7, 3), loc=(x, y, 1.5))
+            m.box("wood_dark", (0.7, 0.7, 3), loc=(x, y, 1.5), bevel=0.05)
+        m.box("wood_dark", (0.4, 3.2, 0.4), loc=(x, 0, 0.7))
+    m.box("wood_dark", (7.2, 3.4, 0.25), loc=(0, 0, 0.95), bevel=0.03)          # lower shelf
+    for i, x in enumerate((-2.4, -1.2, 0.2)):                                     # stock on the shelf
+        m.box("wood_fresh" if i % 2 else "wood", (1.0, 2.6, 0.3), loc=(x, 0, 1.23 + 0.3 * (i % 2)), rot=(0, 0, 4 * i))
+    m.box("metal_dark", (0.9, 0.9, 0.5), loc=(1.6, -1.1, 4.05), bevel=0.05)     # vise
+    m.box("metal", (0.2, 0.8, 0.12), loc=(1.6, -1.55, 4.2))
+    # rear tool board with pegs (tools hang on it, so nothing floats at Tier V)
+    m.box("wood_dark", (5.0, 0.25, 3.4), loc=(-1.2, 1.75, 5.9), bevel=0.04)
+    for x in (-3.6, 1.2):
+        m.box("wood_dark", (0.3, 0.3, 4.3), loc=(x, 1.75, 5.55))
+    for x in (-3.1, -2.1, -1.2, -0.4):
+        m.box("metal_dark", (0.08, 0.3, 0.08), loc=(x, 1.55, 7.2))
+    # forge: stone hearth with glowing coals, bellows and chimney
     m.box("stone_dark", (3.4, 3, 2.6), loc=(6.4, 0.4, 1.3), bevel=0.15)
+    m.box("stone", (3.4, 3.0, 0.25), loc=(6.4, 0.4, 2.6), bevel=0.05)
     m.box("embers", (2.4, 2, 0.3), loc=(6.4, 0.4, 2.7))
-    m.box("stone", (1.4, 1.4, 5), loc=(6.9, 1.3, 5.2))
+    for i in range(4):
+        m.blob("charcoal", 0.3, loc=(5.8 + i * 0.4, 0.1 + (i % 2) * 0.5, 2.9), scale=(1, 1, 0.6), subdiv=1)
+    m.box("stone", (1.4, 1.4, 5), loc=(6.9, 1.3, 5.2), bevel=0.08)
+    m.box("stone_dark", (1.7, 1.4, 0.3), loc=(6.9, 1.3, 7.55))
+    m.box("leather_dark", (0.9, 1.4, 0.6), loc=(4.4, -1.0, 3.1), rot=(0, 0, 20), bevel=0.1)  # bellows
+    m.box("metal_dark", (0.8, 0.8, 0.9), loc=(4.4, 1.1, 4.25), bevel=0.06)     # anvil block on the bench
+    m.box("metal", (1.4, 0.6, 0.35), loc=(4.4, 1.1, 4.85), bevel=0.05)
 
 
 @asset("SM_Workbench_Level05", "SW_Base", "Structure", density=2.5, pivot=GROUND, footprint=[12, 4],
@@ -767,5 +851,11 @@ def workbench4(m):
 def workbench5(m):
     workbench4(m)
     m.box("metal", (8.1, 4.1, 0.12), loc=(0, 0, 3.86))
-    for i in (-1, 0, 1):
-        m.box("metal", (0.25, 0.25, 2.6), loc=(-(i * 1.6 + 0.5), 1.62, 6.4))
+    for x in (-3.9, 3.9):
+        for y in (-1.9, 1.9):
+            m.box("metal_dark", (0.3, 0.3, 0.14), loc=(x, y, 3.93))
+    # steel tools hanging from the board's pegs (was floating bars)
+    for x, ln in ((-3.1, 2.4), (-2.1, 2.0), (-1.2, 2.6)):
+        m.box("metal", (0.22, 0.12, ln), loc=(x, 1.5, 7.15 - ln / 2))
+    m.box("metal_dark", (0.7, 0.2, 0.35), loc=(-2.1, 1.5, 5.2))
+    m.box("metal_dark", (0.5, 0.2, 0.6), loc=(-1.2, 1.5, 4.6))
