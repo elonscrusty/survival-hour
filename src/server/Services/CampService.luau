@@ -23,6 +23,7 @@ local CampService = {}
 
 local ctx: any
 local camps: { [number]: any } = {}
+local trophyCount: { [number]: number } = {} -- trophies placed per team this match
 local levels: { [number]: number } = {}
 local revealed: { [number]: { [number]: boolean } } = {} -- team -> discovered camp teams
 local lastAlert: { [number]: number } = {}
@@ -59,6 +60,7 @@ function CampService.Init(c)
 	end)
 	ctx.MatchService.On("MatchCleanup", function()
 		camps = {}
+		trophyCount = {}
 		levels = {}
 		revealed = {}
 		fires = {}
@@ -277,6 +279,57 @@ function CampService._setup(map: any)
 			sound:Play()
 		end
 	end
+end
+
+-- Trophies: purely visual bragging rights beside a camp's fire (reset every match, no stats).
+-- Kinds: Bear, Wolf, Raid, Explorer. Placed on a ring behind the fire, away from the spawn side.
+local TROPHY_LOOK = {
+	Bear = { Color = Color3.fromRGB(84, 58, 40), Size = Vector3.new(2.2, 1.6, 0.4), Label = "Bear pelt" },
+	Wolf = { Color = Color3.fromRGB(128, 124, 118), Size = Vector3.new(1.6, 1.2, 0.35), Label = "Wolf pelt" },
+	Raid = { Color = Color3.fromRGB(150, 40, 36), Size = Vector3.new(1.2, 1.8, 0.1), Label = "Raid banner" },
+	Explorer = { Color = Color3.fromRGB(214, 196, 150), Size = Vector3.new(1.6, 1.2, 0.1), Label = "Explorer's map" },
+}
+function CampService.AddTrophy(team: number, kind: string)
+	local camp = camps[team]
+	local look = TROPHY_LOOK[kind]
+	if not camp or not look or not camp.Folder then
+		return
+	end
+	local n = (trophyCount[team] or 0) + 1
+	if n > 6 then
+		return
+	end
+	trophyCount[team] = n
+	-- behind the fire (+Z of the camp origin faces away from the map centre), fanned out
+	local ang = math.rad(-50 + (n - 1) * 20)
+	local base = camp.Origin * CFrame.Angles(0, ang, 0) * CFrame.new(0, 0, 9)
+	local ground = ctx.WorldService.GroundY(base.Position.X, base.Position.Z)
+	local at = CFrame.new(base.Position.X, ground, base.Position.Z) * (camp.Origin - camp.Origin.Position) * CFrame.Angles(0, ang + math.pi, 0)
+	local m = Instance.new("Model")
+	m.Name = "Trophy_" .. kind
+	local post = Instance.new("Part")
+	post.Name = "Post"
+	post.Anchored = true
+	post.CanCollide = false
+	post.CanQuery = false
+	post.Size = Vector3.new(0.35, 3.4, 0.35)
+	post.CFrame = at * CFrame.new(0, 1.7, 0)
+	post.Color = Color3.fromRGB(92, 70, 50)
+	post.Material = Enum.Material.Wood
+	post.Parent = m
+	local plate = Instance.new("Part")
+	plate.Name = "Trophy"
+	plate.Anchored = true
+	plate.CanCollide = false
+	plate.CanQuery = false
+	plate.Size = look.Size
+	plate.CFrame = at * CFrame.new(0, 2.6, -0.3)
+	plate.Color = look.Color
+	plate.Material = if kind == "Bear" or kind == "Wolf" then Enum.Material.Fabric else Enum.Material.SmoothPlastic
+	plate.Parent = m
+	m:SetAttribute("Label", look.Label)
+	m.Parent = camp.Folder
+	Net.FireAll("Fx", "Built", { Pos = plate.Position })
 end
 
 function CampService.GetCamp(team: number): any

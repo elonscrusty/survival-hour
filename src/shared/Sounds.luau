@@ -11,7 +11,9 @@
 -- uploads) and paste the rbxassetid here. AssetId overrides Bundled.
 -- A cue with neither plays nothing (silent fallback).
 
-export type Cue = { AssetId: string?, Bundled: string?, Volume: number, Pitch: number?, Looped: boolean? }
+-- Range: how far (studs) the sound carries in 3D. Work noise carries further than the default
+-- 120 on purpose: chopping, felling, building, breaching and shots let players find each other.
+export type Cue = { AssetId: string?, Bundled: string?, Volume: number, Pitch: number?, Looped: boolean?, Range: number? }
 
 local Sounds: { [string]: Cue } = {
 	-- UI
@@ -25,29 +27,29 @@ local Sounds: { [string]: Cue } = {
 	-- Player / combat
 	Swing = { Bundled = "rbxasset://sounds/action_jump.mp3", Volume = 0.35, Pitch = 1.6 },
 	HitFlesh = { Bundled = "rbxasset://sounds/ouch.ogg", Volume = 0.5, Pitch = 1.0 },
-	HitStructure = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.6, Pitch = 0.7 },
+	HitStructure = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.6, Pitch = 0.7, Range = 240 },
 	BowRelease = { Bundled = "rbxasset://sounds/action_jump.mp3", Volume = 0.4, Pitch = 2.0 },
-	Gunshot = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 0.45, Pitch = 2.2 },
+	Gunshot = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 0.45, Pitch = 2.2, Range = 450 },
 	Block = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.6, Pitch = 1.8 },
 	Death = { Bundled = "rbxasset://sounds/oof.ogg", Volume = 0.6, Pitch = 1.0 },
 	Heal = { Bundled = "rbxasset://sounds/action_get_up.mp3", Volume = 0.4, Pitch = 1.3 },
 
 	-- Gathering / building
-	Chop = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.55, Pitch = 1.1 },
+	Chop = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.55, Pitch = 1.1, Range = 220 },
 	Gather = { Bundled = "rbxasset://sounds/action_footsteps_plastic.mp3", Volume = 0.45, Pitch = 1.2 },
-	Build = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.7, Pitch = 0.9 },
-	Repair = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.5, Pitch = 1.5 },
+	Build = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.7, Pitch = 0.9, Range = 180 },
+	Repair = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.5, Pitch = 1.5, Range = 150 },
 	Craft = { Bundled = "rbxasset://sounds/action_get_up.mp3", Volume = 0.45, Pitch = 1.6 },
 	Break = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 0.4, Pitch = 0.8 },
-	ChopHeavy = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.7, Pitch = 0.8 },
-	TreeCreak = { Bundled = "rbxasset://sounds/action_falling.ogg", Volume = 0.45, Pitch = 0.4 },
-	TreeFall = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 0.65, Pitch = 0.45 },
+	ChopHeavy = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.7, Pitch = 0.8, Range = 260 },
+	TreeCreak = { Bundled = "rbxasset://sounds/action_falling.ogg", Volume = 0.45, Pitch = 0.4, Range = 200 },
+	TreeFall = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 0.65, Pitch = 0.45, Range = 320 },
 	Eat = { Bundled = "rbxasset://sounds/action_footsteps_plastic.mp3", Volume = 0.5, Pitch = 1.8 },
 	ChestOpen = { Bundled = "rbxasset://sounds/action_get_up.mp3", Volume = 0.6, Pitch = 0.9 },
 	Alarm = { Bundled = "rbxasset://sounds/volume_slider.ogg", Volume = 0.9, Pitch = 0.5 },
 	TrapSnap = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 0.6, Pitch = 1.8 },
-	Breach = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 1.0, Pitch = 0.5 },
-	Explosion = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 1.0, Pitch = 0.7 },
+	Breach = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 1.0, Pitch = 0.5, Range = 300 },
+	Explosion = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 1.0, Pitch = 0.7, Range = 450 },
 
 	-- Water / fire
 	Pour = { Bundled = "rbxasset://sounds/action_swim.mp3", Volume = 0.6, Pitch = 0.9, Looped = true },
@@ -124,7 +126,7 @@ function SoundLib.Make(name: string): Sound?
 	s.Volume = cue.Volume
 	s.PlaybackSpeed = cue.Pitch or 1
 	s.Looped = cue.Looped == true
-	s.RollOffMaxDistance = 120
+	s.RollOffMaxDistance = cue.Range or 120
 	s.RollOffMinDistance = 10
 	return s
 end

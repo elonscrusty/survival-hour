@@ -79,7 +79,24 @@ function Spectate.Start()
 			if hum and camera.CameraSubject ~= hum then
 				camera.CameraSubject = hum
 			end
-			nameLabel.Text = "Watching " .. target.DisplayName .. (if target:GetAttribute("Team") == player:GetAttribute("Team") then " (clanmate)" else "")
+			-- only public match info: name, whether their fire is out, survivors left, day/night
+			local ms = game:GetService("ReplicatedStorage"):FindFirstChild("MatchState")
+			local t = target:GetAttribute("Team")
+			local finalLife = ms and t and ms:GetAttribute("Fire" .. tostring(t)) == false
+			local left = ms and ms:GetAttribute("Remaining")
+			local phase = ms and ms:GetAttribute("Phase")
+			local day = ms and ms:GetAttribute("Day")
+			local extra = {}
+			if finalLife then
+				table.insert(extra, "FINAL LIFE")
+			end
+			if type(left) == "number" then
+				table.insert(extra, tostring(left) .. " left")
+			end
+			if (phase == "Day" or phase == "Night") and type(day) == "number" then
+				table.insert(extra, phase .. " " .. tostring(day))
+			end
+			nameLabel.Text = "Watching " .. target.DisplayName .. (if t == player:GetAttribute("Team") then " (clanmate)" else "") .. (if #extra > 0 then "  ·  " .. table.concat(extra, " · ") else "")
 		else
 			bar.Visible = false
 			local myHum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")

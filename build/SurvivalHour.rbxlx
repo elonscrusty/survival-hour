@@ -5336,6 +5336,24 @@ function Camp.Campfire(cf: CFrame, teamColor: Color3, parent: Instance?): Model
 	smoke.Size = 2
 	smoke.Enabled = false
 	smoke.Parent = core
+	-- a smoke column that rises above the canopy: bigger fires are seen from further away
+	-- (the trade-off: a strong fire keeps you alive and gives your camp away)
+	local column = Instance.new("ParticleEmitter")
+	column.Name = "SmokeColumn"
+	column.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	column.Color = ColorSequence.new(Color3.fromRGB(120, 118, 115))
+	column.LightInfluence = 0.8
+	column.Rate = 0
+	column.Lifetime = NumberRange.new(9, 13)
+	column.Speed = NumberRange.new(6, 9)
+	column.SpreadAngle = Vector2.new(8, 8)
+	column.Acceleration = Vector3.new(1.2, 0.6, 0.4) -- a slight drift with the wind
+	column.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 3), NumberSequenceKeypoint.new(1, 16) })
+	column.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.75), NumberSequenceKeypoint.new(0.3, 0.72), NumberSequenceKeypoint.new(1, 1) })
+	column.RotSpeed = NumberRange.new(-10, 10)
+	column.Rotation = NumberRange.new(0, 360)
+	column.EmissionDirection = Enum.NormalId.Top
+	column.Parent = core
 
 	-- Light-radius ring (visible guide for "animals avoid this"), faint team tint.
 	local ring = Build.Decor({ Name = "SafeRing", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.1, 90, 90), CFrame = CFrame.new(0, 0.12, 0) * CFrame.Angles(0, 0, math.rad(90)), Color = teamColor, Material = Enum.Material.ForceField, Transparency = 0.85, Parent = m, CastShadow = false })
@@ -5389,6 +5407,14 @@ function Camp.SetFire(m: Model, level: number, fuel: number)
 		smoke.Opacity = 0.08 + lv * 0.05
 		smoke.Size = 2 + lv
 	end
+	local column = core:FindFirstChild("SmokeColumn") :: ParticleEmitter?
+	if column then
+		-- tier sets how tall/thick the column is; a starving fire smoulders dark and heavy
+		local starving = math.clamp(1 - fuel / 0.15, 0, 1)
+		column.Rate = if flame and flame.Enabled then 0.8 + lv * 0.9 + starving * 1.5 else 0
+		column.Speed = NumberRange.new(6 + lv, 9 + lv * 1.5)
+		column.Color = ColorSequence.new(Color3.fromRGB(120, 118, 115):Lerp(Color3.fromRGB(45, 42, 40), starving))
+	end
 end
 
 -- Switches a campfire model to its extinguished look (permanent).
@@ -5403,6 +5429,10 @@ function Camp.Extinguish(m: Model)
 		local glow = core:FindFirstChild("Glow") :: PointLight?
 		if glow then
 			glow.Enabled = false
+		end
+		local column = core:FindFirstChild("SmokeColumn") :: ParticleEmitter?
+		if column then
+			column.Rate = 0
 		end
 		local sparks = core:FindFirstChild("Sparks") :: ParticleEmitter?
 		if sparks then
@@ -10166,7 +10196,9 @@ return Resources
 -- uploads) and paste the rbxassetid here. AssetId overrides Bundled.
 -- A cue with neither plays nothing (silent fallback).
 
-export type Cue = { AssetId: string?, Bundled: string?, Volume: number, Pitch: number?, Looped: boolean? }
+-- Range: how far (studs) the sound carries in 3D. Work noise carries further than the default
+-- 120 on purpose: chopping, felling, building, breaching and shots let players find each other.
+export type Cue = { AssetId: string?, Bundled: string?, Volume: number, Pitch: number?, Looped: boolean?, Range: number? }
 
 local Sounds: { [string]: Cue } = {
 	-- UI
@@ -10180,29 +10212,29 @@ local Sounds: { [string]: Cue } = {
 	-- Player / combat
 	Swing = { Bundled = "rbxasset://sounds/action_jump.mp3", Volume = 0.35, Pitch = 1.6 },
 	HitFlesh = { Bundled = "rbxasset://sounds/ouch.ogg", Volume = 0.5, Pitch = 1.0 },
-	HitStructure = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.6, Pitch = 0.7 },
+	HitStructure = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.6, Pitch = 0.7, Range = 240 },
 	BowRelease = { Bundled = "rbxasset://sounds/action_jump.mp3", Volume = 0.4, Pitch = 2.0 },
-	Gunshot = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 0.45, Pitch = 2.2 },
+	Gunshot = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 0.45, Pitch = 2.2, Range = 450 },
 	Block = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.6, Pitch = 1.8 },
 	Death = { Bundled = "rbxasset://sounds/oof.ogg", Volume = 0.6, Pitch = 1.0 },
 	Heal = { Bundled = "rbxasset://sounds/action_get_up.mp3", Volume = 0.4, Pitch = 1.3 },
 
 	-- Gathering / building
-	Chop = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.55, Pitch = 1.1 },
+	Chop = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.55, Pitch = 1.1, Range = 220 },
 	Gather = { Bundled = "rbxasset://sounds/action_footsteps_plastic.mp3", Volume = 0.45, Pitch = 1.2 },
-	Build = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.7, Pitch = 0.9 },
-	Repair = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.5, Pitch = 1.5 },
+	Build = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.7, Pitch = 0.9, Range = 180 },
+	Repair = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.5, Pitch = 1.5, Range = 150 },
 	Craft = { Bundled = "rbxasset://sounds/action_get_up.mp3", Volume = 0.45, Pitch = 1.6 },
 	Break = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 0.4, Pitch = 0.8 },
-	ChopHeavy = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.7, Pitch = 0.8 },
-	TreeCreak = { Bundled = "rbxasset://sounds/action_falling.ogg", Volume = 0.45, Pitch = 0.4 },
-	TreeFall = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 0.65, Pitch = 0.45 },
+	ChopHeavy = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.7, Pitch = 0.8, Range = 260 },
+	TreeCreak = { Bundled = "rbxasset://sounds/action_falling.ogg", Volume = 0.45, Pitch = 0.4, Range = 200 },
+	TreeFall = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 0.65, Pitch = 0.45, Range = 320 },
 	Eat = { Bundled = "rbxasset://sounds/action_footsteps_plastic.mp3", Volume = 0.5, Pitch = 1.8 },
 	ChestOpen = { Bundled = "rbxasset://sounds/action_get_up.mp3", Volume = 0.6, Pitch = 0.9 },
 	Alarm = { Bundled = "rbxasset://sounds/volume_slider.ogg", Volume = 0.9, Pitch = 0.5 },
 	TrapSnap = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 0.6, Pitch = 1.8 },
-	Breach = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 1.0, Pitch = 0.5 },
-	Explosion = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 1.0, Pitch = 0.7 },
+	Breach = { Bundled = "rbxasset://sounds/action_jump_land.mp3", Volume = 1.0, Pitch = 0.5, Range = 300 },
+	Explosion = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 1.0, Pitch = 0.7, Range = 450 },
 
 	-- Water / fire
 	Pour = { Bundled = "rbxasset://sounds/action_swim.mp3", Volume = 0.6, Pitch = 0.9, Looped = true },
@@ -10279,7 +10311,7 @@ function SoundLib.Make(name: string): Sound?
 	s.Volume = cue.Volume
 	s.PlaybackSpeed = cue.Pitch or 1
 	s.Looped = cue.Looped == true
-	s.RollOffMaxDistance = 120
+	s.RollOffMaxDistance = cue.Range or 120
 	s.RollOffMinDistance = 10
 	return s
 end
@@ -61405,6 +61437,7 @@ local CampService = {}
 
 local ctx: any
 local camps: { [number]: any } = {}
+local trophyCount: { [number]: number } = {} -- trophies placed per team this match
 local levels: { [number]: number } = {}
 local revealed: { [number]: { [number]: boolean } } = {} -- team -> discovered camp teams
 local lastAlert: { [number]: number } = {}
@@ -61441,6 +61474,7 @@ function CampService.Init(c)
 	end)
 	ctx.MatchService.On("MatchCleanup", function()
 		camps = {}
+		trophyCount = {}
 		levels = {}
 		revealed = {}
 		fires = {}
@@ -61659,6 +61693,57 @@ function CampService._setup(map: any)
 			sound:Play()
 		end
 	end
+end
+
+-- Trophies: purely visual bragging rights beside a camp's fire (reset every match, no stats).
+-- Kinds: Bear, Wolf, Raid, Explorer. Placed on a ring behind the fire, away from the spawn side.
+local TROPHY_LOOK = {
+	Bear = { Color = Color3.fromRGB(84, 58, 40), Size = Vector3.new(2.2, 1.6, 0.4), Label = "Bear pelt" },
+	Wolf = { Color = Color3.fromRGB(128, 124, 118), Size = Vector3.new(1.6, 1.2, 0.35), Label = "Wolf pelt" },
+	Raid = { Color = Color3.fromRGB(150, 40, 36), Size = Vector3.new(1.2, 1.8, 0.1), Label = "Raid banner" },
+	Explorer = { Color = Color3.fromRGB(214, 196, 150), Size = Vector3.new(1.6, 1.2, 0.1), Label = "Explorer's map" },
+}
+function CampService.AddTrophy(team: number, kind: string)
+	local camp = camps[team]
+	local look = TROPHY_LOOK[kind]
+	if not camp or not look or not camp.Folder then
+		return
+	end
+	local n = (trophyCount[team] or 0) + 1
+	if n > 6 then
+		return
+	end
+	trophyCount[team] = n
+	-- behind the fire (+Z of the camp origin faces away from the map centre), fanned out
+	local ang = math.rad(-50 + (n - 1) * 20)
+	local base = camp.Origin * CFrame.Angles(0, ang, 0) * CFrame.new(0, 0, 9)
+	local ground = ctx.WorldService.GroundY(base.Position.X, base.Position.Z)
+	local at = CFrame.new(base.Position.X, ground, base.Position.Z) * (camp.Origin - camp.Origin.Position) * CFrame.Angles(0, ang + math.pi, 0)
+	local m = Instance.new("Model")
+	m.Name = "Trophy_" .. kind
+	local post = Instance.new("Part")
+	post.Name = "Post"
+	post.Anchored = true
+	post.CanCollide = false
+	post.CanQuery = false
+	post.Size = Vector3.new(0.35, 3.4, 0.35)
+	post.CFrame = at * CFrame.new(0, 1.7, 0)
+	post.Color = Color3.fromRGB(92, 70, 50)
+	post.Material = Enum.Material.Wood
+	post.Parent = m
+	local plate = Instance.new("Part")
+	plate.Name = "Trophy"
+	plate.Anchored = true
+	plate.CanCollide = false
+	plate.CanQuery = false
+	plate.Size = look.Size
+	plate.CFrame = at * CFrame.new(0, 2.6, -0.3)
+	plate.Color = look.Color
+	plate.Material = if kind == "Bear" or kind == "Wolf" then Enum.Material.Fabric else Enum.Material.SmoothPlastic
+	plate.Parent = m
+	m:SetAttribute("Label", look.Label)
+	m.Parent = camp.Folder
+	Net.FireAll("Fx", "Built", { Pos = plate.Position })
 end
 
 function CampService.GetCamp(team: number): any
@@ -63671,7 +63756,7 @@ function DevService._onCommand(p: Player, cmd: any, arg: any)
 	elseif cmd == "CompleteChallenges" then
 		local s = ctx.DataService.Get(p)
 		if s then
-			for _, stat in { "DistanceTravelled", "CratesOpened", "AnimalsKilled", "EnemyWallsScaled", "HealthRepaired", "LongArrowHits" } do
+			for _, stat in { "Resources", "Animals", "Pois", "Nights", "Crafts", "Chests", "DamageDealt", "Predators", "BenchUpgrades", "Breaches" } do
 				s.Profile.Stats[stat] = 999999
 			end
 			ctx.DataService.Push(p)
@@ -67764,6 +67849,20 @@ local ctx: any
 local states: { [Player]: PState } = {}
 local blood: { { Pos: Vector3, At: number, UserId: number } } = {}
 local workbenchRewarded: { [number]: boolean } = {}
+local trophies: { [number]: { [string]: number } } = {} -- camp trophies placed per team/kind
+
+-- Camp trophies (CampService.AddTrophy): at most `cap` of a kind per team per match.
+local TROPHY_CAP = { Bear = 2, Wolf = 1, Raid = 1, Explorer = 1 }
+local function trophy(p: Player, kind: string)
+	local team = ctx.Util.Team(p)
+	local t = trophies[team] or {}
+	trophies[team] = t
+	if (t[kind] or 0) < (TROPHY_CAP[kind] or 1) then
+		t[kind] = (t[kind] or 0) + 1
+		ctx.CampService.AddTrophy(team, kind)
+	end
+end
+
 
 local function now(): number
 	return workspace:GetServerTimeNow()
@@ -67787,6 +67886,7 @@ function PowerupService.Init(c)
 		states = {}
 		blood = {}
 		workbenchRewarded = {}
+		trophies = {}
 	end)
 	ctx.MatchService.On("PhaseChanged", function(phase: string, day: number)
 		-- Surviving a night: everyone still alive at sunrise (Day 2 onwards).
@@ -67903,6 +68003,13 @@ function PowerupService._tick()
 					if not st.Pois[i] and (poi.Pos - root.Position).Magnitude <= POI_RADIUS then
 						st.Pois[i] = true
 						PowerupService.Reward(p, "PoiDiscovered", "Discovered a " .. poi.Type)
+						local found = 0
+						for _ in st.Pois do
+							found += 1
+						end
+						if found == 5 then
+							trophy(p, "Explorer")
+						end
 					end
 				end
 			end
@@ -68173,6 +68280,9 @@ function PowerupService.Tally(p: Player?, key: string, n: number)
 	local st = p and states[p]
 	if st and n > 0 then
 		st.Stats[key] = (st.Stats[key] or 0) + n
+		if key == "Breaches" then
+			trophy(p :: Player, "Raid")
+		end
 	end
 end
 
@@ -68273,6 +68383,9 @@ function PowerupService.OnWildlifeKill(p: Player, species: string, _night: boole
 		if species == "Bear" then
 			st.Stats.Bears += 1
 			ctx.Util.AwardBadge(p, "BearHunter")
+			trophy(p, "Bear")
+		elseif species == "Wolf" then
+			trophy(p, "Wolf")
 		end
 		if PREDATORS[species] then
 			st.Stats.Predators = (st.Stats.Predators or 0) + 1
@@ -76797,7 +76910,24 @@ function Spectate.Start()
 			if hum and camera.CameraSubject ~= hum then
 				camera.CameraSubject = hum
 			end
-			nameLabel.Text = "Watching " .. target.DisplayName .. (if target:GetAttribute("Team") == player:GetAttribute("Team") then " (clanmate)" else "")
+			-- only public match info: name, whether their fire is out, survivors left, day/night
+			local ms = game:GetService("ReplicatedStorage"):FindFirstChild("MatchState")
+			local t = target:GetAttribute("Team")
+			local finalLife = ms and t and ms:GetAttribute("Fire" .. tostring(t)) == false
+			local left = ms and ms:GetAttribute("Remaining")
+			local phase = ms and ms:GetAttribute("Phase")
+			local day = ms and ms:GetAttribute("Day")
+			local extra = {}
+			if finalLife then
+				table.insert(extra, "FINAL LIFE")
+			end
+			if type(left) == "number" then
+				table.insert(extra, tostring(left) .. " left")
+			end
+			if (phase == "Day" or phase == "Night") and type(day) == "number" then
+				table.insert(extra, phase .. " " .. tostring(day))
+			end
+			nameLabel.Text = "Watching " .. target.DisplayName .. (if t == player:GetAttribute("Team") then " (clanmate)" else "") .. (if #extra > 0 then "  ·  " .. table.concat(extra, " · ") else "")
 		else
 			bar.Visible = false
 			local myHum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")

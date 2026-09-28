@@ -157,6 +157,7 @@ Color3 = {
 Color3.fromRGB = function(r, g, b) return Color3.new(r / 255, g / 255, b / 255) end
 NumberRange = { new = function(a, b) return { Min = a, Max = b or a } end }
 NumberSequence = { new = function(...) return { ... } end }
+NumberSequenceKeypoint = { new = function(t, v, e) return { Time = t, Value = v, Envelope = e or 0 } end }
 ColorSequence = { new = function(...) return { ... } end }
 UDim2 = { new = function(...) return { ... } end, fromScale = function(...) return { ... } end, fromOffset = function(...) return { ... } end }
 Vector2 = { new = function(x, y) return { X = x, Y = y } end }

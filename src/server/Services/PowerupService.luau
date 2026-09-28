@@ -59,6 +59,20 @@ local ctx: any
 local states: { [Player]: PState } = {}
 local blood: { { Pos: Vector3, At: number, UserId: number } } = {}
 local workbenchRewarded: { [number]: boolean } = {}
+local trophies: { [number]: { [string]: number } } = {} -- camp trophies placed per team/kind
+
+-- Camp trophies (CampService.AddTrophy): at most `cap` of a kind per team per match.
+local TROPHY_CAP = { Bear = 2, Wolf = 1, Raid = 1, Explorer = 1 }
+local function trophy(p: Player, kind: string)
+	local team = ctx.Util.Team(p)
+	local t = trophies[team] or {}
+	trophies[team] = t
+	if (t[kind] or 0) < (TROPHY_CAP[kind] or 1) then
+		t[kind] = (t[kind] or 0) + 1
+		ctx.CampService.AddTrophy(team, kind)
+	end
+end
+
 
 local function now(): number
 	return workspace:GetServerTimeNow()
@@ -82,6 +96,7 @@ function PowerupService.Init(c)
 		states = {}
 		blood = {}
 		workbenchRewarded = {}
+		trophies = {}
 	end)
 	ctx.MatchService.On("PhaseChanged", function(phase: string, day: number)
 		-- Surviving a night: everyone still alive at sunrise (Day 2 onwards).
@@ -198,6 +213,13 @@ function PowerupService._tick()
 					if not st.Pois[i] and (poi.Pos - root.Position).Magnitude <= POI_RADIUS then
 						st.Pois[i] = true
 						PowerupService.Reward(p, "PoiDiscovered", "Discovered a " .. poi.Type)
+						local found = 0
+						for _ in st.Pois do
+							found += 1
+						end
+						if found == 5 then
+							trophy(p, "Explorer")
+						end
 					end
 				end
 			end
@@ -468,6 +490,9 @@ function PowerupService.Tally(p: Player?, key: string, n: number)
 	local st = p and states[p]
 	if st and n > 0 then
 		st.Stats[key] = (st.Stats[key] or 0) + n
+		if key == "Breaches" then
+			trophy(p :: Player, "Raid")
+		end
 	end
 end
 
@@ -568,6 +593,9 @@ function PowerupService.OnWildlifeKill(p: Player, species: string, _night: boole
 		if species == "Bear" then
 			st.Stats.Bears += 1
 			ctx.Util.AwardBadge(p, "BearHunter")
+			trophy(p, "Bear")
+		elseif species == "Wolf" then
+			trophy(p, "Wolf")
 		end
 		if PREDATORS[species] then
 			st.Stats.Predators = (st.Stats.Predators or 0) + 1

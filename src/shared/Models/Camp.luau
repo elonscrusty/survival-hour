@@ -73,6 +73,24 @@ function Camp.Campfire(cf: CFrame, teamColor: Color3, parent: Instance?): Model
 	smoke.Size = 2
 	smoke.Enabled = false
 	smoke.Parent = core
+	-- a smoke column that rises above the canopy: bigger fires are seen from further away
+	-- (the trade-off: a strong fire keeps you alive and gives your camp away)
+	local column = Instance.new("ParticleEmitter")
+	column.Name = "SmokeColumn"
+	column.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	column.Color = ColorSequence.new(Color3.fromRGB(120, 118, 115))
+	column.LightInfluence = 0.8
+	column.Rate = 0
+	column.Lifetime = NumberRange.new(9, 13)
+	column.Speed = NumberRange.new(6, 9)
+	column.SpreadAngle = Vector2.new(8, 8)
+	column.Acceleration = Vector3.new(1.2, 0.6, 0.4) -- a slight drift with the wind
+	column.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 3), NumberSequenceKeypoint.new(1, 16) })
+	column.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.75), NumberSequenceKeypoint.new(0.3, 0.72), NumberSequenceKeypoint.new(1, 1) })
+	column.RotSpeed = NumberRange.new(-10, 10)
+	column.Rotation = NumberRange.new(0, 360)
+	column.EmissionDirection = Enum.NormalId.Top
+	column.Parent = core
 
 	-- Light-radius ring (visible guide for "animals avoid this"), faint team tint.
 	local ring = Build.Decor({ Name = "SafeRing", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.1, 90, 90), CFrame = CFrame.new(0, 0.12, 0) * CFrame.Angles(0, 0, math.rad(90)), Color = teamColor, Material = Enum.Material.ForceField, Transparency = 0.85, Parent = m, CastShadow = false })
@@ -126,6 +144,14 @@ function Camp.SetFire(m: Model, level: number, fuel: number)
 		smoke.Opacity = 0.08 + lv * 0.05
 		smoke.Size = 2 + lv
 	end
+	local column = core:FindFirstChild("SmokeColumn") :: ParticleEmitter?
+	if column then
+		-- tier sets how tall/thick the column is; a starving fire smoulders dark and heavy
+		local starving = math.clamp(1 - fuel / 0.15, 0, 1)
+		column.Rate = if flame and flame.Enabled then 0.8 + lv * 0.9 + starving * 1.5 else 0
+		column.Speed = NumberRange.new(6 + lv, 9 + lv * 1.5)
+		column.Color = ColorSequence.new(Color3.fromRGB(120, 118, 115):Lerp(Color3.fromRGB(45, 42, 40), starving))
+	end
 end
 
 -- Switches a campfire model to its extinguished look (permanent).
@@ -140,6 +166,10 @@ function Camp.Extinguish(m: Model)
 		local glow = core:FindFirstChild("Glow") :: PointLight?
 		if glow then
 			glow.Enabled = false
+		end
+		local column = core:FindFirstChild("SmokeColumn") :: ParticleEmitter?
+		if column then
+			column.Rate = 0
 		end
 		local sparks = core:FindFirstChild("Sparks") :: ParticleEmitter?
 		if sparks then

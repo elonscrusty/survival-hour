@@ -230,3 +230,32 @@ gaps. No locked numbers were changed.
 ## Model polish (20 meshes)
 
 Reworked the roughest pack models (Survival Wars chests, storage, walls, Workbench IV/V, seven POIs and three held tools) in `blender/assets/survival_wars.py`. Every model keeps its published bounds and pivot (`tools/check_bounds.py`), so `AssetIds.luau` is unchanged and old or new uploads both fit. `verify_exports.py`: 368 files, 0 issues. The new versions need uploading over the same asset IDs: see `docs/MODEL_REUPLOAD.md`. Checked and left alone: the flame mesh (the game uses particle fire), wildlife rigs (creatures are procedural), and the leaf-litter/moss "dark rim" (a Blender-only preview artifact from downward faces that Roblox culls).
+
+## Content, depth & replayability pass
+
+**Inspected first:** care packages already fall every day (announced, contested), rain weather existed, daily and weekly login bonuses existed, the Tracker class already gets hurt cues, there was a guide for new players, and `Profile.Stats` existed but nothing fed it. None of that was rebuilt.
+
+| Area | Change | Where |
+|---|---|---|
+| Match conditions | One subtle twist per match (70%), announced after the intro: Misty Valley, Rainy Season, Restless Wilds, Hungry Predators, Lost Survivors. Each stays within ~20% of normal and never changes rules | `Logic/MatchEvents`, `EventService` |
+| Random events | Thunderstorm (dark, closed-in fog, slanted rain, lightning with distance-delayed thunder), heavy fog, wolf surge at night (real-direction howls as the clue), deer migration by day (herd walks across the map), survivor cache (unlit chest, a trail of dropped gear, a vague "near the ranger station" hint, bonus Rare roll). Never before 150 s into Day 1, one at a time, 150-300 s quiet gaps, no repeats back to back. Campfires, lives and combat are untouched | `EventService`, `WorldService.SetWeather`, `WildlifeService.SpawnGroup`, `LootService.AddCache`, `Weather`, `Sound`, `Hud` |
+| Weather | Clear / Cloudy / Rain / Storm / Fog grade the server lighting preset instead of replacing it | `WorldService.ApplyLighting` |
+| Endgame tension | "Survivor eliminated, N remain" banners; FINAL THREE and FINAL TWO moments (flash, sting, ambience settles lower and slower) | `MatchService.CheckOutcome`, `Hud`, `Sound` |
+| Dangerous Survivor | Kills, eliminations and snuffed fires build notoriety; at two thresholds everyone hears the name. Never a position | `PowerupService` |
+| Match recap | End screen: match length, day reached, takedowns, wildlife, resources, damage dealt/taken, fires snuffed, storage breached, places discovered, Workbench tier | `PowerupService.Stats/Tally`, `MatchService.End`, `Hud.showEnd` |
+| Records | Lifetime stats in Profile (win rate, best streak, nights, wildlife, bears, fires, breaches, resources, places, crafts), shown in the Profile panel only | `PowerupService.CommitMatch`, `DataService.Push`, `Lobby` |
+| Challenges | 3 daily + 2 weekly gameplay challenges, the same for everyone, Coins only. Progress = lifetime stat now minus a snapshot taken when the period started, so there's no extra tracking to break | `Logic/Challenges` (tested), `LobbyService` `ClaimChallenge` |
+| Badges | First Night, First Blood, Fire Extinguisher, Explorer (25 places), Bear Hunter, Survivor, Untouchable (win, never on Final Life), Final Stand (win after your fire went out), Master Crafter. Silent until ids are filled into `Config.Badges` | `Util.AwardBadge` |
+| Tracking | Work noise carries: chopping 220 studs, felling 320, building 180, breaching 300, shots and explosions 450 (default is 120) | `Sounds` (`Range`) |
+| Campfire smoke | A smoke column above the canopy grows with fire tier and turns dark and heavy when the fire starves. A strong fire is also a beacon | `Models/Camp` |
+| Trophies | Bear pelts (up to 2), a wolf pelt, a raid banner and an explorer's map appear on posts behind your fire. Visual only, reset every match | `CampService.AddTrophy`, `PowerupService` |
+| Spectator | Bar shows FINAL LIFE for the watched player, survivors left and day/night; still locked to living players | `Spectate` |
+| Dev | Studio DEV panel can force each event | `DevService`, `Dev` |
+
+**Deferred or rejected (and why):**
+- Secret locations (waterfall cave, crash site), multi-room mines, branching caves and POI variants with cellars: these need map-layout work that can only be validated by walking it in Studio. Colliders and nav would otherwise be guesses.
+- Contextual music: no licensed tracks yet. The Final Three ambience shift and the event stings cover it until audio is chosen.
+- Rare wildlife variants, practice range, cosmetic preview, base decorations: lower value than the loop items above. The camp trophies cover the bragging-rights part.
+- Rare match items: the survivor cache's bonus Rare roll delivers the "not every match" loot moment with existing items. New items need balance playtesting first.
+
+**Tested:** 158 unit tests (new: `MatchEvents`, `Challenges`), 34 skins/lobby checks, type check clean, Rojo build OK. Not playtested in Studio.
