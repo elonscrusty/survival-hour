@@ -750,6 +750,7 @@ function WildlifeService._onDied(a: Animal)
 		ctx.PowerupService.OnAnimalKilled(killer, a.Id)
 		ctx.PowerupService.OnWildlifeKill(killer, a.Species, night)
 	end
+	a.Model:SetAttribute("TelegraphAt", workspace:GetServerTimeNow())
 	a.Model:SetAttribute("Telegraph", "Dead")
 	for _, d in a.Model:GetDescendants() do
 		if d:IsA("BasePart") then

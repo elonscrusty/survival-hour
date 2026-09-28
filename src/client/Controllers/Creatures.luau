@@ -99,7 +99,9 @@ local function animate(r: Rig, dt: number)
 
 	-- An uploaded clip (walk / run / telegraph / death) replaces the procedural pose.
 	if AnimTracks.Enabled then
-		local pick = AnimClips.Animal({ Species = species, Tele = tele, TeleAge = teleAge, Speed = speed })
+		local cur = AnimTracks.Current(m)
+		local gait = if cur and string.find(cur, "Run$") then "Run" elseif cur and string.find(cur, "Walk$") then "Walk" else nil
+		local pick = AnimClips.Animal({ Species = species, Tele = tele, TeleAge = teleAge, Speed = speed, Gait = gait })
 		if AnimTracks.Set(m, pick, m:GetAttribute("TelegraphAt")) then
 			return
 		end
@@ -181,7 +183,8 @@ local function animate(r: Rig, dt: number)
 end
 
 function Creatures.Start()
-	RunService.RenderStepped:Connect(function(dt)
+	-- PreSimulation: after the Animator, so procedural writes win over a fading clip.
+	RunService.PreSimulation:Connect(function(dt)
 		local match = workspace:FindFirstChild("Match")
 		local wild = match and match:FindFirstChild("Wildlife")
 		local cam = workspace.CurrentCamera.CFrame.Position

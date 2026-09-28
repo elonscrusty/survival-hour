@@ -83,6 +83,7 @@ local function quadruped(name: string, spec: Spec, dims: { [string]: number }): 
 	local hum = Instance.new("Humanoid")
 	-- R15 rig type makes the Humanoid honour HipHeight (R6 would look for leg parts).
 	hum.RigType = Enum.HumanoidRigType.R15
+	Instance.new("Animator").Parent = hum -- uploaded clips (AnimationIds) play through it
 	-- leg top sits 0.3H below centre, root bottom is 0.5H below centre, paws add ~0.15
 	hum.HipHeight = legLen - dims.H * 0.2 * s + 0.15 * s
 	hum.DisplayName = name

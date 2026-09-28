@@ -423,8 +423,16 @@ end
 
 local function apply(rig: Rig, dt: number, t: number)
 	if AnimTracks.Enabled then
-		local pick, key = clipFor(rig, t)
-		if AnimTracks.Set(rig.Char, pick, key) then
+		-- Own character: pick and play (Roblox replicates it). Others: their own
+		-- client plays it; stand aside while that replicated clip runs.
+		local playing
+		if rig.Char == player.Character then
+			local pick, key = clipFor(rig, t)
+			playing = AnimTracks.Set(rig.Char, pick, key)
+		else
+			playing = AnimTracks.Playing(rig.Char)
+		end
+		if playing then
 			-- the clip owns the joints; ease back in from neutral when it ends
 			rig.Cur = { r = ID, l = ID, w = ID, n = ID }
 			return

@@ -24,6 +24,7 @@ export type AnimalState = {
 	Tele: string?, -- telegraph (Lunge, Roar, Swipe, Swoop, Strike, Dead)
 	TeleAge: number,
 	Speed: number, -- ground speed, studs/s
+	Gait: string?, -- "Walk" | "Run" clip playing now (hysteresis so it doesn't flicker)
 }
 
 -- Clip lists for every name the owner can upload (the ChatGPT animation prompt).
@@ -40,6 +41,7 @@ AnimClips.AnimalClips = {
 
 AnimClips.RunSpeed = 8 -- animals above this ground speed use the Run clip
 AnimClips.WalkSpeed = 1
+AnimClips.Hysteresis = 1.5 -- a gait already playing continues until the speed drops this far below its start
 
 local NONE: Pick = { Clips = {}, OneShot = false, Hold = false }
 
@@ -133,9 +135,11 @@ function AnimClips.Animal(s: AnimalState): Pick
 	if s.Tele and s.Tele ~= "Strike" and s.TeleAge < 1.2 then
 		return pick({ prefix .. s.Tele }, true)
 	end
-	if s.Speed > AnimClips.RunSpeed then
+	local run = AnimClips.RunSpeed - (if s.Gait == "Run" then AnimClips.Hysteresis else 0)
+	local walk = AnimClips.WalkSpeed - (if s.Gait then AnimClips.WalkSpeed * 0.5 else 0)
+	if s.Speed > run then
 		return pick({ prefix .. "Run", prefix .. "Walk" })
-	elseif s.Speed > AnimClips.WalkSpeed then
+	elseif s.Speed > walk then
 		return pick({ prefix .. "Walk" })
 	end
 	return NONE

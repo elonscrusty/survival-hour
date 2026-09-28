@@ -84,6 +84,13 @@ return {
 		t.eq(#A.Animal(animal({ Species = "Bat", Speed = 10 })).Clips, 0, "bats stay procedural")
 		t.eq(A.Animal(animal({ Tele = "Strike", TeleAge = 0.1, Speed = 4 })).Clips[1], "WolfWalk")
 	end,
+	gait_has_hysteresis = function(t)
+		t.eq(A.Animal(animal({ Speed = 7.5 })).Clips[1], "WolfWalk", "not fast enough to start running")
+		t.eq(A.Animal(animal({ Speed = 7.5, Gait = "Run" })).Clips[1], "WolfRun", "keeps running just under the threshold")
+		t.eq(A.Animal(animal({ Speed = 6, Gait = "Run" })).Clips[1], "WolfWalk")
+		t.eq(A.Animal(animal({ Speed = 0.8, Gait = "Walk" })).Clips[1], "WolfWalk", "keeps walking while slowing")
+		t.eq(#A.Animal(animal({ Speed = 0.8 })).Clips, 0)
+	end,
 	first_uploaded_candidate_wins = function(t)
 		local p = A.Player(player({ Action = "Breach" }))
 		t.eq(A.First(p, {}), nil)
