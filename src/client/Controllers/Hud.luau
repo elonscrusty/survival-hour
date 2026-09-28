@@ -464,6 +464,9 @@ local function showEnd(data: any)
 	local won = data.Won
 	local winner = data.Winner
 	local frame = UI.panel({ Name = "EndScreen", Size = UDim2.fromOffset(460, 230), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45), Parent = gui }, { UI.padding(16) })
+	-- the result card lands with a short pop (rewards feel earned, not sluggish)
+	local pop = UI.new("UIScale", { Scale = 0.6, Parent = frame })
+	TweenService:Create(pop, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
 	UI.text(if won then "VICTORY" else "DEFEAT", { Size = UDim2.new(1, 0, 0, 56), TextSize = 50, Font = Theme.FontBlack, TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = if won then C.Accent else C.Bad, Parent = frame })
 	local wdef = Config.Teams[winner]
 	UI.text(if wdef then (wdef.Symbol .. " " .. wdef.Name .. " clan kept their fire burning!") else "No clan survived.", { Position = UDim2.fromOffset(0, 62), Size = UDim2.new(1, 0, 0, 26), TextSize = 18, TextXAlignment = Enum.TextXAlignment.Center, Parent = frame })

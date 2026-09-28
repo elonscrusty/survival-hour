@@ -34,7 +34,9 @@ export type Profile = {
 	Eliminations: number,
 	Daily: { Day: number, Streak: number },
 	Weekly: { Week: number, Matches: number, Wins: number, Claimed: boolean },
+	Settings: { [string]: any },
 }
+
 
 export type ProductLike = {
 	Kind: string,
@@ -48,6 +50,14 @@ export type ProductLike = {
 local ProfileRules = {}
 
 ProfileRules.SchemaVersion = 2
+
+-- Player settings: key -> default. Validated on write (ProfileRules.SetSetting).
+ProfileRules.SettingDefaults = {
+	ReduceMotion = false, -- no FOV punch / damage roll / sprint widen
+	ShowGuide = true, -- Survival Guide tracker
+	Ambience = 0.8, -- 0..1 ambience/music volume
+	UiSounds = true,
+} :: { [string]: any }
 
 -- Old (v1) powerups: unlock price and upgrade multipliers, for the refund.
 local OLD_POWERUPS = { Trailblazer = 100, Scavenger = 175, Hunter = 150, Climber = 200, Craftsman = 125, Sharpshooter = 250 }
@@ -76,7 +86,24 @@ function ProfileRules.New(): Profile
 		Eliminations = 0,
 		Daily = { Day = -1, Streak = 0 },
 		Weekly = { Week = -1, Matches = 0, Wins = 0, Claimed = false },
+		Settings = table.clone(ProfileRules.SettingDefaults),
 	}
+end
+
+-- Validates and stores one setting (same type as its default; numbers 0..1).
+function ProfileRules.SetSetting(p: Profile, key: any, value: any): boolean
+	local default = if type(key) == "string" then ProfileRules.SettingDefaults[key] else nil
+	if default == nil or type(value) ~= type(default) then
+		return false
+	end
+	if type(value) == "number" then
+		if value ~= value then
+			return false
+		end
+		value = math.clamp(value, 0, 1)
+	end
+	p.Settings[key] = value
+	return true
 end
 
 local MAX_VALUE = 1e9 -- sanity cap for any stored number (corrupt / tampered saves)
@@ -178,6 +205,11 @@ function ProfileRules.Reconcile(data: any): Profile
 	end
 	if type(data.Weekly) == "table" then
 		p.Weekly = { Week = num(data.Weekly.Week, -1), Matches = num(data.Weekly.Matches, 0), Wins = num(data.Weekly.Wins, 0), Claimed = data.Weekly.Claimed == true }
+	end
+	if type(data.Settings) == "table" then
+		for k, v in data.Settings do
+			ProfileRules.SetSetting(p, k, v)
+		end
 	end
 	ProfileRules.GrantLevelCosmetics(p)
 	return p

@@ -79,6 +79,8 @@ local Sounds: { [string]: Cue } = {
 	AmbientLobby = { AssetId = nil, Volume = 0.3, Looped = true }, -- evening forest + distant fire
 	AmbientCave = { AssetId = nil, Volume = 0.35, Looped = true }, -- drips, low wind
 	Wind = { AssetId = nil, Volume = 0.2, Looped = true },
+	Rain = { AssetId = nil, Volume = 0.35, Looped = true }, -- rain shower loop (licensed clip needed)
+	Thunder = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 0.25, Pitch = 0.3 },
 
 	-- Progression
 	Reward = { Bundled = "rbxasset://sounds/volume_slider.ogg", Volume = 0.3, Pitch = 1.8 },

@@ -16,15 +16,31 @@ local Panels = {}
 
 local player = Players.LocalPlayer
 local gui: ScreenGui
-local panels: { [string]: { Frame: Frame, Body: ScrollingFrame, OnOpen: (() -> ())?, OnClose: (() -> ())? } } = {}
+local panels: { [string]: { Frame: Frame, Body: ScrollingFrame, OnOpen: (() -> ())?, OnClose: (() -> ())?, Want: Vector2 } } = {}
+local uiScale: UIScale
+
+-- Fits a panel inside the screen (phones in landscape are short): the body
+-- scrolls, so shrinking the height never hides content.
+local function fit(p: { Frame: Frame, Want: Vector2 })
+	local vp = workspace.CurrentCamera.ViewportSize
+	local inset = GuiService:GetGuiInset()
+	local s = if uiScale then uiScale.Scale else 1
+	local maxH = math.max(200, (vp.Y - inset.Y - 24) / s)
+	local maxW = math.max(260, (vp.X - 24) / s)
+	p.Frame.Size = UDim2.fromOffset(math.min(p.Want.X, maxW), math.min(p.Want.Y, maxH))
+end
 Panels.Current = nil :: string?
 
 function Panels.Start()
 	gui = UI.new("ScreenGui", { Name = "Panels", ResetOnSpawn = false, DisplayOrder = 10, IgnoreGuiInset = false, Parent = player:WaitForChild("PlayerGui") })
 	local scale = UI.new("UIScale", { Parent = gui })
+	uiScale = scale
 	local function rescale()
 		local vp = workspace.CurrentCamera.ViewportSize
 		scale.Scale = math.clamp(math.min(vp.X / 900, vp.Y / 560), 0.6, 1.15)
+		for _, p in panels do
+			fit(p)
+		end
 	end
 	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(rescale)
 	rescale()
@@ -65,7 +81,8 @@ function Panels.Create(name: string, title: string, size: Vector2, onOpen: (() -
 		ScrollingDirection = Enum.ScrollingDirection.Y,
 		Parent = frame,
 	}, { UI.padding(10) })
-	panels[name] = { Frame = frame, Body = body, OnOpen = onOpen, OnClose = onClose }
+	panels[name] = { Frame = frame, Body = body, OnOpen = onOpen, OnClose = onClose, Want = size }
+	fit(panels[name])
 	return body
 end
 

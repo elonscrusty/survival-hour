@@ -20,6 +20,12 @@ local camera = workspace.CurrentCamera
 
 CameraCtl.Aiming = false
 local deadUntil = 0
+
+-- Player setting: Reduce motion.
+local function calm(): boolean
+	local prof = State.Get("Profile")
+	return prof ~= nil and prof.Settings ~= nil and prof.Settings.ReduceMotion == true
+end
 local crosshair: Frame? = nil
 
 local function character(): Model?
@@ -99,11 +105,13 @@ function CameraCtl._feel()
 		local target = Config.Camera.DefaultFov
 		if CameraCtl.Aiming then
 			target = Config.Camera.AimFov
+		elseif calm() then
+			-- reduce motion: no sprint widen / damage punch
 		elseif hum and player:GetAttribute("Sprinting") and hum.MoveDirection.Magnitude > 0.1 then
 			target += Config.Camera.SprintFovBonus
 		end
 		local since = os.clock() - punchAt
-		if since < 0.22 then
+		if since < 0.22 and not calm() then
 			local k = 1 - since / 0.22
 			target -= 3 * k
 			camera.CFrame *= CFrame.Angles(0, 0, math.rad(0.8 * punchRoll * k))

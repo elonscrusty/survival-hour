@@ -76,7 +76,7 @@ end
 local function refresh()
 	local inMatch = player:GetAttribute("InMatch") == true
 	local profile = State.Get("Profile")
-	local veteran = profile ~= nil and (profile.Level or 1) >= 8
+	local veteran = profile ~= nil and ((profile.Level or 1) >= 8 or (profile.Settings and profile.Settings.ShowGuide == false))
 	local inv = State.Get("Inventory")
 	local step, total = nil, #STEPS
 	if inv then

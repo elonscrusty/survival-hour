@@ -410,6 +410,37 @@ local function renderShop()
 	UI.text("Prices are shown by Roblox for your region. Purchases are only granted after Roblox confirms them. Bundle items you already own are refunded as Coins.", { LayoutOrder = 100, Size = UDim2.new(1, -8, 0, 34), TextWrapped = true, TextSize = 12, TextColor3 = C.TextDim, Parent = shopBody })
 end
 
+-- Settings panel -----------------------------------------------------------------------------------------
+
+local settingsBody: ScrollingFrame
+
+local function renderSettings()
+	UI.clear(settingsBody)
+	local profile = State.Get("Profile")
+	local st = (profile and profile.Settings) or {}
+	local function toggle(order: number, key: string, title: string, sub: string)
+		local on = st[key] == true
+		local row = UI.new("Frame", { LayoutOrder = order, Size = UDim2.new(1, -8, 0, 60), BackgroundColor3 = C.PanelLight, BorderSizePixel = 0, Parent = settingsBody }, { UI.corner(UDim.new(0, 8)), UI.padding(8) })
+		UI.text(title, { Size = UDim2.new(0.7, 0, 0, 22), TextSize = 16, Font = Theme.FontBold, Parent = row })
+		UI.text(sub, { Position = UDim2.fromOffset(0, 22), Size = UDim2.new(0.7, 0, 0, 18), TextSize = 12, TextColor3 = C.TextDim, Parent = row })
+		Buttons.action(if on then "On" else "Off", { Size = UDim2.fromOffset(90, 38), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), Tone = if on then "Green" else "Neutral", State = if on then "Selected" else nil, Parent = row }, function()
+			Net.Event("SetSetting"):FireServer(key, not on)
+		end)
+	end
+	toggle(1, "ReduceMotion", "Reduce motion", "No camera punch, damage roll or sprint zoom")
+	toggle(2, "ShowGuide", "Survival Guide", "Show the objective tracker in matches")
+	toggle(3, "UiSounds", "Interface sounds", "Clicks and menu sounds")
+	local vol = if type(st.Ambience) == "number" then st.Ambience else 0.8
+	local row = UI.new("Frame", { LayoutOrder = 4, Size = UDim2.new(1, -8, 0, 60), BackgroundColor3 = C.PanelLight, BorderSizePixel = 0, Parent = settingsBody }, { UI.corner(UDim.new(0, 8)), UI.padding(8) })
+	UI.text(string.format("Ambience volume · %d%%", math.floor(vol * 100 + 0.5)), { Size = UDim2.new(0.6, 0, 0, 22), TextSize = 16, Font = Theme.FontBold, Parent = row })
+	local steps = UI.new("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), Size = UDim2.fromOffset(250, 40), Parent = row }, { UI.list(Enum.FillDirection.Horizontal, 4, Enum.HorizontalAlignment.Right) })
+	for _, v in { 0, 0.25, 0.5, 0.75, 1 } do
+		Buttons.tab(tostring(math.floor(v * 100)), nil, math.abs(v - vol) < 0.01, { Size = UDim2.fromOffset(46, 36), Parent = steps }, function()
+			Net.Event("SetSetting"):FireServer("Ambience", v)
+		end)
+	end
+end
+
 local HELP = {
 	{ "Goal", "Solo survival. Every player has their own camp with a Campfire and a Tier I Workbench. PvP is on from the start. Be the last survivor." },
 	{ "Day & night", "Day and night each last exactly 2 minutes. At each sunrise, everyone alive gets 15 s of protection (and can't deal damage). At night predators roam." },
@@ -557,6 +588,9 @@ function Lobby.Start()
 	UI.text(player.DisplayName, { Position = UDim2.fromOffset(82, 8), Size = UDim2.new(1, -90, 0, 22), TextSize = 18, Font = Theme.FontBlack, Parent = card })
 	diamondsLabel = UI.text("", { Position = UDim2.fromOffset(82, 30), Size = UDim2.new(1, -90, 0, 16), TextSize = 13, Font = Theme.FontBold, TextColor3 = C.Accent, Parent = card })
 	local xpHolder = UI.new("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(82, 52), Size = UDim2.new(1, -94, 0, 16), Parent = card })
+	Buttons.icon("⚙", { Size = UDim2.fromOffset(32, 32), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -8, 0, 8), TextSize = 18, Parent = card }, function()
+		Panels.Toggle("Settings")
+	end)
 	local _xpBar
 	_xpBar, xpSet = UI.bar({ Size = UDim2.fromScale(1, 1), Parent = xpHolder }, C.Accent)
 	local function pill(x: number, glyph: string, color: Color3): TextLabel
@@ -612,6 +646,8 @@ function Lobby.Start()
 	profileBody = Panels.Create("Profile", "PROFILE & REWARDS", Vector2.new(620, 640), renderProfile)
 	UI.list(Enum.FillDirection.Vertical, 6).Parent = profileBody
 	shopBody = Panels.Create("LobbyShop", "TRADING POST", Vector2.new(600, 520), renderShop)
+	settingsBody = Panels.Create("Settings", "SETTINGS", Vector2.new(560, 380), renderSettings)
+	UI.list(Enum.FillDirection.Vertical, 8).Parent = settingsBody
 	UI.list(Enum.FillDirection.Vertical, 8).Parent = shopBody
 	helpBody = Panels.Create("Help", "HOW TO PLAY", Vector2.new(640, 600), renderHelp)
 	UI.list(Enum.FillDirection.Vertical, 4).Parent = helpBody
@@ -622,7 +658,7 @@ function Lobby.Start()
 			renderParty()
 		end
 	end)
-	local RENDER = { Classes = renderClasses, Perks = renderPerks, Locker = renderLocker, Profile = renderProfile, LobbyShop = renderShop }
+	local RENDER = { Classes = renderClasses, Perks = renderPerks, Locker = renderLocker, Profile = renderProfile, LobbyShop = renderShop, Settings = renderSettings }
 	State.On("Profile", function()
 		renderHud()
 		for name, fn in RENDER do

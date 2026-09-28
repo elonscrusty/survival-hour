@@ -71,6 +71,12 @@ function DataService.Init(c)
 			boards[b] = ods
 		end
 	end
+	ctx.Util.Connect("SetSetting", "Lobby", function(player: Player, key: any, value: any)
+		local s = sessions[player]
+		if s and ProfileRules.SetSetting(s.Profile, key, value) then
+			DataService.Push(player)
+		end
+	end)
 	ctx.Util.OnPlayerAdded(DataService._onJoin)
 	ctx.Util.OnPlayerRemoving(DataService._onLeave)
 	game:BindToClose(DataService._onClose)
@@ -345,6 +351,7 @@ function DataService.Push(player: Player)
 			CanClaim = ProfileRules.CanClaimWeekly(p, now),
 			Amount = Progression.WeeklyCoins(weekly.Wins),
 		},
+		Settings = p.Settings,
 		State = s.State,
 	})
 	player:SetAttribute("Level", level)

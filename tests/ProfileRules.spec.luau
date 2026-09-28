@@ -217,4 +217,17 @@ return {
 		t.eq(#p.RewardedMatches, 40)
 		t.eq(p.Coins, 60 * 50)
 	end,
+	settings_validated_and_saved = function(t)
+		local p = P.New()
+		t.eq(p.Settings.ShowGuide, true)
+		t.ok(P.SetSetting(p, "ReduceMotion", true))
+		t.no(P.SetSetting(p, "ReduceMotion", "yes"), "wrong type")
+		t.no(P.SetSetting(p, "Hack", 1), "unknown key")
+		t.ok(P.SetSetting(p, "Ambience", 7))
+		t.eq(p.Settings.Ambience, 1, "clamped")
+		local q = P.Reconcile({ Version = 2, Settings = { ReduceMotion = true, Bad = 1, Ambience = 0 / 0 } })
+		t.eq(q.Settings.ReduceMotion, true)
+		t.eq(q.Settings.Bad, nil)
+		t.eq(q.Settings.Ambience, 0.8, "NaN rejected, default kept")
+	end,
 }

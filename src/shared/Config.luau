@@ -365,6 +365,7 @@ Config.Lighting = {
 		Contrast = 0.06,
 		Tint = Color3.fromRGB(255, 238, 220),
 	},
+	RainChance = 0.2, -- chance a phase (after Day 1) brings a rain shower; purely visual
 	AfternoonAt = 0.42, -- fraction of the day when light turns to afternoon
 	SunsetAt = 0.72, -- fraction of the day after which the sun sets
 	DawnTime = 12, -- seconds of dawn light at the start of each day

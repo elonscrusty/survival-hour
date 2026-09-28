@@ -89,6 +89,7 @@ local order = {
 	"Creatures",
 	"Effects",
 	"Guide",
+	"Weather",
 	"Spectate",
 	"Dev",
 }

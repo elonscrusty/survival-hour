@@ -29,6 +29,11 @@ function SoundCtl.Play(name: string)
 	(s :: Sound):Play()
 end
 
+local function settings(): { [string]: any }
+	local prof = State.Get("Profile")
+	return (prof and prof.Settings) or {}
+end
+
 local ambientName: string? = nil
 local function setAmbient(name: string)
 	if name == ambientName then
@@ -44,15 +49,30 @@ local function setAmbient(name: string)
 	if s then
 		s.Looped = true
 		s.Parent = SoundService
+		s:SetAttribute("BaseVolume", s.Volume)
+		local vol = settings().Ambience
+		if type(vol) == "number" then
+			s.Volume *= vol
+		end
 		s:Play()
 		ambient = s
 	end
 end
 
+
 function SoundCtl.Start()
 	UI.ClickSound = function()
-		SoundCtl.Play("UiClick")
+		if settings().UiSounds ~= false then
+			SoundCtl.Play("UiClick")
+		end
 	end
+	State.On("Profile", function()
+		local vol = settings().Ambience
+		if ambient and type(vol) == "number" then
+			local base = ambient:GetAttribute("BaseVolume")
+			ambient.Volume = (if type(base) == "number" then base else ambient.Volume) * vol
+		end
+	end)
 	State.On("Notify", function(n)
 		if n.Kind == "error" then
 			SoundCtl.Play("UiError")
@@ -96,6 +116,7 @@ function SoundCtl.Start()
 		[Enum.Material.Cobblestone] = "FootStone", [Enum.Material.Wood] = "FootWood", [Enum.Material.WoodPlanks] = "FootWood",
 		[Enum.Material.Metal] = "FootMetal", [Enum.Material.DiamondPlate] = "FootMetal",
 	}
+	local rainLoop: Sound? = nil
 	local defaultRun: { [Sound]: string } = setmetatable({}, { __mode = "k" }) :: any
 	local acc = 0
 	RunService.Heartbeat:Connect(function(dt)
@@ -111,6 +132,19 @@ function SoundCtl.Start()
 			setAmbient("AmbientCave")
 		else
 			setAmbient(if ms:GetAttribute("Phase") == "Night" then "AmbientNight" else "AmbientDay")
+		end
+		-- rain loop layered over the ambience during showers
+		local wantRain = inMatch and ms:GetAttribute("Weather") == "Rain"
+		if wantRain and not rainLoop then
+			rainLoop = SoundLib.Make("Rain")
+			if rainLoop then
+				rainLoop.Looped = true
+				rainLoop.Parent = SoundService
+				rainLoop:Play()
+			end
+		elseif not wantRain and rainLoop then
+			rainLoop:Destroy()
+			rainLoop = nil
 		end
 		-- surface footsteps (only when a licensed clip is configured)
 		local char = player.Character

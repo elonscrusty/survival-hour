@@ -694,6 +694,7 @@ Config.Lighting = {
 		Contrast = 0.06,
 		Tint = Color3.fromRGB(255, 238, 220),
 	},
+	RainChance = 0.2, -- chance a phase (after Day 1) brings a rain shower; purely visual
 	AfternoonAt = 0.42, -- fraction of the day when light turns to afternoon
 	SunsetAt = 0.72, -- fraction of the day after which the sun sets
 	DawnTime = 12, -- seconds of dawn light at the start of each day
@@ -3252,7 +3253,9 @@ export type Profile = {
 	Eliminations: number,
 	Daily: { Day: number, Streak: number },
 	Weekly: { Week: number, Matches: number, Wins: number, Claimed: boolean },
+	Settings: { [string]: any },
 }
+
 
 export type ProductLike = {
 	Kind: string,
@@ -3266,6 +3269,14 @@ export type ProductLike = {
 local ProfileRules = {}
 
 ProfileRules.SchemaVersion = 2
+
+-- Player settings: key -> default. Validated on write (ProfileRules.SetSetting).
+ProfileRules.SettingDefaults = {
+	ReduceMotion = false, -- no FOV punch / damage roll / sprint widen
+	ShowGuide = true, -- Survival Guide tracker
+	Ambience = 0.8, -- 0..1 ambience/music volume
+	UiSounds = true,
+} :: { [string]: any }
 
 -- Old (v1) powerups: unlock price and upgrade multipliers, for the refund.
 local OLD_POWERUPS = { Trailblazer = 100, Scavenger = 175, Hunter = 150, Climber = 200, Craftsman = 125, Sharpshooter = 250 }
@@ -3294,7 +3305,24 @@ function ProfileRules.New(): Profile
 		Eliminations = 0,
 		Daily = { Day = -1, Streak = 0 },
 		Weekly = { Week = -1, Matches = 0, Wins = 0, Claimed = false },
+		Settings = table.clone(ProfileRules.SettingDefaults),
 	}
+end
+
+-- Validates and stores one setting (same type as its default; numbers 0..1).
+function ProfileRules.SetSetting(p: Profile, key: any, value: any): boolean
+	local default = if type(key) == "string" then ProfileRules.SettingDefaults[key] else nil
+	if default == nil or type(value) ~= type(default) then
+		return false
+	end
+	if type(value) == "number" then
+		if value ~= value then
+			return false
+		end
+		value = math.clamp(value, 0, 1)
+	end
+	p.Settings[key] = value
+	return true
 end
 
 local MAX_VALUE = 1e9 -- sanity cap for any stored number (corrupt / tampered saves)
@@ -3396,6 +3424,11 @@ function ProfileRules.Reconcile(data: any): Profile
 	end
 	if type(data.Weekly) == "table" then
 		p.Weekly = { Week = num(data.Weekly.Week, -1), Matches = num(data.Weekly.Matches, 0), Wins = num(data.Weekly.Wins, 0), Claimed = data.Weekly.Claimed == true }
+	end
+	if type(data.Settings) == "table" then
+		for k, v in data.Settings do
+			ProfileRules.SetSetting(p, k, v)
+		end
 	end
 	ProfileRules.GrantLevelCosmetics(p)
 	return p
@@ -9057,6 +9090,7 @@ Net.Events = {
 	"ClientReady",
 	"Sprint", -- (bool) hold-to-sprint state
 	"LeaveMatch", -- eliminated players go back to the lobby early
+	"SetSetting", -- (key, value) player settings, validated by ProfileRules.SetSetting
 }
 
 local folder: Folder
@@ -9865,6 +9899,8 @@ local Sounds: { [string]: Cue } = {
 	AmbientLobby = { AssetId = nil, Volume = 0.3, Looped = true }, -- evening forest + distant fire
 	AmbientCave = { AssetId = nil, Volume = 0.35, Looped = true }, -- drips, low wind
 	Wind = { AssetId = nil, Volume = 0.2, Looped = true },
+	Rain = { AssetId = nil, Volume = 0.35, Looped = true }, -- rain shower loop (licensed clip needed)
+	Thunder = { Bundled = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 0.25, Pitch = 0.3 },
 
 	-- Progression
 	Reward = { Bundled = "rbxasset://sounds/volume_slider.ogg", Volume = 0.3, Pitch = 1.8 },
@@ -62830,6 +62866,12 @@ function DataService.Init(c)
 			boards[b] = ods
 		end
 	end
+	ctx.Util.Connect("SetSetting", "Lobby", function(player: Player, key: any, value: any)
+		local s = sessions[player]
+		if s and ProfileRules.SetSetting(s.Profile, key, value) then
+			DataService.Push(player)
+		end
+	end)
 	ctx.Util.OnPlayerAdded(DataService._onJoin)
 	ctx.Util.OnPlayerRemoving(DataService._onLeave)
 	game:BindToClose(DataService._onClose)
@@ -63104,6 +63146,7 @@ function DataService.Push(player: Player)
 			CanClaim = ProfileRules.CanClaimWeekly(p, now),
 			Amount = Progression.WeeklyCoins(weekly.Wins),
 		},
+		Settings = p.Settings,
 		State = s.State,
 	})
 	player:SetAttribute("Level", level)
@@ -66165,6 +66208,9 @@ end
 
 function MatchService._enterPhase(phase: string)
 	MatchService._setPhase(phase, phaseLength(phase))
+	-- weather: an occasional rain shower for the whole phase (visual only, never on Day 1)
+	local rain = MatchService.Day > 1 and math.random() < Config.Lighting.RainChance
+	state:SetAttribute("Weather", if rain then "Rain" else "Clear")
 	if phase == "Day" then
 		-- Dawn -> Day -> Sunset across the day (cancelled if the phase changes).
 		ctx.WorldService.ApplyLighting("Dawn", false)
@@ -66342,6 +66388,7 @@ function MatchService._teardown()
 		ctx.WorldService.ClearMatch()
 		MatchService.Map = nil
 		ctx.WorldService.ApplyLighting(if ctx.Mode == "Lobby" then "Lobby" else "Day", true)
+		state:SetAttribute("Weather", nil)
 		MatchService._setPhase("Idle", 0)
 		for _, p in players do
 			if p.Parent then
@@ -70909,6 +70956,12 @@ local camera = workspace.CurrentCamera
 
 CameraCtl.Aiming = false
 local deadUntil = 0
+
+-- Player setting: Reduce motion.
+local function calm(): boolean
+	local prof = State.Get("Profile")
+	return prof ~= nil and prof.Settings ~= nil and prof.Settings.ReduceMotion == true
+end
 local crosshair: Frame? = nil
 
 local function character(): Model?
@@ -70988,11 +71041,13 @@ function CameraCtl._feel()
 		local target = Config.Camera.DefaultFov
 		if CameraCtl.Aiming then
 			target = Config.Camera.AimFov
+		elseif calm() then
+			-- reduce motion: no sprint widen / damage punch
 		elseif hum and player:GetAttribute("Sprinting") and hum.MoveDirection.Magnitude > 0.1 then
 			target += Config.Camera.SprintFovBonus
 		end
 		local since = os.clock() - punchAt
-		if since < 0.22 then
+		if since < 0.22 and not calm() then
 			local k = 1 - since / 0.22
 			target -= 3 * k
 			camera.CFrame *= CFrame.Angles(0, 0, math.rad(0.8 * punchRoll * k))
@@ -72309,7 +72364,7 @@ end
 local function refresh()
 	local inMatch = player:GetAttribute("InMatch") == true
 	local profile = State.Get("Profile")
-	local veteran = profile ~= nil and (profile.Level or 1) >= 8
+	local veteran = profile ~= nil and ((profile.Level or 1) >= 8 or (profile.Settings and profile.Settings.ShowGuide == false))
 	local inv = State.Get("Inventory")
 	local step, total = nil, #STEPS
 	if inv then
@@ -72873,6 +72928,9 @@ local function showEnd(data: any)
 	local won = data.Won
 	local winner = data.Winner
 	local frame = UI.panel({ Name = "EndScreen", Size = UDim2.fromOffset(460, 230), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45), Parent = gui }, { UI.padding(16) })
+	-- the result card lands with a short pop (rewards feel earned, not sluggish)
+	local pop = UI.new("UIScale", { Scale = 0.6, Parent = frame })
+	TweenService:Create(pop, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
 	UI.text(if won then "VICTORY" else "DEFEAT", { Size = UDim2.new(1, 0, 0, 56), TextSize = 50, Font = Theme.FontBlack, TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = if won then C.Accent else C.Bad, Parent = frame })
 	local wdef = Config.Teams[winner]
 	UI.text(if wdef then (wdef.Symbol .. " " .. wdef.Name .. " clan kept their fire burning!") else "No clan survived.", { Position = UDim2.fromOffset(0, 62), Size = UDim2.new(1, 0, 0, 26), TextSize = 18, TextXAlignment = Enum.TextXAlignment.Center, Parent = frame })
@@ -73862,6 +73920,37 @@ local function renderShop()
 	UI.text("Prices are shown by Roblox for your region. Purchases are only granted after Roblox confirms them. Bundle items you already own are refunded as Coins.", { LayoutOrder = 100, Size = UDim2.new(1, -8, 0, 34), TextWrapped = true, TextSize = 12, TextColor3 = C.TextDim, Parent = shopBody })
 end
 
+-- Settings panel -----------------------------------------------------------------------------------------
+
+local settingsBody: ScrollingFrame
+
+local function renderSettings()
+	UI.clear(settingsBody)
+	local profile = State.Get("Profile")
+	local st = (profile and profile.Settings) or {}
+	local function toggle(order: number, key: string, title: string, sub: string)
+		local on = st[key] == true
+		local row = UI.new("Frame", { LayoutOrder = order, Size = UDim2.new(1, -8, 0, 60), BackgroundColor3 = C.PanelLight, BorderSizePixel = 0, Parent = settingsBody }, { UI.corner(UDim.new(0, 8)), UI.padding(8) })
+		UI.text(title, { Size = UDim2.new(0.7, 0, 0, 22), TextSize = 16, Font = Theme.FontBold, Parent = row })
+		UI.text(sub, { Position = UDim2.fromOffset(0, 22), Size = UDim2.new(0.7, 0, 0, 18), TextSize = 12, TextColor3 = C.TextDim, Parent = row })
+		Buttons.action(if on then "On" else "Off", { Size = UDim2.fromOffset(90, 38), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), Tone = if on then "Green" else "Neutral", State = if on then "Selected" else nil, Parent = row }, function()
+			Net.Event("SetSetting"):FireServer(key, not on)
+		end)
+	end
+	toggle(1, "ReduceMotion", "Reduce motion", "No camera punch, damage roll or sprint zoom")
+	toggle(2, "ShowGuide", "Survival Guide", "Show the objective tracker in matches")
+	toggle(3, "UiSounds", "Interface sounds", "Clicks and menu sounds")
+	local vol = if type(st.Ambience) == "number" then st.Ambience else 0.8
+	local row = UI.new("Frame", { LayoutOrder = 4, Size = UDim2.new(1, -8, 0, 60), BackgroundColor3 = C.PanelLight, BorderSizePixel = 0, Parent = settingsBody }, { UI.corner(UDim.new(0, 8)), UI.padding(8) })
+	UI.text(string.format("Ambience volume · %d%%", math.floor(vol * 100 + 0.5)), { Size = UDim2.new(0.6, 0, 0, 22), TextSize = 16, Font = Theme.FontBold, Parent = row })
+	local steps = UI.new("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), Size = UDim2.fromOffset(250, 40), Parent = row }, { UI.list(Enum.FillDirection.Horizontal, 4, Enum.HorizontalAlignment.Right) })
+	for _, v in { 0, 0.25, 0.5, 0.75, 1 } do
+		Buttons.tab(tostring(math.floor(v * 100)), nil, math.abs(v - vol) < 0.01, { Size = UDim2.fromOffset(46, 36), Parent = steps }, function()
+			Net.Event("SetSetting"):FireServer("Ambience", v)
+		end)
+	end
+end
+
 local HELP = {
 	{ "Goal", "Solo survival. Every player has their own camp with a Campfire and a Tier I Workbench. PvP is on from the start. Be the last survivor." },
 	{ "Day & night", "Day and night each last exactly 2 minutes. At each sunrise, everyone alive gets 15 s of protection (and can't deal damage). At night predators roam." },
@@ -74009,6 +74098,9 @@ function Lobby.Start()
 	UI.text(player.DisplayName, { Position = UDim2.fromOffset(82, 8), Size = UDim2.new(1, -90, 0, 22), TextSize = 18, Font = Theme.FontBlack, Parent = card })
 	diamondsLabel = UI.text("", { Position = UDim2.fromOffset(82, 30), Size = UDim2.new(1, -90, 0, 16), TextSize = 13, Font = Theme.FontBold, TextColor3 = C.Accent, Parent = card })
 	local xpHolder = UI.new("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(82, 52), Size = UDim2.new(1, -94, 0, 16), Parent = card })
+	Buttons.icon("⚙", { Size = UDim2.fromOffset(32, 32), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -8, 0, 8), TextSize = 18, Parent = card }, function()
+		Panels.Toggle("Settings")
+	end)
 	local _xpBar
 	_xpBar, xpSet = UI.bar({ Size = UDim2.fromScale(1, 1), Parent = xpHolder }, C.Accent)
 	local function pill(x: number, glyph: string, color: Color3): TextLabel
@@ -74064,6 +74156,8 @@ function Lobby.Start()
 	profileBody = Panels.Create("Profile", "PROFILE & REWARDS", Vector2.new(620, 640), renderProfile)
 	UI.list(Enum.FillDirection.Vertical, 6).Parent = profileBody
 	shopBody = Panels.Create("LobbyShop", "TRADING POST", Vector2.new(600, 520), renderShop)
+	settingsBody = Panels.Create("Settings", "SETTINGS", Vector2.new(560, 380), renderSettings)
+	UI.list(Enum.FillDirection.Vertical, 8).Parent = settingsBody
 	UI.list(Enum.FillDirection.Vertical, 8).Parent = shopBody
 	helpBody = Panels.Create("Help", "HOW TO PLAY", Vector2.new(640, 600), renderHelp)
 	UI.list(Enum.FillDirection.Vertical, 4).Parent = helpBody
@@ -74074,7 +74168,7 @@ function Lobby.Start()
 			renderParty()
 		end
 	end)
-	local RENDER = { Classes = renderClasses, Perks = renderPerks, Locker = renderLocker, Profile = renderProfile, LobbyShop = renderShop }
+	local RENDER = { Classes = renderClasses, Perks = renderPerks, Locker = renderLocker, Profile = renderProfile, LobbyShop = renderShop, Settings = renderSettings }
 	State.On("Profile", function()
 		renderHud()
 		for name, fn in RENDER do
@@ -74537,15 +74631,31 @@ local Panels = {}
 
 local player = Players.LocalPlayer
 local gui: ScreenGui
-local panels: { [string]: { Frame: Frame, Body: ScrollingFrame, OnOpen: (() -> ())?, OnClose: (() -> ())? } } = {}
+local panels: { [string]: { Frame: Frame, Body: ScrollingFrame, OnOpen: (() -> ())?, OnClose: (() -> ())?, Want: Vector2 } } = {}
+local uiScale: UIScale
+
+-- Fits a panel inside the screen (phones in landscape are short): the body
+-- scrolls, so shrinking the height never hides content.
+local function fit(p: { Frame: Frame, Want: Vector2 })
+	local vp = workspace.CurrentCamera.ViewportSize
+	local inset = GuiService:GetGuiInset()
+	local s = if uiScale then uiScale.Scale else 1
+	local maxH = math.max(200, (vp.Y - inset.Y - 24) / s)
+	local maxW = math.max(260, (vp.X - 24) / s)
+	p.Frame.Size = UDim2.fromOffset(math.min(p.Want.X, maxW), math.min(p.Want.Y, maxH))
+end
 Panels.Current = nil :: string?
 
 function Panels.Start()
 	gui = UI.new("ScreenGui", { Name = "Panels", ResetOnSpawn = false, DisplayOrder = 10, IgnoreGuiInset = false, Parent = player:WaitForChild("PlayerGui") })
 	local scale = UI.new("UIScale", { Parent = gui })
+	uiScale = scale
 	local function rescale()
 		local vp = workspace.CurrentCamera.ViewportSize
 		scale.Scale = math.clamp(math.min(vp.X / 900, vp.Y / 560), 0.6, 1.15)
+		for _, p in panels do
+			fit(p)
+		end
 	end
 	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(rescale)
 	rescale()
@@ -74586,7 +74696,8 @@ function Panels.Create(name: string, title: string, size: Vector2, onOpen: (() -
 		ScrollingDirection = Enum.ScrollingDirection.Y,
 		Parent = frame,
 	}, { UI.padding(10) })
-	panels[name] = { Frame = frame, Body = body, OnOpen = onOpen, OnClose = onClose }
+	panels[name] = { Frame = frame, Body = body, OnOpen = onOpen, OnClose = onClose, Want = size }
+	fit(panels[name])
 	return body
 end
 
@@ -74967,6 +75078,11 @@ function SoundCtl.Play(name: string)
 	(s :: Sound):Play()
 end
 
+local function settings(): { [string]: any }
+	local prof = State.Get("Profile")
+	return (prof and prof.Settings) or {}
+end
+
 local ambientName: string? = nil
 local function setAmbient(name: string)
 	if name == ambientName then
@@ -74982,15 +75098,30 @@ local function setAmbient(name: string)
 	if s then
 		s.Looped = true
 		s.Parent = SoundService
+		s:SetAttribute("BaseVolume", s.Volume)
+		local vol = settings().Ambience
+		if type(vol) == "number" then
+			s.Volume *= vol
+		end
 		s:Play()
 		ambient = s
 	end
 end
 
+
 function SoundCtl.Start()
 	UI.ClickSound = function()
-		SoundCtl.Play("UiClick")
+		if settings().UiSounds ~= false then
+			SoundCtl.Play("UiClick")
+		end
 	end
+	State.On("Profile", function()
+		local vol = settings().Ambience
+		if ambient and type(vol) == "number" then
+			local base = ambient:GetAttribute("BaseVolume")
+			ambient.Volume = (if type(base) == "number" then base else ambient.Volume) * vol
+		end
+	end)
 	State.On("Notify", function(n)
 		if n.Kind == "error" then
 			SoundCtl.Play("UiError")
@@ -75034,6 +75165,7 @@ function SoundCtl.Start()
 		[Enum.Material.Cobblestone] = "FootStone", [Enum.Material.Wood] = "FootWood", [Enum.Material.WoodPlanks] = "FootWood",
 		[Enum.Material.Metal] = "FootMetal", [Enum.Material.DiamondPlate] = "FootMetal",
 	}
+	local rainLoop: Sound? = nil
 	local defaultRun: { [Sound]: string } = setmetatable({}, { __mode = "k" }) :: any
 	local acc = 0
 	RunService.Heartbeat:Connect(function(dt)
@@ -75049,6 +75181,19 @@ function SoundCtl.Start()
 			setAmbient("AmbientCave")
 		else
 			setAmbient(if ms:GetAttribute("Phase") == "Night" then "AmbientNight" else "AmbientDay")
+		end
+		-- rain loop layered over the ambience during showers
+		local wantRain = inMatch and ms:GetAttribute("Weather") == "Rain"
+		if wantRain and not rainLoop then
+			rainLoop = SoundLib.Make("Rain")
+			if rainLoop then
+				rainLoop.Looped = true
+				rainLoop.Parent = SoundService
+				rainLoop:Play()
+			end
+		elseif not wantRain and rainLoop then
+			rainLoop:Destroy()
+			rainLoop = nil
 		end
 		-- surface footsteps (only when a licensed clip is configured)
 		local char = player.Character
@@ -75296,8 +75441,93 @@ return Storage
 ]]></string>
             </Properties>
           </Item>
+          <Item class="ModuleScript" referent="924">
+            <Properties>
+              <string name="Name">Weather</string>
+              <string name="Source"><![CDATA[--!nonstrict
+-- Client weather: rain showers chosen by the server (MatchState.Weather).
+-- A single rain emitter follows the camera (cheap on mobile), the image gets a
+-- little greyer and hazier, and at night distant lightning flashes now and then.
+-- Purely visual; gameplay never changes with the weather.
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Weather = {}
+
+local player = Players.LocalPlayer
+
+function Weather.Start()
+	local ms = ReplicatedStorage:WaitForChild("MatchState")
+	local holder = Instance.new("Part")
+	holder.Name = "RainHolder"
+	holder.Size = Vector3.new(90, 1, 90)
+	holder.Transparency = 1
+	holder.Anchored = true
+	holder.CanCollide = false
+	holder.CanQuery = false
+	holder.CanTouch = false
+	holder.Parent = workspace.CurrentCamera
+	local rain = Instance.new("ParticleEmitter")
+	rain.Name = "Rain"
+	rain.Rate = 0
+	rain.Lifetime = NumberRange.new(0.9, 1.2)
+	rain.Speed = NumberRange.new(70, 85)
+	rain.EmissionDirection = Enum.NormalId.Bottom
+	rain.SpreadAngle = Vector2.new(4, 4)
+	rain.Size = NumberSequence.new(0.08)
+	rain.Squash = NumberSequence.new(-4) -- long thin streaks
+	rain.Transparency = NumberSequence.new(0.55)
+	rain.Color = ColorSequence.new(Color3.fromRGB(190, 205, 220))
+	rain.LightInfluence = 1
+	rain.Orientation = Enum.ParticleOrientation.FacingCameraWorldUp
+	rain.Parent = holder
+	local grade = Instance.new("ColorCorrectionEffect")
+	grade.Name = "WeatherGrade"
+	grade.Parent = Lighting
+	local flash = Instance.new("ColorCorrectionEffect")
+	flash.Name = "Lightning"
+	flash.Parent = Lighting
+
+	local raining = false
+	local function apply()
+		local want = ms:GetAttribute("Weather") == "Rain" and player:GetAttribute("InMatch") == true
+		if want == raining then
+			return
+		end
+		raining = want
+		local info = TweenInfo.new(6)
+		TweenService:Create(rain, info, { Rate = if want then 600 else 0 }):Play()
+		TweenService:Create(grade, info, { Saturation = if want then -0.18 else 0, Brightness = if want then -0.04 else 0, TintColor = if want then Color3.fromRGB(225, 232, 240) else Color3.new(1, 1, 1) }):Play()
+	end
+	ms:GetAttributeChangedSignal("Weather"):Connect(apply)
+	player:GetAttributeChangedSignal("InMatch"):Connect(apply)
+	apply()
+
+	local nextFlash = os.clock() + 10
+	RunService.Heartbeat:Connect(function()
+		if raining then
+			local cam = workspace.CurrentCamera.CFrame.Position
+			holder.CFrame = CFrame.new(cam + Vector3.new(0, 45, 0))
+			-- distant lightning at night: a brief brightening, no damage, no noise spam
+			if ms:GetAttribute("Phase") == "Night" and os.clock() > nextFlash then
+				nextFlash = os.clock() + math.random(12, 30)
+				flash.Brightness = 0.35
+				TweenService:Create(flash, TweenInfo.new(0.4), { Brightness = 0 }):Play()
+			end
+		end
+	end)
+end
+
+return Weather
+]]></string>
+            </Properties>
+          </Item>
         </Item>
-        <Item class="LocalScript" referent="924">
+        <Item class="LocalScript" referent="925">
           <Properties>
             <string name="Name">Main</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -75391,6 +75621,7 @@ local order = {
 	"Creatures",
 	"Effects",
 	"Guide",
+	"Weather",
 	"Spectate",
 	"Dev",
 }
@@ -75417,7 +75648,7 @@ local _ = Players
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="925">
+        <Item class="ModuleScript" referent="926">
           <Properties>
             <string name="Name">State</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -75467,11 +75698,11 @@ return State
 ]]></string>
           </Properties>
         </Item>
-        <Item class="Folder" referent="926">
+        <Item class="Folder" referent="927">
           <Properties>
             <string name="Name">UI</string>
           </Properties>
-          <Item class="ModuleScript" referent="927">
+          <Item class="ModuleScript" referent="928">
             <Properties>
               <string name="Name">Buttons</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -75877,7 +76108,7 @@ return Buttons
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="928">
+          <Item class="ModuleScript" referent="929">
             <Properties>
               <string name="Name">Theme</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -75939,7 +76170,7 @@ return Theme
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="929">
+          <Item class="ModuleScript" referent="930">
             <Properties>
               <string name="Name">UI</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -76156,7 +76387,7 @@ return UI
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="930">
+  <Item class="Workspace" referent="931">
     <Properties>
       <string name="Name">Workspace</string>
       <float name="Gravity">196.2</float>

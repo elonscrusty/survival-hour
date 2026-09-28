@@ -273,6 +273,9 @@ end
 
 function MatchService._enterPhase(phase: string)
 	MatchService._setPhase(phase, phaseLength(phase))
+	-- weather: an occasional rain shower for the whole phase (visual only, never on Day 1)
+	local rain = MatchService.Day > 1 and math.random() < Config.Lighting.RainChance
+	state:SetAttribute("Weather", if rain then "Rain" else "Clear")
 	if phase == "Day" then
 		-- Dawn -> Day -> Sunset across the day (cancelled if the phase changes).
 		ctx.WorldService.ApplyLighting("Dawn", false)
@@ -450,6 +453,7 @@ function MatchService._teardown()
 		ctx.WorldService.ClearMatch()
 		MatchService.Map = nil
 		ctx.WorldService.ApplyLighting(if ctx.Mode == "Lobby" then "Lobby" else "Day", true)
+		state:SetAttribute("Weather", nil)
 		MatchService._setPhase("Idle", 0)
 		for _, p in players do
 			if p.Parent then

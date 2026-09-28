@@ -43,6 +43,7 @@ Net.Events = {
 	"ClientReady",
 	"Sprint", -- (bool) hold-to-sprint state
 	"LeaveMatch", -- eliminated players go back to the lobby early
+	"SetSetting", -- (key, value) player settings, validated by ProfileRules.SetSetting
 }
 
 local folder: Folder
