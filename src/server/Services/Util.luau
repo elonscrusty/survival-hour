@@ -229,9 +229,10 @@ function Util.Now(): number
 end
 
 -- The seasonal event running now (Config.Seasons), or nil. Config.Dev.ForceSeason turns
--- one on early, in Studio only.
+-- one on early, in Studio only, and never while Studio saves to the real DataStore
+-- (a forced season must not put early items or counts into real profiles).
 function Util.Season(): any
-	local force = if game:GetService("RunService"):IsStudio() then Config.Dev.ForceSeason else nil
+	local force = if game:GetService("RunService"):IsStudio() and not Config.Dev.SaveInStudio then Config.Dev.ForceSeason else nil
 	return Seasons.Active(Config.Seasons :: any, os.time(), force)
 end
 
