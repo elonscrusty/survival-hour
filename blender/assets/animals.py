@@ -13,8 +13,11 @@ existing animation moves it:
   SM_Bat_Body         -> Body       (body, head, ears)
   SM_Bat_Wing         -> WingRPart, and WingLPart turned 180 deg about its forward axis
 
-Every mesh's origin is its rig part's centre (Motor6D C1 space), so the game
-places it with part.CFrame and welds it. The rig numbers below mirror
+The geometry is the owner's blocky animal models (blender/source_models/animals/
+<Species>_Basic.blend), split into those pieces and fitted to the bounds each
+part was first published with, so the uploaded IDs take the new look as new
+versions. Every mesh's origin is its rig part's centre (Motor6D C1 space), so
+the game places it with part.CFrame and welds it. The rig numbers below mirror
 Animals.luau: change both together. Blender axes: -Y forward, +Z up, X side
 (Roblox X = -Blender X, Roblox Y = Blender Z, Roblox Z = Blender Y).
 """
@@ -22,10 +25,8 @@ Animals.luau: change both together. Blender axes: -Y forward, +Z up, X side
 import math
 import os
 
-import bmesh
 import bpy
 from mathutils import Matrix, Vector
-from mathutils.bvhtree import BVHTree
 
 from sh import pipeline as P
 from sh import textures as tx
@@ -59,574 +60,388 @@ class Rig:
         self.foot = -Leg * s / 2 - 0.15 * s  # leg space: bottom of the paw
 
 
-# ------------------------------------------------------------------ helpers
+# ------------------------------------------------------------ owner models
 
-class Skel:
-    """Skin-modifier skeleton: nodes (position, radius) joined by edges."""
+# The owner's six blocky animals (one .blend each: an empty <Species>_Root with
+# separate child meshes, head facing -Y, flat materials). Their parts are split
+# into the rig's pieces below.
+SRC_DIR = os.path.join(P.ROOT, "blender", "source_models", "animals")
 
-    def __init__(self):
-        self.nodes, self.edges = [], []
+# Published bounds (Blender lo / hi) of every part mesh, from AssetIds.luau. Each
+# rebuilt part is fitted to exactly this box so the uploaded asset IDs keep
+# working as new versions (tools/check_bounds.py).
+BOUNDS = {
+    "SM_Wolf_Body": ((-0.74, -2.12, -0.8), (0.74, 2.08, 0.8)),
+    "SM_Wolf_Head": ((-0.465, -1.632, -0.6105), (0.465, 0.878, 1.0895)),
+    "SM_Wolf_LegF": ((-0.305, -0.3115, -1.348), (0.305, 0.2985, 1.562)),
+    "SM_Wolf_LegB": ((-0.375, -0.4855, -1.35), (0.375, 0.4245, 1.56)),
+    "SM_Wolf_Tail": ((-0.265, -1.5865, -0.548), (0.265, 1.2835, 0.192)),
+    "SM_Bear_Body": ((-1.9, -3.85, -1.75), (1.9, 3.65, 1.95)),
+    "SM_Bear_Head": ((-1.25, -2.622, -1.08), (1.25, 1.458, 1.37)),
+    "SM_Bear_LegF": ((-0.815, -0.8075, -2.162), (0.815, 0.8225, 2.538)),
+    "SM_Bear_LegB": ((-0.905, -1.0395, -2.161), (0.905, 0.7705, 2.529)),
+    "SM_Bear_Tail": ((-0.29, -0.55, -0.3325), (0.29, 0.42, 0.2775)),
+    "SM_Deer_Body": ((-0.66, -2.15, -0.74), (0.66, 2.1, 0.78)),
+    "SM_Deer_Head": ((-0.74, -1.199, -0.6155), (0.74, 0.941, 0.9745)),
+    "SM_Deer_Head_Antlered": ((-0.84, -1.199, -0.613), (0.84, 0.941, 2.137)),
+    "SM_Deer_LegF": ((-0.235, -0.22, -1.927), (0.235, 0.25, 2.123)),
+    "SM_Deer_LegB": ((-0.325, -0.4185, -1.926), (0.325, 0.4215, 2.124)),
+    "SM_Deer_Tail": ((-0.125, -0.29, -0.09), (0.125, 0.25, 0.09)),
+    "SM_Rabbit_Body": ((-0.3, -0.56, -0.3), (0.3, 0.54, 0.3)),
+    "SM_Rabbit_Head": ((-0.1755, -0.384, -0.149), (0.1745, 0.146, 0.621)),
+    "SM_Rabbit_LegF": ((-0.09, -0.1095, -0.3145), (0.09, 0.0805, 0.3855)),
+    "SM_Rabbit_LegB": ((-0.175, -0.134, -0.3165), (0.175, 0.226, 0.4035)),
+    "SM_Rabbit_Tail": ((-0.0985, -0.224, -0.1115), (0.1015, -0.014, 0.0785)),
+    "SM_Boar_Body": ((-0.9, -1.95, -0.8475), (0.9, 1.85, 1.1225)),
+    "SM_Boar_Head": ((-0.49, -1.3355, -0.53), (0.49, 0.6545, 0.81)),
+    "SM_Boar_LegF": ((-0.355, -0.35, -0.9435), (0.355, 0.36, 1.1665)),
+    "SM_Boar_LegB": ((-0.42, -0.4895, -0.9455), (0.42, 0.3505, 1.1645)),
+    "SM_Boar_Tail": ((-0.09, -0.5865, -0.5355), (0.09, 0.0835, 0.1145)),
+    "SM_Bat_Body": ((-0.72, -1.541, -0.6205), (0.72, 0.949, 1.3295)),
+    "SM_Bat_Wing": ((-2.952, -0.8795, -0.0985), (1.718, 1.0005, 0.1215)),
+}
 
-    def n(self, pos, r, link=None):
-        self.nodes.append((Vector(pos), r))
-        i = len(self.nodes) - 1
-        if link is not None:
-            self.edges.append((link, i))
-        return i
+# Atlas tiles a source colour may not snap to (team-tinted, emissive, metallic).
+SWATCH_SKIP = {"team_cloth", "team_paint", "fire", "embers", "glow", "water", "diamond", "metal", "metal_dark",
+               "gunmetal", "brass"}
+# Hand picks (source material name -> (tile, lightness percentile)) where the
+# nearest swatch loses the look: the atlas has no pink or blue-grey fur.
+SWATCH_PICK = {
+    "Rabbit ears and nose": ("leather_stitch", 100),
+    "Bat wing": ("stone", 20),
+    "Bat inner ear": ("membrane", 98),
+    "Ivory tusks": ("bone", 50),
+}
 
-    def chain(self, start, pts):
-        prev = start
-        for p, r in pts:
-            prev = self.n(p, r, prev)
-        return prev
 
-    def build(self, m, paint, subdiv=1, scale=(1, 1, 1), fit=None, keep=None, floor=None):
-        """Adds the skinned, subdivided surface to Model m; paint(centre, normal) -> tile.
-        fit=(lo, hi) stretches the result to exactly fill that box (rig part bounds);
-        keep < 1 decimates to that share of the faces (thin limbs need fewer);
-        floor stretches the lower end down to that height and flattens it (a sole
-        standing exactly on the rig's ground)."""
-        me = bpy.data.meshes.new("skin_tmp")
-        me.from_pydata([tuple(p) for p, _ in self.nodes], self.edges, [])
-        o = bpy.data.objects.new("skin_tmp", me)
-        bpy.context.scene.collection.objects.link(o)
-        o.modifiers.new("Skin", "SKIN")
-        if len(me.skin_vertices) == 0:
-            me.skin_vertices.new()
-        for d, (_, r) in zip(me.skin_vertices[0].data, self.nodes):
-            d.radius = (r, r)
-        me.skin_vertices[0].data[0].use_root = True
-        if subdiv:
-            o.modifiers.new("Sub", "SUBSURF").levels = subdiv
-        if keep:
-            o.modifiers.new("Dec", "DECIMATE").ratio = keep
-        dg = bpy.context.evaluated_depsgraph_get()
-        ev = bpy.data.meshes.new_from_object(o.evaluated_get(dg))
-        tmp = bmesh.new()
-        tmp.from_mesh(ev)
-        bm = m.bm
-        sc = Vector(scale)
-        pts = {v: Vector((v.co.x * sc.x, v.co.y * sc.y, v.co.z * sc.z)) for v in tmp.verts}
-        if fit:
-            lo0 = [min(p[i] for p in pts.values()) for i in range(3)]
-            hi0 = [max(p[i] for p in pts.values()) for i in range(3)]
-            lo, hi = fit
-            for p in pts.values():
-                for i in range(3):
-                    p[i] = lo[i] + (p[i] - lo0[i]) / (hi0[i] - lo0[i]) * (hi[i] - lo[i])
-        if floor is not None:
-            zmin = min(p.z for p in pts.values())
-            zmax = max(p.z for p in pts.values())
-            low = floor - 0.04 * (zmax - zmin)
-            for p in pts.values():
-                p.z = max(floor, zmax - (zmax - p.z) * (zmax - low) / (zmax - zmin))
-        vmap = {v: bm.verts.new(p) for v, p in pts.items()}
-        faces = []
-        for f in tmp.faces:
-            nf = bm.faces.new([vmap[v] for v in f.verts])
-            faces.append(nf)
-        tmp.free()
+def _lab(rgb_lin):
+    x, y, z = (Matrix(((0.4124, 0.3576, 0.1805), (0.2126, 0.7152, 0.0722), (0.0193, 0.1192, 0.9505)))
+               @ Vector(rgb_lin))
+
+    def f(t):
+        return t ** (1 / 3) if t > 0.008856 else 7.787 * t + 16 / 116
+    fx, fy, fz = f(x / 0.9505), f(y), f(z / 1.089)
+    return Vector((116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)))
+
+
+def _lin(c):
+    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+
+_SWATCHES = None
+
+
+def swatch(name, rgb_lin):
+    """Nearest atlas swatch (tile, lightness percentile) to a linear source colour."""
+    global _SWATCHES
+    if name in SWATCH_PICK:
+        return SWATCH_PICK[name]
+    if _SWATCHES is None:
+        _SWATCHES = [(t, q, _lab([_lin(c) for c in tx.tone_rgb(i, q)]))
+                     for i, t in enumerate(tx.TILE_NAMES) if t not in SWATCH_SKIP for q in range(0, 101, 2)]
+    lab = _lab(rgb_lin)
+
+    def dist(s):  # lightness counts a little less than hue (the atlas is muted)
+        d = s[2] - lab
+        return (0.6 * d.x) ** 2 + d.y ** 2 + d.z ** 2
+    t, q, _ = min(_SWATCHES, key=dist)
+    return t, q
+
+
+class Piece:
+    """One source mesh: world-space verts and (vertex indices, tile, percentile) faces."""
+
+    def __init__(self, name, verts, faces):
+        self.name, self.v, self.f = name, verts, faces
+
+    def copy(self):
+        return Piece(self.name, [v.copy() for v in self.v], list(self.f))
+
+
+_SRC = {}
+
+
+def _world(o):
+    m = o.matrix_basis.copy()
+    while o.parent:
+        m = o.parent.matrix_basis @ o.matrix_parent_inverse @ m
+        o = o.parent
+    return m
+
+
+def source(sp):
+    """{object name: Piece} of the owner's model (animal parts only, no floor/lights)."""
+    if sp in _SRC:
+        return _SRC[sp]
+    path = os.path.join(SRC_DIR, f"{sp}_Basic.blend")
+    with bpy.data.libraries.load(path, link=False) as (src, dst):
+        names = [str(n) for n in src.objects]
+        dst.objects = list(names)
+    parts = {}
+    for name, o in zip(names, dst.objects):
+        if o is None or o.type != "MESH" or o.parent is None:
+            continue
+        mw = _world(o)
+        tones = []
+        for slot in o.material_slots:
+            mat = slot.material
+            col = mat.diffuse_color[:3]
+            if mat.node_tree:
+                for n in mat.node_tree.nodes:
+                    if n.type == "BSDF_PRINCIPLED":
+                        col = n.inputs["Base Color"].default_value[:3]
+            tile, q = swatch(mat.name, col)
+            tones.append((tx.TILE_INDEX[tile], q))
+        parts[name] = Piece(name, [mw @ v.co for v in o.data.vertices],
+                            [(tuple(p.vertices), *tones[p.material_index]) for p in o.data.polygons])
+    loaded = [o for o in dst.objects if o is not None]
+    datas = [o.data for o in loaded if o.data is not None]
+    mats = {mt for d in datas if isinstance(d, bpy.types.Mesh) for mt in d.materials if mt}
+    for o in loaded:
         bpy.data.objects.remove(o)
-        bpy.data.meshes.remove(me)
-        bpy.data.meshes.remove(ev)
-        # the skin modifier can leave small gaps where branches meet: close them
-        edges = list({e for f in faces for e in f.edges if len(e.link_faces) == 1})
-        if edges:
-            faces += bmesh.ops.holes_fill(bm, edges=edges, sides=0)["faces"]
-        bmesh.ops.recalc_face_normals(bm, faces=faces)
-        for f in faces:
-            f.normal_update()
-            f[m.l_mat] = tx.TILE_INDEX[paint(f.calc_center_median(), f.normal)]
-        return list(vmap.values())
+    for d in datas:
+        try:
+            if d.users == 0:
+                {bpy.types.Mesh: bpy.data.meshes, bpy.types.Camera: bpy.data.cameras}.get(
+                    type(d), bpy.data.lights).remove(d)
+        except ReferenceError:  # already freed with its object
+            pass
+    for mt in mats:
+        if mt.users == 0:
+            bpy.data.materials.remove(mt)
+    _SRC[sp] = parts
+    return parts
 
 
-def surface(m, target, outward):
-    """Point on the current surface of m hit by a ray from outside, travelling
-    along -outward through `target`. Returns (point, normal)."""
+def pick(sp, names):
+    src = source(sp)
+    return [src[n].copy() for n in names]
+
+
+def bbox(pieces):
+    vs = [v for p in pieces for v in p.v]
+    return (Vector([min(v[i] for v in vs) for i in range(3)]),
+            Vector([max(v[i] for v in vs) for i in range(3)]))
+
+
+def xform(pieces, mat, about=(0, 0, 0)):
+    c = Vector(about)
+    for p in pieces:
+        p.v = [mat @ (v - c) + c for v in p.v]
+    return pieces
+
+
+def remap(pieces, src_box, dst_box, axes=(0, 1, 2)):
+    """Per-axis linear map of src_box onto dst_box (the source box is usually the
+    pieces' own bounds, so the result exactly fills dst_box)."""
+    (a0, a1), (b0, b1) = src_box, dst_box
+    for p in pieces:
+        for v in p.v:
+            for i in axes:
+                v[i] = b0[i] + (v[i] - a0[i]) / (a1[i] - a0[i]) * (b1[i] - b0[i])
+    return pieces
+
+
+def emit(m, pieces, name):
+    """Adds the pieces to Model m (flat atlas colours) and snaps m to the published box."""
     bm = m.bm
-    bm.normal_update()
-    tree = BVHTree.FromBMesh(bm)
-    d = Vector(outward).normalized()
-    hit, nrm, _, _ = tree.ray_cast(Vector(target) + d * 4.0, -d)
-    if hit is None:
-        return Vector(target), d
-    return hit, nrm
+    lay = bm.faces.layers.int.get("tone") or bm.faces.layers.int.new("tone")
+    for p in pieces:
+        vs = [bm.verts.new(v) for v in p.v]
+        for idx, tile, q in p.f:
+            try:
+                f = bm.faces.new([vs[i] for i in idx])
+            except ValueError:
+                continue
+            f[m.l_mat] = tile
+            f[lay] = int(q) + 1
+    m.fit_bounds(*BOUNDS[name])
 
 
-def eye(m, target, outward, r, iris="eye_glow", pupil=True):
-    """Eye set into the surface: a coloured ball with a dark pupil in front."""
-    p, n = surface(m, target, outward)
-    c = p - n * r * 0.35
-    m.blob(iris, r, loc=c, subdiv=2)
-    if pupil:
-        m.blob("eye", r * 0.55, loc=c + n * r * 0.62, scale=(1, 1, 1), subdiv=1)
-    return p, n
+def fill(m, name, pieces):
+    remap(pieces, bbox(pieces), BOUNDS[name])
+    emit(m, pieces, name)
 
 
-def flatten_bottom(m, z):
-    for v in m.bm.verts:
-        if v.co.z < z:
-            v.co.z = z
+# ------------------------------------------------------------------ pieces
+
+def body(m, sp, names):
+    fill(m, f"SM_{sp}_Body", pick(sp, names))
 
 
-def ear(m, mat, base, h, r, tilt_out, tilt_fwd, flat=0.45, inner=None, sg=1):
-    """Pointed ear: flattened cone standing on `base`, tilted outwards (and
-    forwards for positive tilt_fwd)."""
-    m.cone(mat, r, h, seg=6, loc=base, rot=(tilt_fwd, sg * tilt_out, 0), scale=(1, flat, 1))
-    if inner:
-        rot = Matrix.Rotation(math.radians(sg * tilt_out), 3, "Y") @ Matrix.Rotation(math.radians(tilt_fwd), 3, "X")
-        fwd = rot @ Vector((0, -1, 0))
-        m.cone(inner, r * 0.62, h * 0.72, seg=6,
-               loc=Vector(base) + fwd * r * flat * 0.45 + rot @ Vector((0, 0, h * 0.08)),
-               rot=(tilt_fwd, sg * tilt_out, 0), scale=(1, flat * 0.5, 1))
+def head(m, sp, names, extra=None, name=None, antlers=None):
+    """Head group mapped onto the published head box. extra(sp) adds pieces
+    (e.g. a neck) in source space first. With antlers, the head keeps the plain
+    head's mapping and the antlers alone stretch up to the antlered box."""
+    pcs = pick(sp, names)
+    if extra:
+        pcs += extra(sp)
+    plain = BOUNDS[f"SM_{sp}_Head"]
+    box = bbox(pcs)
+    remap(pcs, box, plain)
+    if antlers:
+        lo, hi = BOUNDS[name]
+        ant = remap(pick(sp, antlers), box, plain)
+        a0, a1 = bbox(ant)
+        sx = hi[0] / max(abs(a0[0]), a1[0])
+        for p in ant:
+            for v in p.v:
+                v.x *= sx
+                v.z = a0.z + (v.z - a0.z) * (hi[2] - a0.z) / (a1.z - a0.z)
+        pcs += ant
+    emit(m, pcs, name or f"SM_{sp}_Head")
 
 
-def membrane(m, poly, thickness, mat="membrane"):
-    """Thin watertight wing membrane in the XY plane (centred on z=0)."""
-    tmp = bmesh.new()
-    vs = [tmp.verts.new((x, y, 0)) for x, y in poly]
-    tmp.faces.new(vs)
-    bmesh.ops.triangulate(tmp, faces=tmp.faces[:], ngon_method="BEAUTY")
-    bmesh.ops.subdivide_edges(tmp, edges=tmp.edges[:], cuts=1, use_grid_fill=True)
-    bm = m.bm
-    top = {v: bm.verts.new(v.co + Vector((0, 0, thickness / 2))) for v in tmp.verts}
-    bot = {v: bm.verts.new(v.co - Vector((0, 0, thickness / 2))) for v in tmp.verts}
-    for f in tmp.faces:
-        a = bm.faces.new([top[v] for v in f.verts])
-        b = bm.faces.new([bot[v] for v in reversed(f.verts)])
-        a[m.l_mat] = b[m.l_mat] = tx.TILE_INDEX[mat]
-    for e in tmp.edges:
-        if len(e.link_faces) == 1:
-            v0, v1 = e.verts
-            f = bm.faces.new((top[v0], top[v1], bot[v1], bot[v0]))
-            f[m.l_mat] = tx.TILE_INDEX[mat]
-    tmp.free()
+def leg(m, sp, name, shaft, foot, extra=None):
+    """Leg + paw/hoof filling the leg box: x/y stretch to the box, the paw keeps
+    about its proportions at the bottom and the shaft stretches up to the hip."""
+    lo, hi = BOUNDS[name]
+    sh = pick(sp, shaft)
+    ft = pick(sp, foot)
+    if extra:
+        sh += extra(sp, ft)
+    pcs = sh + ft
+    b0, b1 = bbox(pcs)
+    remap(pcs, (b0, b1), (lo, hi), axes=(0, 1))
+    if not ft:
+        remap(pcs, (b0, b1), (lo, hi), axes=(2,))
+    else:
+        s = ((hi[0] - lo[0]) / (b1.x - b0.x) + (hi[1] - lo[1]) / (b1.y - b0.y)) / 2
+        f1 = bbox(ft)[1].z
+        s = min(s, 0.2 * (hi[2] - lo[2]) / (f1 - b0.z))
+        for p in ft:
+            for v in p.v:
+                v.z = lo[2] + (v.z - b0.z) * s
+        s0 = bbox(sh)[0].z
+        z0 = lo[2] + (s0 - b0.z) * s
+        for p in sh:
+            for v in p.v:
+                v.z = z0 + (v.z - s0) / (b1.z - s0) * (hi[2] - z0)
+    emit(m, pcs, name)
 
 
-# ------------------------------------------------------------------- wolf
+def tail(m, sp, names, ref, angle=0.0):
+    """Tail turned so its long axis (of piece `ref`) points back (+Y) at `angle`
+    degrees above the horizontal (negative = hanging), then fitted to the box."""
+    pcs = pick(sp, names)
+    r = [p for p in pcs if p.name == ref][0]
+    c = sum(r.v, Vector()) / len(r.v)
+    syy = sum((v.y - c.y) ** 2 for v in r.v)
+    szz = sum((v.z - c.z) ** 2 for v in r.v)
+    syz = sum((v.y - c.y) * (v.z - c.z) for v in r.v)
+    cur = 0.5 * math.atan2(2 * syz, syy - szz)  # principal axis angle in the YZ plane
+    xform(pcs, Matrix.Rotation(math.radians(angle) - cur, 3, "X"), c)
+    fill(m, f"SM_{sp}_Tail", pcs)
 
-def wolf_body(m):
-    k = Skel()
-    rump = k.n((0, 1.8, 0.28), 0.5)
-    hips = k.n((0, 1.25, 0.18), 0.64, rump)
-    mid = k.n((0, 0.15, 0.2), 0.6, hips)
-    chest = k.n((0, -1.05, 0.12), 0.78, mid)
-    k.n((0, -1.9, 0.42), 0.6, chest)  # neck base
-    k.n((0, -1.2, -0.32), 0.56, chest)  # deep chest
-    for sg in (1, -1):
-        k.n((sg * 0.4, -1.5, -0.28), 0.42, chest)
-        k.n((sg * 0.38, 1.5, -0.2), 0.5, hips)
 
-    def paint(c, n):
-        if n.z < -0.35 and c.z < 0.1 or (c.y < -1.5 and c.z < -0.2):
-            return "fur_light"
-        if n.z > 0.6 and -0.9 < c.y < 1.6:
-            return "fur_bat"
-        return "fur_grey"
-    k.build(m, paint, fit=((-0.74, -2.12, -0.8), (0.74, 2.08, 0.8)))
+def block(sp, like, scale, centre):
+    """Extra block cut from one of the source pieces (same colours), rescaled
+    about its own centre and moved to `centre` (source space)."""
+    p = pick(sp, [like])[0]
+    c = sum(p.v, Vector()) / len(p.v)
+    p.v = [Vector(centre) + Vector([(v - c)[i] * scale[i] for i in range(3)]) for v in p.v]
+    p.name = like + "_extra"
+    return p
+
+
+FACE = ["Ear_L", "Ear_R", "InnerEar_L", "InnerEar_R", "Eye_L", "Eye_R"]
 
 
 def wolf_head(m):
-    k = Skel()
-    neck = k.n((0, 0.8, -0.42), 0.5)
-    nape = k.n((0, 0.3, -0.06), 0.52, neck)
-    skull = k.n((0, -0.12, 0.14), 0.52, nape)
-    cheek = k.n((0, -0.5, -0.06), 0.44, skull)
-    muzzle = k.n((0, -0.98, -0.18), 0.26, cheek)
-    k.n((0, -1.36, -0.18), 0.16, muzzle)
-
-    def paint(c, n):
-        if c.y < -0.3 and (n.z < -0.2 or c.z < -0.2):
-            return "fur_light"
-        if n.z > 0.55 and c.y > -0.6:
-            return "fur_bat"
-        return "fur_grey"
-    k.build(m, paint, scale=(0.95, 1, 1))
-    for sg in (1, -1):
-        eye(m, (sg * 0.3, -0.58, 0.2), (sg * 0.55, -0.8, 0.15), 0.1)
-        # brow ridge
-        p, n = surface(m, (sg * 0.26, -0.5, 0.36), (sg * 0.3, -0.5, 0.8))
-        m.box("fur_bat", (0.22, 0.12, 0.05), loc=p, rot=(20, sg * -16, sg * 8))
-        ear(m, "fur_grey", (sg * 0.28, 0.02, 0.5), 0.62, 0.22, 16, -8, inner="fur_bat", sg=sg)
-        m.cone("bone", 0.035, 0.13, seg=4, loc=(sg * 0.1, -1.3, -0.33), rot=(180, 0, 0))
-    m.blob("nose", 0.13, loc=(0, -1.52, -0.12), scale=(1.1, 0.85, 0.8))
+    head(m, "Wolf", ["Head", "Muzzle", "Nose", "Neck"] + FACE)
 
 
-def toes(m, foot, mat="fur_light", r=0.07, xs=(-0.08, 0.08)):
-    """Two toe bumps on the front of a paw, resting on the ground."""
-    for x in xs:
-        p, n = surface(m, (x, -0.1, foot + r * 0.9), (0, -1, 0))
-        m.blob(mat, r, loc=(p.x, p.y + r * 0.2, foot + r * 0.8), scale=(1, 1.3, 0.8), subdiv=1)
-
-
-def wolf_leg_f(m, r):
-    k = Skel()
-    top = k.n((0, 0, 1.6), 0.3)
-    k.chain(top, [((0, -0.02, 1.15), 0.36), ((0, 0.04, 0.55), 0.27), ((0, 0.1, 0.05), 0.19),
-                  ((0, 0.03, -0.8), 0.13), ((0, -0.12, -1.2), 0.17)])
-    k.build(m, lambda c, n: "fur_light" if c.z < -0.55 else "fur_grey", keep=0.65, floor=r.foot)
-    flatten_bottom(m, r.foot)
-    toes(m, r.foot)
-
-
-def wolf_leg_b(m, r):
-    k = Skel()
-    top = k.n((0, 0, 1.6), 0.36)
-    k.chain(top, [((0, -0.1, 1.1), 0.44), ((0, -0.2, 0.45), 0.32), ((0, 0.05, -0.1), 0.2),
-                  ((0, 0.34, -0.55), 0.14), ((0, 0.12, -1.0), 0.13), ((0, -0.08, -1.22), 0.17)])
-    k.build(m, lambda c, n: "fur_light" if c.z < -0.75 else "fur_grey", keep=0.65, floor=r.foot)
-    flatten_bottom(m, r.foot)
-    toes(m, r.foot)
-
-
-def wolf_tail(m):
-    k = Skel()
-    k.chain(k.n((0, -1.6, 0.08), 0.1), [((0, -1.2, 0.04), 0.16), ((0, -0.75, -0.02), 0.24), ((0, 0.05, -0.14), 0.3),
-                                          ((0, 0.75, -0.32), 0.22), ((0, 1.3, -0.5), 0.07)])
-    k.build(m, lambda c, n: "fur_bat" if c.y > 0.75 or (n.z > 0.6 and c.y < -0.4) else
-            ("fur_light" if n.z < -0.5 else "fur_grey"), keep=0.65)
-
-
-# ------------------------------------------------------------------- bear
-
-def bear_body(m):
-    k = Skel()
-    rump = k.n((0, 2.6, 0.25), 1.35)
-    hips = k.n((0, 1.7, 0.2), 1.65, rump)
-    mid = k.n((0, 0.1, 0.25), 1.68, hips)
-    chest = k.n((0, -1.9, 0.15), 1.72, mid)
-    k.n((0, -1.3, 1.05), 1.25, chest)  # shoulder hump
-    k.n((0, -3.2, 0.75), 1.25, chest)  # neck base
-    for sg in (1, -1):
-        k.n((sg * 1.05, -2.5, -0.6), 0.95, chest)
-        k.n((sg * 1.0, 2.45, -0.5), 1.1, hips)
-
-    def paint(c, n):
-        if n.z < -0.5 and c.z < -1.2:
-            return "fur_bat"
-        return "fur_brown"
-    k.build(m, paint, fit=((-1.9, -3.85, -1.75), (1.9, 3.65, 1.95)))
+def bear_neck(sp):
+    # the owner's bear has no neck; the head box reaches back over the shoulders
+    return [block(sp, "Head", (0.8, 0.9, 0.75), (0, -1.0, 2.55))]
 
 
 def bear_head(m):
-    k = Skel()
-    neck = k.n((0, 1.25, -0.55), 1.1)
-    nape = k.n((0, 0.5, -0.05), 1.12, neck)
-    skull = k.n((0, -0.3, 0.22), 1.05, nape)
-    cheek = k.n((0, -0.65, -0.25), 0.98, skull)
-    muzzle = k.n((0, -1.45, -0.5), 0.58, cheek)
-    k.n((0, -2.0, -0.5), 0.4, muzzle)
-
-    def paint(c, n):
-        if c.y < -1.25 and (c.z < -0.05 or n.y < -0.5):
-            return "fur_light"
-        return "fur_brown"
-    k.build(m, paint, scale=(0.95, 1, 0.95))
-    for sg in (1, -1):
-        eye(m, (sg * 0.55, -1.2, 0.35), (sg * 0.45, -0.85, 0.3), 0.14)
-        p, n = surface(m, (sg * 0.5, -1.05, 0.55), (sg * 0.3, -0.55, 0.8))
-        m.box("fur_bat", (0.45, 0.3, 0.1), loc=p, rot=(20, sg * -14, sg * 6))
-        m.blob("fur_brown", 0.42, loc=(sg * 0.85, 0.05, 0.95), scale=(1, 0.5, 1), subdiv=2)
-        m.blob("fur_bat", 0.25, loc=(sg * 0.85, -0.12, 0.95), scale=(0.8, 0.35, 0.8), subdiv=2)
-        m.cone("bone", 0.07, 0.24, seg=4, loc=(sg * 0.2, -2.2, -0.72), rot=(180, 0, 0))
-    m.blob("nose", 0.3, loc=(0, -2.38, -0.4), scale=(1.2, 0.8, 0.8))
+    head(m, "Bear", ["Head", "Muzzle", "Nose", "Mouth"] + FACE, extra=bear_neck)
 
 
-def bear_leg(m, r, front):
-    k = Skel()
-    if front:
-        top = k.n((0, 0, 2.6), 0.8)
-        k.chain(top, [((0, 0, 1.8), 0.95), ((0, 0.05, 0.7), 0.72), ((0, 0.05, -0.6), 0.56),
-                      ((0, -0.05, -1.35), 0.52), ((0, -0.3, -1.85), 0.58)])
-    else:
-        top = k.n((0, 0, 2.6), 0.9)
-        k.chain(top, [((0, -0.15, 1.7), 1.05), ((0, -0.25, 0.7), 0.82), ((0, 0.25, -0.5), 0.54),
-                      ((0, 0.15, -1.3), 0.5), ((0, -0.2, -1.85), 0.58)])
-    k.build(m, lambda c, n: "fur_bat" if c.z < -1.45 else "fur_brown", floor=r.foot)
-    flatten_bottom(m, r.foot)
-    for x in (-0.3, -0.1, 0.1, 0.3):
-        p, n = surface(m, (x, -0.4, r.foot + 0.2), (0, -1, 0.15))
-        m.cone("bone", 0.07, 0.3, seg=4, loc=p - Vector((0, -0.05, 0)), rot=(100, 0, 0))
+DEER_HEAD = ["Head", "Muzzle", "Nose", "Neck", "ChestPatch"] + FACE
+DEER_ANTLERS = ["AntlerStem_L", "AntlerStem_R", "AntlerTine_L", "AntlerTine_R", "AntlerOuter_L", "AntlerOuter_R"]
 
 
-def bear_tail(m):
-    k = Skel()
-    k.chain(k.n((0, -0.6, 0.05), 0.3), [((0, 0.05, -0.05), 0.36), ((0, 0.45, -0.15), 0.16)])
-    k.build(m, lambda c, n: "fur_brown")
+def rabbit_thigh(sp, ft):
+    # the owner's rabbit has paws only: a haunch block rises from the back paw
+    return [block(sp, "BackPaw_R", (0.8, 0.55, 2.2), (0.56, 1.0, 0.6))]
 
 
-# ------------------------------------------------------------------- deer
+BAT_HEAD_SHIFT = (0, -0.1, -0.55)
 
-def deer_body(m):
-    k = Skel()
-    rump = k.n((0, 1.72, 0.22), 0.52)
-    hips = k.n((0, 1.2, 0.12), 0.6, rump)
-    mid = k.n((0, 0.05, 0.08), 0.58, hips)
-    chest = k.n((0, -1.15, 0.1), 0.64, mid)
-    k.n((0, -1.75, 0.42), 0.46, chest)  # neck base
-    k.n((0, -1.15, -0.32), 0.44, chest)  # brisket
-    for sg in (1, -1):
-        k.n((sg * 0.34, -1.4, -0.22), 0.36, chest)
-        k.n((sg * 0.34, 1.4, -0.15), 0.44, hips)
-
-    def paint(c, n):
-        if c.y > 1.75 and c.z < 0.45 or (n.z < -0.4 and c.z < -0.3):
-            return "fur_light"
-        return "fur_brown"
-    k.build(m, paint, fit=((-0.66, -2.15, -0.74), (0.66, 2.1, 0.78)))
-
-
-def deer_head(m, antlers):
-    k = Skel()
-    base = k.n((0, 0.85, -0.55), 0.42)
-    neck = k.n((0, 0.4, -0.05), 0.34, base)
-    upper = k.n((0, 0.02, 0.35), 0.3, neck)
-    skull = k.n((0, -0.25, 0.52), 0.32, upper)
-    muzzle = k.n((0, -0.72, 0.3), 0.21, skull)
-    k.n((0, -1.0, 0.2), 0.15, muzzle)
-
-    def paint(c, n):
-        if c.y < -0.5 and c.z < 0.3 or (c.y > -0.2 and n.y < -0.55 and c.z < 0.2):
-            return "fur_light"
-        return "fur_brown"
-    k.build(m, paint, scale=(0.95, 1, 1))
-    for sg in (1, -1):
-        eye(m, (sg * 0.27, -0.45, 0.58), (sg * 0.8, -0.45, 0.25), 0.075)
-        ear(m, "fur_brown", (sg * 0.26, -0.1, 0.72), 0.55, 0.2, 62, -10, flat=0.4, inner="fur_light", sg=sg)
-        if antlers:
-            root = Vector((sg * 0.16, -0.12, 0.78))
-            beam = [root, root + Vector((sg * 0.18, 0.02, 0.35)), root + Vector((sg * 0.42, 0.12, 0.7)),
-                    root + Vector((sg * 0.55, 0.05, 1.05)), root + Vector((sg * 0.5, -0.12, 1.35))]
-            m.sweep("bone", beam, [0.07, 0.06, 0.05, 0.04, 0.02], seg=5)
-            for i, (dx, dy, dz) in ((1, (0.0, -0.25, 0.35)), (2, (0.05, -0.28, 0.32)), (3, (0.12, -0.05, 0.25))):
-                a = beam[i]
-                m.sweep("bone", [a, a + Vector((sg * dx, dy, dz))], [0.04, 0.015], seg=4)
-            m.blob("wood_dark", 0.08, loc=root, subdiv=1)
-    m.blob("nose", 0.1, loc=(0, -1.12, 0.22), scale=(1.1, 0.8, 0.85))
-
-
-def deer_leg(m, r, front):
-    k = Skel()
-    if front:
-        top = k.n((0, 0, 2.15), 0.24)
-        k.chain(top, [((0, 0.02, 1.4), 0.26), ((0, 0.04, 0.5), 0.15), ((0, 0.0, -0.1), 0.11),
-                      ((0, -0.02, -1.45), 0.09), ((0, -0.06, -1.74), 0.11)])
-    else:
-        top = k.n((0, 0, 2.15), 0.3)
-        k.chain(top, [((0, -0.12, 1.4), 0.38), ((0, 0.05, 0.4), 0.2), ((0, 0.34, -0.3), 0.11),
-                      ((0, 0.08, -1.45), 0.09), ((0, -0.02, -1.74), 0.11)])
-    k.build(m, lambda c, n: "nose" if c.z < -1.66 else ("fur_light" if n.y > 0.5 and c.z > 0.6 and not front
-                                                        else "fur_brown"), keep=0.5, floor=r.foot)
-    flatten_bottom(m, r.foot)
-
-
-def deer_tail(m):
-    k = Skel()
-    k.chain(k.n((0, -0.3, 0.02), 0.1), [((0, -0.02, 0.0), 0.15), ((0, 0.26, -0.04), 0.08)])
-    k.build(m, lambda c, n: "fur_brown" if n.z > 0.5 else "fur_light", scale=(1, 1, 0.7))
-
-
-# ----------------------------------------------------------------- rabbit
-
-def rabbit_body(m):
-    k = Skel()
-    rump = k.n((0, 0.28, 0.02), 0.34)
-    mid = k.n((0, -0.08, 0.02), 0.3, rump)
-    chest = k.n((0, -0.36, 0.0), 0.24, mid)
-    k.n((0, -0.5, 0.12), 0.18, chest)
-    for sg in (1, -1):
-        k.n((sg * 0.2, 0.34, -0.1), 0.2, rump)  # haunches
-
-    def paint(c, n):
-        if n.z < -0.4 or (c.y < -0.4 and c.z < 0.0):
-            return "fur_light"
-        return "fur_grey"
-    k.build(m, paint, fit=((-0.3, -0.56, -0.3), (0.3, 0.54, 0.3)))
-
-
-def rabbit_head(m):
-    k = Skel()
-    neck = k.n((0, 0.12, -0.05), 0.17)
-    skull = k.n((0, -0.04, 0.05), 0.19, neck)
-    cheek = k.n((0, -0.2, -0.02), 0.15, skull)
-    k.n((0, -0.3, -0.04), 0.09, cheek)
-
-    def paint(c, n):
-        if c.y < -0.22 and c.z < -0.02 or n.z < -0.6:
-            return "fur_light"
-        return "fur_grey"
-    k.build(m, paint, scale=(1.0, 1, 1))
-    for sg in (1, -1):
-        eye(m, (sg * 0.13, -0.12, 0.08), (sg * 0.9, -0.3, 0.2), 0.05, iris="eye", pupil=False)
-        m.blob("eye_glow", 0.012, loc=(sg * 0.165, -0.15, 0.115), subdiv=1)
-        base = (sg * 0.07, 0.03, 0.17)
-        m.blob("fur_grey", 0.07, loc=(sg * 0.1, 0.07, 0.4), rot=(-18, sg * 14, 0), scale=(0.85, 0.42, 3.4))
-        m.blob("fur_light", 0.052, loc=(sg * 0.103, 0.045, 0.41), rot=(-18, sg * 14, 0), scale=(0.7, 0.3, 3.1),
-               subdiv=1)
-        m.blob("fur_grey", 0.06, loc=base, scale=(1, 0.8, 1.2), subdiv=1)
-    m.blob("nose", 0.03, loc=(0, -0.365, -0.01), scale=(1.2, 0.8, 0.8), subdiv=1)
-
-
-def rabbit_leg(m, r, front):
-    k = Skel()
-    if front:
-        top = k.n((0, 0, 0.4), 0.09)
-        k.chain(top, [((0, -0.01, 0.22), 0.1), ((0, -0.02, -0.05), 0.07), ((0, -0.06, -0.24), 0.065)])
-        k.build(m, lambda c, n: "fur_light" if c.z < -0.12 else "fur_grey", keep=0.6, floor=r.foot)
-    else:
-        top = k.n((0, 0, 0.42), 0.16)
-        k.chain(top, [((0, 0.05, 0.2), 0.21), ((0, 0.08, -0.06), 0.14), ((0, 0.12, -0.22), 0.07),
-                      ((0, -0.14, -0.26), 0.075)])
-        k.build(m, lambda c, n: "fur_light" if c.z < -0.18 else "fur_grey", keep=0.6, floor=r.foot)
-    flatten_bottom(m, r.foot)
-
-
-def rabbit_tail(m):
-    m.blob("fur_light", 0.1, loc=(0, -0.12, -0.02), jitter=0.01, subdiv=2)
-
-
-# ------------------------------------------------------------------- boar
-
-def boar_body(m):
-    k = Skel()
-    rump = k.n((0, 1.35, 0.02), 0.7)
-    mid = k.n((0, 0.35, 0.05), 0.8, rump)
-    shoulder = k.n((0, -0.85, 0.18), 0.92, mid)
-    k.n((0, -1.55, 0.3), 0.78, shoulder)  # neck base
-    k.n((0, -0.55, 0.55), 0.62, shoulder)  # high withers
-    for sg in (1, -1):
-        k.n((sg * 0.45, -1.0, -0.25), 0.5, shoulder)
-        k.n((sg * 0.42, 1.2, -0.2), 0.55, rump)
-
-    def paint(c, n):
-        if n.z < -0.45 and c.z < -0.3:
-            return "fur_brown"
-        return "fur_bat"
-    k.build(m, paint, fit=((-0.9, -1.95, -0.85), (0.9, 1.85, 0.95)))
-    # bristly mane along the spine
-    for i in range(9):
-        y = -1.55 + i * 0.3
-        p, n = surface(m, (0, y, 0.6), (0, 0, 1))
-        h = 0.5 - abs(i - 2.5) * 0.06
-        m.cone("fur_bat", 0.15, max(h, 0.16), seg=4, loc=p - n * 0.08, rot=(-30, 0, 45), scale=(0.45, 1, 1))
-
-
-def boar_head(m):
-    k = Skel()
-    neck = k.n((0, 0.6, -0.2), 0.62)
-    skull = k.n((0, 0.1, 0.1), 0.56, neck)
-    face = k.n((0, -0.4, -0.08), 0.42, skull)
-    k.n((0, -1.0, -0.24), 0.26, face)
-
-    def paint(c, n):
-        if c.y < -0.7:
-            return "leather"
-        if n.z < -0.4:
-            return "fur_brown"
-        return "fur_bat"
-    k.build(m, paint, scale=(0.95, 1, 1))
-    # snout disc
-    m.cylinder("leather", 0.25, 0.25, 0.14, seg=10, loc=(0, -1.16, -0.24), rot=(90, 0, 0), cap="leather")
-    for sg in (1, -1):
-        m.blob("nose", 0.055, loc=(sg * 0.08, -1.31, -0.24), scale=(0.8, 0.5, 1.1), subdiv=1)
-        eye(m, (sg * 0.3, -0.25, 0.2), (sg * 0.7, -0.6, 0.25), 0.07)
-        ear(m, "fur_bat", (sg * 0.3, 0.2, 0.46), 0.42, 0.17, 28, 20, flat=0.45, inner="fur_brown", sg=sg)
-        m.sweep("bone", [(sg * 0.2, -0.92, -0.36), (sg * 0.32, -1.05, -0.26), (sg * 0.38, -1.08, -0.02)],
-                [0.06, 0.05, 0.012], seg=5)
-
-
-def boar_leg(m, r, front):
-    k = Skel()
-    if front:
-        top = k.n((0, 0, 1.2), 0.36)
-        k.chain(top, [((0, 0, 0.8), 0.42), ((0, 0.03, 0.2), 0.27), ((0, 0.0, -0.5), 0.13),
-                      ((0, -0.06, -0.82), 0.14)])
-    else:
-        top = k.n((0, 0, 1.2), 0.4)
-        k.chain(top, [((0, -0.08, 0.75), 0.5), ((0, -0.12, 0.25), 0.34), ((0, 0.18, -0.35), 0.13),
-                      ((0, 0.0, -0.82), 0.14)])
-    k.build(m, lambda c, n: "nose" if c.z < -0.78 else "fur_bat", floor=r.foot)
-    flatten_bottom(m, r.foot)
-
-
-def boar_tail(m):
-    k = Skel()
-    k.chain(k.n((0, -0.6, 0.05), 0.1), [((0, -0.28, -0.02), 0.09), ((0, -0.05, -0.25), 0.065),
-                                         ((0, 0.02, -0.55), 0.12)])
-    k.build(m, lambda c, n: "fur_bat", keep=0.6)
-
-
-# -------------------------------------------------------------------- bat
 
 def bat_body(m):
-    k = Skel()
-    tailn = k.n((0, 0.6, -0.1), 0.32)
-    belly = k.n((0, 0.2, -0.02), 0.58, tailn)
-    chest = k.n((0, -0.35, 0.08), 0.62, belly)
-    head = k.n((0, -0.9, 0.3), 0.44, chest)
-    k.n((0, -1.28, 0.24), 0.22, head)
-    k.build(m, lambda c, n: "fur_light" if n.z < -0.5 and c.y < 0.1 and c.y > -0.7 else "fur_bat",
-            fit=((-0.72, -1.5, -0.62), (0.72, 0.95, 0.8)))
-    for sg in (1, -1):
-        p, n = surface(m, (sg * 0.24, -0.85, 0.5), (0, 0, 1))
-        ear(m, "fur_bat", p - Vector((0, 0, 0.06)), 0.75, 0.24, 22, -12, flat=0.45, inner="membrane", sg=sg)
-        eye(m, (sg * 0.2, -1.15, 0.42), (sg * 0.45, -0.85, 0.3), 0.075)
-        m.cone("bone", 0.035, 0.14, seg=4, loc=(sg * 0.08, -1.38, 0.12), rot=(180, 0, 0))
-        m.sweep("fur_bat", [(sg * 0.2, 0.55, -0.3), (sg * 0.28, 0.9, -0.45)], [0.07, 0.04], seg=5)
-    m.blob("nose", 0.07, loc=(0, -1.5, 0.28), scale=(1.2, 0.7, 0.8), subdiv=1)
+    """The owner's bat hangs upright; the rig flies level, head first (-Y). The
+    body and feet pitch forward and the head sits on the front, looking ahead."""
+    sp = "Bat"
+    trunk = pick(sp, ["Body", "Foot_L", "Foot_R"])
+    xform(trunk, Matrix.Rotation(math.radians(90), 3, "X"), (0, 0, 1.53))
+    hd = pick(sp, ["Head", "Muzzle", "Nose"] + FACE)
+    for p in hd:
+        p.v = [v + Vector(BAT_HEAD_SHIFT) for v in p.v]
+    fill(m, "SM_Bat_Body", trunk + hd)
 
 
 def bat_wing(m):
-    """Right wing (Roblox +X = Blender -X). Joint at local x = +1.6."""
-    poly = [(1.62, -0.3), (0.3, -0.52), (-1.1, -0.62), (-2.95, -0.42), (-2.2, 0.08), (-2.4, 0.8),
-            (-1.55, 0.42), (-1.0, 1.0), (-0.3, 0.52), (0.5, 0.78), (1.55, 0.45)]
-    membrane(m, poly, 0.05)
-    arm = [(1.7, -0.3, 0.0), (0.3, -0.52, 0.0), (-1.1, -0.62, 0.0)]
-    m.sweep("fur_bat", arm, [0.12, 0.09, 0.07], seg=5)
-    for tip in ((-2.95, -0.42), (-2.4, 0.8), (-1.0, 1.0)):
-        m.sweep("membrane", [(-1.1, -0.62, 0.0), (tip[0], tip[1], 0.0)], [0.05, 0.02], seg=4)
-    m.cone("bone", 0.05, 0.22, seg=4, loc=(-1.1, -0.66, 0.0), rot=(90, 0, 0))
+    """Right wing of the rig = the owner's Wing_L (Blender -X), laid flat with the
+    arm on the leading (-Y) edge; the joint side is +X."""
+    pcs = pick("Bat", ["Wing_L", "WingArm_L"])
+    xform(pcs, Matrix.Rotation(math.radians(90), 3, "X"))
+    fill(m, "SM_Bat_Wing", pcs)
 
 
 # ------------------------------------------------------------ registration
 
 SPECIES = ["Wolf", "Bear", "Deer", "Rabbit", "Boar"]
-DENSITY = {"Wolf": 1.6, "Bear": 2.4, "Deer": 1.5, "Rabbit": 0.7, "Boar": 1.6, "Bat": 1.2}
 BUILDERS = {
-    "Wolf": dict(Body=wolf_body, Head=wolf_head, LegF=lambda m, r: wolf_leg_f(m, r),
-                 LegB=lambda m, r: wolf_leg_b(m, r), Tail=wolf_tail),
-    "Bear": dict(Body=bear_body, Head=bear_head, LegF=lambda m, r: bear_leg(m, r, True),
-                 LegB=lambda m, r: bear_leg(m, r, False), Tail=bear_tail),
-    "Deer": dict(Body=deer_body, Head=lambda m: deer_head(m, False), Head_Antlered=lambda m: deer_head(m, True),
-                 LegF=lambda m, r: deer_leg(m, r, True), LegB=lambda m, r: deer_leg(m, r, False), Tail=deer_tail),
-    "Rabbit": dict(Body=rabbit_body, Head=rabbit_head, LegF=lambda m, r: rabbit_leg(m, r, True),
-                   LegB=lambda m, r: rabbit_leg(m, r, False), Tail=rabbit_tail),
-    "Boar": dict(Body=boar_body, Head=boar_head, LegF=lambda m, r: boar_leg(m, r, True),
-                 LegB=lambda m, r: boar_leg(m, r, False), Tail=boar_tail),
+    "Wolf": dict(Body=lambda m: body(m, "Wolf", ["Body", "Chest"]), Head=wolf_head,
+                 LegF=lambda m: leg(m, "Wolf", "SM_Wolf_LegF", ["FrontLeg_R"], ["FrontPaw_R"]),
+                 LegB=lambda m: leg(m, "Wolf", "SM_Wolf_LegB", ["BackLeg_R"], ["BackPaw_R"]),
+                 Tail=lambda m: tail(m, "Wolf", ["Tail", "TailTip"], "Tail")),
+    "Bear": dict(Body=lambda m: body(m, "Bear", ["Body", "Chest"]), Head=bear_head,
+                 LegF=lambda m: leg(m, "Bear", "SM_Bear_LegF", ["FrontLeg_R"], ["FrontPaw_R"]),
+                 LegB=lambda m: leg(m, "Bear", "SM_Bear_LegB", ["BackLeg_R"], ["BackPaw_R"]),
+                 Tail=lambda m: fill(m, "SM_Bear_Tail", pick("Bear", ["Tail"]))),
+    "Deer": dict(Body=lambda m: body(m, "Deer", ["Body"]),
+                 Head=lambda m: head(m, "Deer", DEER_HEAD),
+                 Head_Antlered=lambda m: head(m, "Deer", DEER_HEAD, name="SM_Deer_Head_Antlered",
+                                              antlers=DEER_ANTLERS),
+                 LegF=lambda m: leg(m, "Deer", "SM_Deer_LegF", ["FrontLeg_R"], ["FrontHoof_R"]),
+                 LegB=lambda m: leg(m, "Deer", "SM_Deer_LegB", ["BackLeg_R"], ["BackHoof_R"]),
+                 Tail=lambda m: fill(m, "SM_Deer_Tail", pick("Deer", ["Tail"]))),
+    "Rabbit": dict(Body=lambda m: body(m, "Rabbit", ["Body", "Chest"]),
+                   Head=lambda m: head(m, "Rabbit", ["Head", "Muzzle_L", "Muzzle_R", "Nose"] + FACE),
+                   LegF=lambda m: leg(m, "Rabbit", "SM_Rabbit_LegF", ["FrontPaw_R"], []),
+                   LegB=lambda m: leg(m, "Rabbit", "SM_Rabbit_LegB", [], ["BackPaw_R"], extra=rabbit_thigh),
+                   Tail=lambda m: fill(m, "SM_Rabbit_Tail", pick("Rabbit", ["Tail"]))),
+    "Boar": dict(Body=lambda m: body(m, "Boar", ["Body", "Shoulders"]),
+                 Head=lambda m: head(m, "Boar", ["Head", "Snout", "SnoutTip", "Nostril_L", "Nostril_R",
+                                                 "Tusk_L", "Tusk_R", "Ear_L", "Ear_R", "Eye_L", "Eye_R"]),
+                 LegF=lambda m: leg(m, "Boar", "SM_Boar_LegF", ["FrontLeg_R"], ["FrontHoof_R"]),
+                 LegB=lambda m: leg(m, "Boar", "SM_Boar_LegB", ["BackLeg_R"], ["BackHoof_R"]),
+                 Tail=lambda m: tail(m, "Boar", ["Tail", "TailTuft"], "Tail", angle=-50)),
 }
 RIG_PART = {"Body": "Torso", "Head": "Head", "Head_Antlered": "Head", "LegF": "LegFL, LegFR",
             "LegB": "LegBL, LegBR", "Tail": "TailPart"}
+SMOOTH = 35  # blocky owner models: keep the bevels crisp
 
 
 def _register(sp, piece, fn):
-    rig = Rig(sp) if sp in RIGS else None
-    takes_rig = piece in ("LegF", "LegB")
-
-    def build(m):
-        fn(m, rig) if takes_rig else fn(m)
-    P.asset(f"SM_{sp}_{piece}", CAT, "RigPart", density=DENSITY[sp], smooth=70, grain=(0, 1, 0),
+    P.asset(f"SM_{sp}_{piece}", CAT, "RigPart", density=1.6, smooth=SMOOTH, grain=(0, 1, 0),
             uv_box=True, dummy=False, preview=False, fidelity="Box",
             pivot=f"Centre of the {sp} rig's {RIG_PART.get(piece, piece)} part (Animals.luau).",
-            use=f"{sp} rig: weld onto {RIG_PART.get(piece, piece)} (Models/Animals.luau).")(build)
+            use=f"{sp} rig: weld onto {RIG_PART.get(piece, piece)} (Models/Animals.luau).")(fn)
 
 
 for _sp in SPECIES:
     for _piece, _fn in BUILDERS[_sp].items():
         _register(_sp, _piece, _fn)
-P.asset("SM_Bat_Body", CAT, "RigPart", density=DENSITY["Bat"], smooth=70, grain=(0, 1, 0), uv_box=True,
+P.asset("SM_Bat_Body", CAT, "RigPart", density=1.2, smooth=SMOOTH, grain=(0, 1, 0), uv_box=True,
         dummy=False, preview=False, pivot="Centre of the bat rig's Body ball (Animals.luau).",
         use="Bat rig: weld onto Body (covers head, ears and eyes).")(bat_body)
-P.asset("SM_Bat_Wing", CAT, "RigPart", density=DENSITY["Bat"], smooth=70, grain=(1, 0, 0), uv_box=True,
+P.asset("SM_Bat_Wing", CAT, "RigPart", density=1.2, smooth=SMOOTH, grain=(1, 0, 0), uv_box=True,
         dummy=False, preview=False, pivot="Centre of the bat rig's WingRPart (Animals.luau).",
         use="Bat rig: weld onto WingRPart; WingLPart uses it turned 180 deg about the forward axis.")(bat_wing)
 

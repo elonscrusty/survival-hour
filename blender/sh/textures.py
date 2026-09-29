@@ -475,6 +475,7 @@ if __name__ == "__main__":
 # --- flat colour picks (no atlas change) -------------------------------------------
 
 _TONE_CACHE = {}
+_TONE_RGB = {}
 
 
 def _box_blur(a, r):
@@ -499,15 +500,23 @@ def tone_uv(index, q):
         c = _box_blur(c, 5)
         lum = c @ np.array([0.3, 0.59, 0.11])
         gy, gx = np.gradient(lum)
-        _TONE_CACHE[index] = (lum, np.hypot(gx, gy))
-    lum, grad = _TONE_CACHE[index]
+        _TONE_CACHE[index] = (lum, np.hypot(gx, gy), c)
+    lum, grad, _ = _TONE_CACHE[index]
     lo, hi = MARGIN + 12, TILE - MARGIN - 12
     inner = lum[lo:hi, lo:hi]
     target = np.percentile(inner, q)
     score = np.abs(inner - target) + 2.0 * grad[lo:hi, lo:hi]
     y, x = np.unravel_index(np.argmin(score), score.shape)
+    _TONE_RGB[key] = tuple(float(v) for v in _TONE_CACHE[index][2][y + lo, x + lo])
     y, x = y + lo + 0.5, x + lo + 0.5
     col, row = index % GRID, index // GRID
     uv = ((col * TILE + x) / ATLAS, 1 - (row * TILE + y) / ATLAS)
     _TONE_CACHE[key] = uv
     return uv
+
+
+def tone_rgb(index, q):
+    """sRGB colour (0..1) that tone_uv(index, q) picks: lets a model match a
+    source colour to the nearest existing atlas swatch."""
+    tone_uv(index, q)
+    return _TONE_RGB[(index, int(q))]
