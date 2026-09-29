@@ -219,6 +219,7 @@ local LOCKER_TAB_ICON = {
 	Outfit = "LockerTab_Outfits", ToolSkin = "LockerTab_ToolSkins", BackpackSkin = "LockerTab_BackpackSkins", CampfireSkin = "LockerTab_CampfireSkins",
 	WorkbenchSkin = "LockerTab_WorkbenchSkins", StorageSkin = "LockerTab_StorageSkins", Nameplate = "LockerTab_Nameplates",
 	Title = "LockerTab_Titles", Emote = "LockerTab_Emotes", EliminationFx = "LockerTab_EliminationEffects",
+	VictoryPose = "LockerTab_VictoryPoses",
 }
 
 local function card(parent: Instance, order: number, height: number, color: Color3, selected: boolean): Frame
