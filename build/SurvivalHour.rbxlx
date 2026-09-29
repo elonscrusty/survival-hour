@@ -78787,7 +78787,7 @@ local function rgb(c: { number }?): Color3
 end
 
 local PILL_VISIBLE = Vector2.new(0.86, 0.42)
-local PILL_W, PILL_H = 150, 70
+local PILL_W, PILL_H = 176, 70
 
 -- Locker tab icons (Shared/IconIds), by cosmetic type.
 local LOCKER_TAB_ICON = {
@@ -81818,9 +81818,10 @@ function Buttons.pill(title: string, glyph: string, props: { [string]: any }?, o
 	local b = new("TextButton", p)
 	Buttons.decorate(b, (props and props.Tone) or "Neutral", UDim.new(0.5, 0))
 	local h = b.Size.Y.Offset
-	local g = label(b, glyph, { Name = "Glyph", AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.fromOffset(h * 0.8, h * 0.8), Position = UDim2.new(0, h * 0.22, 0.5, 0), Font = Theme.FontBlack })
+	local g = label(b, glyph, { Name = "Glyph", AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.fromOffset(h * 0.66, h * 0.66), Position = UDim2.new(0, h * 0.26, 0.5, 0), Font = Theme.FontBlack })
 	Icons.Apply(g, props and props.Icon)
-	local t = label(b, title, { Name = "Title", AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.new(1, -h * 1.35, 0.56, 0), Position = UDim2.new(0, h * 1.12, 0.5, 0), Font = Theme.FontBlack, TextXAlignment = Enum.TextXAlignment.Left })
+	-- one line: long names shrink to fit instead of wrapping ("PART / Y")
+	local t = label(b, title, { Name = "Title", AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.new(1, -h * 1.3, 0.34, 0), Position = UDim2.new(0, h * 1.02, 0.5, 0), Font = Theme.FontBlack, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = false })
 	t.TextStrokeTransparency = 0.6
 	if props and props.State then
 		Buttons.setState(b, props.State)

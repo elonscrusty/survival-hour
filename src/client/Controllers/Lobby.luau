@@ -214,7 +214,7 @@ local function rgb(c: { number }?): Color3
 end
 
 local PILL_VISIBLE = Vector2.new(0.86, 0.42)
-local PILL_W, PILL_H = 150, 70
+local PILL_W, PILL_H = 176, 70
 
 -- Locker tab icons (Shared/IconIds), by cosmetic type.
 local LOCKER_TAB_ICON = {
