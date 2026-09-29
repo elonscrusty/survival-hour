@@ -231,3 +231,6 @@ SM_Sign_Board | Big wooden notice board on two posts | 12 x 9.3 x 1.6 | (no icon
 SM_Sign_Hanging | Hanging wooden sign on chains | 4.5 x 3.44 x 0.34 | (no icon)
 SM_Sign_Plaque | Small wooden plaque | 1.8 x 0.94 x 0.34 | (no icon)
 SM_Sign_Post | Wooden signpost with an arrow board | 4 x 5.1 x 0.54 | (no icon)
+
+== DONE: fitted by tools/fit_meshy.py (upload these FBX files, then send Claude the IDs) ==
+SM_Axe_Crude | Export/Meshy/SM_Axe_Crude.fbx | Size {0.809, 3.6, 1.81} Offset {0.00504, -1.1, 0.447} | kept Meshy's chunkier proportions
