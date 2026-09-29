@@ -686,7 +686,7 @@ function Lobby.Start()
 			workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
 		end
 	end)
-	gui = UI.new("ScreenGui", { Name = "LobbyHud", ResetOnSpawn = false, DisplayOrder = 3, Parent = player:WaitForChild("PlayerGui") })
+	gui = UI.new("ScreenGui", { Name = "LobbyHud", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 3, Parent = player:WaitForChild("PlayerGui") })
 	local scale = UI.new("UIScale", { Parent = gui })
 	local function rescale()
 		local vp = workspace.CurrentCamera.ViewportSize
