@@ -97,7 +97,7 @@ local function renderHud()
 		local cls = Classes.ById[profile.Class]
 		local perk = profile.Perk and Perks.ById[profile.Perk]
 		diamondsLabel.Text = string.format("%s %s · %s", if cls then cls.Glyph else "", if cls then cls.Name else "?", if perk then perk.Glyph .. " " .. perk.Name else "no power-up")
-		levelLabel.Text = tostring(profile.Level or 1)
+		levelLabel.Text = "Lv " .. tostring(profile.Level or 1)
 		-- win streak: a small flame on the profile card at 2+ (prestige only)
 		local streak = (profile.Records and profile.Records.WinStreak) or 0
 		if streakLabel then
@@ -213,7 +213,6 @@ local function rgb(c: { number }?): Color3
 	return if c then Color3.fromRGB(c[1], c[2], c[3]) else C.Text
 end
 
-local PILL_W, PILL_H = 164, 76 -- the pill art is 2.16 : 1
 
 -- Locker tab icons (Shared/IconIds), by cosmetic type.
 local LOCKER_TAB_ICON = {
@@ -696,34 +695,35 @@ function Lobby.Start()
 
 	-- Top: profile card (level badge, name, title, XP bar) + animated currency pills.
 	-- Top centre: name plate in the middle, Coins and Diamonds to its right.
-	local card = UI.panel({ Size = UDim2.fromOffset(460, 56), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 6), Parent = gui })
-	UI.skin(card, "UI_NameLevel") -- art is 8.4 : 1
-	-- level badge: a round plate hanging off the left end of the bar
-	local badge = UI.new("Frame", { Size = UDim2.fromOffset(62, 62), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, -14, 0.5, 0), BackgroundColor3 = C.PanelLight, ZIndex = 2, Parent = card }, { UI.corner(UDim.new(0.5, 0)), UI.new("UIStroke", { Color = C.Accent, Thickness = 3 }) })
-	UI.skin(badge, "UI_Round")
-	UI.text("LVL", { Size = UDim2.new(1, 0, 0, 12), Position = UDim2.fromOffset(0, 12), TextSize = 10, Font = Theme.FontBold, TextColor3 = C.ForestText, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 3, Parent = badge })
-	levelLabel = UI.text("1", { Name = "Level", Size = UDim2.new(1, 0, 0, 22), Position = UDim2.fromOffset(0, 24), TextSize = 20, Font = Theme.FontBlack, TextColor3 = C.ForestText, TextStrokeColor3 = C.ForestStroke, TextStrokeTransparency = 0.4, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 3, Parent = badge })
-	UI.text(player.DisplayName, { AutoLocalize = false, Position = UDim2.fromOffset(58, 5), Size = UDim2.new(0.5, -58, 0, 18), TextSize = 16, Font = Theme.FontBlack, TextColor3 = C.ForestText, TextStrokeColor3 = C.ForestStroke, TextStrokeTransparency = 0.4, TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd, Parent = card })
-	streakLabel = UI.text("", { Position = UDim2.new(0.5, 0, 0, 5), Size = UDim2.new(0.5, -52, 0, 18), TextSize = 12, Font = Theme.FontBold, TextColor3 = C.Warn, TextXAlignment = Enum.TextXAlignment.Right, TextWrapped = false, Parent = card })
-	diamondsLabel = UI.text("", { Position = UDim2.fromOffset(58, 23), Size = UDim2.new(1, -110, 0, 12), TextSize = 11, Font = Theme.FontBold, TextColor3 = C.Accent, TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd, Parent = card })
-	local xpHolder = UI.new("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(58, 37), Size = UDim2.new(1, -110, 0, 11), Parent = card })
-	local gear = Buttons.icon("⚙", { Size = UDim2.fromOffset(34, 34), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), TextSize = 17, Parent = card }, function()
+	-- Top centre, no plates: name, level + class and a thin XP line, then Coins and Diamonds
+	-- as icon + number. Text is outlined so it reads over the world.
+	local function outlined(props: { [string]: any }): { [string]: any }
+		props.TextColor3 = props.TextColor3 or C.ForestText
+		props.TextStrokeColor3 = C.ForestStroke
+		props.TextStrokeTransparency = 0.25
+		props.TextWrapped = false
+		return props
+	end
+	local card = UI.new("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(420, 66), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, -120, 0, 6), Parent = gui })
+	UI.text(player.DisplayName, outlined({ AutoLocalize = false, Position = UDim2.fromOffset(0, 0), Size = UDim2.new(0.6, 0, 0, 30), TextSize = 28, Font = Theme.FontBlack, TextTruncate = Enum.TextTruncate.AtEnd, Parent = card }))
+	levelLabel = UI.text("1", outlined({ Name = "Level", Position = UDim2.new(0.6, 6, 0, 4), Size = UDim2.new(0.2, 0, 0, 24), TextSize = 22, Font = Theme.FontBlack, TextColor3 = C.Accent, Parent = card }))
+	streakLabel = UI.text("", outlined({ Position = UDim2.new(0.6, 0, 0, 4), Size = UDim2.new(0.4, -34, 0, 24), TextSize = 15, Font = Theme.FontBold, TextColor3 = C.Warn, TextXAlignment = Enum.TextXAlignment.Right, Parent = card }))
+	diamondsLabel = UI.text("", outlined({ Position = UDim2.fromOffset(0, 32), Size = UDim2.new(1, -34, 0, 18), TextSize = 16, Font = Theme.FontBold, TextColor3 = C.Accent, TextTruncate = Enum.TextTruncate.AtEnd, Parent = card }))
+	local xpHolder = UI.new("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 53), Size = UDim2.new(1, -34, 0, 11), Parent = card })
+	local gear = UI.new("TextButton", { Text = "⚙", Font = Theme.FontBlack, TextSize = 26, TextColor3 = C.ForestText, TextStrokeColor3 = C.ForestStroke, TextStrokeTransparency = 0.25, BackgroundTransparency = 1, AutoButtonColor = false, Size = UDim2.fromOffset(32, 32), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, -2), Parent = card })
+	gear.Activated:Connect(function()
 		Panels.Toggle("Settings")
 	end)
-	UI.skin(gear, "UI_Round")
 	local _xpBar
 	_xpBar, xpSet = UI.bar({ Size = UDim2.fromScale(1, 1), Parent = xpHolder }, C.Accent)
-	UI.skin(_xpBar, "UI_XpTrack") -- art is 31.5 : 1
-	-- Coins / Diamonds: the currency art is 5.9 : 1
 	local function pill(x: number, glyph: string, color: Color3, icon: string): TextLabel
-		local f = UI.panel({ Size = UDim2.fromOffset(176, 30), AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(0.5, x, 0, 19), Parent = gui })
-		UI.skin(f, "UI_Currency")
-		Icons.Apply(UI.text(glyph, { Size = UDim2.fromOffset(26, 26), Position = UDim2.fromOffset(12, 2), TextSize = 17, TextColor3 = color, TextXAlignment = Enum.TextXAlignment.Center, Parent = f }), icon)
-		return UI.text("0", { Position = UDim2.fromOffset(44, 0), Size = UDim2.new(1, -56, 1, 0), TextSize = 17, Font = Theme.FontBlack, TextColor3 = color, TextStrokeColor3 = C.ForestStroke, TextStrokeTransparency = 0.4, Parent = f })
+		local f = UI.new("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(150, 34), Position = UDim2.new(0.5, x, 0, 8), Parent = gui })
+		Icons.Apply(UI.text(glyph, outlined({ Size = UDim2.fromOffset(32, 32), TextSize = 24, TextColor3 = color, TextXAlignment = Enum.TextXAlignment.Center, Parent = f })), icon)
+		return UI.text("0", outlined({ Position = UDim2.fromOffset(38, 0), Size = UDim2.new(1, -38, 1, 0), TextSize = 22, Font = Theme.FontBlack, TextColor3 = color, Parent = f }))
 	end
-	coinPill = pill(240, "●", Color3.fromRGB(242, 193, 78), "Currency_Coins")
-	diamondPill = pill(424, "◆", C.Diamond, "Currency_Diamonds")
-	local banner = UI.panel({ Size = UDim2.fromOffset(360, 30), Position = UDim2.new(0.5, 240, 0, 54), Visible = false, Parent = gui })
+	coinPill = pill(104, "●", Color3.fromRGB(242, 193, 78), "Currency_Coins")
+	diamondPill = pill(258, "◆", C.Diamond, "Currency_Diamonds")
+	local banner = UI.panel({ Size = UDim2.fromOffset(360, 30), Position = UDim2.new(0.5, 104, 0, 46), Visible = false, Parent = gui })
 	seasonBanner = banner
 	seasonLabel = UI.text("", { Position = UDim2.fromOffset(10, 0), Size = UDim2.new(1, -20, 1, 0), TextSize = 13, Font = Theme.FontBold, TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd, Parent = banner })
 	local bannerHit = UI.new("TextButton", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", Parent = banner })
@@ -772,26 +772,37 @@ function Lobby.Start()
 		end
 	end)
 
-	-- Left: the menu, one column of green pills (icon + title).
-	-- pills keep the art's own shape so it never looks stretched
-	local nav = UI.new("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(PILL_W, 8 * (PILL_H + 4)), Position = UDim2.fromOffset(12, 96), Parent = gui }, {
+	-- Left: the menu, icon + title rows with no plates (hover brightens and nudges).
+	local nav = UI.new("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(220, 8 * 50), Position = UDim2.fromOffset(12, 96), Parent = gui }, {
 		UI.list(Enum.FillDirection.Vertical, 4),
 	})
 	local TILES = {
-		{ "Party", "PARTY", "Play with friends", "👥", "Party" },
-		{ "Classes", "CLASS", "Choose your style", "🏠", "Class" },
-		{ "Perks", "POWER-UP", "Boost your run", "⚡", "PowerUp" },
-		{ "Locker", "LOCKER", "Customize", "🎒", "Locker" },
-		{ "Profile", "PROFILE", "Stats & rewards", "👤", "Profile" },
-		{ "LobbyShop", "SHOP", "Coins & bundles", "🛒", "Shop" },
-		{ "Help", "HOW TO PLAY", "Learn the basics", "❓", "HowToPlay" },
-		{ "LobbyShop", "BUY COINS", "Get more coins", "🪙", "BuyCoins" },
+		{ "Party", "PARTY", "👥", "Party" },
+		{ "Classes", "CLASS", "🏠", "Class" },
+		{ "Perks", "POWER-UP", "⚡", "PowerUp" },
+		{ "Locker", "LOCKER", "🎒", "Locker" },
+		{ "Profile", "PROFILE", "👤", "Profile" },
+		{ "LobbyShop", "SHOP", "🛒", "Shop" },
+		{ "Help", "HOW TO PLAY", "❓", "HowToPlay" },
+		{ "LobbyShop", "BUY COINS", "🪙", "BuyCoins" },
 	}
 	for i, spec in TILES do
-		local menuBtn = Buttons.pill(spec[2], spec[4], { LayoutOrder = i, Size = UDim2.fromOffset(PILL_W, PILL_H), Parent = nav, Icon = "Lobby_" .. spec[5], Tone = if spec[2] == "BUY COINS" then "Gold" else "Neutral" }, function()
+		local row = UI.new("TextButton", { Text = "", BackgroundTransparency = 1, AutoButtonColor = false, LayoutOrder = i, Size = UDim2.fromOffset(220, 46), Parent = nav })
+		local ic = UI.text(spec[3], outlined({ Size = UDim2.fromOffset(42, 42), Position = UDim2.fromOffset(0, 2), TextSize = 30, TextXAlignment = Enum.TextXAlignment.Center, Parent = row }))
+		Icons.Apply(ic, "Lobby_" .. spec[4])
+		local label = UI.text(spec[2], outlined({ Position = UDim2.fromOffset(50, 0), Size = UDim2.new(1, -50, 1, 0), TextSize = 21, Font = Theme.FontBlack, TextColor3 = if spec[2] == "BUY COINS" then Color3.fromRGB(255, 214, 110) else nil, Parent = row }))
+		local base = label.TextColor3
+		row.MouseEnter:Connect(function()
+			label.TextColor3 = Color3.new(1, 1, 1)
+			label.Position = UDim2.fromOffset(54, 0)
+		end)
+		row.MouseLeave:Connect(function()
+			label.TextColor3 = base
+			label.Position = UDim2.fromOffset(50, 0)
+		end)
+		row.Activated:Connect(function()
 			Panels.Toggle(spec[1])
 		end)
-		UI.skin(menuBtn, "UI_Pill")
 	end
 
 	partyBody = Panels.Create("Party", "PARTY", Vector2.new(560, 560), renderParty)

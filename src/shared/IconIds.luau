@@ -7,7 +7,7 @@
 --   Lobby_<Tile>         lobby menu tiles (Party, Class, PowerUp, Locker, Profile, Shop, HowToPlay, BuyCoins)
 --   Hud_<Button>         in-match buttons (Bag, Craft, Build, Map, Attack, Aim, Heal, Swap, Run)
 --   Currency_Coins / Currency_Diamonds
---   UI_Round / UI_Pill / UI_NameLevel / UI_Currency / UI_XpTrack   green UI backgrounds
+--   UI_Round / UI_Pill / UI_NameLevel / UI_Currency / UI_XpTrack   optional backgrounds (owner chose none)
 -- The list in docs/ICON_LIST.md shows what each icon is for.
 
 local IconIds: { [string]: number } = {
@@ -129,11 +129,6 @@ local IconIds: { [string]: number } = {
 	["Status_LivesFinalLife"] = 130322102638432,
 	["Status_Stamina"] = 110763660370864,
 	["Title_Scroll"] = 122022830852661,
-	["UI_Currency"] = 95224944873082,
-	["UI_NameLevel"] = 90105850786718,
-	["UI_Pill"] = 126171073088954,
-	["UI_Round"] = 103398874874503,
-	["UI_XpTrack"] = 93246725508931,
 }
 
 return IconIds
