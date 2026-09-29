@@ -11431,13 +11431,12 @@
    1.48,
    4.2
   ],
-  "tris": 202,
-  "verts": 103,
+  "tris": 88,
+  "verts": 48,
   "materials": 1,
   "texture_tiles": [
-   "fur_bat",
-   "fur_grey",
-   "fur_light"
+   "stone",
+   "stone_vein"
   ],
   "origin_offset": [
    0.0,
@@ -11478,17 +11477,14 @@
    0.93,
    2.51
   ],
-  "tris": 532,
-  "verts": 294,
+  "tris": 288,
+  "verts": 164,
   "materials": 1,
   "texture_tiles": [
-   "bone",
-   "eye",
-   "eye_glow",
-   "fur_bat",
-   "fur_grey",
-   "fur_light",
-   "nose"
+   "charcoal",
+   "stone",
+   "stone_dark",
+   "stone_vein"
   ],
   "origin_offset": [
    0.0,
@@ -11529,12 +11525,12 @@
    0.61,
    0.61
   ],
-  "tris": 236,
-  "verts": 124,
+  "tris": 88,
+  "verts": 48,
   "materials": 1,
   "texture_tiles": [
-   "fur_grey",
-   "fur_light"
+   "stone",
+   "stone_dark"
   ],
   "origin_offset": [
    0.0,
@@ -11575,17 +11571,17 @@
    0.75,
    0.91
   ],
-  "tris": 236,
-  "verts": 124,
+  "tris": 88,
+  "verts": 48,
   "materials": 1,
   "texture_tiles": [
-   "fur_grey",
-   "fur_light"
+   "stone",
+   "stone_dark"
   ],
   "origin_offset": [
    0.0,
    -0.105,
-   0.0305
+   0.031
   ],
   "team_colored": false,
   "pivot": "Centre of the Wolf rig's LegBL, LegBR part (Animals.luau).",
@@ -11621,18 +11617,17 @@
    0.53,
    2.87
   ],
-  "tris": 218,
-  "verts": 111,
+  "tris": 88,
+  "verts": 48,
   "materials": 1,
   "texture_tiles": [
-   "fur_bat",
-   "fur_grey",
-   "fur_light"
+   "stone",
+   "stone_dark"
   ],
   "origin_offset": [
    0.0,
    0.178,
-   0.1515
+   0.152
   ],
   "team_colored": false,
   "pivot": "Centre of the Wolf rig's TailPart part (Animals.luau).",
@@ -11668,12 +11663,11 @@
    3.8,
    7.5
   ],
-  "tris": 388,
-  "verts": 196,
+  "tris": 88,
+  "verts": 48,
   "materials": 1,
   "texture_tiles": [
-   "fur_bat",
-   "fur_brown"
+   "leather_stitch"
   ],
   "origin_offset": [
    0.0,
@@ -11714,17 +11708,15 @@
    2.5,
    4.08
   ],
-  "tris": 812,
-  "verts": 434,
+  "tris": 1228,
+  "verts": 636,
   "materials": 1,
   "texture_tiles": [
-   "bone",
    "eye",
-   "eye_glow",
-   "fur_bat",
    "fur_brown",
-   "fur_light",
-   "nose"
+   "leather_stitch",
+   "membrane",
+   "wood_fresh"
   ],
   "origin_offset": [
    0.0,
@@ -11765,18 +11757,17 @@
    1.63,
    1.63
   ],
-  "tris": 232,
-  "verts": 126,
+  "tris": 88,
+  "verts": 48,
   "materials": 1,
   "texture_tiles": [
-   "bone",
-   "fur_bat",
-   "fur_brown"
+   "leather_stitch",
+   "membrane"
   ],
   "origin_offset": [
    0.0,
    -0.188,
-   -0.0075
+   -0.007
   ],
   "team_colored": false,
   "pivot": "Centre of the Bear rig's LegFL, LegFR part (Animals.luau).",
@@ -11812,18 +11803,17 @@
    1.81,
    1.81
   ],
-  "tris": 200,
-  "verts": 110,
+  "tris": 88,
+  "verts": 48,
   "materials": 1,
   "texture_tiles": [
-   "bone",
-   "fur_bat",
-   "fur_brown"
+   "leather_stitch",
+   "membrane"
   ],
   "origin_offset": [
    0.0,
    -0.184,
-   0.1345
+   0.134
   ],
   "team_colored": false,
   "pivot": "Centre of the Bear rig's LegBL, LegBR part (Animals.luau).",
@@ -11859,11 +11849,11 @@
    0.58,
    0.97
   ],
-  "tris": 80,
-  "verts": 42,
+  "tris": 168,
+  "verts": 86,
   "materials": 1,
   "texture_tiles": [
-   "fur_brown"
+   "leather_stitch"
   ],
   "origin_offset": [
    0.0,
@@ -11904,12 +11894,11 @@
    1.32,
    4.25
   ],
-  "tris": 388,
-  "verts": 196,
+  "tris": 44,
+  "verts": 24,
   "materials": 1,
   "texture_tiles": [
-   "fur_brown",
-   "fur_light"
+   "leather_stitch"
   ],
   "origin_offset": [
    0.0,
@@ -11950,19 +11939,18 @@
    1.48,
    2.14
   ],
-  "tris": 496,
-  "verts": 268,
+  "tris": 716,
+  "verts": 380,
   "materials": 1,
   "texture_tiles": [
+   "end_grain",
    "eye",
-   "eye_glow",
-   "fur_brown",
-   "fur_light",
-   "nose"
+   "fur_bat",
+   "leather_stitch"
   ],
   "origin_offset": [
    0.0,
-   -0.1795,
+   -0.18,
    0.129
   ],
   "team_colored": false,
@@ -11999,17 +11987,15 @@
    1.68,
    2.14
   ],
-  "tris": 700,
-  "verts": 390,
+  "tris": 836,
+  "verts": 452,
   "materials": 1,
   "texture_tiles": [
-   "bone",
+   "end_grain",
    "eye",
-   "eye_glow",
-   "fur_brown",
-   "fur_light",
-   "nose",
-   "wood_dark"
+   "fur_bat",
+   "leather_stitch",
+   "wood_fresh"
   ],
   "origin_offset": [
    0.0,
@@ -12050,12 +12036,12 @@
    0.47,
    0.47
   ],
-  "tris": 280,
-  "verts": 142,
+  "tris": 88,
+  "verts": 48,
   "materials": 1,
   "texture_tiles": [
-   "fur_brown",
-   "nose"
+   "fur_bat",
+   "leather_stitch"
   ],
   "origin_offset": [
    0.0,
@@ -12096,18 +12082,17 @@
    0.65,
    0.84
   ],
-  "tris": 248,
-  "verts": 126,
+  "tris": 88,
+  "verts": 48,
   "materials": 1,
   "texture_tiles": [
-   "fur_brown",
-   "fur_light",
-   "nose"
+   "fur_bat",
+   "leather_stitch"
   ],
   "origin_offset": [
    0.0,
    -0.099,
-   -0.0015
+   -0.001
   ],
   "team_colored": false,
   "pivot": "Centre of the Deer rig's LegBL, LegBR part (Animals.luau).",
@@ -12143,12 +12128,11 @@
    0.25,
    0.54
   ],
-  "tris": 144,
-  "verts": 74,
+  "tris": 168,
+  "verts": 86,
   "materials": 1,
   "texture_tiles": [
-   "fur_brown",
-   "fur_light"
+   "end_grain"
   ],
   "origin_offset": [
    0.0,
@@ -12189,11 +12173,11 @@
    0.6,
    1.1
   ],
-  "tris": 196,
-  "verts": 100,
+  "tris": 88,
+  "verts": 48,
   "materials": 1,
   "texture_tiles": [
-   "fur_grey",
+   "chute_b",
    "fur_light"
   ],
   "origin_offset": [
@@ -12235,15 +12219,14 @@
    0.35,
    0.53
   ],
-  "tris": 572,
-  "verts": 310,
+  "tris": 1028,
+  "verts": 534,
   "materials": 1,
   "texture_tiles": [
+   "chute_b",
    "eye",
-   "eye_glow",
-   "fur_grey",
    "fur_light",
-   "nose"
+   "leather_stitch"
   ],
   "origin_offset": [
    -0.0005,
@@ -12284,11 +12267,10 @@
    0.18,
    0.19
   ],
-  "tris": 104,
-  "verts": 54,
+  "tris": 44,
+  "verts": 24,
   "materials": 1,
   "texture_tiles": [
-   "fur_grey",
    "fur_light"
   ],
   "origin_offset": [
@@ -12330,16 +12312,15 @@
    0.35,
    0.36
   ],
-  "tris": 104,
-  "verts": 54,
+  "tris": 88,
+  "verts": 48,
   "materials": 1,
   "texture_tiles": [
-   "fur_grey",
    "fur_light"
   ],
   "origin_offset": [
    0.0,
-   -0.0435,
+   -0.043,
    -0.046
   ],
   "team_colored": false,
@@ -12376,11 +12357,11 @@
    0.2,
    0.21
   ],
-  "tris": 80,
-  "verts": 42,
+  "tris": 168,
+  "verts": 86,
   "materials": 1,
   "texture_tiles": [
-   "fur_light"
+   "chute_b"
   ],
   "origin_offset": [
    0.0015,
@@ -12421,16 +12402,16 @@
    1.8,
    3.8
   ],
-  "tris": 360,
-  "verts": 199,
+  "tris": 88,
+  "verts": 48,
   "materials": 1,
   "texture_tiles": [
-   "fur_bat",
-   "fur_brown"
+   "bark",
+   "leather_stitch"
   ],
   "origin_offset": [
    0.0,
-   -0.1375,
+   -0.137,
    0.05
   ],
   "team_colored": false,
@@ -12467,17 +12448,14 @@
    0.98,
    1.99
   ],
-  "tris": 480,
-  "verts": 268,
+  "tris": 416,
+  "verts": 230,
   "materials": 1,
   "texture_tiles": [
+   "bark",
    "bone",
-   "eye",
-   "eye_glow",
-   "fur_bat",
-   "fur_brown",
-   "leather",
-   "nose"
+   "charcoal",
+   "leather_stitch"
   ],
   "origin_offset": [
    0.0,
@@ -12518,12 +12496,12 @@
    0.71,
    0.71
   ],
-  "tris": 208,
-  "verts": 106,
+  "tris": 88,
+  "verts": 48,
   "materials": 1,
   "texture_tiles": [
-   "fur_bat",
-   "nose"
+   "leather_stitch",
+   "stone_dark"
   ],
   "origin_offset": [
    0.0,
@@ -12564,16 +12542,16 @@
    0.84,
    0.84
   ],
-  "tris": 208,
-  "verts": 106,
+  "tris": 88,
+  "verts": 48,
   "materials": 1,
   "texture_tiles": [
-   "fur_bat",
-   "nose"
+   "leather_stitch",
+   "stone_dark"
   ],
   "origin_offset": [
    0.0,
-   -0.1095,
+   -0.109,
    0.0695
   ],
   "team_colored": false,
@@ -12610,15 +12588,16 @@
    0.18,
    0.67
   ],
-  "tris": 144,
-  "verts": 74,
+  "tris": 88,
+  "verts": 48,
   "materials": 1,
   "texture_tiles": [
-   "fur_bat"
+   "bark",
+   "leather_stitch"
   ],
   "origin_offset": [
    0.0,
-   0.2105,
+   0.21,
    0.2515
   ],
   "team_colored": false,
@@ -12655,21 +12634,18 @@
    1.44,
    2.49
   ],
-  "tris": 448,
-  "verts": 252,
+  "tris": 868,
+  "verts": 458,
   "materials": 1,
   "texture_tiles": [
-   "bone",
-   "eye",
+   "charcoal",
    "eye_glow",
-   "fur_bat",
-   "fur_light",
    "membrane",
-   "nose"
+   "stone_dark"
   ],
   "origin_offset": [
    0.0,
-   -0.3545,
+   -0.354,
    0.296
   ],
   "team_colored": false,
@@ -12706,17 +12682,16 @@
    4.67,
    1.88
   ],
-  "tris": 184,
-  "verts": 100,
+  "tris": 48,
+  "verts": 28,
   "materials": 1,
   "texture_tiles": [
-   "bone",
-   "fur_bat",
-   "membrane"
+   "stone",
+   "stone_dark"
   ],
   "origin_offset": [
    -0.617,
-   -0.0115,
+   -0.012,
    -0.0605
   ],
   "team_colored": false,

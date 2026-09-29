@@ -105,6 +105,8 @@ use this table instead.
 
 ## New models: animals (upload as NEW assets)
 
+Done: these IDs are in `src/shared/AssetIds.luau`. For the owner-model look, see the last section.
+
 28 part meshes that give the wolf, bear, deer, rabbit, boar and bat a proper look
 (`blender/assets/animals.py`, preview: `Renders/ContactSheet_Animals.png`). Each mesh sits on one part
 of the in-game rig, so the existing walk / look-around / attack animation moves it. Upload each file as a
@@ -145,3 +147,50 @@ does and antlered bucks); until then it keeps the old block look.
 | `Export/Meshes/Animals/SM_Boar_Tail.fbx` | new |
 | `Export/Meshes/Animals/SM_Bat_Body.fbx` | new |
 | `Export/Meshes/Animals/SM_Bat_Wing.fbx` | new |
+
+## Animals: owner models (upload as NEW VERSIONS, same IDs)
+
+The 28 animal part meshes now use the owner's six blocky animal models
+(`blender/source_models/animals/*_Basic.blend`, split by `blender/assets/animals.py`): grey wolf
+with a cream chest and dark paws, brown bear with a tan muzzle, warm brown deer with cream patches
+and antlers, pale rabbit, russet boar with a dark mane and ivory tusks, charcoal bat with lighter
+wings and amber eyes. Each part is fitted to its **exact published size and pivot**
+(`tools/check_bounds.py` passes), so `src/shared/AssetIds.luau` does not change and the rigs and
+animations stay as they are. Colours are flat picks from the existing atlas (it has no pink, so the
+rabbit's inner ears are warm brown). Preview: `Renders/ContactSheet_Animals.png`,
+`Renders/Animals/*.png`.
+
+| File | Existing asset ID |
+|---|---|
+| `Export/Meshes/Animals/SM_Wolf_Body.fbx` | 72634194885985 |
+| `Export/Meshes/Animals/SM_Wolf_Head.fbx` | 74141736270655 |
+| `Export/Meshes/Animals/SM_Wolf_LegF.fbx` | 107102943356409 |
+| `Export/Meshes/Animals/SM_Wolf_LegB.fbx` | 121528125856892 |
+| `Export/Meshes/Animals/SM_Wolf_Tail.fbx` | 120725435653489 |
+| `Export/Meshes/Animals/SM_Bear_Body.fbx` | 137138480859421 |
+| `Export/Meshes/Animals/SM_Bear_Head.fbx` | 139353492259250 |
+| `Export/Meshes/Animals/SM_Bear_LegF.fbx` | 117419541941087 |
+| `Export/Meshes/Animals/SM_Bear_LegB.fbx` | 129474877972020 |
+| `Export/Meshes/Animals/SM_Bear_Tail.fbx` | 118815588769713 |
+| `Export/Meshes/Animals/SM_Deer_Body.fbx` | 130632780638215 |
+| `Export/Meshes/Animals/SM_Deer_Head.fbx` | 133188122555894 |
+| `Export/Meshes/Animals/SM_Deer_Head_Antlered.fbx` | 127805609599256 |
+| `Export/Meshes/Animals/SM_Deer_LegF.fbx` | 131027930304623 |
+| `Export/Meshes/Animals/SM_Deer_LegB.fbx` | 109544530847498 |
+| `Export/Meshes/Animals/SM_Deer_Tail.fbx` | 89653479463814 |
+| `Export/Meshes/Animals/SM_Rabbit_Body.fbx` | 96976254095719 |
+| `Export/Meshes/Animals/SM_Rabbit_Head.fbx` | 115840535372266 |
+| `Export/Meshes/Animals/SM_Rabbit_LegF.fbx` | 119677472378572 |
+| `Export/Meshes/Animals/SM_Rabbit_LegB.fbx` | 82742530078883 |
+| `Export/Meshes/Animals/SM_Rabbit_Tail.fbx` | 126615622631395 |
+| `Export/Meshes/Animals/SM_Boar_Body.fbx` | 130297488397550 |
+| `Export/Meshes/Animals/SM_Boar_Head.fbx` | 101874426230199 |
+| `Export/Meshes/Animals/SM_Boar_LegF.fbx` | 135834037251825 |
+| `Export/Meshes/Animals/SM_Boar_LegB.fbx` | 133496966430325 |
+| `Export/Meshes/Animals/SM_Boar_Tail.fbx` | 76673408440422 |
+| `Export/Meshes/Animals/SM_Bat_Body.fbx` | 97702486845443 |
+| `Export/Meshes/Animals/SM_Bat_Wing.fbx` | 112807529368495 |
+
+Upload these 28 as **new versions of the existing assets** (Open Cloud
+`PATCH .../assets/v1/assets/{assetId}`), no new assets. The ChatGPT prompt above works as is: tell
+it to use this table instead.

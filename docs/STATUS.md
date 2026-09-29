@@ -32,6 +32,8 @@ _Updated: 2026-09-28. The full history is in [IMPLEMENTATION_LOG.md](IMPLEMENTAT
 - Animal meshes: 28 segmented part meshes (wolf, bear, deer with doe/buck heads, rabbit, boar, bat;
   `blender/assets/animals.py`, `Renders/ContactSheet_Animals.png`). `Animals.Build` welds one onto
   each rig part once a species' meshes are all uploaded, so the procedural Motor6D animation moves them.
+  The parts are now rebuilt from the owner's six blocky models (`blender/source_models/animals/`),
+  fitted to the published bounds; they need uploading as new versions of the same 28 IDs.
 
 **Checks:** `bash tools/check.sh` covers the type check, 205 unit tests, 36 skins/lobby checks and the build. All pass.
 
@@ -39,7 +41,8 @@ _Updated: 2026-09-28. The full history is in [IMPLEMENTATION_LOG.md](IMPLEMENTAT
 
 ## Next (owner)
 1. Playtest in Studio: follow `docs/STUDIO_TESTS.md`.
-2. Re-upload 20 models and upload the new camp shack + 28 animal meshes (`docs/MODEL_REUPLOAD.md`).
+2. Re-upload 20 models, upload the new camp shack, and upload the 28 owner-model animal meshes as new
+   versions of their existing IDs (`docs/MODEL_REUPLOAD.md`, last section).
 3. Create 9 badges and 6 Robux products, then send the IDs.
 4. Make animation clips (ChatGPT prompt) and send the ids.
 5. Choose licensed audio. Delete the API key. Publish (`docs/PUBLISH_CHECKLIST.md`).
