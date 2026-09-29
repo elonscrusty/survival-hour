@@ -216,7 +216,7 @@ end
 
 -- Locker tab icons (Shared/IconIds), by cosmetic type.
 local LOCKER_TAB_ICON = {
-	Outfit = "LockerTab_Outfits", BackpackSkin = "LockerTab_BackpackSkins", CampfireSkin = "LockerTab_CampfireSkins",
+	Outfit = "LockerTab_Outfits", ToolSkin = "LockerTab_ToolSkins", BackpackSkin = "LockerTab_BackpackSkins", CampfireSkin = "LockerTab_CampfireSkins",
 	WorkbenchSkin = "LockerTab_WorkbenchSkins", StorageSkin = "LockerTab_StorageSkins", Nameplate = "LockerTab_Nameplates",
 	Title = "LockerTab_Titles", Emote = "LockerTab_Emotes", EliminationFx = "LockerTab_EliminationEffects",
 }
@@ -714,6 +714,7 @@ function Lobby.Start()
 	gear.Activated:Connect(function()
 		Panels.Toggle("Settings")
 	end)
+	Icons.Apply(gear, "Lobby_Settings")
 	local _xpBar
 	_xpBar, xpSet = UI.bar({ Size = UDim2.fromScale(1, 1), Parent = xpHolder }, C.Accent)
 	local function pill(x: number, glyph: string, color: Color3, icon: string): TextLabel

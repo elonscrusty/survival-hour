@@ -24,6 +24,10 @@ def read(name):
 def items():
     s = read("Items.luau")
     out = {norm(n): i for i, n in re.findall(r'Id = "([A-Za-z0-9]+)", Name = "([^"]+)"', s)}
+    for key, name in (("Hide", "Hide"), ("ReinforcedHide", "Reinforced Hide"), ("Scrap", "Scrap"), ("Iron", "Iron"),
+                      ("Tactical", "Tactical")):  # generated armour sets
+        for slot, piece in (("Head", "Helmet"), ("Chest", "Chestpiece"), ("Legs", "Leggings")):
+            out[norm(name + " " + piece)] = key + slot
     for t in ("Crude", "Stone", "Iron", "Steel"):  # generated tool tiers
         out[norm(t + " Axe")] = t + "Axe"
         out[norm(t + " Pickaxe")] = t + "Pickaxe"
@@ -49,11 +53,11 @@ def cosmetics():
 ITEMS, CLASSES, PERKS, COSM = items(), simple("Classes.luau"), simple("Perks.luau"), cosmetics()
 PRODUCTS = {norm(t): k for k, t in re.findall(r'Key = "([A-Za-z0-9]+)"[^\n]*Title = "([^"]+)"', read("Products.luau"))}
 LOBBY = {"party": "Party", "class": "Class", "powerup": "PowerUp", "locker": "Locker", "profile": "Profile",
-         "shop": "Shop", "howtoplay": "HowToPlay", "buycoins": "BuyCoins"}
+         "shop": "Shop", "howtoplay": "HowToPlay", "buycoins": "BuyCoins", "settings": "Settings"}
 HUD = {"aimblock": "Aim", "aim": "Aim", "attack": "Attack", "bag": "Bag", "build": "Build", "craft": "Craft",
        "heal": "Heal", "map": "Map", "run": "Run", "swap": "Swap"}
 COSM_PREFIX = {"outfit": "", "nameplate": "nameplate", "toolskin": "", "backpackskin": "", "campfireskin": "",
-               "workbenchskin": "", "storageskin": "", "emote": "", "eliminationfx": "", "victory": ""}
+               "workbenchskin": "", "storageskin": "", "emote": "", "eliminationfx": "", "elimination": "", "victory": ""}
 
 
 def key_for(stem):
@@ -97,7 +101,7 @@ def key_for(stem):
                     return "Cosmetic_" + COSM[c][0]
         # recorded for later hooks (no UI slot yet)
         extra = {"lockertab": "LockerTab_", "mapmarker": "MapMarker_", "notification": "Notify_",
-                 "rarity": "Rarity_", "status": "Status_"}
+                 "rarity": "Rarity_", "status": "Status_", "badge": "Badge_", "event": "Event_"}
         if pre in extra:
             return extra[pre] + "".join(p.capitalize() for p in rest)
     if stem.lower() == "title_scroll":
