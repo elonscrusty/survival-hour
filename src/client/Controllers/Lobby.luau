@@ -213,6 +213,13 @@ local function rgb(c: { number }?): Color3
 	return if c then Color3.fromRGB(c[1], c[2], c[3]) else C.Text
 end
 
+-- Locker tab icons (Shared/IconIds), by cosmetic type.
+local LOCKER_TAB_ICON = {
+	Outfit = "LockerTab_Outfits", BackpackSkin = "LockerTab_BackpackSkins", CampfireSkin = "LockerTab_CampfireSkins",
+	WorkbenchSkin = "LockerTab_WorkbenchSkins", StorageSkin = "LockerTab_StorageSkins", Nameplate = "LockerTab_Nameplates",
+	Title = "LockerTab_Titles", Emote = "LockerTab_Emotes", EliminationFx = "LockerTab_EliminationEffects",
+}
+
 local function card(parent: Instance, order: number, height: number, color: Color3, selected: boolean): Frame
 	return UI.new("Frame", { LayoutOrder = order, Size = UDim2.new(1, -8, 0, height), BackgroundColor3 = C.PanelLight, BorderSizePixel = 0, Parent = parent }, { UI.corner(UDim.new(0, 10)), UI.stroke(if selected then color else C.Stroke, if selected then 3 else 1, 0.2), UI.padding(10) })
 end
@@ -276,7 +283,7 @@ local function renderLocker()
 	UI.text(string.format("🪙 %d Coins · cosmetics are purely visual — they never change stats", profile.Coins or 0), { LayoutOrder = 0, TextSize = 14, TextColor3 = C.Accent, Parent = lockerBody })
 	local tabs = UI.new("Frame", { LayoutOrder = 1, BackgroundTransparency = 1, Size = UDim2.new(1, -8, 0, 190), Parent = lockerBody }, { UI.new("UIGridLayout", { CellSize = UDim2.fromOffset(104, 56), CellPadding = UDim2.fromOffset(6, 6) }) })
 	for _, typ in Cosmetics.Types do
-		Buttons.tab(TYPE_LABEL[typ] or typ, TYPE_GLYPH[typ], typ == lockerType, { Size = UDim2.fromOffset(104, 56), Parent = tabs }, function()
+		Buttons.tab(TYPE_LABEL[typ] or typ, TYPE_GLYPH[typ], typ == lockerType, { Size = UDim2.fromOffset(104, 56), Icon = LOCKER_TAB_ICON[typ], Parent = tabs }, function()
 			lockerType = typ
 			renderLocker()
 		end)
@@ -300,7 +307,9 @@ local function renderLocker()
 			local sel = wearing == def.Id
 			local cd = card(lockerBody, order, if limited then 78 else 64, rarity, sel)
 			local sw = UI.new("Frame", { Size = UDim2.fromOffset(42, 42), BackgroundColor3 = if def.Color then rgb(def.Color) else C.PanelLighter, Parent = cd }, { UI.corner(UDim.new(0, 8)) })
-			Icons.Apply(sw, "Cosmetic_" .. def.Id)
+			if not Icons.Apply(sw, "Cosmetic_" .. def.Id) and def.Type == "Title" then
+				Icons.Apply(sw, "Title_Scroll") -- titles share one scroll icon
+			end
 			if def.Text then
 				UI.text("✎", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, Parent = sw })
 			end

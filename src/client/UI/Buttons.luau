@@ -361,7 +361,8 @@ function Buttons.tab(text: string, glyph: string?, selected: boolean, props: { [
 	local b = new("TextButton", p)
 	Buttons.decorate(b, "Neutral", UDim.new(0, 6))
 	if glyph then
-		label(b, glyph, { Name = "Glyph", Size = UDim2.fromScale(0.8, 0.52), Position = UDim2.fromScale(0.1, 0.06) })
+		local g = label(b, glyph, { Name = "Glyph", Size = UDim2.fromScale(0.8, 0.52), Position = UDim2.fromScale(0.1, 0.06) })
+		Icons.Apply(g, props and props.Icon)
 		local t = label(b, text, { Name = "Title", Size = UDim2.fromScale(0.92, 0.28), Position = UDim2.fromScale(0.04, 0.64), Font = Theme.FontBold })
 		t:SetAttribute("Sub", true)
 	end
