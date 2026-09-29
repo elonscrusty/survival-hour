@@ -178,12 +178,12 @@ end
 -- the right one turned over (a rotation about the forward axis).
 local FLIP = CFrame.Angles(0, 0, math.pi)
 
-local function meshesFor(species: string): ({ [string]: string }, { [string]: CFrame })
+local function meshesFor(species: string, antlered: boolean?): ({ [string]: string }, { [string]: CFrame })
 	if species == "Bat" then
 		return { Body = "SM_Bat_Body", WingLPart = "SM_Bat_Wing", WingRPart = "SM_Bat_Wing" }, { WingLPart = FLIP }
 	end
 	local head = "SM_" .. species .. "_Head"
-	if species == "Deer" and math.random() < 0.5 then
+	if species == "Deer" and (if antlered ~= nil then antlered else math.random() < 0.5) then
 		head = "SM_Deer_Head_Antlered" -- bucks and does
 	end
 	local p = "SM_" .. species .. "_"
@@ -200,8 +200,8 @@ end
 
 -- Welds each part's mesh onto it (visual only: massless, no collision or queries).
 -- Needs every mesh of the set; otherwise the primitive look stays.
-local function dress(m: Model, species: string)
-	local set, offsets = meshesFor(species)
+local function dress(m: Model, species: string, antlered: boolean?)
+	local set, offsets = meshesFor(species, antlered)
 	for _, asset in set do
 		if not Skins.Has(asset) then
 			return
@@ -242,10 +242,11 @@ local function dress(m: Model, species: string)
 	end
 end
 
-function Animals.Build(species: string): Model
+-- `antlered` (deer only, optional) forces a buck (true) or doe (false); random otherwise.
+function Animals.Build(species: string, antlered: boolean?): Model
 	local f = (Animals :: any)[species]
 	local m = f()
-	dress(m, species)
+	dress(m, species, antlered)
 	return m
 end
 

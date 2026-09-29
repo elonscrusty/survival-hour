@@ -65,6 +65,8 @@ function DevService._onCommand(p: Player, cmd: any, arg: any)
 		ctx.CraftService.Push(p)
 	elseif cmd == "Extinguish" and type(arg) == "number" then
 		M.ExtinguishFire(math.clamp(math.floor(arg), 1, 4), nil)
+	elseif cmd == "AnimalLineup" then
+		DevService._lineup(p)
 	elseif cmd == "SpawnAnimal" and type(arg) == "string" and ctx.WildlifeService.Species[arg] then
 		local root = ctx.Util.Root(p)
 		if root then
@@ -98,6 +100,58 @@ function DevService._onCommand(p: Player, cmd: any, arg: any)
 	elseif cmd == "EndMatch" then
 		if M.Active then
 			M.End(ctx.Util.Team(p))
+		end
+	end
+end
+
+-- Studio check of the animal meshes: every species frozen in a row in front of the
+-- player (a buck and a doe for the deer), labelled, on the ground. Replaces the last row.
+function DevService._lineup(p: Player)
+	local root = ctx.Util.Root(p)
+	if not root then
+		return
+	end
+	local Animals = require(game:GetService("ReplicatedStorage").Shared.Models.Animals)
+	local old = workspace:FindFirstChild("DevAnimalLineup")
+	if old then
+		old:Destroy()
+	end
+	local folder = Instance.new("Folder")
+	folder.Name = "DevAnimalLineup"
+	folder.Parent = workspace
+	local list = { { "Wolf" }, { "Bear" }, { "Boar" }, { "Deer", true }, { "Deer", false }, { "Rabbit" }, { "Bat" } }
+	local look = CFrame.lookAt(root.Position, root.Position + root.CFrame.LookVector * Vector3.new(1, 0, 1))
+	for i, spec in list do
+		local ok, m = pcall(Animals.Build, spec[1], spec[2])
+		if ok and m then
+			for _, d in m:GetDescendants() do
+				if d:IsA("BasePart") then
+					d.Anchored = true
+				end
+			end
+			local spot = (look * CFrame.new((i - 4) * 9, 0, -22)).Position
+			local ground = ctx.WorldService.RaycastGround(spot, { folder, p.Character })
+			local hum = m:FindFirstChildOfClass("Humanoid")
+			local rootPart = m.PrimaryPart
+			local lift = (if hum then hum.HipHeight else 3) + (if rootPart then rootPart.Size.Y / 2 else 0)
+			m:PivotTo(CFrame.lookAt(Vector3.new(spot.X, (ground and ground.Y or spot.Y) + lift, spot.Z), root.Position * Vector3.new(1, 0, 1) + Vector3.new(0, (ground and ground.Y or spot.Y) + lift, 0)))
+			m.Name = spec[1] .. (if spec[2] == true then " (buck)" elseif spec[2] == false then " (doe)" else "")
+			m.Parent = folder
+			local tag = Instance.new("BillboardGui")
+			tag.Size = UDim2.fromOffset(120, 24)
+			tag.StudsOffset = Vector3.new(0, 4, 0)
+			tag.AlwaysOnTop = true
+			local t = Instance.new("TextLabel")
+			t.Size = UDim2.fromScale(1, 1)
+			t.BackgroundTransparency = 1
+			t.TextScaled = true
+			t.TextColor3 = Color3.new(1, 1, 1)
+			t.TextStrokeTransparency = 0.3
+			t.Text = m.Name
+			t.Parent = tag
+			tag.Parent = m.PrimaryPart
+		else
+			warn("[Dev] lineup: couldn't build", spec[1], m)
 		end
 	end
 end
