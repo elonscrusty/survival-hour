@@ -26,6 +26,7 @@ local Panels = require("./Panels")
 local ClassHall = require("./ClassHall")
 local Hud = require("./Hud")
 local Buttons = require("../UI/Buttons")
+local Icons = require("../UI/Icons")
 local Season = require("./Season")
 local Seasons = require(Shared.Logic.Seasons)
 
@@ -236,7 +237,7 @@ local function renderPerks()
 		local color = rgb(def.Color)
 		local sel = profile.Perk == def.Id
 		local cd = card(perkBody, i, 84, color, sel)
-		local ic = UI.icon(def.Glyph, color, 48, "Round")
+		local ic = UI.icon(def.Glyph, color, 48, "Round", "Perk_" .. def.Id)
 		ic.Parent = cd
 		UI.text(def.Name .. (if owned then "" else "   🔒 " .. def.Price .. " ◆"), { Position = UDim2.fromOffset(60, 0), Size = UDim2.new(1, -60, 0, 22), TextSize = 17, Font = Theme.FontBlack, TextColor3 = color, Parent = cd })
 		UI.text(def.Text, { Position = UDim2.fromOffset(60, 24), Size = UDim2.new(0.62, -60, 0, 36), TextWrapped = true, TextSize = 13, TextYAlignment = Enum.TextYAlignment.Top, Parent = cd })
@@ -299,6 +300,7 @@ local function renderLocker()
 			local sel = wearing == def.Id
 			local cd = card(lockerBody, order, if limited then 78 else 64, rarity, sel)
 			local sw = UI.new("Frame", { Size = UDim2.fromOffset(42, 42), BackgroundColor3 = if def.Color then rgb(def.Color) else C.PanelLighter, Parent = cd }, { UI.corner(UDim.new(0, 8)) })
+			Icons.Apply(sw, "Cosmetic_" .. def.Id)
 			if def.Text then
 				UI.text("✎", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, Parent = sw })
 			end
@@ -432,7 +434,7 @@ local function renderShop()
 			order += 1
 			local isBundle = p.Kind == "Bundle"
 			local r = UI.new("Frame", { LayoutOrder = order, Size = UDim2.new(1, -8, 0, 70), BackgroundColor3 = C.PanelLight, BorderSizePixel = 0, Parent = shopBody }, { UI.corner(UDim.new(0, 8)), UI.padding(8) })
-			local ic = UI.icon(if isBundle then "🎁" else "🪙", if isBundle then C.Dev else C.Accent, 52, "Round")
+			local ic = UI.icon(if isBundle then "🎁" else "🪙", if isBundle then C.Dev else C.Accent, 52, "Round", "Product_" .. p.Key)
 			ic.Parent = r
 			UI.text(p.Title, { Position = UDim2.fromOffset(64, 4), Size = UDim2.new(1, -240, 0, 26), TextSize = 19, Font = Theme.FontBlack, TextColor3 = if isBundle then C.Dev else C.Accent, Parent = r })
 			if isBundle then
@@ -695,13 +697,13 @@ function Lobby.Start()
 	end)
 	local _xpBar
 	_xpBar, xpSet = UI.bar({ Size = UDim2.fromScale(1, 1), Parent = xpHolder }, C.Accent)
-	local function pill(x: number, glyph: string, color: Color3): TextLabel
+	local function pill(x: number, glyph: string, color: Color3, icon: string): TextLabel
 		local f = UI.panel({ Size = UDim2.fromOffset(150, 40), Position = UDim2.fromOffset(x, 8), Parent = gui })
-		UI.text(glyph, { Size = UDim2.fromOffset(34, 40), TextSize = 20, TextColor3 = color, TextXAlignment = Enum.TextXAlignment.Center, Parent = f })
+		Icons.Apply(UI.text(glyph, { Size = UDim2.fromOffset(34, 40), TextSize = 20, TextColor3 = color, TextXAlignment = Enum.TextXAlignment.Center, Parent = f }), icon)
 		return UI.text("0", { Position = UDim2.fromOffset(34, 0), Size = UDim2.new(1, -40, 1, 0), TextSize = 19, Font = Theme.FontBlack, TextColor3 = color, Parent = f })
 	end
-	coinPill = pill(442, "●", Color3.fromRGB(242, 193, 78))
-	diamondPill = pill(600, "◆", C.Diamond)
+	coinPill = pill(442, "●", Color3.fromRGB(242, 193, 78), "Currency_Coins")
+	diamondPill = pill(600, "◆", C.Diamond, "Currency_Diamonds")
 	local banner = UI.panel({ Size = UDim2.fromOffset(308, 34), Position = UDim2.fromOffset(442, 54), Visible = false, Parent = gui })
 	seasonBanner = banner
 	seasonLabel = UI.text("", { Position = UDim2.fromOffset(10, 0), Size = UDim2.new(1, -20, 1, 0), TextSize = 13, Font = Theme.FontBold, TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd, Parent = banner })
@@ -756,17 +758,17 @@ function Lobby.Start()
 		UI.new("UIGridLayout", { CellSize = UDim2.fromOffset(104, 104), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
 	})
 	local TILES = {
-		{ "Party", "PARTY", "Play with friends", "👥" },
-		{ "Classes", "CLASS", "Choose your style", "🏠" },
-		{ "Perks", "POWER-UP", "Boost your run", "⚡" },
-		{ "Locker", "LOCKER", "Customize", "🎒" },
-		{ "Profile", "PROFILE", "Stats & rewards", "👤" },
-		{ "LobbyShop", "SHOP", "Coins & bundles", "🛒" },
-		{ "Help", "HOW TO PLAY", "Learn the basics", "❓" },
-		{ "LobbyShop", "BUY COINS", "Get more coins", "🪙" },
+		{ "Party", "PARTY", "Play with friends", "👥", "Party" },
+		{ "Classes", "CLASS", "Choose your style", "🏠", "Class" },
+		{ "Perks", "POWER-UP", "Boost your run", "⚡", "PowerUp" },
+		{ "Locker", "LOCKER", "Customize", "🎒", "Locker" },
+		{ "Profile", "PROFILE", "Stats & rewards", "👤", "Profile" },
+		{ "LobbyShop", "SHOP", "Coins & bundles", "🛒", "Shop" },
+		{ "Help", "HOW TO PLAY", "Learn the basics", "❓", "HowToPlay" },
+		{ "LobbyShop", "BUY COINS", "Get more coins", "🪙", "BuyCoins" },
 	}
 	for i, spec in TILES do
-		Buttons.tile(spec[2], spec[3], spec[4], { LayoutOrder = i, Parent = nav, Tone = if spec[2] == "BUY COINS" then "Gold" else "Neutral" }, function()
+		Buttons.tile(spec[2], spec[3], spec[4], { LayoutOrder = i, Parent = nav, Icon = "Lobby_" .. spec[5], Tone = if spec[2] == "BUY COINS" then "Gold" else "Neutral" }, function()
 			Panels.Toggle(spec[1])
 		end)
 	end

@@ -3,6 +3,7 @@
 
 local Theme = require("./Theme")
 local Buttons = require("./Buttons")
+local Icons = require("./Icons")
 
 local UI = {}
 
@@ -123,7 +124,8 @@ end
 UI.Buttons = Buttons
 
 -- Item/powerup icon badge drawn from primitives: shaped background + glyph.
-function UI.icon(glyph: string, color: Color3, size: number, shape: string?): Frame
+-- `key` (optional) names an uploaded image in Shared/IconIds; it replaces the glyph.
+function UI.icon(glyph: string, color: Color3, size: number, shape: string?, key: string?): Frame
 	local f = UI.new("Frame", {
 		Size = UDim2.fromOffset(size, size),
 		BackgroundColor3 = color:Lerp(Color3.new(0, 0, 0), 0.45),
@@ -145,6 +147,7 @@ function UI.icon(glyph: string, color: Color3, size: number, shape: string?): Fr
 			TextColor3 = color:Lerp(Color3.new(1, 1, 1), 0.55),
 		}, { UI.new("UITextSizeConstraint", { MaxTextSize = math.floor(size * 0.62) }) }),
 	})
+	Icons.Apply(f:FindFirstChild("Glyph") :: TextLabel, key)
 	return f
 end
 

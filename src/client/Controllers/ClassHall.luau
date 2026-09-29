@@ -22,6 +22,7 @@ local ClassLevels = require(Shared.Logic.ClassLevels)
 local UI = require("../UI/UI")
 local Theme = require("../UI/Theme")
 local Buttons = require("../UI/Buttons")
+local Icons = require("../UI/Icons")
 local State = require("../State")
 local Panels = require("./Panels")
 
@@ -381,7 +382,8 @@ local function classCard(def: Classes.Def, order: number, profile: any, deals: {
 	})
 	local cardW = gridLayout.CellSize.X.Offset
 	local badge = math.floor(cardW * 0.54)
-	hexBadge(def.Glyph, color, badge, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), Parent = b })
+	local hb = hexBadge(def.Glyph, color, badge, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), Parent = b })
+	Icons.Apply(hb:FindFirstChild("Glyph") :: TextLabel, "Class_" .. def.Id)
 	local function line(text: string, y: number, h: number, max: number, props: { [string]: any }?): TextLabel
 		local p = props or {}
 		p.Position = UDim2.new(0, 4, y, 0)

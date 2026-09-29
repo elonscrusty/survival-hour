@@ -67,7 +67,7 @@ function Storage.Render()
 			continue
 		end
 		local r = UI.new("Frame", { LayoutOrder = 10 + i, Size = UDim2.new(1, -8, 0, 54), BackgroundColor3 = C.PanelLight, BorderSizePixel = 0, Parent = body }, { UI.corner(UDim.new(0, 8)) })
-		local ic = UI.icon(def.Icon.Glyph, def.Icon.Color, 40, "Square")
+		local ic = UI.icon(def.Icon.Glyph, def.Icon.Color, 40, "Square", "Item_" .. id)
 		ic.Position = UDim2.fromOffset(6, 7)
 		ic.Parent = r
 		UI.text(string.format("%s   stored %d   ·   you carry %d", def.Name, have, carry), { Position = UDim2.fromOffset(54, 16), Size = UDim2.new(1, -330, 0, 22), TextSize = 15, Font = Theme.FontBold, Parent = r })

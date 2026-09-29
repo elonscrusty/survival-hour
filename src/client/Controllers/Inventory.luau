@@ -53,7 +53,7 @@ function Inventory.Render()
 		UI.text(SLOT_LABEL[slot], { Position = UDim2.fromOffset(62, 4), Size = UDim2.new(0.5, 0, 0, 16), TextSize = 12, TextColor3 = C.TextDim, Parent = r })
 		if stack and stack ~= false then
 			local def = Items[stack.Id]
-			local ic = UI.icon(def.Icon.Glyph, def.Icon.Color, 44, def.Icon.Shape)
+			local ic = UI.icon(def.Icon.Glyph, def.Icon.Color, 44, def.Icon.Shape, "Item_" .. stack.Id)
 			ic.Position = UDim2.fromOffset(6, 5)
 			ic.Parent = r
 			local extra = ""
@@ -105,7 +105,7 @@ function Inventory.Render()
 		local def = Items[id]
 		local r = row(order, 50)
 		order += 1
-		local ic = UI.icon(def.Icon.Glyph, def.Icon.Color, 38, "Square")
+		local ic = UI.icon(def.Icon.Glyph, def.Icon.Color, 38, "Square", "Item_" .. id)
 		ic.Position = UDim2.fromOffset(6, 6)
 		ic.Parent = r
 		UI.text(def.Name .. "  ×" .. n, { Position = UDim2.fromOffset(54, 14), Size = UDim2.new(1, -250, 0, 22), TextSize = 16, Font = Theme.FontBold, TextColor3 = if n > 0 then C.Text else C.TextDim, Parent = r })

@@ -16,6 +16,7 @@
 local TweenService = game:GetService("TweenService")
 
 local Theme = require("./Theme")
+local Icons = require("./Icons")
 
 local Buttons = {}
 
@@ -242,6 +243,7 @@ local function base(className: string, props: { [string]: any }?): { [string]: a
 	p.Price = nil
 	p.Sub = nil
 	p.Glyph = nil
+	p.Icon = nil -- uploaded icon key (Shared/IconIds), applied by the builder
 	return p
 end
 
@@ -283,7 +285,8 @@ function Buttons.tile(title: string, sub: string?, glyph: string, props: { [stri
 	local b = new("TextButton", p)
 	Buttons.decorate(b, (props and props.Tone) or "Neutral", UDim.new(0, 10))
 	local hasSub = sub ~= nil and sub ~= ""
-	label(b, glyph, { Name = "Glyph", Size = UDim2.fromScale(0.8, if hasSub then 0.42 else 0.5), Position = UDim2.fromScale(0.1, 0.08), Font = Theme.FontBlack })
+	local g = label(b, glyph, { Name = "Glyph", Size = UDim2.fromScale(0.8, if hasSub then 0.42 else 0.5), Position = UDim2.fromScale(0.1, 0.08), Font = Theme.FontBlack })
+	Icons.Apply(g, props and props.Icon)
 	label(b, title, { Name = "Title", Size = UDim2.fromScale(0.9, if hasSub then 0.2 else 0.24), Position = UDim2.fromScale(0.05, if hasSub then 0.52 else 0.64) })
 	if hasSub then
 		local s = label(b, sub :: string, { Name = "Subtitle", Size = UDim2.fromScale(0.9, 0.15), Position = UDim2.fromScale(0.05, 0.74), Font = Theme.FontBold })
@@ -307,7 +310,8 @@ function Buttons.round(glyph: string, text: string, size: number, tone: string, 
 	if stroke then
 		stroke.Thickness = 3
 	end
-	label(b, glyph, { Name = "Glyph", Size = UDim2.fromScale(0.62, 0.62), Position = UDim2.fromScale(0.19, 0.19) })
+	local g = label(b, glyph, { Name = "Glyph", Size = UDim2.fromScale(0.62, 0.62), Position = UDim2.fromScale(0.19, 0.19) })
+	Icons.Apply(g, props and props.Icon)
 	local cap = label(b, text, { Name = "Caption", Size = UDim2.new(1.4, 0, 0, math.max(12, size * 0.2)), Position = UDim2.new(-0.2, 0, 1, 4), Font = Theme.FontBlack, TextStrokeTransparency = 0.3 })
 	cap:SetAttribute("Tinted", nil)
 	cap.TextColor3 = Color3.new(1, 1, 1)

@@ -104,7 +104,7 @@ function Craft.Render()
 		local locked = r.Level > level
 		local card = UI.new("Frame", { LayoutOrder = order, Size = UDim2.new(1, -8, 0, 74), BackgroundColor3 = C.PanelLight, BackgroundTransparency = if locked then 0.55 else 0.15, BorderSizePixel = 0, Parent = body }, { UI.corner(UDim.new(0, 8)) })
 		order += 1
-		local ic = UI.icon(def.Icon.Glyph, def.Icon.Color, 46, def.Icon.Shape)
+		local ic = UI.icon(def.Icon.Glyph, def.Icon.Color, 46, def.Icon.Shape, "Item_" .. r.Result)
 		ic.Position = UDim2.fromOffset(8, 8)
 		ic.Parent = card
 		UI.text(def.Name .. (if r.Count > 1 then " ×" .. r.Count else "") .. (if r.Kind == "Structure" then "  (structure)" else ""), { Position = UDim2.fromOffset(62, 4), Size = UDim2.new(1, -200, 0, 20), TextSize = 16, Font = Theme.FontBold, Parent = card })

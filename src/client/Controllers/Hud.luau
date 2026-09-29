@@ -252,7 +252,7 @@ local function refreshHotbar()
 		end
 		if stack then
 			local def = Items[stack.Id]
-			local ic = UI.icon(def.Icon.Glyph, def.Icon.Color, 40, def.Icon.Shape)
+			local ic = UI.icon(def.Icon.Glyph, def.Icon.Color, 40, def.Icon.Shape, "Item_" .. stack.Id)
 			ic.Position = UDim2.fromOffset(12, 6)
 			ic.Parent = btn
 			UI.text(def.Name, { Position = UDim2.fromOffset(2, 48), Size = UDim2.new(1, -4, 0, 14), TextSize = 11, TextXAlignment = Enum.TextXAlignment.Center, Font = Theme.FontBold, Parent = btn })

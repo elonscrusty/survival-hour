@@ -283,7 +283,7 @@ local function renderPicker()
 					Build.Begin(r.Result)
 				end
 			end)
-			local ic = UI.icon(def.Icon.Glyph, def.Icon.Color, 48, "Square")
+			local ic = UI.icon(def.Icon.Glyph, def.Icon.Color, 48, "Square", "Item_" .. r.Result)
 			ic.AnchorPoint = Vector2.new(0.5, 0)
 			ic.Position = UDim2.new(0.5, 0, 0, 8)
 			ic.Parent = b

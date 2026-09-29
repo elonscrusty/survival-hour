@@ -119,8 +119,9 @@ function Input._buildTouch()
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 		Parent = player:WaitForChild("PlayerGui"),
 	})
+	local HUD_ICON = { Attack = "Attack", Aim = "Aim", Bandage = "Heal", Swap = "Swap", Sprint = "Run", Inventory = "Bag", Craft = "Craft", Build = "Build", Map = "Map" }
 	local function round(name: string, glyph: string, label: string, size: number, pos: UDim2, action: string, hold: boolean, tone: string)
-		local b = UI.Buttons.round(glyph, label, size, tone, { Name = name, Position = pos, AnchorPoint = Vector2.new(0.5, 0.5), Parent = gui })
+		local b = UI.Buttons.round(glyph, label, size, tone, { Name = name, Position = pos, AnchorPoint = Vector2.new(0.5, 0.5), Icon = "Hud_" .. HUD_ICON[name], Parent = gui })
 		b.InputBegan:Connect(function(io)
 			if io.UserInputType == Enum.UserInputType.Touch then
 				b:SetAttribute("Down", true)
@@ -159,7 +160,7 @@ function Input._buildTouch()
 		Parent = gui,
 	}, { UI.list(Enum.FillDirection.Horizontal, 6, Enum.HorizontalAlignment.Right) })
 	for i, spec in { { "Inventory", "🎒", "BAG" }, { "Craft", "🔨", "CRAFT" }, { "Build", "🧱", "BUILD" }, { "Map", "🗺", "MAP" } } do
-		local b = UI.Buttons.tile(spec[3], nil, spec[2], { Name = spec[1], LayoutOrder = i, Size = UDim2.fromOffset(58, 58), Parent = menu })
+		local b = UI.Buttons.tile(spec[3], nil, spec[2], { Name = spec[1], LayoutOrder = i, Size = UDim2.fromOffset(58, 58), Icon = "Hud_" .. HUD_ICON[spec[1]], Parent = menu })
 		b.Activated:Connect(function()
 			emit(spec[1], true)
 			emit(spec[1], false)
