@@ -74,13 +74,21 @@ end
 -- frame's contents. The drawn fill, gradient and outline are dropped only once the image
 -- has loaded, so a missing or blocked image leaves the drawn look. Returns true when an
 -- image is listed for `key`.
--- `visible` (optional) is the part of the image that is actually drawn (e.g. a pill with
--- transparent margins): the image is enlarged so that part fills the frame.
-function UI.skin(frame: GuiObject, key: string, visible: Vector2?): boolean
+-- The green UI art has transparent margins; only the drawn part (pixels measured from the
+-- owner's PNGs) is shown so it fills the frame. Frames using it are sized to roughly the
+-- art's own shape so it doesn't look stretched.
+local SKIN_CROP: { [string]: { number } } = {
+	UI_Pill = { 45, 158, 467, 353 }, -- 512 x 512 canvas
+	UI_Round = { 66, 65, 445, 447 }, -- 512 x 512
+	UI_Currency = { 9, 33, 502, 116 }, -- 512 x 144
+	UI_NameLevel = { 9, 44, 1014, 164 }, -- 1024 x 200
+	UI_XpTrack = { 8, 17, 1016, 49 }, -- 1024 x 64
+}
+
+function UI.skin(frame: GuiObject, key: string): boolean
 	if not Icons.Image(key) then
 		return false
 	end
-	local v = visible or Vector2.one
 	if not frame:IsA("GuiButton") then
 		-- until (or unless) the art loads, use the same forest green instead of grey
 		frame.BackgroundColor3 = Theme.Colors.Forest
@@ -92,9 +100,12 @@ function UI.skin(frame: GuiObject, key: string, visible: Vector2?): boolean
 	local il = Instance.new("ImageLabel")
 	il.Name = "Skin"
 	il.BackgroundTransparency = 1
-	il.AnchorPoint = Vector2.new(0.5, 0.5)
-	il.Position = UDim2.fromScale(0.5, 0.5)
-	il.Size = UDim2.fromScale(1 / v.X, 1 / v.Y)
+	il.Size = UDim2.fromScale(1, 1)
+	local crop = SKIN_CROP[key]
+	if crop then
+		il.ImageRectOffset = Vector2.new(crop[1], crop[2])
+		il.ImageRectSize = Vector2.new(crop[3] - crop[1], crop[4] - crop[2])
+	end
 	il.ScaleType = Enum.ScaleType.Stretch
 	il.ZIndex = 0
 	il.Parent = frame
