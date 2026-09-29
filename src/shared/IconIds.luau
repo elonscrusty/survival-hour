@@ -86,6 +86,7 @@ local IconIds: { [string]: number } = {
 	["Item_Bandage"] = 71614480426390,
 	["Item_BearTrap"] = 79002865666485,
 	["Item_Berries"] = 85497301925063,
+	["Item_Bolt"] = 115781703356002,
 	["Item_Bow"] = 103846042784506,
 	["Item_BreachingCharge"] = 71834998337919,
 	["Item_Bullet"] = 137130687308775,

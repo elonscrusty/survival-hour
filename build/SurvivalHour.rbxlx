@@ -1193,6 +1193,7 @@ local IconIds: { [string]: number } = {
 	["Item_Bandage"] = 71614480426390,
 	["Item_BearTrap"] = 79002865666485,
 	["Item_Berries"] = 85497301925063,
+	["Item_Bolt"] = 115781703356002,
 	["Item_Bow"] = 103846042784506,
 	["Item_BreachingCharge"] = 71834998337919,
 	["Item_Bullet"] = 137130687308775,
@@ -78924,6 +78925,7 @@ local LOCKER_TAB_ICON = {
 	Outfit = "LockerTab_Outfits", ToolSkin = "LockerTab_ToolSkins", BackpackSkin = "LockerTab_BackpackSkins", CampfireSkin = "LockerTab_CampfireSkins",
 	WorkbenchSkin = "LockerTab_WorkbenchSkins", StorageSkin = "LockerTab_StorageSkins", Nameplate = "LockerTab_Nameplates",
 	Title = "LockerTab_Titles", Emote = "LockerTab_Emotes", EliminationFx = "LockerTab_EliminationEffects",
+	VictoryPose = "LockerTab_VictoryPoses",
 }
 
 local function card(parent: Instance, order: number, height: number, color: Color3, selected: boolean): Frame
