@@ -78783,7 +78783,7 @@ local perkBody: ScrollingFrame
 local lockerBody: ScrollingFrame
 local profileBody: ScrollingFrame
 local shopBody: ScrollingFrame
-local lockerType = "Outfit"
+local lockerType: string? = nil -- nil = the category page
 local titleUp = false -- lobby HUD stays hidden behind the title screen
 local refreshVis: () -> () = function() end
 local helpBody: ScrollingFrame
@@ -78988,14 +78988,36 @@ local function renderLocker()
 		UI.text("Loading your profile…", { Parent = lockerBody })
 		return
 	end
-	UI.text(string.format("🪙 %d Coins · cosmetics are purely visual — they never change stats", profile.Coins or 0), { LayoutOrder = 0, TextSize = 14, TextColor3 = C.Accent, Parent = lockerBody })
-	local tabs = UI.new("Frame", { LayoutOrder = 1, BackgroundTransparency = 1, Size = UDim2.new(1, -8, 0, 190), Parent = lockerBody }, { UI.new("UIGridLayout", { CellSize = UDim2.fromOffset(104, 56), CellPadding = UDim2.fromOffset(6, 6) }) })
-	for _, typ in Cosmetics.Types do
-		Buttons.tab(TYPE_LABEL[typ] or typ, TYPE_GLYPH[typ], typ == lockerType, { Size = UDim2.fromOffset(104, 56), Icon = LOCKER_TAB_ICON[typ], Parent = tabs }, function()
-			lockerType = typ
-			renderLocker()
-		end)
+	-- Page 1: just the categories, big. Page 2: one category's items with room to breathe.
+	if not lockerType then
+		UI.text(string.format("🪙 %d Coins · cosmetics are purely visual; they never change stats", profile.Coins or 0), { LayoutOrder = 0, TextSize = 15, TextColor3 = C.Accent, Parent = lockerBody })
+		local grid = UI.new("Frame", { LayoutOrder = 1, BackgroundTransparency = 1, Size = UDim2.new(1, -8, 0, 4 * 118), Parent = lockerBody }, { UI.new("UIGridLayout", { CellSize = UDim2.fromOffset(150, 110), CellPadding = UDim2.fromOffset(8, 8) }) })
+		for _, typ in Cosmetics.Types do
+			local total, have = 0, 0
+			for _, def in Cosmetics.List do
+				if def.Type == typ and not def.Season then
+					total += 1
+					if profile.Cosmetics[def.Id] then
+						have += 1
+					end
+				end
+			end
+			Buttons.tile(TYPE_LABEL[typ] or typ, string.format("%d / %d owned", have, total), TYPE_GLYPH[typ] or "✦", { Size = UDim2.fromOffset(150, 110), Icon = LOCKER_TAB_ICON[typ], Parent = grid }, function()
+				lockerType = typ
+				renderLocker()
+			end)
+		end
+		return
 	end
+	local typ: string = lockerType
+	local head = UI.new("Frame", { LayoutOrder = 0, BackgroundTransparency = 1, Size = UDim2.new(1, -8, 0, 44), Parent = lockerBody })
+	Buttons.action("◀ Back", { Size = UDim2.fromOffset(110, 40), Tone = "Neutral", Parent = head }, function()
+		lockerType = nil
+		renderLocker()
+	end)
+	UI.text(string.upper(TYPE_LABEL[typ] or typ), { Position = UDim2.fromOffset(122, 0), Size = UDim2.new(0.5, -122, 1, 0), TextSize = 22, Font = Theme.FontBlack, TextColor3 = C.Accent, TextWrapped = false, Parent = head })
+	UI.text(string.format("🪙 %d", profile.Coins or 0), { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(0.4, 0, 1, 0), TextSize = 18, Font = Theme.FontBlack, TextColor3 = Color3.fromRGB(242, 193, 78), TextXAlignment = Enum.TextXAlignment.Right, Parent = head })
+	local lockerType = typ
 	local order = 10
 	local wearing = profile.Wearing[lockerType]
 	if wearing then
@@ -79013,24 +79035,24 @@ local function renderLocker()
 			order += 1
 			local rarity = rgb(Cosmetics.RarityColor[def.Rarity])
 			local sel = wearing == def.Id
-			local cd = card(lockerBody, order, if limited then 78 else 64, rarity, sel)
-			local sw = UI.new("Frame", { Size = UDim2.fromOffset(42, 42), BackgroundColor3 = if def.Color then rgb(def.Color) else C.PanelLighter, Parent = cd }, { UI.corner(UDim.new(0, 8)) })
+			local cd = card(lockerBody, order, if limited then 96 else 80, rarity, sel)
+			local sw = UI.new("Frame", { Size = UDim2.fromOffset(58, 58), BackgroundColor3 = if def.Color then rgb(def.Color) else C.PanelLighter, Parent = cd }, { UI.corner(UDim.new(0, 8)) })
 			if not Icons.Apply(sw, "Cosmetic_" .. def.Id) and def.Type == "Title" then
 				Icons.Apply(sw, "Title_Scroll") -- titles share one scroll icon
 			end
 			if def.Text then
 				UI.text("✎", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, Parent = sw })
 			end
-			UI.text(def.Name .. (if def.Text then '  "' .. def.Text .. '"' else ""), { Position = UDim2.fromOffset(52, 0), Size = UDim2.new(0.6, -52, 0, 22), TextSize = 15, Font = Theme.FontBold, Parent = cd })
+			UI.text(def.Name .. (if def.Text then '  "' .. def.Text .. '"' else ""), { Position = UDim2.fromOffset(70, 0), Size = UDim2.new(0.6, -70, 0, 28), TextSize = 19, Font = Theme.FontBold, TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd, Parent = cd })
 			local how = if def.Level then " · level " .. def.Level .. " reward" elseif def.Mastery then " · " .. def.Mastery.Label elseif def.Price > 0 then " · " .. def.Price .. " Coins" else " · bundle"
 			if inSeason and def.Mastery and not owned then
 				local have = (profile.SeasonStats or {})[def.Mastery.Stat] or 0
 				how ..= string.format(" (%d/%d)", math.min(have, def.Mastery.Need), def.Mastery.Need)
 			end
-			UI.text(def.Rarity .. how, { Position = UDim2.fromOffset(52, 22), Size = UDim2.new(0.6, -52, 0, 18), TextSize = 12, TextColor3 = rarity, Parent = cd })
+			UI.text(def.Rarity .. how, { Position = UDim2.fromOffset(70, 30), Size = UDim2.new(0.6, -70, 0, 20), TextSize = 14, TextColor3 = rarity, Parent = cd })
 			if limited then
 				local tag = if inSeason and not owned then string.format("%s LIMITED · %s", season.Glyph or "★", Seasons.LeftText(Seasons.SecondsLeft(season, workspace:GetServerTimeNow()))) else "LIMITED EDITION"
-				UI.text(tag, { Position = UDim2.fromOffset(52, 40), Size = UDim2.new(0.6, -52, 0, 14), TextSize = 11, Font = Theme.FontBold, TextColor3 = if season and season.Accent then season.Accent else C.Warn, Parent = cd })
+				UI.text(tag, { Position = UDim2.fromOffset(70, 52), Size = UDim2.new(0.6, -70, 0, 18), TextSize = 13, Font = Theme.FontBold, TextColor3 = if season and season.Accent then season.Accent else C.Warn, Parent = cd })
 			end
 			local row = buttonRow(cd)
 			if owned then
@@ -79496,7 +79518,7 @@ function Lobby.Start()
 	}
 	for i, spec in TILES do
 		local row = UI.new("TextButton", { Text = "", BackgroundTransparency = 1, AutoButtonColor = false, LayoutOrder = i, Size = UDim2.fromOffset(240, 46), Parent = nav })
-		local ic = UI.text(spec[3], outlined({ Size = UDim2.fromOffset(42, 42), Position = UDim2.fromOffset(0, 2), TextSize = 30, TextXAlignment = Enum.TextXAlignment.Center, Parent = row }))
+		local ic = UI.text(spec[3], outlined({ Size = UDim2.fromOffset(46, 46), Position = UDim2.fromOffset(0, 0), TextSize = 32, TextXAlignment = Enum.TextXAlignment.Center, Parent = row }))
 		Icons.Apply(ic, "Lobby_" .. spec[4])
 		local label = UI.text(spec[2], outlined({ Position = UDim2.fromOffset(50, 0), Size = UDim2.new(1, -50, 1, 0), TextSize = 21, Font = Theme.FontBlack, TextColor3 = if spec[2] == "BUY COINS" then Color3.fromRGB(255, 214, 110) else nil, Parent = row }))
 		local base = label.TextColor3
@@ -79519,7 +79541,9 @@ function Lobby.Start()
 	task.spawn(ClassHall.Build, send)
 	perkBody = Panels.Create("Perks", "POWER-UPS", Vector2.new(640, 640), renderPerks)
 	UI.list(Enum.FillDirection.Vertical, 6).Parent = perkBody
-	lockerBody = Panels.Create("Locker", "LOCKER", Vector2.new(640, 640), renderLocker)
+	lockerBody = Panels.Create("Locker", "LOCKER", Vector2.new(680, 640), renderLocker, function()
+		lockerType = nil -- reopening starts on the category page
+	end)
 	UI.list(Enum.FillDirection.Vertical, 6).Parent = lockerBody
 	profileBody = Panels.Create("Profile", "PROFILE & REWARDS", Vector2.new(620, 640), renderProfile)
 	UI.list(Enum.FillDirection.Vertical, 6).Parent = profileBody
@@ -82326,11 +82350,11 @@ Theme.Colors = {
 	ForestStroke = Color3.fromRGB(18, 36, 22),
 }
 
--- Overall UI size (owner: 20% smaller). Every ScreenGui scales by this; text scales with it.
-Theme.UiScale = 0.8
+-- Overall UI size (owner: 20% smaller, then icons back up a bit: 90%). Every ScreenGui scales by this; text scales with it.
+Theme.UiScale = 0.9
 -- Text is scaled back up (owner: fonts too small after the shrink): text keeps its old size
 -- while icons and plates stay 20% smaller.
-Theme.TextScale = 1.25
+Theme.TextScale = 1.2
 
 Theme.Font = Enum.Font.GothamMedium
 Theme.FontBold = Enum.Font.GothamBold

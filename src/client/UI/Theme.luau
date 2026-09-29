@@ -31,11 +31,11 @@ Theme.Colors = {
 	ForestStroke = Color3.fromRGB(18, 36, 22),
 }
 
--- Overall UI size (owner: 20% smaller). Every ScreenGui scales by this; text scales with it.
-Theme.UiScale = 0.8
+-- Overall UI size (owner: 20% smaller, then icons back up a bit: 90%). Every ScreenGui scales by this; text scales with it.
+Theme.UiScale = 0.9
 -- Text is scaled back up (owner: fonts too small after the shrink): text keeps its old size
 -- while icons and plates stay 20% smaller.
-Theme.TextScale = 1.25
+Theme.TextScale = 1.2
 
 Theme.Font = Enum.Font.GothamMedium
 Theme.FontBold = Enum.Font.GothamBold
