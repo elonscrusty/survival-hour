@@ -213,6 +213,8 @@ local function rgb(c: { number }?): Color3
 	return if c then Color3.fromRGB(c[1], c[2], c[3]) else C.Text
 end
 
+local PILL_VISIBLE = Vector2.new(0.86, 0.42)
+
 -- Locker tab icons (Shared/IconIds), by cosmetic type.
 local LOCKER_TAB_ICON = {
 	Outfit = "LockerTab_Outfits", BackpackSkin = "LockerTab_BackpackSkins", CampfireSkin = "LockerTab_CampfireSkins",
@@ -768,9 +770,9 @@ function Lobby.Start()
 		end
 	end)
 
-	-- Left: menu tiles (icon + title + subtitle), two columns.
-	local nav = UI.new("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(2 * 104 + 8, 4 * 104 + 24), Position = UDim2.fromOffset(12, 100), Parent = gui }, {
-		UI.new("UIGridLayout", { CellSize = UDim2.fromOffset(104, 104), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+	-- Left: the menu, one column of green pills (icon + title).
+	local nav = UI.new("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(200, 8 * 52), Position = UDim2.fromOffset(12, 100), Parent = gui }, {
+		UI.list(Enum.FillDirection.Vertical, 6),
 	})
 	local TILES = {
 		{ "Party", "PARTY", "Play with friends", "👥", "Party" },
@@ -783,9 +785,11 @@ function Lobby.Start()
 		{ "LobbyShop", "BUY COINS", "Get more coins", "🪙", "BuyCoins" },
 	}
 	for i, spec in TILES do
-		Buttons.tile(spec[2], spec[3], spec[4], { LayoutOrder = i, Parent = nav, Icon = "Lobby_" .. spec[5], Tone = if spec[2] == "BUY COINS" then "Gold" else "Neutral" }, function()
+		local menuBtn = Buttons.pill(spec[2], spec[4], { LayoutOrder = i, Size = UDim2.fromOffset(196, 46), Parent = nav, Icon = "Lobby_" .. spec[5], Tone = if spec[2] == "BUY COINS" then "Gold" else "Neutral" }, function()
 			Panels.Toggle(spec[1])
 		end)
+		-- the uploaded pill art is centred in its canvas (~86% wide, ~42% tall)
+		UI.skin(menuBtn, "UI_Pill", PILL_VISIBLE)
 	end
 
 	partyBody = Panels.Create("Party", "PARTY", Vector2.new(560, 560), renderParty)

@@ -312,6 +312,26 @@ function Buttons.tile(title: string, sub: string?, glyph: string, props: { [stri
 	return b
 end
 
+--- Menu pill: icon on the left, bold title on the right (the lobby menu). With the
+--- green pill background uploaded (IconIds UI_Pill) the plate is replaced by it.
+function Buttons.pill(title: string, glyph: string, props: { [string]: any }?, onClick: (() -> ())?): TextButton
+	local p = base("TextButton", props)
+	p.Text = ""
+	p.Size = p.Size or UDim2.fromOffset(190, 46)
+	local b = new("TextButton", p)
+	Buttons.decorate(b, (props and props.Tone) or "Neutral", UDim.new(0.5, 0))
+	local h = b.Size.Y.Offset
+	local g = label(b, glyph, { Name = "Glyph", AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.fromOffset(h * 0.62, h * 0.62), Position = UDim2.new(0, h * 0.34, 0.5, 0), Font = Theme.FontBlack })
+	Icons.Apply(g, props and props.Icon)
+	local t = label(b, title, { Name = "Title", AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.new(1, -h * 1.25, 0.46, 0), Position = UDim2.new(0, h * 1.05, 0.5, 0), Font = Theme.FontBlack, TextXAlignment = Enum.TextXAlignment.Left })
+	t.TextStrokeTransparency = 0.6
+	if props and props.State then
+		Buttons.setState(b, props.State)
+	end
+	wireClick(b, onClick)
+	return b
+end
+
 --- Round mobile action button (caller wires touch input). Label sits under the disc.
 function Buttons.round(glyph: string, text: string, size: number, tone: string, props: { [string]: any }?): TextButton
 	local p = base("TextButton", props)

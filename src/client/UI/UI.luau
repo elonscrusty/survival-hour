@@ -74,14 +74,19 @@ end
 -- frame's contents. The drawn fill, gradient and outline are dropped only once the image
 -- has loaded, so a missing or blocked image leaves the drawn look. Returns true when an
 -- image is listed for `key`.
-function UI.skin(frame: GuiObject, key: string): boolean
+-- `visible` (optional) is the part of the image that is actually drawn (e.g. a pill with
+-- transparent margins): the image is enlarged so that part fills the frame.
+function UI.skin(frame: GuiObject, key: string, visible: Vector2?): boolean
 	if not Icons.Image(key) then
 		return false
 	end
+	local v = visible or Vector2.one
 	local il = Instance.new("ImageLabel")
 	il.Name = "Skin"
 	il.BackgroundTransparency = 1
-	il.Size = UDim2.fromScale(1, 1)
+	il.AnchorPoint = Vector2.new(0.5, 0.5)
+	il.Position = UDim2.fromScale(0.5, 0.5)
+	il.Size = UDim2.fromScale(1 / v.X, 1 / v.Y)
 	il.ScaleType = Enum.ScaleType.Stretch
 	il.ZIndex = 0
 	il.Parent = frame
@@ -92,6 +97,8 @@ function UI.skin(frame: GuiObject, key: string): boolean
 				c.Transparency = 1
 			elseif c:IsA("UIGradient") then
 				c.Enabled = false
+			elseif c:IsA("Frame") and c.Name == "Glow" then
+				c.Visible = false -- no grey plate or ring around the image
 			end
 		end
 		if frame:IsA("GuiButton") and frame:GetAttribute("Tone") ~= nil then
