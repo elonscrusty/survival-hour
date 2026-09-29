@@ -64,19 +64,92 @@ All about 1.3 × 0.7 × 1.3, a small readable pile or bundle.
 | SM_Camp_SpawnPad | Wooden spawn platform with a team-colour mark | 5 × 0.4 × 5 |
 
 ## F. Lobby buildings and storefronts (NEW)
+Each storefront is a small open-front stall/building the player walks up to; the game puts the
+shop's name and a "press E" prompt on it. Leave a flat, plain sign board on each (the game draws
+the text), and keep the counter at waist height (about 3.5 studs) at the front.
 | Save as | What it is | Size (W × H × D) |
 |---|---|---|
-| SM_Lobby_ClassHall | Log cabin shop with 6 big lit windows (mannequins stand in them), a counter in the open doorway, neon "CLASSES" sign spot over the door, chimney | 40 × 16 × 15 |
-| SM_Lobby_TradingPost | Market stall storefront: counter, awning, crates of goods ("TRADING POST") | 11 × 9 × 6 |
-| SM_Lobby_Outfitter | Clothing stall: counter, rack of clothes, mirror ("OUTFITTER") | 11 × 9 × 6 |
-| SM_Lobby_PartyBoard | Wooden notice board on posts with pinned notes ("PARTY BOARD") | 11 × 9 × 3 |
-| SM_Lobby_HallOfFame | Stone plinth with trophies and a plaque board ("HALL OF FAME") | 11 × 9 × 6 |
-| SM_Lobby_ChallengeBoard | Big framed chalkboard on two posts (text is drawn by the game) | 14 × 10.5 × 2.2 |
+| SM_Lobby_ClassHall | Log cabin shop with 6 big lit windows (mannequins stand in them), a counter in the open doorway, flat sign board over the door, chimney | 40 × 16 × 15 |
+| SM_Lobby_TradingPost | Coin shop: wooden market stall, striped awning, counter with coin sacks, crates and barrels of goods | 11 × 9 × 6 |
+| SM_Lobby_Outfitter | Locker/cosmetics shop: clothes stall with a rack of outfits, hats on hooks, a standing mirror, fabric awning | 11 × 9 × 6 |
+| SM_Lobby_PowerUpShrine | Power-up shop: small stone shrine with glowing crystals and shelves of potion jars | 10 × 9 × 6 |
+| SM_Lobby_RobuxShop | Premium shop: fancier stall with gold trim, treasure chest on the counter, gem display | 11 × 9 × 6 |
+| SM_Lobby_PartyBoard | Wooden notice board on posts with pinned notes | 11 × 9 × 3 |
+| SM_Lobby_HallOfFame | Stone plinth with trophies, medals and a plaque board | 11 × 9 × 6 |
+| SM_Lobby_ChallengeBoard | Big framed chalkboard on two posts (text drawn by the game) | 14 × 10.5 × 2.2 |
 | SM_Lobby_ReadySign | Hanging wooden sign over the ready ring | 16 × 4 × 0.5 |
+| SM_Lobby_ReadyArch | Log arch over the ready ring with lantern hooks | 18 × 10 × 2 |
 | SM_Lobby_LanternPole | Tall wooden lantern pole (string lights hang from it) | 1.4 × 9.5 × 1.4 |
+| SM_Lobby_Bench | Log bench for the lobby | 5 × 1.8 × 1.6 |
+| SM_Lobby_FlowerBox | Planter box full of flowers (for under windows and along paths) | 4 × 1.2 × 1.2 |
 | SM_Season_JackOLantern | Carved pumpkin (Halloween) | 1.6 × 1.4 × 1.6 |
 
-Leave the front of boards and signs flat and plain: the game draws the text on them.
+## H. Everything people can buy (cosmetics)
+These are what the Locker sells. Most are 3D models; a few are PNG images or animations.
+
+### H1. Nameplates: PNG images (NEW, upload as Images/Decals)
+The coloured tag floating over a player's head, showing their title and level. The game shows it
+on a billboard, so it must look right from the front and the back: **make it symmetrical with no
+text or arrows**, and make the art identical on both halves so it reads the same from either side.
+**512 × 128 PNG, transparent background, a plate shape with a clear empty middle for the text.**
+Save as `nameplate_<name>.png`:
+| Save as | Look |
+|---|---|
+| nameplate_bark.png | Bark / rough wood plank |
+| nameplate_moss.png | Mossy stone |
+| nameplate_silver.png | Polished silver with rivets |
+| nameplate_gold.png | Shiny gold with gem studs |
+| nameplate_ember.png | Dark metal with glowing ember cracks |
+| nameplate_seasoned.png | Weathered leather with stitching (earned: 25 wins) |
+| nameplate_centurion.png | Red and gold banner (earned: 100 wins) |
+| nameplate_veteran.png | Steel blue with stars (level 50) |
+| nameplate_legend.png | Gold laurel wreath frame (level 100) |
+| nameplate_ghostly.png | Pale see-through ghostly green (Halloween) |
+
+### H2. Outfits: Roblox clothing PNGs (NEW)
+Each outfit is a Roblox **Shirt + Pants** pair on the standard 585 × 559 clothing template.
+Save as `outfit_<name>_shirt.png` and `outfit_<name>_pants.png`:
+Woodsman Plaid (red plaid shirt, dark jeans), Ranger Greens (olive ranger shirt with badge, khaki
+pants), Autumn Hunter (orange hunting vest over brown), Night Stalker (black hooded gear), Ember
+Warden (dark coat with glowing ember trim), Pumpkin Patch (orange and black Halloween overalls).
+
+### H3. Backpack skins: 3D (NEW), worn on the back, about 1.8 × 2.2 × 1.0
+| Save as | Look |
+|---|---|
+| SM_BackpackSkin_Canvas | Canvas pack with leather straps |
+| SM_BackpackSkin_LeafCamo | Leaf camouflage pack with twigs tucked in |
+| SM_BackpackSkin_Royal | Purple and gold royal pack |
+
+### H4. Tool skins: 3D grip wraps (NEW), a wrap that slides over any tool handle
+Short tube, about 0.35 × 0.9 × 0.35, open in the middle. Save as `SM_ToolSkin_<name>`:
+Copper Wrap (copper wire coils), Moss Grip (mossy cloth), Frostbite (icy crystals), Gilded
+(gold bands with a gem).
+
+### H5. Campfire skins: 3D (NEW), same size as the campfire, 6.8 × 6.5 × 6.4
+The stone ring and logs in a new style; the game adds the flames in the matching colour.
+| Save as | Look |
+|---|---|
+| SM_CampfireSkin_Blue | Blue-grey stones, pale logs (blue flame) |
+| SM_CampfireSkin_Spirit | White runestones (spirit flame) |
+| SM_CampfireSkin_Void | Black obsidian stones (purple void flame) |
+| SM_CampfireSkin_JackOFlame | Ring of carved pumpkins (Halloween) |
+
+### H6. Workbench and storage skins: 3D trims (NEW)
+| Save as | What it is | Size |
+|---|---|---|
+| SM_WorkbenchSkin_Oak | Oak plate that sits on top of the workbench | 6 × 0.3 × 2.4 |
+| SM_WorkbenchSkin_Ironbound | Iron-bound plate for the workbench top | 6 × 0.3 × 2.4 |
+| SM_StorageSkin_MossyCrest | Mossy stone crest badge fixed to storage fronts | 1.4 × 1.4 × 0.2 |
+| SM_StorageSkin_GoldCrest | Gold crest badge for storage fronts | 1.4 × 1.4 × 0.2 |
+
+### H7. Victory poses and elimination effects
+- Victory pose props (3D, NEW): `SM_Victory_Torch` (held torch, 0.4 × 2.5 × 0.4, grip pivot),
+  `SM_Victory_LogThrone` (log throne to sit on, 3 × 4 × 3). "Axe on Shoulder" uses the player's axe.
+- Elimination effects (PNG particles, 128 × 128 transparent): `fx_ember.png` (glowing ember),
+  `fx_leaf.png` (single leaf), `fx_star.png` (sparkle star).
+- Emotes and victory poses also need **animations**, not models: use the ChatGPT animation prompt
+  from before (EmoteWave, EmoteFlex, EmoteWarmHands, EmotePumpkinCheer, VictoryTorch, VictoryAxe,
+  VictoryThrone).
 
 ## G. Nature and props RESTYLE (same name, EXACT size, upload as new versions)
 Make these match the new tree style (clean, chunky, flat colours).
@@ -127,5 +200,5 @@ Make these match the new tree style (clean, chunky, flat colours).
 | SM_CarePackage_Crate | Air-dropped supply crate | 4.45 × 3.41 × 4.45 |
 | SM_SupplyCrate_Small01 | Small supply crate | 1.86 × 1.52 × 1.9 |
 
-After ChatGPT uploads: send Claude the IDs for everything in sections A to F. Section G needs
-nothing, because it uses the same IDs.
+After ChatGPT uploads: send Claude the IDs for everything in sections A to F and H (the game
+needs a little code to use the H items). Section G needs nothing, because it uses the same IDs.
