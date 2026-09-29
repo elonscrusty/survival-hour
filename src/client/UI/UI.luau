@@ -133,7 +133,7 @@ function UI.text(text: string, props: { [string]: any }?): TextLabel
 	p.BackgroundTransparency = 1
 	p.Font = p.Font or Theme.Font
 	p.TextColor3 = p.TextColor3 or Theme.Colors.Text
-	p.TextSize = p.TextSize or 16
+	p.TextSize = math.floor((p.TextSize or 16) * Theme.TextScale + 0.5)
 	p.TextWrapped = if p.TextWrapped == nil then true else p.TextWrapped
 	p.Size = p.Size or UDim2.new(1, 0, 0, (p.TextSize :: number) + 6)
 	p.TextXAlignment = p.TextXAlignment or Enum.TextXAlignment.Left
@@ -152,7 +152,7 @@ function UI.button(text: string, props: { [string]: any }?, onClick: (() -> ())?
 	p.State = nil
 	p.Text = text
 	p.Font = p.Font or Theme.FontBold
-	p.TextSize = p.TextSize or 16
+	p.TextSize = math.floor((p.TextSize or 16) * Theme.TextScale + 0.5)
 	p.Size = p.Size or UDim2.new(0, 140, 0, 44)
 	local b: TextButton = UI.new("TextButton", p)
 	Buttons.decorate(b, tone)

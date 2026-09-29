@@ -33,6 +33,9 @@ Theme.Colors = {
 
 -- Overall UI size (owner: 20% smaller). Every ScreenGui scales by this; text scales with it.
 Theme.UiScale = 0.8
+-- Text is scaled back up (owner: fonts too small after the shrink): text keeps its old size
+-- while icons and plates stay 20% smaller.
+Theme.TextScale = 1.25
 
 Theme.Font = Enum.Font.GothamMedium
 Theme.FontBold = Enum.Font.GothamBold

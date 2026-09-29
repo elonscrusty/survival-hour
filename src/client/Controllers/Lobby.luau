@@ -710,7 +710,7 @@ function Lobby.Start()
 	levelLabel = UI.text("1", outlined({ Name = "Level", Position = UDim2.new(0.6, 6, 0, 4), Size = UDim2.new(0.2, 0, 0, 24), TextSize = 22, Font = Theme.FontBlack, TextColor3 = C.Accent, Parent = card }))
 	streakLabel = UI.text("", outlined({ Position = UDim2.new(0.6, 0, 0, 4), Size = UDim2.new(0.4, -34, 0, 24), TextSize = 15, Font = Theme.FontBold, TextColor3 = C.Warn, TextXAlignment = Enum.TextXAlignment.Right, Parent = card }))
 	diamondsLabel = UI.text("", outlined({ Position = UDim2.fromOffset(0, 32), Size = UDim2.new(1, -34, 0, 18), TextSize = 16, Font = Theme.FontBold, TextColor3 = C.Accent, TextTruncate = Enum.TextTruncate.AtEnd, Parent = card }))
-	local xpHolder = UI.new("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 53), Size = UDim2.new(1, -34, 0, 11), Parent = card })
+	local xpHolder = UI.new("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 54), Size = UDim2.new(1, -34, 0, 16), Parent = card })
 	local gear = UI.new("TextButton", { Text = "⚙", Font = Theme.FontBlack, TextSize = 26, TextColor3 = C.ForestText, TextStrokeColor3 = C.ForestStroke, TextStrokeTransparency = 0.25, BackgroundTransparency = 1, AutoButtonColor = false, Size = UDim2.fromOffset(32, 32), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, -2), Parent = card })
 	gear.Activated:Connect(function()
 		Panels.Toggle("Settings")
@@ -775,7 +775,7 @@ function Lobby.Start()
 	end)
 
 	-- Left: the menu, icon + title rows with no plates (hover brightens and nudges).
-	local nav = UI.new("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(220, 8 * 50), Position = UDim2.fromOffset(12, 96), Parent = gui }, {
+	local nav = UI.new("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(240, 8 * 50), Position = UDim2.fromOffset(12, 140), Parent = gui }, {
 		UI.list(Enum.FillDirection.Vertical, 4),
 	})
 	local TILES = {
@@ -789,7 +789,7 @@ function Lobby.Start()
 		{ "LobbyShop", "BUY COINS", "🪙", "BuyCoins" },
 	}
 	for i, spec in TILES do
-		local row = UI.new("TextButton", { Text = "", BackgroundTransparency = 1, AutoButtonColor = false, LayoutOrder = i, Size = UDim2.fromOffset(220, 46), Parent = nav })
+		local row = UI.new("TextButton", { Text = "", BackgroundTransparency = 1, AutoButtonColor = false, LayoutOrder = i, Size = UDim2.fromOffset(240, 46), Parent = nav })
 		local ic = UI.text(spec[3], outlined({ Size = UDim2.fromOffset(42, 42), Position = UDim2.fromOffset(0, 2), TextSize = 30, TextXAlignment = Enum.TextXAlignment.Center, Parent = row }))
 		Icons.Apply(ic, "Lobby_" .. spec[4])
 		local label = UI.text(spec[2], outlined({ Position = UDim2.fromOffset(50, 0), Size = UDim2.new(1, -50, 1, 0), TextSize = 21, Font = Theme.FontBlack, TextColor3 = if spec[2] == "BUY COINS" then Color3.fromRGB(255, 214, 110) else nil, Parent = row }))
