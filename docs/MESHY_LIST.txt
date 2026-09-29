@@ -1,0 +1,233 @@
+STYLE (add to every Meshy prompt): Roblox game asset, chunky toy-like low-poly, smooth rounded bevelled edges, soft shading, flat solid bright colours, no photo textures, no noise, clean simple shapes, single object, no ground, no background.
+FORMAT: SaveAs | prompt | size in studs (W x H x D) | icon to use as image reference
+
+== A. Hand-held items that still borrow another model (NEW) ==
+SM_Axe_Crude | Crude axe: stick handle, sharp stone lashed with fibre | 0.3 x 3.6 x 1.6 | axe_crude.png
+SM_Axe_Steel | Steel axe: polished steel head, wrapped grip | 0.3 x 3.6 x 1.6 | axe_steel.png
+SM_Pickaxe_Crude | Crude pickaxe: stick + two stone points lashed on | 0.3 x 3.6 x 2.6 | pickaxe_crude.png
+SM_Pickaxe_Steel | Steel pickaxe | 0.3 x 3.6 x 2.6 | pickaxe_steel.png
+SM_Bow_Hunting_Crude | Crude bow (bent branch + string) | 0.3 x 4.2 x 1.0 | weapon_crude_bow.png
+SM_Spear_Crude | Crude spear: sharpened stick | 0.3 x 6 x 0.3 | weapon_crude_spear.png
+SM_BreachingCharge | Breaching charge (bundle with fuse) | 1.0 x 0.8 x 0.6 | explosive_breaching_charge.png
+SM_FirstAidKit | First aid kit (small pouch with a cross) | 1.0 x 0.7 x 0.5 | healing_first_aid_kit.png
+SM_Medkit | Medkit (bigger hard case with a cross) | 1.4 x 1.0 x 0.6 | healing_medkit.png
+SM_Bolt | Crossbow bolt (short, fat arrow) | 0.15 x 1.6 x 0.15 | ammo_bolts.png
+
+== B. Resources dropped on the ground (NEW) ==
+SM_Pickup_Berries | Handful of berries on leaves | 1.3 x 0.7 x 1.3 | resource_berries.png
+SM_Pickup_Mushroom | Two or three mushrooms | 1.3 x 0.7 x 1.3 | resource_mushroom.png
+SM_Pickup_Scrap | Pile of scrap metal bits | 1.3 x 0.7 x 1.3 | resource_scrap.png
+SM_Pickup_Iron | Iron ore chunks / small ingot | 1.3 x 0.7 x 1.3 | resource_iron.png
+SM_Pickup_Coal | Lumps of coal | 1.3 x 0.7 x 1.3 | resource_coal.png
+SM_Pickup_RareComponent | Glowing gear/part | 1.3 x 0.7 x 1.3 | resource_rare_component.png
+
+== C. Worn backpacks (NEW), on the back, about 1.8 × 2.2 × 1.0 (bigger packs slightly bigger) ==
+SM_Backpack_Fibre | Woven plant-fibre backpack, rope shoulder straps, rolled bedroll on top | 1.6 x 2.0 x 0.9 | backpack_fibre_pack.png
+SM_Backpack_Hide | Animal-hide backpack with fur trim, leather straps and a front pouch | 1.7 x 2.1 x 1.0 | backpack_hide_pack.png
+SM_Backpack_ScrapFrame | Backpack on a frame of bent scrap metal pipes, canvas sack, bolts and patches | 1.8 x 2.2 x 1.0 | backpack_scrap_frame_pack.png
+SM_Backpack_IronFrame | Sturdy backpack on an iron frame, riveted metal corners, side pouches | 1.9 x 2.3 x 1.1 | backpack_iron_frame_pack.png
+SM_Backpack_Expedition | Big expedition backpack, several pouches, bedroll and lantern strapped on | 2.0 x 2.5 x 1.2 | backpack_expedition_pack.png
+
+== D. Build pieces with no model yet (NEW) ==
+SM_ReinforcedDoor | Reinforced wooden door in a frame | 10 x 9 x 1.6 | build_reinforced_door.png
+SM_WindowWall | Wooden wall with a window hole | 10 x 10 x 2.4 | build_window_wall.png
+SM_HeavyGate | Heavy iron-strapped gate | 10 x 9 x 1.6 | build_heavy_gate.png
+SM_AdvancedAlarm | Post with a bell/siren alarm | 1.5 x 5 x 1.5 | build_advanced_alarm.png
+
+== E. Camp (NEW) ==
+SM_Camp_SpawnPad | Wooden spawn platform with a team-colour mark | 5 x 0.4 x 5 | map_marker_camp.png
+
+== F. Lobby buildings and storefronts (NEW) ==
+SM_Lobby_ClassHall | Log cabin shop with 6 big lit windows (mannequins stand in them), a counter in the open doorway, flat sign board over the door, chimney | 40 x 16 x 15 | lobby_class.png
+SM_Lobby_TradingPost | Coin shop: wooden market stall, striped awning, counter with coin sacks, crates and barrels of goods | 11 x 9 x 6 | lobby_shop.png
+SM_Lobby_Outfitter | Locker/cosmetics shop: clothes stall with a rack of outfits, hats on hooks, a standing mirror, fabric awning | 11 x 9 x 6 | lobby_locker.png
+SM_Lobby_PowerUpShrine | Power-up shop: small stone shrine with glowing crystals and shelves of potion jars | 10 x 9 x 6 | lobby_power_up.png
+SM_Lobby_RobuxShop | Premium shop: fancier stall with gold trim, treasure chest on the counter, gem display | 11 x 9 x 6 | lobby_buy_coins.png
+SM_Lobby_PartyBoard | Wooden notice board on posts with pinned notes | 11 x 9 x 3 | lobby_party.png
+SM_Lobby_HallOfFame | Stone plinth with trophies, medals and a plaque board | 11 x 9 x 6 | lobby_profile.png
+SM_Lobby_ChallengeBoard | Big framed chalkboard on two posts (text drawn by the game) | 14 x 10.5 x 2.2 | (no icon)
+SM_Lobby_ReadySign | Hanging wooden sign over the ready ring | 16 x 4 x 0.5 | (no icon)
+SM_Lobby_ReadyArch | Log arch over the ready ring with lantern hooks | 18 x 10 x 2 | (no icon)
+SM_Lobby_LanternPole | Tall wooden lantern pole (string lights hang from it) | 1.4 x 9.5 x 1.4 | (no icon)
+SM_Lobby_Bench | Log bench for the lobby | 5 x 1.8 x 1.6 | (no icon)
+SM_Lobby_FlowerBox | Planter box full of flowers (for under windows and along paths) | 4 x 1.2 x 1.2 | (no icon)
+SM_Season_JackOLantern | Carved pumpkin (Halloween) | 1.6 x 1.4 x 1.6 | event_halloween_banner.png
+
+== H1. Nameplates: 2D PNG images, NOT Meshy (use an image AI; 512x128, symmetrical, empty middle) ==
+nameplate_bark.png | Bark / rough wood plank | 512x128 px | nameplate_bark.png
+nameplate_moss.png | Mossy stone | 512x128 px | nameplate_moss.png
+nameplate_silver.png | Polished silver with rivets | 512x128 px | nameplate_silver.png
+nameplate_gold.png | Shiny gold with gem studs | 512x128 px | nameplate_gold.png
+nameplate_ember.png | Dark metal with glowing ember cracks | 512x128 px | nameplate_ember.png
+nameplate_seasoned.png | Weathered leather with stitching (earned: 25 wins) | 512x128 px | nameplate_seasoned.png
+nameplate_centurion.png | Red and gold banner (earned: 100 wins) | 512x128 px | nameplate_centurion.png
+nameplate_veteran.png | Steel blue with stars (level 50) | 512x128 px | nameplate_veteran.png
+nameplate_legend.png | Gold laurel wreath frame (level 100) | 512x128 px | nameplate_legend.png
+nameplate_ghostly.png | Pale see-through ghostly green (Halloween) | 512x128 px | nameplate_ghostly.png
+
+== H3. Backpack skins: 3D (NEW), worn on the back, about 1.8 × 2.2 × 1.0 ==
+SM_BackpackSkin_Canvas | Canvas pack with leather straps | 1.8 x 2.2 x 1.0 | backpack_skin_canvas_pack.png
+SM_BackpackSkin_LeafCamo | Leaf camouflage pack with twigs tucked in | 1.8 x 2.2 x 1.0 | backpack_skin_leaf_camo_pack.png
+SM_BackpackSkin_Royal | Purple and gold royal pack | 1.8 x 2.2 x 1.0 | backpack_skin_royal_pack.png
+
+== H5. Campfire skins: 3D (NEW), same size as the campfire, 6.8 × 6.5 × 6.4 ==
+SM_CampfireSkin_Blue | Campfire: ring of blue-grey stones around pale logs | 6.8 x 6.5 x 6.4 | campfire_skin_blue_flame.png
+SM_CampfireSkin_Spirit | Campfire: ring of white rune-carved stones around logs | 6.8 x 6.5 x 6.4 | campfire_skin_spirit_flame.png
+SM_CampfireSkin_Void | Campfire: ring of black obsidian stones around dark logs | 6.8 x 6.5 x 6.4 | campfire_skin_void_flame.png
+SM_CampfireSkin_JackOFlame | Campfire: ring of small carved pumpkins around logs | 6.8 x 6.5 x 6.4 | campfire_skin_jack_o_flame.png
+
+== H6. Workbench and storage skins: 3D trims (NEW) ==
+SM_WorkbenchSkin_Oak | Oak plate that sits on top of the workbench | 6 x 0.3 x 2.4 | workbench_skin_oak_plate.png
+SM_WorkbenchSkin_Ironbound | Iron-bound plate for the workbench top | 6 x 0.3 x 2.4 | workbench_skin_ironbound_plate.png
+SM_StorageSkin_MossyCrest | Mossy stone crest badge fixed to storage fronts | 1.4 x 1.4 x 0.2 | storage_skin_mossy_crest.png
+SM_StorageSkin_GoldCrest | Gold crest badge for storage fronts | 1.4 x 1.4 x 0.2 | storage_skin_gold_crest.png
+
+== G. Nature and props RESTYLE (same name, EXACT size, upload as new versions) ==
+SM_Flowers01 | Flower patch | 2.53 x 1.04 x 2.31 | (no icon)
+SM_Flowers02 | Flower patch (other colours) | 2.44 x 1.03 x 2.37 | (no icon)
+SM_Bush01 | Bush | 2.85 x 2.02 x 3.44 | (no icon)
+SM_Bush02 | Big bush | 4.54 x 2.75 x 4.53 | (no icon)
+SM_Bush03_Berry | Berry bush | 3.26 x 1.84 x 3.14 | resource_berries.png
+SM_Fern01 | Fern | 3.98 x 0.74 x 3.94 | (no icon)
+SM_Fern02 | Small fern | 2.75 x 0.74 x 2.85 | (no icon)
+SM_Grass_Clump01 | Grass tuft | 1.23 x 1.47 x 1.35 | (no icon)
+SM_Grass_Clump02 | Wide grass tuft | 2.6 x 1.17 x 1.28 | (no icon)
+SM_Grass_Clump03 | Tall grass tuft | 1.34 x 2.03 x 1.14 | (no icon)
+SM_Boulder01 | Boulder | 9.54 x 3.49 x 6.65 | (no icon)
+SM_Boulder02 | Boulder | 6.82 x 4.77 x 5.87 | (no icon)
+SM_Boulder03 | Flat boulder | 6.86 x 2.25 x 5.46 | (no icon)
+SM_Rock_Small01 | Small rock | 1.81 x 0.61 x 1.29 | (no icon)
+SM_Rock_Small02 | Small rock | 2.53 x 0.72 x 1.69 | (no icon)
+SM_Rock_Small03 | Flat pebbles | 2.8 x 0.29 x 2.35 | (no icon)
+SM_Mushrooms01 | Mushroom cluster | 1.47 x 0.93 x 1.02 | resource_mushroom.png
+SM_Mushrooms02_Glow | Glowing mushrooms | 1.03 x 0.65 x 0.49 | (no icon)
+SM_FallenLog01 | Fallen log | 8.06 x 2.29 x 1.78 | (no icon)
+SM_FallenLog02_Hollow | Hollow fallen log | 10.88 x 3.11 x 2.74 | (no icon)
+SM_Stump_Old01 | Old stump | 4.11 x 2.18 x 4.11 | (no icon)
+SM_Stump_Old02 | Tall old stump | 3.74 x 3.88 x 3.74 | (no icon)
+SM_Sapling01 | Sapling | 2.46 x 5.07 x 2.41 | (no icon)
+SM_Roots01 | Surface roots | 4.97 x 0.57 x 4.82 | (no icon)
+SM_Roots02 | Surface roots | 4.86 x 0.93 x 2.72 | (no icon)
+SM_Pinecones01 | Pinecones | 1.67 x 0.3 x 2.24 | (no icon)
+SM_Branch01 | Fallen branch | 4.55 x 0.48 x 3.01 | (no icon)
+SM_Branch02 | Fallen branch | 3.65 x 0.53 x 2.9 | (no icon)
+SM_Sticks_Loose01 | Stick pile (gatherable) | 1.85 x 0.28 x 3.06 | resource_stick.png
+SM_StoneDeposit01 | Stone deposit (mineable) | 5.99 x 2.48 x 4.24 | resource_stone.png
+SM_StoneDeposit01_Depleted | Mined-out stone | 4.38 x 0.75 x 4.48 | (no icon)
+SM_OreDeposit_Coal | Coal deposit | 5.23 x 3.59 x 4.49 | resource_coal.png
+SM_OreDeposit_Iron | Iron deposit | 5.37 x 3.26 x 4.56 | resource_iron.png
+SM_ScrapPile01 | Scrap pile | 4.33 x 2.09 x 3.75 | resource_scrap.png
+SM_FiberPlant01 | Fibre plant (gatherable) | 1.93 x 3.79 x 1.95 | resource_plant_fibre.png
+SM_FiberPlant01_Harvested | Harvested fibre plant | 0.52 x 0.65 x 0.81 | (no icon)
+SM_Camp_Lantern | Lantern on a post | 1.36 x 5.3 x 0.64 | (no icon)
+SM_Camp_TeamBanner | Team banner on a pole | 2.29 x 9.4 x 0.39 | map_marker_camp.png
+SM_Chest_Common | Wooden chest | 3.4 x 2.4 x 2.47 | rarity_common.png
+SM_Chest_Uncommon | Better chest | 3.4 x 2.4 x 2.47 | rarity_uncommon.png
+SM_Chest_Rare | Rare chest | 3.4 x 2.4 x 2.53 | rarity_rare.png
+SM_Chest_VeryRare | Very rare chest (glowing lock) | 3.4 x 2.4 x 2.53 | rarity_legendary.png
+SM_CarePackage_Crate | Air-dropped supply crate | 4.45 x 3.41 x 4.45 | map_marker_supply_drop.png
+SM_SupplyCrate_Small01 | Small supply crate | 1.86 x 1.52 x 1.9 | (no icon)
+
+== I. Armour (worn, NEW) ==
+SM_Armor_Hide_Head | hide helmet | 1.4 x 1.2 x 1.4 | armour_hide_helmet.png
+SM_Armor_Hide_Chest | hide chestpiece armour | 2.2 x 2.2 x 1.3 | armour_hide_chestpiece.png
+SM_Armor_Hide_Legs | hide pair of leg guards | 2.8 x 1.8 x 0.9 | armour_hide_leggings.png
+SM_Armor_ReinforcedHide_Head | reinforced hide helmet | 1.4 x 1.2 x 1.4 | armour_reinforced_hide_helmet.png
+SM_Armor_ReinforcedHide_Chest | reinforced hide chestpiece armour | 2.2 x 2.2 x 1.3 | armour_reinforced_hide_chestpiece.png
+SM_Armor_ReinforcedHide_Legs | reinforced hide pair of leg guards | 2.8 x 1.8 x 0.9 | armour_reinforced_hide_leggings.png
+SM_Armor_Scrap_Head | scrap helmet | 1.4 x 1.2 x 1.4 | armour_scrap_helmet.png
+SM_Armor_Scrap_Chest | scrap chestpiece armour | 2.2 x 2.2 x 1.3 | armour_scrap_chestpiece.png
+SM_Armor_Scrap_Legs | scrap pair of leg guards | 2.8 x 1.8 x 0.9 | armour_scrap_leggings.png
+SM_Armor_Iron_Head | iron helmet | 1.4 x 1.2 x 1.4 | armour_iron_helmet.png
+SM_Armor_Iron_Chest | iron chestpiece armour | 2.2 x 2.2 x 1.3 | armour_iron_chestpiece.png
+SM_Armor_Iron_Legs | iron pair of leg guards | 2.8 x 1.8 x 0.9 | armour_iron_leggings.png
+SM_Armor_Tactical_Head | tactical helmet | 1.4 x 1.2 x 1.4 | armour_tactical_helmet.png
+SM_Armor_Tactical_Chest | tactical chestpiece armour | 2.2 x 2.2 x 1.3 | armour_tactical_chestpiece.png
+SM_Armor_Tactical_Legs | tactical pair of leg guards | 2.8 x 1.8 x 0.9 | armour_tactical_leggings.png
+SM_Armor_LeatherVest | leather vest armour worn on the chest | 2.2 x 2.2 x 1.3 | armour_leather_vest.png
+
+== Held items (weapons & tools) ==
+SM_Axe_Iron | Iron axe: grey iron head, wooden handle with grip wrap | 0.31 x 3.61 x 1.58 | axe_iron.png
+SM_Bandage_Held | Rolled white bandage held in the hand | 0.45 x 1.46 x 0.73 | healing_bandage.png
+SM_Crossbow | Wooden crossbow with metal limbs and string | 3.21 x 0.95 x 3.05 | weapon_crossbow.png
+SM_Crowbar | Red-painted metal crowbar with a hooked end | 0.17 x 3.5 x 0.88 | tool_crowbar.png
+SM_HuntingBow | Curved wooden hunting bow with leather grip and string | 0.3 x 4.84 x 0.77 | weapon_hunting_bow.png
+SM_Pickaxe_Iron | Iron pickaxe: grey iron head, wooden handle | 0.31 x 3.61 x 2.62 | pickaxe_iron.png
+SM_Pickaxe_Stone | Stone pickaxe: pointed stone head tied to a wooden handle | 0.47 x 3.61 x 2.2 | pickaxe_stone.png
+SM_Pistol | Old flintlock pistol, wooden grip, brass trim | 0.28 x 1.05 x 1.41 | weapon_flintlock_pistol.png
+SM_Rifle | Wooden hunting rifle with a scope | 0.34 x 1.24 x 5.69 | weapon_hunting_rifle.png
+SM_Shotgun | Double-barrel shotgun with a wooden stock | 0.33 x 1.08 x 5.67 | (no icon)
+SM_Sledgehammer | Big sledgehammer: heavy iron head, long wooden handle | 0.6 x 4.2 x 1.5 | tool_sledgehammer.png
+
+== Pickups on the ground ==
+SM_Ammo_Pistol | Small box of pistol bullets | 0.9 x 0.75 x 0.62 | ammo_bullets.png
+SM_Ammo_Rifle | Box of rifle bullets | 1.3 x 0.96 x 0.6 | ammo_bullets.png
+SM_Ammo_Shotgun | Box of red shotgun shells | 1.1 x 0.95 x 0.7 | (no icon)
+SM_Pickup_Ammo | Small ammo box with a few bullets on top | 1.25 x 0.81 x 0.85 | ammo_bullets.png
+SM_Pickup_Bandage | Rolled bandage lying on the ground | 0.55 x 0.77 x 1.47 | healing_bandage.png
+SM_Pickup_Fiber | Bundle of green plant fibres tied together | 0.54 x 0.31 x 1.66 | resource_plant_fibre.png
+SM_Pickup_Leather | Folded piece of brown leather | 1.3 x 0.49 x 1.29 | resource_leather.png
+SM_Pickup_Rope | Coil of rope | 1.56 x 0.36 x 1.23 | resource_rope.png
+SM_Pickup_Stick | Single wooden stick | 1.7 x 0.47 x 0.52 | resource_stick.png
+SM_Pickup_Stone | Small grey stone | 1.41 x 0.69 x 0.92 | resource_stone.png
+SM_Pickup_Wood | Two chopped wooden logs | 1.07 x 0.93 x 1.3 | resource_wood.png
+
+== Build pieces, storage & camp ==
+SM_BearTrap | Open steel bear trap with jagged jaws | 2.56 x 0.55 x 1.76 | build_bear_trap.png
+SM_Campfire_Burning | Burning campfire: stone ring, stacked logs (no flames, the game adds them) | 6.81 x 6.5 x 6.44 | (no icon)
+SM_Campfire_ColdWet | Wet cold campfire: dark stones, soggy grey logs | 6.96 x 6.5 x 6.76 | (no icon)
+SM_Campfire_Extinguished | Put-out campfire: stone ring, charred black logs, ash | 6.96 x 6.5 x 6.62 | (no icon)
+SM_MetalLocker | Tall grey metal locker with vents and a handle | 4 x 7 x 3.2 | build_metal_locker.png
+SM_MetalWall | Wall of riveted metal sheets in a steel frame | 10.8 x 11 x 2.6 | build_metal_wall.png
+SM_ReinforcedChest | Big wooden chest with iron bands and a padlock | 6.2 x 4.3 x 4.3 | build_reinforced_chest.png
+SM_ScrapWall | Wall made of mismatched scrap metal sheets nailed to wood | 10.46 x 10.4 x 1.36 | build_scrap_wall.png
+SM_Snare | Rope snare trap on a bent stick | 3.14 x 3.25 x 2.46 | build_snare.png
+SM_SupplyCrate_Small02 | Long flat wooden supply crate | 3.26 x 1.12 x 1.51 | (no icon)
+SM_SupplyCrate_Small03 | Square wooden supply crate with rope handles | 3.73 x 1.31 x 3.36 | (no icon)
+SM_SurvivalSafe | Heavy steel safe with a round dial and handle | 4.5 x 5 x 4.8 | build_survival_safe.png
+SM_TripwireAlarm | Tripwire between two small stakes with tin cans hanging | 7.91 x 1.4 x 0.53 | build_tripwire_alarm.png
+SM_WoodFloor | Square wooden plank floor tile | 10 x 1 x 10.02 | build_wooden_floor.png
+
+== Places to explore (POIs) ==
+SM_POI_AbandonedHouse | Abandoned two-storey wooden house, boarded windows, broken porch | 16.48 x 13.98 x 17.62 | (no icon)
+SM_POI_BrokenVehicle | Rusty broken-down pickup truck, flat tyres | 15.12 x 5.36 x 9.42 | (no icon)
+SM_POI_Bunker | Concrete bunker half in the ground with a metal door | 14.6 x 8.68 x 14.92 | (no icon)
+SM_POI_Cabin | Log cabin with a porch and chimney (open doorway) | 14.87 x 12.84 x 13.4 | map_marker_cabin.png
+SM_POI_Campsite | Abandoned campsite: tent, fire pit, logs and crates | 18.46 x 3.71 x 15.03 | (no icon)
+SM_POI_HuntingBlind | Wooden hunting blind on stilts with a ladder | 6.4 x 8.6 x 6.9 | (no icon)
+SM_POI_IndustrialSite | Small industrial yard: shed, tanks, pipes and fences | 34.95 x 10.61 x 22.5 | (no icon)
+SM_POI_LargeMine | Large mine entrance in a rock hill, wooden supports, rail tracks | 19.35 x 14.81 x 20.95 | map_marker_mine.png
+SM_POI_LoggingCamp | Logging camp: log piles, saw bench, small shack | 19.11 x 9.42 x 24 | (no icon)
+SM_POI_MineEntrance | Mine entrance with wooden beam frame in a rocky slope | 15.71 x 8.47 x 20.56 | map_marker_mine.png
+SM_POI_Outpost | Wooden outpost with a fence, lookout tower and hut | 26.56 x 9.36 x 20.6 | (no icon)
+SM_POI_RangerStation | Ranger station cabin with a green roof and flag pole | 15.56 x 12.84 x 22.1 | (no icon)
+SM_POI_Shed | Small wooden shed with a slanted roof | 9 x 7.83 x 6.96 | (no icon)
+SM_POI_SmallCabin | Small log cabin with one room and a chimney | 10.87 x 11.6 x 10.9 | map_marker_cabin.png
+
+== World props, caves & cliffs ==
+SM_Camp_Barrel | Wooden barrel with metal hoops | 2 x 2.53 x 2 | (no icon)
+SM_Camp_Bedroll | Rolled-out sleeping bedroll with a pillow | 1.8 x 0.71 x 4.6 | (no icon)
+SM_Camp_ChoppingBlock | Tree stump chopping block with an axe mark | 3.8 x 1.7 x 3.84 | (no icon)
+SM_Camp_DryingRack | Wooden drying rack with hides hanging | 4.6 x 4.23 x 1.41 | (no icon)
+SM_Camp_FirewoodStack | Neat stack of firewood logs | 2.65 x 1.76 x 1.5 | (no icon)
+SM_Camp_LogBench | Log bench (half log on two stumps) | 5 x 1.89 x 1.26 | (no icon)
+SM_CaveChamber_End | Rock cave end chamber, hollow inside, open at one side | 19.37 x 15.88 x 20.19 | map_marker_cave.png
+SM_CaveEntrance | Rocky cave entrance arch, hollow inside | 20.87 x 15.4 x 9.75 | map_marker_cave.png
+SM_CaveTunnel_Segment | Rock cave tunnel section, hollow, open at both ends | 14.75 x 12.95 x 12.4 | map_marker_cave.png
+SM_Cliff_Face01 | Tall rocky cliff wall section | 24.8 x 26.38 x 9.71 | (no icon)
+SM_Cliff_Face02 | Tall rocky cliff wall section, different shape | 24.62 x 23.56 x 9.66 | (no icon)
+SM_Landmark_AntlerTotem | Wooden totem pole topped with antlers | 3.32 x 8.86 x 1.19 | (no icon)
+SM_Landmark_GiantLog | Giant fallen hollow tree log | 22.8 x 8.6 x 7.43 | (no icon)
+SM_Landmark_StandingStones | Circle of tall standing stones | 17.26 x 7.9 x 17.79 | (no icon)
+
+== Effect ==
+SM_Campfire_Flames | Cartoon campfire flames, orange and yellow | 2.47 x 4.9 x 2.42 | (no icon)
+SM_Campfire_WaterTarget | Flat round ring marker | 6.4 x 0.44 x 6.4 | (no icon)
+SM_Parachute_Canopy | Parachute canopy dome, striped | 14 x 4.4 x 14 | (no icon)
+SM_Parachute_Lines | Parachute cords fanning down to a point | 13.89 x 12.44 x 13.89 | (no icon)
+
+== Lobby ==
+SM_Sign_Board | Big wooden notice board on two posts | 12 x 9.3 x 1.6 | (no icon)
+SM_Sign_Hanging | Hanging wooden sign on chains | 4.5 x 3.44 x 0.34 | (no icon)
+SM_Sign_Plaque | Small wooden plaque | 1.8 x 0.94 x 0.34 | (no icon)
+SM_Sign_Post | Wooden signpost with an arrow board | 4 x 5.1 x 0.54 | (no icon)
