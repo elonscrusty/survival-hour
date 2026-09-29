@@ -24,6 +24,11 @@ Theme.Colors = {
 	Night = Color3.fromRGB(110, 130, 220),
 	Day = Color3.fromRGB(255, 205, 90),
 	Dev = Color3.fromRGB(200, 120, 255),
+	-- green UI kit (uploaded backgrounds) and its drawn fallback
+	Forest = Color3.fromRGB(40, 74, 50),
+	ForestRim = Color3.fromRGB(96, 150, 92),
+	ForestText = Color3.fromRGB(238, 226, 190), -- soft cream, not bright white
+	ForestStroke = Color3.fromRGB(18, 36, 22),
 }
 
 -- Overall UI size (owner: 20% smaller). Every ScreenGui scales by this; text scales with it.

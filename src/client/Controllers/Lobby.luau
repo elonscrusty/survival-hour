@@ -214,6 +214,7 @@ local function rgb(c: { number }?): Color3
 end
 
 local PILL_VISIBLE = Vector2.new(0.86, 0.42)
+local PILL_W, PILL_H = 150, 70
 
 -- Locker tab icons (Shared/IconIds), by cosmetic type.
 local LOCKER_TAB_ICON = {
@@ -695,12 +696,13 @@ function Lobby.Start()
 	rescale()
 
 	-- Top: profile card (level badge, name, title, XP bar) + animated currency pills.
-	local card = UI.panel({ Size = UDim2.fromOffset(420, 80), Position = UDim2.fromOffset(12, 8), Parent = gui })
+	-- Top centre: name plate in the middle, Coins and Diamonds to its right.
+	local card = UI.panel({ Size = UDim2.fromOffset(420, 80), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 6), Parent = gui })
 	UI.skin(card, "UI_NameLevel")
 	local badge = UI.new("Frame", { Size = UDim2.fromOffset(60, 60), Position = UDim2.fromOffset(10, 10), BackgroundColor3 = C.PanelLight, Parent = card }, { UI.corner(UDim.new(0.5, 0)), UI.new("UIStroke", { Color = C.Accent, Thickness = 3 }) })
 	UI.text("LVL", { Size = UDim2.new(1, 0, 0, 14), Position = UDim2.fromOffset(0, 10), TextSize = 11, Font = Theme.FontBold, TextColor3 = C.TextDim, TextXAlignment = Enum.TextXAlignment.Center, Parent = badge })
 	levelLabel = UI.text("1", { Name = "Level", Size = UDim2.new(1, 0, 0, 24), Position = UDim2.fromOffset(0, 24), TextSize = 22, Font = Theme.FontBlack, TextXAlignment = Enum.TextXAlignment.Center, Parent = badge })
-	UI.text(player.DisplayName, { AutoLocalize = false, Position = UDim2.fromOffset(82, 8), Size = UDim2.new(1, -90, 0, 22), TextSize = 18, Font = Theme.FontBlack, Parent = card })
+	UI.text(player.DisplayName, { AutoLocalize = false, Position = UDim2.fromOffset(82, 8), Size = UDim2.new(1, -90, 0, 22), TextSize = 18, Font = Theme.FontBlack, TextColor3 = C.ForestText, TextStrokeColor3 = C.ForestStroke, TextStrokeTransparency = 0.4, Parent = card })
 	streakLabel = UI.text("", { Position = UDim2.fromOffset(82, 8), Size = UDim2.new(1, -94, 0, 22), TextSize = 13, Font = Theme.FontBold, TextColor3 = C.Warn, TextXAlignment = Enum.TextXAlignment.Right, Parent = card })
 	diamondsLabel = UI.text("", { Position = UDim2.fromOffset(82, 30), Size = UDim2.new(1, -90, 0, 16), TextSize = 13, Font = Theme.FontBold, TextColor3 = C.Accent, Parent = card })
 	local xpHolder = UI.new("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(82, 52), Size = UDim2.new(1, -94, 0, 16), Parent = card })
@@ -714,14 +716,14 @@ function Lobby.Start()
 	_xpBar, xpSet = UI.bar({ Size = UDim2.fromScale(1, 1), Parent = xpHolder }, C.Accent)
 	UI.skin(_xpBar, "UI_XpTrack")
 	local function pill(x: number, glyph: string, color: Color3, icon: string): TextLabel
-		local f = UI.panel({ Size = UDim2.fromOffset(150, 40), Position = UDim2.fromOffset(x, 8), Parent = gui })
+		local f = UI.panel({ Size = UDim2.fromOffset(150, 40), Position = UDim2.new(0.5, x, 0, 6), Parent = gui })
 		UI.skin(f, "UI_Currency")
 		Icons.Apply(UI.text(glyph, { Size = UDim2.fromOffset(34, 40), TextSize = 20, TextColor3 = color, TextXAlignment = Enum.TextXAlignment.Center, Parent = f }), icon)
 		return UI.text("0", { Position = UDim2.fromOffset(34, 0), Size = UDim2.new(1, -40, 1, 0), TextSize = 19, Font = Theme.FontBlack, TextColor3 = color, Parent = f })
 	end
-	coinPill = pill(442, "●", Color3.fromRGB(242, 193, 78), "Currency_Coins")
-	diamondPill = pill(600, "◆", C.Diamond, "Currency_Diamonds")
-	local banner = UI.panel({ Size = UDim2.fromOffset(308, 34), Position = UDim2.fromOffset(442, 54), Visible = false, Parent = gui })
+	coinPill = pill(218, "●", Color3.fromRGB(242, 193, 78), "Currency_Coins")
+	diamondPill = pill(376, "◆", C.Diamond, "Currency_Diamonds")
+	local banner = UI.panel({ Size = UDim2.fromOffset(308, 34), Position = UDim2.new(0.5, 218, 0, 52), Visible = false, Parent = gui })
 	seasonBanner = banner
 	seasonLabel = UI.text("", { Position = UDim2.fromOffset(10, 0), Size = UDim2.new(1, -20, 1, 0), TextSize = 13, Font = Theme.FontBold, TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd, Parent = banner })
 	local bannerHit = UI.new("TextButton", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", Parent = banner })
@@ -771,8 +773,9 @@ function Lobby.Start()
 	end)
 
 	-- Left: the menu, one column of green pills (icon + title).
-	local nav = UI.new("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(200, 8 * 52), Position = UDim2.fromOffset(12, 100), Parent = gui }, {
-		UI.list(Enum.FillDirection.Vertical, 6),
+	-- pills keep the art's own shape (~2.1 : 1) so it never looks stretched
+	local nav = UI.new("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(PILL_W, 8 * (PILL_H + 4)), Position = UDim2.fromOffset(12, 96), Parent = gui }, {
+		UI.list(Enum.FillDirection.Vertical, 4),
 	})
 	local TILES = {
 		{ "Party", "PARTY", "Play with friends", "👥", "Party" },
@@ -785,7 +788,7 @@ function Lobby.Start()
 		{ "LobbyShop", "BUY COINS", "Get more coins", "🪙", "BuyCoins" },
 	}
 	for i, spec in TILES do
-		local menuBtn = Buttons.pill(spec[2], spec[4], { LayoutOrder = i, Size = UDim2.fromOffset(196, 46), Parent = nav, Icon = "Lobby_" .. spec[5], Tone = if spec[2] == "BUY COINS" then "Gold" else "Neutral" }, function()
+		local menuBtn = Buttons.pill(spec[2], spec[4], { LayoutOrder = i, Size = UDim2.fromOffset(PILL_W, PILL_H), Parent = nav, Icon = "Lobby_" .. spec[5], Tone = if spec[2] == "BUY COINS" then "Gold" else "Neutral" }, function()
 			Panels.Toggle(spec[1])
 		end)
 		-- the uploaded pill art is centred in its canvas (~86% wide, ~42% tall)

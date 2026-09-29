@@ -81,6 +81,14 @@ function UI.skin(frame: GuiObject, key: string, visible: Vector2?): boolean
 		return false
 	end
 	local v = visible or Vector2.one
+	if not frame:IsA("GuiButton") then
+		-- until (or unless) the art loads, use the same forest green instead of grey
+		frame.BackgroundColor3 = Theme.Colors.Forest
+		local st = frame:FindFirstChildOfClass("UIStroke")
+		if st then
+			st.Color = Theme.Colors.ForestRim
+		end
+	end
 	local il = Instance.new("ImageLabel")
 	il.Name = "Skin"
 	il.BackgroundTransparency = 1

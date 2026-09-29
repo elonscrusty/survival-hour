@@ -194,13 +194,22 @@ function Buttons.refresh(b: GuiButton)
 		if gs then
 			gs.Transparency = 1
 		end
+		for _, d in b:GetDescendants() do
+			if d:IsA("TextLabel") and d:GetAttribute("Tinted") then
+				d.TextColor3 = if hot then Color3.new(1, 1, 1) else Theme.Colors.ForestText
+				d.TextStrokeColor3 = Theme.Colors.ForestStroke
+				d.TextStrokeTransparency = 0.25
+			end
+		end
 	end
 	if b:IsA("TextButton") and b.Text ~= "" then
 		b.TextColor3 = tone.Text
 	end
-	for _, d in b:GetDescendants() do
-		if d:IsA("TextLabel") and d:GetAttribute("Tinted") then
-			d.TextColor3 = if d:GetAttribute("Sub") then tone.Text:Lerp(tone.Top, 0.35) else tone.Text
+	if not (skin and skin:IsA("ImageLabel") and skin.IsLoaded) then
+		for _, d in b:GetDescendants() do
+			if d:IsA("TextLabel") and d:GetAttribute("Tinted") then
+				d.TextColor3 = if d:GetAttribute("Sub") then tone.Text:Lerp(tone.Top, 0.35) else tone.Text
+			end
 		end
 	end
 	b.Active = state ~= "Disabled"
@@ -321,9 +330,9 @@ function Buttons.pill(title: string, glyph: string, props: { [string]: any }?, o
 	local b = new("TextButton", p)
 	Buttons.decorate(b, (props and props.Tone) or "Neutral", UDim.new(0.5, 0))
 	local h = b.Size.Y.Offset
-	local g = label(b, glyph, { Name = "Glyph", AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.fromOffset(h * 0.62, h * 0.62), Position = UDim2.new(0, h * 0.34, 0.5, 0), Font = Theme.FontBlack })
+	local g = label(b, glyph, { Name = "Glyph", AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.fromOffset(h * 0.8, h * 0.8), Position = UDim2.new(0, h * 0.22, 0.5, 0), Font = Theme.FontBlack })
 	Icons.Apply(g, props and props.Icon)
-	local t = label(b, title, { Name = "Title", AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.new(1, -h * 1.25, 0.46, 0), Position = UDim2.new(0, h * 1.05, 0.5, 0), Font = Theme.FontBlack, TextXAlignment = Enum.TextXAlignment.Left })
+	local t = label(b, title, { Name = "Title", AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.new(1, -h * 1.35, 0.56, 0), Position = UDim2.new(0, h * 1.12, 0.5, 0), Font = Theme.FontBlack, TextXAlignment = Enum.TextXAlignment.Left })
 	t.TextStrokeTransparency = 0.6
 	if props and props.State then
 		Buttons.setState(b, props.State)

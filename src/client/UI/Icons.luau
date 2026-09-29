@@ -2,7 +2,7 @@
 -- Swaps a drawn glyph for an uploaded icon image (Shared/IconIds) when one exists.
 -- Decal ids are resolved to their image by the server (ImageService -> ReplicatedStorage
 -- .ImageMap); images update when that arrives. Nothing is hidden until an image has
--- actually loaded, so a missing or blocked image leaves the drawn look in place.
+-- actually loaded (symbols come back if an icon image fails to load).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -45,17 +45,16 @@ function Icons.Bind(il: ImageLabel, key: string, onLoaded: (() -> ())?)
 		end
 	end)
 	if onLoaded then
-		if il.IsLoaded then
-			onLoaded()
-		else
-			local c
-			c = il:GetPropertyChangedSignal("IsLoaded"):Connect(function()
-				if il.IsLoaded then
-					c:Disconnect()
-					onLoaded()
-				end
-			end)
-		end
+		-- IsLoaded's change signal isn't reliable for cached images, so poll briefly too
+		task.spawn(function()
+			local deadline = os.clock() + 15
+			while il.Parent and not il.IsLoaded and os.clock() < deadline do
+				task.wait(0.25)
+			end
+			if il.IsLoaded then
+				onLoaded()
+			end
+		end)
 	end
 end
 
@@ -74,9 +73,19 @@ function Icons.Apply(glyph: GuiObject?, key: string?): boolean
 	il.ScaleType = Enum.ScaleType.Fit
 	il.ZIndex = glyph.ZIndex + 1
 	il.Parent = glyph
+	-- hide the old symbol right away (no double icon); bring it back if the image fails
+	local isText = glyph:IsA("TextLabel") or glyph:IsA("TextButton")
+	if isText then
+		(glyph :: any).TextTransparency = 1
+	end
+	local loaded = false
 	Icons.Bind(il, key :: string, function()
-		if glyph:IsA("TextLabel") or glyph:IsA("TextButton") then
-			(glyph :: any).TextTransparency = 1
+		loaded = true
+	end)
+	task.delay(16, function()
+		if not loaded and isText and glyph.Parent then
+			(glyph :: any).TextTransparency = 0
+			il:Destroy()
 		end
 	end)
 	return true
