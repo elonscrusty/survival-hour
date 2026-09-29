@@ -182,6 +182,7 @@ end
 
 function MapCtl.Start()
 	local gui = UI.new("ScreenGui", { Name = "Minimap", ResetOnSpawn = false, DisplayOrder = 2, Parent = player:WaitForChild("PlayerGui") })
+	UI.new("UIScale", { Name = "UiScale", Scale = Theme.UiScale, Parent = gui })
 	mini = makeCanvas(gui, 180)
 	mini.AnchorPoint = Vector2.new(1, 0)
 	mini.Position = UDim2.new(1, -12, 0, 8)

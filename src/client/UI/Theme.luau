@@ -26,6 +26,9 @@ Theme.Colors = {
 	Dev = Color3.fromRGB(200, 120, 255),
 }
 
+-- Overall UI size (owner: 20% smaller). Every ScreenGui scales by this; text scales with it.
+Theme.UiScale = 0.8
+
 Theme.Font = Enum.Font.GothamMedium
 Theme.FontBold = Enum.Font.GothamBold
 Theme.FontBlack = Enum.Font.GothamBlack

@@ -185,7 +185,7 @@ function Buttons.refresh(b: GuiButton)
 	-- skinned buttons (UI.skin): the image is the plate; hover / press tint it, the rim
 	-- only shows when selected or hovered
 	local skin = b:FindFirstChild("Skin")
-	if skin and skin:IsA("ImageLabel") then
+	if skin and skin:IsA("ImageLabel") and skin.IsLoaded then
 		b.BackgroundTransparency = 1
 		skin.ImageColor3 = if b:GetAttribute("Down") then Color3.fromRGB(190, 190, 190) elseif hot then Color3.new(1, 1, 1) else Color3.fromRGB(232, 232, 232)
 		if stroke then

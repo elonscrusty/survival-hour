@@ -18,6 +18,7 @@ function Dev.Start()
 		return
 	end
 	local gui = UI.new("ScreenGui", { Name = "DevButton", ResetOnSpawn = false, DisplayOrder = 30, Parent = player:WaitForChild("PlayerGui") })
+	UI.new("UIScale", { Name = "UiScale", Scale = Theme.UiScale, Parent = gui })
 	UI.button("⚙ DEV", { Size = UDim2.fromOffset(80, 36), Position = UDim2.new(0, 12, 0, 56), BackgroundColor3 = Color3.fromRGB(90, 50, 120), TextSize = 14, Parent = gui }, function()
 		Panels.Toggle("Dev")
 	end)

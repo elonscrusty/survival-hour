@@ -687,7 +687,7 @@ function Lobby.Start()
 	local scale = UI.new("UIScale", { Parent = gui })
 	local function rescale()
 		local vp = workspace.CurrentCamera.ViewportSize
-		scale.Scale = math.clamp(math.min(vp.X / 1000, vp.Y / 600), 0.65, 1.2)
+		scale.Scale = math.clamp(math.min(vp.X / 1000, vp.Y / 600), 0.65, 1.2) * Theme.UiScale
 	end
 	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(rescale)
 	rescale()

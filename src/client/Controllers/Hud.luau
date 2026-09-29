@@ -732,7 +732,7 @@ function Hud.Start()
 	local scale = gui:FindFirstChild("Scale") :: UIScale
 	local function rescale()
 		local vp = workspace.CurrentCamera.ViewportSize
-		scale.Scale = math.clamp(math.min(vp.X / 1100, vp.Y / 620), 0.62, 1.2)
+		scale.Scale = math.clamp(math.min(vp.X / 1100, vp.Y / 620), 0.62, 1.2) * Theme.UiScale
 	end
 	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(rescale)
 	rescale()

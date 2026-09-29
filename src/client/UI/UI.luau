@@ -71,29 +71,33 @@ function UI.panel(props: { [string]: any }, children: { Instance }?): Frame
 end
 
 -- Puts an uploaded background image (Shared/IconIds `key`, e.g. "UI_Pill") behind a
--- frame's contents and drops its drawn fill, gradient and outline. Does nothing
--- until that image is uploaded, so the drawn look stays as the fallback.
+-- frame's contents. The drawn fill, gradient and outline are dropped only once the image
+-- has loaded, so a missing or blocked image leaves the drawn look. Returns true when an
+-- image is listed for `key`.
 function UI.skin(frame: GuiObject, key: string): boolean
-	local img = Icons.Image(key)
-	if not img then
+	if not Icons.Image(key) then
 		return false
-	end
-	frame.BackgroundTransparency = 1
-	for _, c in frame:GetChildren() do
-		if c:IsA("UIStroke") then
-			c.Transparency = 1
-		elseif c:IsA("UIGradient") then
-			c.Enabled = false
-		end
 	end
 	local il = Instance.new("ImageLabel")
 	il.Name = "Skin"
 	il.BackgroundTransparency = 1
 	il.Size = UDim2.fromScale(1, 1)
 	il.ScaleType = Enum.ScaleType.Stretch
-	il.Image = img
 	il.ZIndex = 0
 	il.Parent = frame
+	Icons.Bind(il, key, function()
+		frame.BackgroundTransparency = 1
+		for _, c in frame:GetChildren() do
+			if c:IsA("UIStroke") then
+				c.Transparency = 1
+			elseif c:IsA("UIGradient") then
+				c.Enabled = false
+			end
+		end
+		if frame:IsA("GuiButton") and frame:GetAttribute("Tone") ~= nil then
+			Buttons.refresh(frame)
+		end
+	end)
 	return true
 end
 

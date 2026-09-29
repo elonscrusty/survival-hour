@@ -62368,6 +62368,7 @@ StarterGui.ResetPlayerGuiOnSpawn = false
 local order = {
 	"Util",
 	"AssetLoaderService",
+	"ImageService",
 	"DataService",
 	"PurchaseService",
 	"WorldService",
@@ -66748,6 +66749,68 @@ return GatherService
         </Item>
         <Item class="ModuleScript" referent="895">
           <Properties>
+            <string name="Name">ImageService</string>
+            <string name="Source"><![CDATA[--!nonstrict
+-- Resolves the ids in Shared/IconIds to showable images. Uploads done as Decals give a
+-- Decal id, which an ImageLabel can't display; the image inside it has its own id.
+-- InsertService can open Decals owned by the experience's creator, so each id is tried
+-- once: a Decal's Texture is published as an attribute on ReplicatedStorage.ImageMap
+-- (name = the listed id). Plain Image ids fail to load here and stay as they are.
+-- Clients (UI/Icons) prefer the resolved texture and update when it arrives.
+
+local InsertService = game:GetService("InsertService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local IconIds = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("IconIds"))
+
+local ImageService = {}
+
+local folder: Folder
+
+function ImageService.Init(_ctx)
+	folder = Instance.new("Folder")
+	folder.Name = "ImageMap"
+	folder.Parent = ReplicatedStorage
+end
+
+local function resolve(id: number)
+	local ok, model = pcall(function()
+		return InsertService:LoadAsset(id)
+	end)
+	if not ok or not model then
+		return
+	end
+	local decal = model:FindFirstChildWhichIsA("Decal", true)
+	if decal and decal.Texture ~= "" then
+		folder:SetAttribute(tostring(id), decal.Texture)
+	end
+	model:Destroy()
+end
+
+function ImageService.Start()
+	local seen = {}
+	local running = 0
+	for _, id in IconIds do
+		if type(id) == "number" and id > 0 and not seen[id] then
+			seen[id] = true
+			while running >= 8 do
+				task.wait(0.1)
+			end
+			running += 1
+			task.spawn(function()
+				resolve(id)
+				running -= 1
+			end)
+		end
+	end
+end
+
+return ImageService
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="896">
+          <Properties>
             <string name="Name">InventoryService</string>
             <string name="Source"><![CDATA[--!nonstrict
 -- Per-player match inventories, world pickups, supply bags, held-item visuals,
@@ -67462,7 +67525,7 @@ return InventoryService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="896">
+        <Item class="ModuleScript" referent="897">
           <Properties>
             <string name="Name">LivesService</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -67907,7 +67970,7 @@ return LivesService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="897">
+        <Item class="ModuleScript" referent="898">
           <Properties>
             <string name="Name">LobbyService</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -68437,7 +68500,7 @@ return LobbyService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="898">
+        <Item class="ModuleScript" referent="899">
           <Properties>
             <string name="Name">LootService</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -68960,7 +69023,7 @@ return LootService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="899">
+        <Item class="ModuleScript" referent="900">
           <Properties>
             <string name="Name">MatchService</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -69637,7 +69700,7 @@ return MatchService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="900">
+        <Item class="ModuleScript" referent="901">
           <Properties>
             <string name="Name">MatchmakingService</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -69980,7 +70043,7 @@ return MatchmakingService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="901">
+        <Item class="ModuleScript" referent="902">
           <Properties>
             <string name="Name">PowerupService</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -70843,7 +70906,7 @@ return PowerupService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="902">
+        <Item class="ModuleScript" referent="903">
           <Properties>
             <string name="Name">PurchaseService</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -71065,7 +71128,7 @@ return PurchaseService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="903">
+        <Item class="ModuleScript" referent="904">
           <Properties>
             <string name="Name">StaminaService</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -71225,7 +71288,7 @@ return StaminaService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="904">
+        <Item class="ModuleScript" referent="905">
           <Properties>
             <string name="Name">StorageService</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -71686,7 +71749,7 @@ return StorageService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="905">
+        <Item class="ModuleScript" referent="906">
           <Properties>
             <string name="Name">TelemetryService</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -71822,7 +71885,7 @@ return TelemetryService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="906">
+        <Item class="ModuleScript" referent="907">
           <Properties>
             <string name="Name">Util</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -72128,7 +72191,7 @@ return Util
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="907">
+        <Item class="ModuleScript" referent="908">
           <Properties>
             <string name="Name">WildlifeService</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -72909,7 +72972,7 @@ return WildlifeService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="908">
+        <Item class="ModuleScript" referent="909">
           <Properties>
             <string name="Name">WorldLobby</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -73149,7 +73212,7 @@ end
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="909">
+        <Item class="ModuleScript" referent="910">
           <Properties>
             <string name="Name">WorldService</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -73999,19 +74062,19 @@ return WorldService
       </Item>
     </Item>
   </Item>
-  <Item class="SoundService" referent="910">
+  <Item class="SoundService" referent="911">
     <Properties>
       <string name="Name">SoundService</string>
       <bool name="RespectFilteringEnabled">true</bool>
     </Properties>
   </Item>
-  <Item class="StarterGui" referent="911">
+  <Item class="StarterGui" referent="912">
     <Properties>
       <string name="Name">StarterGui</string>
       <bool name="ResetPlayerGuiOnSpawn">false</bool>
     </Properties>
   </Item>
-  <Item class="StarterPlayer" referent="912">
+  <Item class="StarterPlayer" referent="913">
     <Properties>
       <string name="Name">StarterPlayer</string>
       <float name="CameraMaxZoomDistance">24</float>
@@ -74022,11 +74085,11 @@ return WorldService
       <bool name="EnableMouseLockOption">true</bool>
       <bool name="LoadCharacterAppearance">true</bool>
     </Properties>
-    <Item class="StarterCharacterScripts" referent="913">
+    <Item class="StarterCharacterScripts" referent="914">
       <Properties>
         <string name="Name">StarterCharacterScripts</string>
       </Properties>
-      <Item class="Script" referent="914">
+      <Item class="Script" referent="915">
         <Properties>
           <string name="Name">Health</string>
           <token name="RunContext">0</token>
@@ -74037,15 +74100,15 @@ return WorldService
         </Properties>
       </Item>
     </Item>
-    <Item class="StarterPlayerScripts" referent="915">
+    <Item class="StarterPlayerScripts" referent="916">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="916">
+      <Item class="Folder" referent="917">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="ModuleScript" referent="917">
+        <Item class="ModuleScript" referent="918">
           <Properties>
             <string name="Name">AnimTracks</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -74222,11 +74285,11 @@ return AnimTracks
 ]]></string>
           </Properties>
         </Item>
-        <Item class="Folder" referent="918">
+        <Item class="Folder" referent="919">
           <Properties>
             <string name="Name">Controllers</string>
           </Properties>
-          <Item class="ModuleScript" referent="919">
+          <Item class="ModuleScript" referent="920">
             <Properties>
               <string name="Name">Animation</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -74730,7 +74793,7 @@ return Animation
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="920">
+          <Item class="ModuleScript" referent="921">
             <Properties>
               <string name="Name">Build</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -75030,6 +75093,7 @@ end
 
 function Build.Start()
 	local gui = UI.new("ScreenGui", { Name = "BuildMode", ResetOnSpawn = false, DisplayOrder = 6, Parent = player:WaitForChild("PlayerGui") })
+	UI.new("UIScale", { Name = "UiScale", Scale = Theme.UiScale, Parent = gui })
 	touchBar = UI.panel({ Size = UDim2.fromOffset(460, 118), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -96), Visible = false, Parent = gui }, { UI.padding(8) })
 	statusLabel = UI.text("", { Size = UDim2.new(1, 0, 0, 40), TextSize = 15, Font = Theme.FontBold, TextXAlignment = Enum.TextXAlignment.Center, Parent = touchBar })
 	local row = UI.new("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 46), Size = UDim2.new(1, 0, 0, 52), Parent = touchBar }, { UI.list(Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Center) })
@@ -75087,7 +75151,7 @@ return Build
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="921">
+          <Item class="ModuleScript" referent="922">
             <Properties>
               <string name="Name">Camera</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -75332,7 +75396,7 @@ return CameraCtl
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="922">
+          <Item class="ModuleScript" referent="923">
             <Properties>
               <string name="Name">ClassHall</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -75987,7 +76051,7 @@ return ClassHall
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="923">
+          <Item class="ModuleScript" referent="924">
             <Properties>
               <string name="Name">Combat</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -76212,7 +76276,7 @@ return Combat
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="924">
+          <Item class="ModuleScript" referent="925">
             <Properties>
               <string name="Name">Craft</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -76368,7 +76432,7 @@ return Craft
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="925">
+          <Item class="ModuleScript" referent="926">
             <Properties>
               <string name="Name">Creatures</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -76581,7 +76645,7 @@ return Creatures
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="926">
+          <Item class="ModuleScript" referent="927">
             <Properties>
               <string name="Name">Dev</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -76604,6 +76668,7 @@ function Dev.Start()
 		return
 	end
 	local gui = UI.new("ScreenGui", { Name = "DevButton", ResetOnSpawn = false, DisplayOrder = 30, Parent = player:WaitForChild("PlayerGui") })
+	UI.new("UIScale", { Name = "UiScale", Scale = Theme.UiScale, Parent = gui })
 	UI.button("⚙ DEV", { Size = UDim2.fromOffset(80, 36), Position = UDim2.new(0, 12, 0, 56), BackgroundColor3 = Color3.fromRGB(90, 50, 120), TextSize = 14, Parent = gui }, function()
 		Panels.Toggle("Dev")
 	end)
@@ -76662,7 +76727,7 @@ return Dev
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="927">
+          <Item class="ModuleScript" referent="928">
             <Properties>
               <string name="Name">Effects</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -77138,7 +77203,7 @@ return Effects
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="928">
+          <Item class="ModuleScript" referent="929">
             <Properties>
               <string name="Name">Guide</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -77247,6 +77312,7 @@ end
 
 function Guide.Start()
 	local gui = UI.new("ScreenGui", { Name = "Guide", ResetOnSpawn = false, DisplayOrder = 2, Parent = player:WaitForChild("PlayerGui") })
+	UI.new("UIScale", { Name = "UiScale", Scale = Theme.UiScale, Parent = gui })
 	frame = UI.panel({ Size = UDim2.fromOffset(330, 58), AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 12, 1, -190), Visible = false, Parent = gui }, { UI.padding(8), UI.new("UIScale", {}) })
 	local stroke = frame:FindFirstChildOfClass("UIStroke")
 	if stroke then
@@ -77314,7 +77380,7 @@ return Guide
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="929">
+          <Item class="ModuleScript" referent="930">
             <Properties>
               <string name="Name">Hud</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -78051,7 +78117,7 @@ function Hud.Start()
 	local scale = gui:FindFirstChild("Scale") :: UIScale
 	local function rescale()
 		local vp = workspace.CurrentCamera.ViewportSize
-		scale.Scale = math.clamp(math.min(vp.X / 1100, vp.Y / 620), 0.62, 1.2)
+		scale.Scale = math.clamp(math.min(vp.X / 1100, vp.Y / 620), 0.62, 1.2) * Theme.UiScale
 	end
 	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(rescale)
 	rescale()
@@ -78104,7 +78170,7 @@ return Hud
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="930">
+          <Item class="ModuleScript" referent="931">
             <Properties>
               <string name="Name">Input</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -78123,6 +78189,7 @@ local Players = game:GetService("Players")
 
 local State = require("../State")
 local UI = require("../UI/UI")
+local Theme = require("../UI/Theme")
 
 local Input = {}
 
@@ -78228,6 +78295,7 @@ function Input._buildTouch()
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 		Parent = player:WaitForChild("PlayerGui"),
 	})
+	UI.new("UIScale", { Name = "UiScale", Scale = Theme.UiScale, Parent = gui })
 	local HUD_ICON = { Attack = "Attack", Aim = "Aim", Bandage = "Heal", Swap = "Swap", Sprint = "Run", Inventory = "Bag", Craft = "Craft", Build = "Build", Map = "Map" }
 	local function round(name: string, glyph: string, label: string, size: number, pos: UDim2, action: string, hold: boolean, tone: string)
 		local b = UI.Buttons.round(glyph, label, size, tone, { Name = name, Position = pos, AnchorPoint = Vector2.new(0.5, 0.5), Icon = "Hud_" .. HUD_ICON[name], Parent = gui })
@@ -78303,7 +78371,7 @@ return Input
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="931">
+          <Item class="ModuleScript" referent="932">
             <Properties>
               <string name="Name">Inventory</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -78500,7 +78568,7 @@ return Inventory
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="932">
+          <Item class="ModuleScript" referent="933">
             <Properties>
               <string name="Name">Lobby</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -79192,7 +79260,7 @@ function Lobby.Start()
 	local scale = UI.new("UIScale", { Parent = gui })
 	local function rescale()
 		local vp = workspace.CurrentCamera.ViewportSize
-		scale.Scale = math.clamp(math.min(vp.X / 1000, vp.Y / 600), 0.65, 1.2)
+		scale.Scale = math.clamp(math.min(vp.X / 1000, vp.Y / 600), 0.65, 1.2) * Theme.UiScale
 	end
 	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(rescale)
 	rescale()
@@ -79356,7 +79424,7 @@ return Lobby
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="933">
+          <Item class="ModuleScript" referent="934">
             <Properties>
               <string name="Name">LobbyBoards</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -79544,7 +79612,7 @@ return LobbyBoards
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="934">
+          <Item class="ModuleScript" referent="935">
             <Properties>
               <string name="Name">Map</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -79731,6 +79799,7 @@ end
 
 function MapCtl.Start()
 	local gui = UI.new("ScreenGui", { Name = "Minimap", ResetOnSpawn = false, DisplayOrder = 2, Parent = player:WaitForChild("PlayerGui") })
+	UI.new("UIScale", { Name = "UiScale", Scale = Theme.UiScale, Parent = gui })
 	mini = makeCanvas(gui, 180)
 	mini.AnchorPoint = Vector2.new(1, 0)
 	mini.Position = UDim2.new(1, -12, 0, 8)
@@ -79796,7 +79865,7 @@ return MapCtl
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="935">
+          <Item class="ModuleScript" referent="936">
             <Properties>
               <string name="Name">Movement</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -79854,7 +79923,7 @@ return Movement
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="936">
+          <Item class="ModuleScript" referent="937">
             <Properties>
               <string name="Name">Notifications</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -79935,6 +80004,7 @@ end
 
 function Notifications.Start()
 	local gui = UI.new("ScreenGui", { Name = "Notifications", ResetOnSpawn = false, DisplayOrder = 20, Parent = player:WaitForChild("PlayerGui") })
+	UI.new("UIScale", { Name = "UiScale", Scale = Theme.UiScale, Parent = gui })
 	list = UI.new("Frame", {
 		BackgroundTransparency = 1,
 		Size = UDim2.fromOffset(320, 400),
@@ -79952,7 +80022,7 @@ return Notifications
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="937">
+          <Item class="ModuleScript" referent="938">
             <Properties>
               <string name="Name">Panels</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -80004,7 +80074,7 @@ function Panels.Start()
 	uiScale = scale
 	local function rescale()
 		local vp = workspace.CurrentCamera.ViewportSize
-		scale.Scale = math.clamp(math.min(vp.X / 900, vp.Y / 560), 0.6, 1.15)
+		scale.Scale = math.clamp(math.min(vp.X / 900, vp.Y / 560), 0.6, 1.15) * Theme.UiScale
 		for _, p in panels do
 			fit(p)
 		end
@@ -80119,7 +80189,7 @@ return Panels
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="938">
+          <Item class="ModuleScript" referent="939">
             <Properties>
               <string name="Name">Prompts</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -80299,7 +80369,7 @@ return Prompts
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="939">
+          <Item class="ModuleScript" referent="940">
             <Properties>
               <string name="Name">Season</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -80510,7 +80580,7 @@ return Season
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="940">
+          <Item class="ModuleScript" referent="941">
             <Properties>
               <string name="Name">Shop</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -80597,6 +80667,7 @@ function Shop.Start()
 	body = Panels.Create("Shop", "SUPPLY SHOP", Vector2.new(620, 620), Shop.Render)
 	UI.list(Enum.FillDirection.Vertical, 8).Parent = body
 	local gui = UI.new("ScreenGui", { Name = "ShopButton", ResetOnSpawn = false, DisplayOrder = 4, Parent = player:WaitForChild("PlayerGui") })
+	UI.new("UIScale", { Name = "UiScale", Scale = Theme.UiScale, Parent = gui })
 	local btn = UI.button("✚ Shop", { Size = UDim2.fromOffset(96, 44), Position = UDim2.new(0, 12, 1, -176), BackgroundColor3 = Color3.fromRGB(60, 90, 50), Parent = gui }, function()
 		Panels.Toggle("Shop")
 	end)
@@ -80622,7 +80693,7 @@ return Shop
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="941">
+          <Item class="ModuleScript" referent="942">
             <Properties>
               <string name="Name">Sound</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -80876,7 +80947,7 @@ return SoundCtl
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="942">
+          <Item class="ModuleScript" referent="943">
             <Properties>
               <string name="Name">Spectate</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -80923,6 +80994,7 @@ end
 
 function Spectate.Start()
 	local gui = UI.new("ScreenGui", { Name = "Spectate", ResetOnSpawn = false, DisplayOrder = 4, Parent = player:WaitForChild("PlayerGui") })
+	UI.new("UIScale", { Name = "UiScale", Scale = Theme.UiScale, Parent = gui })
 	bar = UI.panel({ Size = UDim2.fromOffset(420, 60), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -16), Visible = false, Parent = gui })
 	UI.Buttons.icon("◀", { Size = UDim2.fromOffset(60, 48), Position = UDim2.fromOffset(6, 6), TextSize = 24, Parent = bar }, function()
 		index -= 1
@@ -80997,7 +81069,7 @@ return Spectate
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="943">
+          <Item class="ModuleScript" referent="944">
             <Properties>
               <string name="Name">Storage</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -81120,7 +81192,7 @@ return Storage
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="944">
+          <Item class="ModuleScript" referent="945">
             <Properties>
               <string name="Name">Weather</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -81230,7 +81302,7 @@ return Weather
             </Properties>
           </Item>
         </Item>
-        <Item class="LocalScript" referent="945">
+        <Item class="LocalScript" referent="946">
           <Properties>
             <string name="Name">Main</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -81353,7 +81425,7 @@ local _ = Players
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="946">
+        <Item class="ModuleScript" referent="947">
           <Properties>
             <string name="Name">State</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -81403,11 +81475,11 @@ return State
 ]]></string>
           </Properties>
         </Item>
-        <Item class="Folder" referent="947">
+        <Item class="Folder" referent="948">
           <Properties>
             <string name="Name">UI</string>
           </Properties>
-          <Item class="ModuleScript" referent="948">
+          <Item class="ModuleScript" referent="949">
             <Properties>
               <string name="Name">Buttons</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -81597,7 +81669,7 @@ function Buttons.refresh(b: GuiButton)
 	-- skinned buttons (UI.skin): the image is the plate; hover / press tint it, the rim
 	-- only shows when selected or hovered
 	local skin = b:FindFirstChild("Skin")
-	if skin and skin:IsA("ImageLabel") then
+	if skin and skin:IsA("ImageLabel") and skin.IsLoaded then
 		b.BackgroundTransparency = 1
 		skin.ImageColor3 = if b:GetAttribute("Down") then Color3.fromRGB(190, 190, 190) elseif hot then Color3.new(1, 1, 1) else Color3.fromRGB(232, 232, 232)
 		if stroke then
@@ -81831,7 +81903,7 @@ return Buttons
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="949">
+          <Item class="ModuleScript" referent="950">
             <Properties>
               <string name="Name">EndScreen</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -81939,11 +82011,14 @@ return EndScreen
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="950">
+          <Item class="ModuleScript" referent="951">
             <Properties>
               <string name="Name">Icons</string>
               <string name="Source"><![CDATA[--!nonstrict
 -- Swaps a drawn glyph for an uploaded icon image (Shared/IconIds) when one exists.
+-- Decal ids are resolved to their image by the server (ImageService -> ReplicatedStorage
+-- .ImageMap); images update when that arrives. Nothing is hidden until an image has
+-- actually loaded, so a missing or blocked image leaves the drawn look in place.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -81951,21 +82026,60 @@ local IconIds = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("I
 
 local Icons = {}
 
--- "rbxassetid://…" for `key`, or nil when no image is uploaded.
-function Icons.Image(key: string?): string?
+local function idOf(key: string?): number?
 	local id = if key then IconIds[key] else nil
-	return if type(id) == "number" and id > 0 then "rbxassetid://" .. tostring(id) else nil
+	return if type(id) == "number" and id > 0 then id else nil
 end
 
--- Puts `key`'s image over `glyph` (a TextLabel/TextButton showing a symbol) and hides
--- the symbol. Returns true when an image was used.
-function Icons.Apply(glyph: GuiObject?, key: string?): boolean
-	local img = Icons.Image(key)
-	if not img or not glyph then
-		return false
+local function map(): Instance?
+	return ReplicatedStorage:FindFirstChild("ImageMap")
+end
+
+-- Best image url for `key` right now, or nil when no image is listed.
+function Icons.Image(key: string?): string?
+	local id = idOf(key)
+	if not id then
+		return nil
 	end
-	if glyph:IsA("TextLabel") or glyph:IsA("TextButton") then
-		(glyph :: any).TextTransparency = 1
+	local m = map()
+	local resolved = m and m:GetAttribute(tostring(id))
+	return if type(resolved) == "string" then resolved else "rbxassetid://" .. tostring(id)
+end
+
+-- Keeps `il.Image` on the best url for `key` (updates when the server resolves a Decal),
+-- and calls `onLoaded` once the image has loaded.
+function Icons.Bind(il: ImageLabel, key: string, onLoaded: (() -> ())?)
+	il.Image = Icons.Image(key) or ""
+	local id = idOf(key)
+	task.spawn(function()
+		local m = map() or ReplicatedStorage:WaitForChild("ImageMap", 10)
+		if m and id then
+			m:GetAttributeChangedSignal(tostring(id)):Connect(function()
+				il.Image = Icons.Image(key) or ""
+			end)
+			il.Image = Icons.Image(key) or ""
+		end
+	end)
+	if onLoaded then
+		if il.IsLoaded then
+			onLoaded()
+		else
+			local c
+			c = il:GetPropertyChangedSignal("IsLoaded"):Connect(function()
+				if il.IsLoaded then
+					c:Disconnect()
+					onLoaded()
+				end
+			end)
+		end
+	end
+end
+
+-- Puts `key`'s image over `glyph` (a symbol label, button or swatch frame); the symbol
+-- is hidden only once the image loads. Returns true when an image is listed.
+function Icons.Apply(glyph: GuiObject?, key: string?): boolean
+	if not glyph or not idOf(key) then
+		return false
 	end
 	local il = Instance.new("ImageLabel")
 	il.Name = "IconImage"
@@ -81974,9 +82088,13 @@ function Icons.Apply(glyph: GuiObject?, key: string?): boolean
 	il.Position = UDim2.fromScale(0.5, 0.5)
 	il.Size = UDim2.fromScale(1, 1)
 	il.ScaleType = Enum.ScaleType.Fit
-	il.Image = img
 	il.ZIndex = glyph.ZIndex + 1
 	il.Parent = glyph
+	Icons.Bind(il, key :: string, function()
+		if glyph:IsA("TextLabel") or glyph:IsA("TextButton") then
+			(glyph :: any).TextTransparency = 1
+		end
+	end)
 	return true
 end
 
@@ -81984,7 +82102,7 @@ return Icons
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="951">
+          <Item class="ModuleScript" referent="952">
             <Properties>
               <string name="Name">Theme</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -82014,6 +82132,9 @@ Theme.Colors = {
 	Day = Color3.fromRGB(255, 205, 90),
 	Dev = Color3.fromRGB(200, 120, 255),
 }
+
+-- Overall UI size (owner: 20% smaller). Every ScreenGui scales by this; text scales with it.
+Theme.UiScale = 0.8
 
 Theme.Font = Enum.Font.GothamMedium
 Theme.FontBold = Enum.Font.GothamBold
@@ -82046,7 +82167,7 @@ return Theme
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="952">
+          <Item class="ModuleScript" referent="953">
             <Properties>
               <string name="Name">UI</string>
               <string name="Source"><![CDATA[--!nonstrict
@@ -82122,29 +82243,33 @@ function UI.panel(props: { [string]: any }, children: { Instance }?): Frame
 end
 
 -- Puts an uploaded background image (Shared/IconIds `key`, e.g. "UI_Pill") behind a
--- frame's contents and drops its drawn fill, gradient and outline. Does nothing
--- until that image is uploaded, so the drawn look stays as the fallback.
+-- frame's contents. The drawn fill, gradient and outline are dropped only once the image
+-- has loaded, so a missing or blocked image leaves the drawn look. Returns true when an
+-- image is listed for `key`.
 function UI.skin(frame: GuiObject, key: string): boolean
-	local img = Icons.Image(key)
-	if not img then
+	if not Icons.Image(key) then
 		return false
-	end
-	frame.BackgroundTransparency = 1
-	for _, c in frame:GetChildren() do
-		if c:IsA("UIStroke") then
-			c.Transparency = 1
-		elseif c:IsA("UIGradient") then
-			c.Enabled = false
-		end
 	end
 	local il = Instance.new("ImageLabel")
 	il.Name = "Skin"
 	il.BackgroundTransparency = 1
 	il.Size = UDim2.fromScale(1, 1)
 	il.ScaleType = Enum.ScaleType.Stretch
-	il.Image = img
 	il.ZIndex = 0
 	il.Parent = frame
+	Icons.Bind(il, key, function()
+		frame.BackgroundTransparency = 1
+		for _, c in frame:GetChildren() do
+			if c:IsA("UIStroke") then
+				c.Transparency = 1
+			elseif c:IsA("UIGradient") then
+				c.Enabled = false
+			end
+		end
+		if frame:IsA("GuiButton") and frame:GetAttribute("Tone") ~= nil then
+			Buttons.refresh(frame)
+		end
+	end)
 	return true
 end
 
@@ -82293,7 +82418,7 @@ return UI
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="953">
+  <Item class="Workspace" referent="954">
     <Properties>
       <string name="Name">Workspace</string>
       <float name="Gravity">196.2</float>

@@ -14,6 +14,7 @@ local Players = game:GetService("Players")
 
 local State = require("../State")
 local UI = require("../UI/UI")
+local Theme = require("../UI/Theme")
 
 local Input = {}
 
@@ -119,6 +120,7 @@ function Input._buildTouch()
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 		Parent = player:WaitForChild("PlayerGui"),
 	})
+	UI.new("UIScale", { Name = "UiScale", Scale = Theme.UiScale, Parent = gui })
 	local HUD_ICON = { Attack = "Attack", Aim = "Aim", Bandage = "Heal", Swap = "Swap", Sprint = "Run", Inventory = "Bag", Craft = "Craft", Build = "Build", Map = "Map" }
 	local function round(name: string, glyph: string, label: string, size: number, pos: UDim2, action: string, hold: boolean, tone: string)
 		local b = UI.Buttons.round(glyph, label, size, tone, { Name = name, Position = pos, AnchorPoint = Vector2.new(0.5, 0.5), Icon = "Hud_" .. HUD_ICON[name], Parent = gui })

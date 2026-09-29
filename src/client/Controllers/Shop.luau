@@ -82,6 +82,7 @@ function Shop.Start()
 	body = Panels.Create("Shop", "SUPPLY SHOP", Vector2.new(620, 620), Shop.Render)
 	UI.list(Enum.FillDirection.Vertical, 8).Parent = body
 	local gui = UI.new("ScreenGui", { Name = "ShopButton", ResetOnSpawn = false, DisplayOrder = 4, Parent = player:WaitForChild("PlayerGui") })
+	UI.new("UIScale", { Name = "UiScale", Scale = Theme.UiScale, Parent = gui })
 	local btn = UI.button("✚ Shop", { Size = UDim2.fromOffset(96, 44), Position = UDim2.new(0, 12, 1, -176), BackgroundColor3 = Color3.fromRGB(60, 90, 50), Parent = gui }, function()
 		Panels.Toggle("Shop")
 	end)

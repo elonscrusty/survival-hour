@@ -47,7 +47,7 @@ function Panels.Start()
 	uiScale = scale
 	local function rescale()
 		local vp = workspace.CurrentCamera.ViewportSize
-		scale.Scale = math.clamp(math.min(vp.X / 900, vp.Y / 560), 0.6, 1.15)
+		scale.Scale = math.clamp(math.min(vp.X / 900, vp.Y / 560), 0.6, 1.15) * Theme.UiScale
 		for _, p in panels do
 			fit(p)
 		end

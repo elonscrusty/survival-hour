@@ -295,6 +295,7 @@ end
 
 function Build.Start()
 	local gui = UI.new("ScreenGui", { Name = "BuildMode", ResetOnSpawn = false, DisplayOrder = 6, Parent = player:WaitForChild("PlayerGui") })
+	UI.new("UIScale", { Name = "UiScale", Scale = Theme.UiScale, Parent = gui })
 	touchBar = UI.panel({ Size = UDim2.fromOffset(460, 118), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -96), Visible = false, Parent = gui }, { UI.padding(8) })
 	statusLabel = UI.text("", { Size = UDim2.new(1, 0, 0, 40), TextSize = 15, Font = Theme.FontBold, TextXAlignment = Enum.TextXAlignment.Center, Parent = touchBar })
 	local row = UI.new("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 46), Size = UDim2.new(1, 0, 0, 52), Parent = touchBar }, { UI.list(Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Center) })

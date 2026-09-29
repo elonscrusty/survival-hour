@@ -104,6 +104,7 @@ end
 
 function Guide.Start()
 	local gui = UI.new("ScreenGui", { Name = "Guide", ResetOnSpawn = false, DisplayOrder = 2, Parent = player:WaitForChild("PlayerGui") })
+	UI.new("UIScale", { Name = "UiScale", Scale = Theme.UiScale, Parent = gui })
 	frame = UI.panel({ Size = UDim2.fromOffset(330, 58), AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 12, 1, -190), Visible = false, Parent = gui }, { UI.padding(8), UI.new("UIScale", {}) })
 	local stroke = frame:FindFirstChildOfClass("UIStroke")
 	if stroke then

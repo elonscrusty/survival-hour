@@ -76,6 +76,7 @@ end
 
 function Notifications.Start()
 	local gui = UI.new("ScreenGui", { Name = "Notifications", ResetOnSpawn = false, DisplayOrder = 20, Parent = player:WaitForChild("PlayerGui") })
+	UI.new("UIScale", { Name = "UiScale", Scale = Theme.UiScale, Parent = gui })
 	list = UI.new("Frame", {
 		BackgroundTransparency = 1,
 		Size = UDim2.fromOffset(320, 400),

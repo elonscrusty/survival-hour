@@ -42,6 +42,7 @@ end
 
 function Spectate.Start()
 	local gui = UI.new("ScreenGui", { Name = "Spectate", ResetOnSpawn = false, DisplayOrder = 4, Parent = player:WaitForChild("PlayerGui") })
+	UI.new("UIScale", { Name = "UiScale", Scale = Theme.UiScale, Parent = gui })
 	bar = UI.panel({ Size = UDim2.fromOffset(420, 60), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -16), Visible = false, Parent = gui })
 	UI.Buttons.icon("◀", { Size = UDim2.fromOffset(60, 48), Position = UDim2.fromOffset(6, 6), TextSize = 24, Parent = bar }, function()
 		index -= 1

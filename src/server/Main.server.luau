@@ -39,6 +39,7 @@ StarterGui.ResetPlayerGuiOnSpawn = false
 local order = {
 	"Util",
 	"AssetLoaderService",
+	"ImageService",
 	"DataService",
 	"PurchaseService",
 	"WorldService",
