@@ -73602,9 +73602,7 @@ local function buildCamp(map: MapInfo, c: any): CampInfo
 		table.insert(pads, cf + Vector3.new(0, 3.5, 0))
 	end
 
-	local hutCF = origin * CFrame.new(0, 0, 34) * CFrame.Angles(0, math.rad(180), 0)
-	local hut = Camp.Hut(CFrame.new(hutCF.Position.X, WorldService.GroundY(hutCF.Position.X, hutCF.Position.Z), hutCF.Position.Z) * hutCF.Rotation, team.Motif, team.Color, folder)
-	atomic(hut)
+	-- (no ready-made shack: players build their own walls and shelters)
 	local bannerCF = origin * CFrame.new(9, 0, -14)
 	local banner = Camp.Banner(CFrame.new(bannerCF.Position.X, WorldService.GroundY(bannerCF.Position.X, bannerCF.Position.Z), bannerCF.Position.Z) * origin.Rotation, team.Color, team.Symbol, folder)
 	banner.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
@@ -73627,11 +73625,9 @@ local function buildCamp(map: MapInfo, c: any): CampInfo
 	end
 	local _, yawRad = origin:ToOrientation()
 	local yaw = math.deg(yawRad)
-	local hx, hz = toLocal2D(hutCF)
 	local wx, wz = toLocal2D(wbCF)
 	local bx, bz = toLocal2D(bannerCF)
 	local rects = {
-		{ X = hx, Z = hz, HX = 6.5, HZ = 5.5, Yaw = -yaw },
 		{ X = wx, Z = wz, HX = 5, HZ = 2.5, Yaw = -yaw },
 		{ X = bx, Z = bz, HX = 1.5, HZ = 1.5, Yaw = 0 },
 	}
