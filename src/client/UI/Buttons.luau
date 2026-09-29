@@ -182,6 +182,19 @@ function Buttons.refresh(b: GuiButton)
 		gs.Color = if hot and toneName ~= "Red" then HOVER_RIM else tone.Rim
 		gs.Transparency = if hot then 0.45 else tone.Glow
 	end
+	-- skinned buttons (UI.skin): the image is the plate; hover / press tint it, the rim
+	-- only shows when selected or hovered
+	local skin = b:FindFirstChild("Skin")
+	if skin and skin:IsA("ImageLabel") then
+		b.BackgroundTransparency = 1
+		skin.ImageColor3 = if b:GetAttribute("Down") then Color3.fromRGB(190, 190, 190) elseif hot then Color3.new(1, 1, 1) else Color3.fromRGB(232, 232, 232)
+		if stroke then
+			stroke.Transparency = if state == "Selected" or hot then 0 else 1
+		end
+		if gs then
+			gs.Transparency = 1
+		end
+	end
 	if b:IsA("TextButton") and b.Text ~= "" then
 		b.TextColor3 = tone.Text
 	end

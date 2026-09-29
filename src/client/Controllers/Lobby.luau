@@ -694,6 +694,7 @@ function Lobby.Start()
 
 	-- Top: profile card (level badge, name, title, XP bar) + animated currency pills.
 	local card = UI.panel({ Size = UDim2.fromOffset(420, 80), Position = UDim2.fromOffset(12, 8), Parent = gui })
+	UI.skin(card, "UI_NameLevel")
 	local badge = UI.new("Frame", { Size = UDim2.fromOffset(60, 60), Position = UDim2.fromOffset(10, 10), BackgroundColor3 = C.PanelLight, Parent = card }, { UI.corner(UDim.new(0.5, 0)), UI.new("UIStroke", { Color = C.Accent, Thickness = 3 }) })
 	UI.text("LVL", { Size = UDim2.new(1, 0, 0, 14), Position = UDim2.fromOffset(0, 10), TextSize = 11, Font = Theme.FontBold, TextColor3 = C.TextDim, TextXAlignment = Enum.TextXAlignment.Center, Parent = badge })
 	levelLabel = UI.text("1", { Name = "Level", Size = UDim2.new(1, 0, 0, 24), Position = UDim2.fromOffset(0, 24), TextSize = 22, Font = Theme.FontBlack, TextXAlignment = Enum.TextXAlignment.Center, Parent = badge })
@@ -701,13 +702,18 @@ function Lobby.Start()
 	streakLabel = UI.text("", { Position = UDim2.fromOffset(82, 8), Size = UDim2.new(1, -94, 0, 22), TextSize = 13, Font = Theme.FontBold, TextColor3 = C.Warn, TextXAlignment = Enum.TextXAlignment.Right, Parent = card })
 	diamondsLabel = UI.text("", { Position = UDim2.fromOffset(82, 30), Size = UDim2.new(1, -90, 0, 16), TextSize = 13, Font = Theme.FontBold, TextColor3 = C.Accent, Parent = card })
 	local xpHolder = UI.new("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(82, 52), Size = UDim2.new(1, -94, 0, 16), Parent = card })
-	Buttons.icon("⚙", { Size = UDim2.fromOffset(32, 32), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -8, 0, 8), TextSize = 18, Parent = card }, function()
+	local gear = Buttons.icon("⚙", { Size = UDim2.fromOffset(32, 32), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -8, 0, 8), TextSize = 18, Parent = card }, function()
 		Panels.Toggle("Settings")
 	end)
+	if UI.skin(gear, "UI_Round") then
+		Buttons.refresh(gear)
+	end
 	local _xpBar
 	_xpBar, xpSet = UI.bar({ Size = UDim2.fromScale(1, 1), Parent = xpHolder }, C.Accent)
+	UI.skin(_xpBar, "UI_XpTrack")
 	local function pill(x: number, glyph: string, color: Color3, icon: string): TextLabel
 		local f = UI.panel({ Size = UDim2.fromOffset(150, 40), Position = UDim2.fromOffset(x, 8), Parent = gui })
+		UI.skin(f, "UI_Currency")
 		Icons.Apply(UI.text(glyph, { Size = UDim2.fromOffset(34, 40), TextSize = 20, TextColor3 = color, TextXAlignment = Enum.TextXAlignment.Center, Parent = f }), icon)
 		return UI.text("0", { Position = UDim2.fromOffset(34, 0), Size = UDim2.new(1, -40, 1, 0), TextSize = 19, Font = Theme.FontBlack, TextColor3 = color, Parent = f })
 	end
@@ -777,9 +783,12 @@ function Lobby.Start()
 		{ "LobbyShop", "BUY COINS", "Get more coins", "🪙", "BuyCoins" },
 	}
 	for i, spec in TILES do
-		Buttons.tile(spec[2], spec[3], spec[4], { LayoutOrder = i, Parent = nav, Icon = "Lobby_" .. spec[5], Tone = if spec[2] == "BUY COINS" then "Gold" else "Neutral" }, function()
+		local tile = Buttons.tile(spec[2], spec[3], spec[4], { LayoutOrder = i, Parent = nav, Icon = "Lobby_" .. spec[5], Tone = if spec[2] == "BUY COINS" then "Gold" else "Neutral" }, function()
 			Panels.Toggle(spec[1])
 		end)
+		if UI.skin(tile, "UI_Pill") then
+			Buttons.refresh(tile)
+		end
 	end
 
 	partyBody = Panels.Create("Party", "PARTY", Vector2.new(560, 560), renderParty)

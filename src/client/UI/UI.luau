@@ -70,6 +70,33 @@ function UI.panel(props: { [string]: any }, children: { Instance }?): Frame
 	return UI.new("Frame", p, kids)
 end
 
+-- Puts an uploaded background image (Shared/IconIds `key`, e.g. "UI_Pill") behind a
+-- frame's contents and drops its drawn fill, gradient and outline. Does nothing
+-- until that image is uploaded, so the drawn look stays as the fallback.
+function UI.skin(frame: GuiObject, key: string): boolean
+	local img = Icons.Image(key)
+	if not img then
+		return false
+	end
+	frame.BackgroundTransparency = 1
+	for _, c in frame:GetChildren() do
+		if c:IsA("UIStroke") then
+			c.Transparency = 1
+		elseif c:IsA("UIGradient") then
+			c.Enabled = false
+		end
+	end
+	local il = Instance.new("ImageLabel")
+	il.Name = "Skin"
+	il.BackgroundTransparency = 1
+	il.Size = UDim2.fromScale(1, 1)
+	il.ScaleType = Enum.ScaleType.Stretch
+	il.Image = img
+	il.ZIndex = 0
+	il.Parent = frame
+	return true
+end
+
 function UI.text(text: string, props: { [string]: any }?): TextLabel
 	local p = props and table.clone(props) or {}
 	p.Text = text

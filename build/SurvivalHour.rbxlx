@@ -1114,6 +1114,7 @@ return Cosmetics
 --   Lobby_<Tile>         lobby menu tiles (Party, Class, PowerUp, Locker, Profile, Shop, HowToPlay, BuyCoins)
 --   Hud_<Button>         in-match buttons (Bag, Craft, Build, Map, Attack, Aim, Heal, Swap, Run)
 --   Currency_Coins / Currency_Diamonds
+--   UI_Round / UI_Pill / UI_NameLevel / UI_Currency / UI_XpTrack   green UI backgrounds
 -- The list in docs/ICON_LIST.md shows what each icon is for.
 
 local IconIds: { [string]: number } = {
@@ -1235,6 +1236,11 @@ local IconIds: { [string]: number } = {
 	["Status_LivesFinalLife"] = 130322102638432,
 	["Status_Stamina"] = 110763660370864,
 	["Title_Scroll"] = 122022830852661,
+	["UI_Currency"] = 95224944873082,
+	["UI_NameLevel"] = 90105850786718,
+	["UI_Pill"] = 126171073088954,
+	["UI_Round"] = 103398874874503,
+	["UI_XpTrack"] = 93246725508931,
 }
 
 return IconIds
@@ -78225,6 +78231,9 @@ function Input._buildTouch()
 	local HUD_ICON = { Attack = "Attack", Aim = "Aim", Bandage = "Heal", Swap = "Swap", Sprint = "Run", Inventory = "Bag", Craft = "Craft", Build = "Build", Map = "Map" }
 	local function round(name: string, glyph: string, label: string, size: number, pos: UDim2, action: string, hold: boolean, tone: string)
 		local b = UI.Buttons.round(glyph, label, size, tone, { Name = name, Position = pos, AnchorPoint = Vector2.new(0.5, 0.5), Icon = "Hud_" .. HUD_ICON[name], Parent = gui })
+		if UI.skin(b, "UI_Round") then
+			UI.Buttons.refresh(b)
+		end
 		b.InputBegan:Connect(function(io)
 			if io.UserInputType == Enum.UserInputType.Touch then
 				b:SetAttribute("Down", true)
@@ -78264,6 +78273,9 @@ function Input._buildTouch()
 	}, { UI.list(Enum.FillDirection.Horizontal, 6, Enum.HorizontalAlignment.Right) })
 	for i, spec in { { "Inventory", "🎒", "BAG" }, { "Craft", "🔨", "CRAFT" }, { "Build", "🧱", "BUILD" }, { "Map", "🗺", "MAP" } } do
 		local b = UI.Buttons.tile(spec[3], nil, spec[2], { Name = spec[1], LayoutOrder = i, Size = UDim2.fromOffset(58, 58), Icon = "Hud_" .. HUD_ICON[spec[1]], Parent = menu })
+		if UI.skin(b, "UI_Round") then
+			UI.Buttons.refresh(b)
+		end
 		b.Activated:Connect(function()
 			emit(spec[1], true)
 			emit(spec[1], false)
@@ -79187,6 +79199,7 @@ function Lobby.Start()
 
 	-- Top: profile card (level badge, name, title, XP bar) + animated currency pills.
 	local card = UI.panel({ Size = UDim2.fromOffset(420, 80), Position = UDim2.fromOffset(12, 8), Parent = gui })
+	UI.skin(card, "UI_NameLevel")
 	local badge = UI.new("Frame", { Size = UDim2.fromOffset(60, 60), Position = UDim2.fromOffset(10, 10), BackgroundColor3 = C.PanelLight, Parent = card }, { UI.corner(UDim.new(0.5, 0)), UI.new("UIStroke", { Color = C.Accent, Thickness = 3 }) })
 	UI.text("LVL", { Size = UDim2.new(1, 0, 0, 14), Position = UDim2.fromOffset(0, 10), TextSize = 11, Font = Theme.FontBold, TextColor3 = C.TextDim, TextXAlignment = Enum.TextXAlignment.Center, Parent = badge })
 	levelLabel = UI.text("1", { Name = "Level", Size = UDim2.new(1, 0, 0, 24), Position = UDim2.fromOffset(0, 24), TextSize = 22, Font = Theme.FontBlack, TextXAlignment = Enum.TextXAlignment.Center, Parent = badge })
@@ -79194,13 +79207,18 @@ function Lobby.Start()
 	streakLabel = UI.text("", { Position = UDim2.fromOffset(82, 8), Size = UDim2.new(1, -94, 0, 22), TextSize = 13, Font = Theme.FontBold, TextColor3 = C.Warn, TextXAlignment = Enum.TextXAlignment.Right, Parent = card })
 	diamondsLabel = UI.text("", { Position = UDim2.fromOffset(82, 30), Size = UDim2.new(1, -90, 0, 16), TextSize = 13, Font = Theme.FontBold, TextColor3 = C.Accent, Parent = card })
 	local xpHolder = UI.new("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(82, 52), Size = UDim2.new(1, -94, 0, 16), Parent = card })
-	Buttons.icon("⚙", { Size = UDim2.fromOffset(32, 32), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -8, 0, 8), TextSize = 18, Parent = card }, function()
+	local gear = Buttons.icon("⚙", { Size = UDim2.fromOffset(32, 32), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -8, 0, 8), TextSize = 18, Parent = card }, function()
 		Panels.Toggle("Settings")
 	end)
+	if UI.skin(gear, "UI_Round") then
+		Buttons.refresh(gear)
+	end
 	local _xpBar
 	_xpBar, xpSet = UI.bar({ Size = UDim2.fromScale(1, 1), Parent = xpHolder }, C.Accent)
+	UI.skin(_xpBar, "UI_XpTrack")
 	local function pill(x: number, glyph: string, color: Color3, icon: string): TextLabel
 		local f = UI.panel({ Size = UDim2.fromOffset(150, 40), Position = UDim2.fromOffset(x, 8), Parent = gui })
+		UI.skin(f, "UI_Currency")
 		Icons.Apply(UI.text(glyph, { Size = UDim2.fromOffset(34, 40), TextSize = 20, TextColor3 = color, TextXAlignment = Enum.TextXAlignment.Center, Parent = f }), icon)
 		return UI.text("0", { Position = UDim2.fromOffset(34, 0), Size = UDim2.new(1, -40, 1, 0), TextSize = 19, Font = Theme.FontBlack, TextColor3 = color, Parent = f })
 	end
@@ -79270,9 +79288,12 @@ function Lobby.Start()
 		{ "LobbyShop", "BUY COINS", "Get more coins", "🪙", "BuyCoins" },
 	}
 	for i, spec in TILES do
-		Buttons.tile(spec[2], spec[3], spec[4], { LayoutOrder = i, Parent = nav, Icon = "Lobby_" .. spec[5], Tone = if spec[2] == "BUY COINS" then "Gold" else "Neutral" }, function()
+		local tile = Buttons.tile(spec[2], spec[3], spec[4], { LayoutOrder = i, Parent = nav, Icon = "Lobby_" .. spec[5], Tone = if spec[2] == "BUY COINS" then "Gold" else "Neutral" }, function()
 			Panels.Toggle(spec[1])
 		end)
+		if UI.skin(tile, "UI_Pill") then
+			Buttons.refresh(tile)
+		end
 	end
 
 	partyBody = Panels.Create("Party", "PARTY", Vector2.new(560, 560), renderParty)
@@ -81573,6 +81594,19 @@ function Buttons.refresh(b: GuiButton)
 		gs.Color = if hot and toneName ~= "Red" then HOVER_RIM else tone.Rim
 		gs.Transparency = if hot then 0.45 else tone.Glow
 	end
+	-- skinned buttons (UI.skin): the image is the plate; hover / press tint it, the rim
+	-- only shows when selected or hovered
+	local skin = b:FindFirstChild("Skin")
+	if skin and skin:IsA("ImageLabel") then
+		b.BackgroundTransparency = 1
+		skin.ImageColor3 = if b:GetAttribute("Down") then Color3.fromRGB(190, 190, 190) elseif hot then Color3.new(1, 1, 1) else Color3.fromRGB(232, 232, 232)
+		if stroke then
+			stroke.Transparency = if state == "Selected" or hot then 0 else 1
+		end
+		if gs then
+			gs.Transparency = 1
+		end
+	end
 	if b:IsA("TextButton") and b.Text ~= "" then
 		b.TextColor3 = tone.Text
 	end
@@ -82085,6 +82119,33 @@ function UI.panel(props: { [string]: any }, children: { Instance }?): Frame
 	table.insert(kids, UI.corner())
 	table.insert(kids, UI.stroke())
 	return UI.new("Frame", p, kids)
+end
+
+-- Puts an uploaded background image (Shared/IconIds `key`, e.g. "UI_Pill") behind a
+-- frame's contents and drops its drawn fill, gradient and outline. Does nothing
+-- until that image is uploaded, so the drawn look stays as the fallback.
+function UI.skin(frame: GuiObject, key: string): boolean
+	local img = Icons.Image(key)
+	if not img then
+		return false
+	end
+	frame.BackgroundTransparency = 1
+	for _, c in frame:GetChildren() do
+		if c:IsA("UIStroke") then
+			c.Transparency = 1
+		elseif c:IsA("UIGradient") then
+			c.Enabled = false
+		end
+	end
+	local il = Instance.new("ImageLabel")
+	il.Name = "Skin"
+	il.BackgroundTransparency = 1
+	il.Size = UDim2.fromScale(1, 1)
+	il.ScaleType = Enum.ScaleType.Stretch
+	il.Image = img
+	il.ZIndex = 0
+	il.Parent = frame
+	return true
 end
 
 function UI.text(text: string, props: { [string]: any }?): TextLabel
