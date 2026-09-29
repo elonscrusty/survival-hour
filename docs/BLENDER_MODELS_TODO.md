@@ -1,6 +1,20 @@
 # Blender models wanted (for ChatGPT)
 
 ## Rules for every model (paste this part to ChatGPT too)
+### Make them smooth and "Roblox-looking" (tell ChatGPT exactly this)
+- **Bevel every edge**: add a Bevel modifier (width 0.08 to 0.15 studs, 3 segments), so nothing
+  has a sharp corner. Small parts get 0.03 to 0.05.
+- **Shade Smooth**, with "Smooth by Angle" (auto smooth) at 30°, so the bevels look soft and
+  rounded, not faceted.
+- Round shapes use enough sides: cylinders 16 to 24 sides, spheres 16 × 12. Organic shapes (leaves,
+  bushes, rocks, animals) get one Subdivision Surface level before applying.
+- **Big, simple, chunky forms**, like a toy: slightly oversized handles, heads and details, and
+  nothing thinner than 0.2 studs.
+- **Flat solid colours** (one colour per part, bright but not neon), with no photo textures, noise,
+  wood grain or dirt. At most a soft two-tone (a lighter top, darker underside).
+- Material: plain Principled BSDF, Roughness 0.5 to 0.6, Metallic 0 (0.3 at most for metal).
+- Apply all modifiers before exporting the FBX.
+
 - Style: simple, chunky, clean Roblox low-poly (like the new trees, animals and "99 Nights in the
   Forest"), flat colours, soft bevels, readable from far away. Under ~3,000 triangles each.
 - Units: 1 Blender unit = 1 Roblox stud. **Z is up. The front faces -Y.**
@@ -200,5 +214,123 @@ Make these match the new tree style (clean, chunky, flat colours).
 | SM_CarePackage_Crate | Air-dropped supply crate | 4.45 × 3.41 × 4.45 |
 | SM_SupplyCrate_Small01 | Small supply crate | 1.86 × 1.52 × 1.9 |
 
-After ChatGPT uploads: send Claude the IDs for everything in sections A to F and H (the game
-needs a little code to use the H items). Section G needs nothing, because it uses the same IDs.
+
+## I. Armour (worn, NEW)
+Worn on the character over the avatar. Make one of each shape per material; keep them chunky
+and low-poly. Head ~1.4 × 1.2 × 1.4, chest ~2.2 × 2.2 × 1.3, legs = two leg guards ~0.9 × 1.8 × 0.9 each
+in one model spaced 1 stud apart. Save as `SM_Armor_<Material>_<Piece>`:
+
+| Material | Save as (Head / Chest / Legs) | Icons |
+|---|---|---|
+| Hide | SM_Armor_Hide_Head / SM_Armor_Hide_Chest / SM_Armor_Hide_Legs | armour_hide_helmet / _chestpiece / _leggings.png |
+| Reinforced Hide | SM_Armor_ReinforcedHide_Head / SM_Armor_ReinforcedHide_Chest / SM_Armor_ReinforcedHide_Legs | armour_reinforced_hide_helmet / _chestpiece / _leggings.png |
+| Scrap | SM_Armor_Scrap_Head / SM_Armor_Scrap_Chest / SM_Armor_Scrap_Legs | armour_scrap_helmet / _chestpiece / _leggings.png |
+| Iron | SM_Armor_Iron_Head / SM_Armor_Iron_Chest / SM_Armor_Iron_Legs | armour_iron_helmet / _chestpiece / _leggings.png |
+| Tactical | SM_Armor_Tactical_Head / SM_Armor_Tactical_Chest / SM_Armor_Tactical_Legs | armour_tactical_helmet / _chestpiece / _leggings.png |
+| Leather Vest | SM_Armor_LeatherVest (chest only) | armour_leather_vest.png |
+
+## J. Everything else 3D: RESTYLE to the new look (same name, EXACT size, new version)
+These already exist in the game. Remake each in the new clean chunky style at exactly this size.
+
+### Held items (weapons & tools)
+| Save as | Exact size (W × H × D) |
+|---|---|
+| SM_Axe_Iron | 0.31 × 3.61 × 1.58 |
+| SM_Bandage_Held | 0.45 × 1.46 × 0.73 |
+| SM_Crossbow | 3.21 × 0.95 × 3.05 |
+| SM_Crowbar | 0.17 × 3.5 × 0.88 |
+| SM_HuntingBow | 0.3 × 4.84 × 0.77 |
+| SM_Pickaxe_Iron | 0.31 × 3.61 × 2.62 |
+| SM_Pickaxe_Stone | 0.47 × 3.61 × 2.2 |
+| SM_Pistol | 0.28 × 1.05 × 1.41 |
+| SM_Rifle | 0.34 × 1.24 × 5.69 |
+| SM_Shotgun | 0.33 × 1.08 × 5.67 |
+| SM_Sledgehammer | 0.6 × 4.2 × 1.5 |
+
+### Pickups on the ground
+| Save as | Exact size (W × H × D) |
+|---|---|
+| SM_Ammo_Pistol | 0.9 × 0.75 × 0.62 |
+| SM_Ammo_Rifle | 1.3 × 0.96 × 0.6 |
+| SM_Ammo_Shotgun | 1.1 × 0.95 × 0.7 |
+| SM_Pickup_Ammo | 1.25 × 0.81 × 0.85 |
+| SM_Pickup_Bandage | 0.55 × 0.77 × 1.47 |
+| SM_Pickup_Fiber | 0.54 × 0.31 × 1.66 |
+| SM_Pickup_Leather | 1.3 × 0.49 × 1.29 |
+| SM_Pickup_Rope | 1.56 × 0.36 × 1.23 |
+| SM_Pickup_Stick | 1.7 × 0.47 × 0.52 |
+| SM_Pickup_Stone | 1.41 × 0.69 × 0.92 |
+| SM_Pickup_Wood | 1.07 × 0.93 × 1.3 |
+
+### Build pieces, storage & camp
+| Save as | Exact size (W × H × D) |
+|---|---|
+| SM_BearTrap | 2.56 × 0.55 × 1.76 |
+| SM_Campfire_Burning | 6.81 × 6.5 × 6.44 |
+| SM_Campfire_ColdWet | 6.96 × 6.5 × 6.76 |
+| SM_Campfire_Extinguished | 6.96 × 6.5 × 6.62 |
+| SM_MetalLocker | 4 × 7 × 3.2 |
+| SM_MetalWall | 10.8 × 11 × 2.6 |
+| SM_ReinforcedChest | 6.2 × 4.3 × 4.3 |
+| SM_ScrapWall | 10.46 × 10.4 × 1.36 |
+| SM_Snare | 3.14 × 3.25 × 2.46 |
+| SM_SupplyCrate_Small02 | 3.26 × 1.12 × 1.51 |
+| SM_SupplyCrate_Small03 | 3.73 × 1.31 × 3.36 |
+| SM_SurvivalSafe | 4.5 × 5 × 4.8 |
+| SM_TripwireAlarm | 7.91 × 1.4 × 0.53 |
+| SM_WoodFloor | 10 × 1 × 10.02 |
+
+### Places to explore (POIs)
+| Save as | Exact size (W × H × D) |
+|---|---|
+| SM_POI_AbandonedHouse | 16.48 × 13.98 × 17.62 |
+| SM_POI_BrokenVehicle | 15.12 × 5.36 × 9.42 |
+| SM_POI_Bunker | 14.6 × 8.68 × 14.92 |
+| SM_POI_Cabin | 14.87 × 12.84 × 13.4 |
+| SM_POI_Campsite | 18.46 × 3.71 × 15.03 |
+| SM_POI_HuntingBlind | 6.4 × 8.6 × 6.9 |
+| SM_POI_IndustrialSite | 34.95 × 10.61 × 22.5 |
+| SM_POI_LargeMine | 19.35 × 14.81 × 20.95 |
+| SM_POI_LoggingCamp | 19.11 × 9.42 × 24 |
+| SM_POI_MineEntrance | 15.71 × 8.47 × 20.56 |
+| SM_POI_Outpost | 26.56 × 9.36 × 20.6 |
+| SM_POI_RangerStation | 15.56 × 12.84 × 22.1 |
+| SM_POI_Shed | 9 × 7.83 × 6.96 |
+| SM_POI_SmallCabin | 10.87 × 11.6 × 10.9 |
+
+### World props, caves & cliffs
+| Save as | Exact size (W × H × D) |
+|---|---|
+| SM_Camp_Barrel | 2 × 2.53 × 2 |
+| SM_Camp_Bedroll | 1.8 × 0.71 × 4.6 |
+| SM_Camp_ChoppingBlock | 3.8 × 1.7 × 3.84 |
+| SM_Camp_DryingRack | 4.6 × 4.23 × 1.41 |
+| SM_Camp_FirewoodStack | 2.65 × 1.76 × 1.5 |
+| SM_Camp_LogBench | 5 × 1.89 × 1.26 |
+| SM_CaveChamber_End | 19.37 × 15.88 × 20.19 |
+| SM_CaveEntrance | 20.87 × 15.4 × 9.75 |
+| SM_CaveTunnel_Segment | 14.75 × 12.95 × 12.4 |
+| SM_Cliff_Face01 | 24.8 × 26.38 × 9.71 |
+| SM_Cliff_Face02 | 24.62 × 23.56 × 9.66 |
+| SM_Landmark_AntlerTotem | 3.32 × 8.86 × 1.19 |
+| SM_Landmark_GiantLog | 22.8 × 8.6 × 7.43 |
+| SM_Landmark_StandingStones | 17.26 × 7.9 × 17.79 |
+
+### Effect
+| Save as | Exact size (W × H × D) |
+|---|---|
+| SM_Campfire_Flames | 2.47 × 4.9 × 2.42 |
+| SM_Campfire_WaterTarget | 6.4 × 0.44 × 6.4 |
+| SM_Parachute_Canopy | 14 × 4.4 × 14 |
+| SM_Parachute_Lines | 13.89 × 12.44 × 13.89 |
+
+### Lobby
+| Save as | Exact size (W × H × D) |
+|---|---|
+| SM_Sign_Board | 12 × 9.3 × 1.6 |
+| SM_Sign_Hanging | 4.5 × 3.44 × 0.34 |
+| SM_Sign_Plaque | 1.8 × 0.94 × 0.34 |
+| SM_Sign_Post | 4 × 5.1 × 0.54 |
+
+After ChatGPT uploads: send Claude the IDs for everything in sections A to F, H and I (the game
+needs a little code to use the H items). Sections G and J need nothing, because they use the same IDs.
