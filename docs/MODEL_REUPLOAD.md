@@ -1,6 +1,6 @@
 # Model polish: re-upload list
 
-Twenty models were reworked in `blender/assets/survival_wars.py` and re-exported. **Each one keeps the
+Twenty-three models were reworked in `blender/assets/survival_wars.py` and `blender/assets/camp.py` and re-exported. **Each one keeps the
 exact outer size and pivot it was published with** (`tools/check_bounds.py` enforces this), so
 `src/shared/AssetIds.luau` does not change and the game works with either the old or the new uploads.
 The new detail only appears in game after the files below are uploaded as **new versions of the same
@@ -11,7 +11,7 @@ assets** (same IDs).
 | Chests | Plank bodies on feet, iron corner brackets, riveted hoop bands, lock hasp (rare tiers keep the glowing lock) |
 | Storage | Locker: slate paint, double doors, louvres, hinges, handles. Safe: feet, door plate, hinges, dial and locking wheel |
 | Walls | Scrap wall: weathered sheets with ribs and bolts, one faded red panel, second rail. Metal wall: rivets, seams, top beam |
-| Workbench IV / V | Lower shelf with stock, vise, anvil, bellows, forge rim and coals, chimney cap, a pegged tool board. Tier V tools now hang on the board (they used to float) |
+| Workbenches I-V (reworked again as a set, so each tier reads as an upgrade) | I: split-log top on rooted stumps, pegs and rope lashing, knapping stone, stone hammer, stone axe stuck in the top, hide, team cloth throw, firewood. II: nailed plank top, leg vise, braced legs, stocked shelf, hand plane and shavings, team-painted tool board with saw, hammers, chisels, square and rope. III: iron-banded beam top with rivets, anvil on a banded stump, quench bucket, tongs, crank grindstone, tool rack with shelves of ingots and a team banner with an anvil emblem. IV: iron-strapped plank bench, engineer's vise, anvil, grindstone, team tool board with an iron guild plaque, stone forge with glowing coals, ash-pit glow, bellows, quench trough, hood on iron posts and chimney. V: IV upgraded to a riveted steel top with brass corners, brass-pulled drawers, steel tools and vise, brass plaque, iron-banded forge with crucible, lantern, metal hood, team pennant and chimney rain cap |
 | POIs | Pickup truck (olive, open bed, glass, grille, rims, flat tyre, weeds), industrial yard (corrugated containers with doors, tank ladder, barrels, pallets, crates), bunker (moss patches instead of a green lid, door frame, lamp, vent, two sandbag courses), hunting blind (slatted screens with brush), cabin (stacked-stone chimney), mine entrance and large mine (sleepers under the rails, a real ore cart, name board, braces, lantern) |
 | Held tools | Sledgehammer (forged head with striking faces and collar), crowbar (grip wrap, bare-steel claw), crossbow (butt plate, trigger guard, loaded bolt) |
 
@@ -27,8 +27,11 @@ assets** (same IDs).
 | `Export/Meshes/SW_Base/SM_SurvivalSafe.fbx` | 76460121618816 |
 | `Export/Meshes/SW_Base/SM_ScrapWall.fbx` | 86100239983828 |
 | `Export/Meshes/SW_Base/SM_MetalWall.fbx` | 90222266864696 |
-| `Export/Meshes/SW_Base/SM_Workbench_Level04.fbx` | 97752974757537 |
-| `Export/Meshes/SW_Base/SM_Workbench_Level05.fbx` | 113154978546972 |
+| `Export/Meshes/Camp/SM_Workbench_Level01.fbx` | 124461291296913 |
+| `Export/Meshes/Camp/SM_Workbench_Level02.fbx` | 73246854612819 |
+| `Export/Meshes/Camp/SM_Workbench_Level03.fbx` | 89873222733176 |
+| `Export/Meshes/SW_Base/SM_Workbench_Level04.fbx` (changed again) | 97752974757537 |
+| `Export/Meshes/SW_Base/SM_Workbench_Level05.fbx` (changed again) | 113154978546972 |
 | `Export/Meshes/SW_POI/SM_POI_BrokenVehicle.fbx` | 89009731297133 |
 | `Export/Meshes/SW_POI/SM_POI_Bunker.fbx` | 118663500247472 |
 | `Export/Meshes/SW_POI/SM_POI_Cabin.fbx` | 83134859646780 |
@@ -42,7 +45,7 @@ assets** (same IDs).
 
 ## Prompt for ChatGPT (paste as is)
 
-> I re-exported 20 FBX models for my Roblox game Survival Hour. Each one is already uploaded; I need a
+> I re-exported 23 FBX models for my Roblox game Survival Hour. Each one is already uploaded; I need a
 > **new version of the existing asset**, not a new asset, so the IDs stay the same.
 > Use the Open Cloud Assets API update call (`PATCH https://apis.roblox.com/assets/v1/assets/{assetId}`,
 > multipart with `request` JSON `{"assetId": <id>}` and `fileContent` = the FBX, content type

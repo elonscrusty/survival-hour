@@ -946,49 +946,202 @@ def tripwire(m):
         m.cylinder("enamel_teal", 0.18, 0.18, 0.45, seg=6, loc=(3.8, 0.2, 0.9 - k * 0.3))
 
 
-@asset("SM_Workbench_Level04", "SW_Base", "Structure", density=2.5, pivot=GROUND, footprint=[12, 4],
-       use="Workbench Tier IV: stone forge with coals and chimney beside the bench.")
-def workbench4(m):
-    # bounds locked: X -4..8.1, Y +-2, Z 0..7.7
-    m.box("wood", (8, 4, 0.8), loc=(0, 0, 3.4), bevel=0.06)
+# Workbench helpers shared with the camp tiers (camp.py is imported first).
+from assets.camp import (anvil, axe, cbox, chisel, grp, hammer, ingot, log_piece, nail,  # noqa: E402
+                         plank_run, rope_coil, tongs)
+
+
+def _bellows(m, loc, tier):
+    """Leather bellows lying flat, nozzle pointing +Y into the hearth."""
+    prof = [(0.0, -0.5), (0.12, -0.42), (0.34, -0.05), (0.4, 0.3), (0.3, 0.48), (-0.3, 0.48), (-0.4, 0.3),
+            (-0.34, -0.05), (-0.12, -0.42)]
+
+    def b():
+        m.prism("wood", prof, 0.08, loc=(0, 0, 0.22), rot=(90, 0, 0))
+        m.prism("wood", prof, 0.08, loc=(0, 0, -0.22), rot=(90, 0, 0))
+        m.prism("leather_dark", prof, 0.2, loc=(0, 0.03, 0.08), rot=(90, 0, 0), scale=(0.94, 0.94, 0.94))
+        m.prism("leather_dark", prof, 0.2, loc=(0, 0.03, -0.08), rot=(90, 0, 0), scale=(0.84, 0.84, 0.84))
+        m.cone("brass" if tier >= 5 else "metal_dark", 0.09, 0.4, seg=6, loc=(0, 0.45, 0), rot=(-90, 0, 0))
+        m.box("wood", (0.9, 0.1, 0.1), loc=(0, 0.3, 0.26))
+    grp(m, loc, (-10, 0, 0), b, scale=1.2)
+
+
+def _forge(m, tier):
+    """Stone hearth (x 4.7..8.1) with the coal bed where Camp.luau's ForgeCoals neon sits,
+    an open hood on iron posts and a chimney whose pot top is the Z 7.7 bound."""
+    cx, cy = 6.4, 0.45
+    ins = 0.04 if tier >= 5 else 0.0  # Tier V: iron bands take the outer face (bound X 8.1)
+    x0, x1, y0, y1 = 4.7 + ins, 8.1 - ins, -1.0 + ins, 1.9 - ins
+    w, d = x1 - x0, y1 - y0
+    cbox(m, "stone", (w, d, 0.35), loc=(cx, cy, 0.175), c=0.07)                                # plinth
+    m.box("stone_dark", (w - 0.12, d - 0.12, 2.0), loc=(cx, cy, 1.35))                           # core
+    for qx, qy in ((x0, y0), (x1, y0)):                                                         # quoins
+        sx, sy = (1 if qx == x0 else -1), (1 if qy == y0 else -1)
+        for k, (z0, z1) in enumerate(((0.35, 1.3), (1.3, 2.3))):
+            a, b = (0.55, 0.4) if k == 0 else (0.4, 0.55)
+            cbox(m, "stone", (a, b, z1 - z0), loc=(qx + sx * (a / 2 + 0.03), qy + sy * (b / 2 + 0.03), (z0 + z1) / 2),
+                 c=0.07)
+    # rim course around the coal pit
+    cbox(m, "stone", (w - 0.06, 0.5, 0.3), loc=(cx, y0 + 0.28, 2.45), c=0.07)
+    cbox(m, "stone", (w - 0.06, 0.5, 0.3), loc=(cx, y1 - 0.28, 2.45), c=0.07)
+    for x in (x0 + 0.28, x1 - 0.28):
+        cbox(m, "stone", (0.5, d - 1.0, 0.3), loc=(x, cy, 2.45), c=0.07)
+    # glowing coal bed (ForgeCoals neon overlays it in game)
+    m.box("embers", (w - 0.95, d - 0.95, 0.3), loc=(cx, cy, 2.52))
+    for i, (x, y) in enumerate(((5.6, 0.0), (6.3, 0.85), (7.2, 0.2))):
+        m.blob("charcoal" if i % 3 else "embers", 0.22, loc=(x, y, 2.72), scale=(1.2, 1.0, 0.6), jitter=0.04,
+               subdiv=1)
+    for x, y, r in ((6.3, 0.3, 0.3), (5.8, 0.6, 0.2)):
+        m.blob("fire", r, loc=(x, y, 2.74), scale=(1.1, 1.0, 0.55), jitter=0.03, subdiv=1)
+    # ash-pit opening with a glow, under a stone lintel
+    m.box("embers", (1.3, 0.1, 0.75), loc=(cx, y0 + 0.02, 0.85))
+    cbox(m, "stone", (1.9, 0.3, 0.3), loc=(cx, y0 + 0.1, 1.4), c=0.07)
+    # fire-back wall, iron posts and the hood
+    cbox(m, "stone_dark", (w - 0.2, 0.5, 1.8), loc=(cx, y1 - 0.25, 3.5), c=0.084)
+    hood = "metal_dark" if tier >= 5 else "stone"
+    for x in (x0 + 0.3, x1 - 0.3):
+        m.box("metal_dark", (0.14, 0.14, 1.75), loc=(x, 0.0, 3.47))
+    v = m.cylinder(hood, 2.2, 0.8, 1.2, seg=4, loc=(cx, 0.92, 4.35), rot=(0, 0, 45))
+    for vv in v:
+        vv.co.y = 0.92 + (vv.co.y - 0.92) * 0.66
+    m.box("metal_dark" if tier >= 5 else "stone_dark", (3.15, 2.1, 0.12), loc=(cx, 0.92, 4.35))
+    # chimney stack, band, cap and pot (bound: Z 7.7)
+    cbox(m, "stone", (1.15, 1.15, 1.8), loc=(cx, 0.92, 6.4), c=0.084)
+    m.box("stone_dark", (1.3, 1.3, 0.22), loc=(cx, 0.92, 6.0))
+    cbox(m, "stone_dark", (1.5, 1.5, 0.24), loc=(cx, 0.92, 7.38), c=0.07)
+    if tier >= 5:
+        m.cylinder("metal_dark", 0.34, 0.34, 0.16, seg=8, loc=(cx, 0.92, 7.5))
+        m.cone("metal", 0.45, 0.2, seg=8, loc=(cx, 0.92, 7.5))
+    else:
+        m.cylinder("stone_dark", 0.36, 0.32, 0.2, seg=8, loc=(cx, 0.92, 7.5), cap="charcoal")
+    # bellows on a trestle, tuyere into the hearth front
+    cbox(m, "wood_dark", (0.6, 0.5, 0.95), loc=(5.35, -1.55, 0.475), c=0.06)
+    _bellows(m, (5.35, -1.37, 1.3), tier)
+    # quench trough with tongs
+    cbox(m, "wood", (1.25, 0.8, 0.7), loc=(7.35, -1.55, 0.35), c=0.056)
+    m.box("water", (1.05, 0.6, 0.04), loc=(7.35, -1.55, 0.69))
+    for x in (6.95, 7.75):
+        m.box("metal_dark", (0.1, 0.84, 0.7), loc=(x, -1.55, 0.35))
+    tongs(m, (7.5, -1.5, 0.55), rot=(0, -18, 10), s=1.1)
+    if tier >= 5:
+        # iron bands round the hearth, crucible in the coals, lantern and a team pennant on the hood
+        for z in (1.0, 1.95):
+            m.box("metal_dark", (8.1 - 4.7, 2.9, 0.14), loc=(cx, cy, z))
+        m.cylinder("stone_dark", 0.3, 0.36, 0.45, seg=8, loc=(6.9, 0.45, 2.66), top_cap="fire")
+        m.box("metal_dark", (0.06, 0.06, 0.95), loc=(x1 - 0.3, -0.02, 2.95 + 0.9))
+        m.cylinder("glow", 0.15, 0.15, 0.4, seg=6, loc=(x1 - 0.8, -0.02, 3.55))
+        m.cone("metal_dark", 0.2, 0.2, seg=6, loc=(x1 - 0.8, -0.02, 3.93))
+        m.prism("team_cloth", [(-0.55, 0), (0.55, 0), (0.55, -1.25), (0, -0.95), (-0.55, -1.25)], 0.05,
+                loc=(cx, 0.02, 5.4), rot=(-30, 0, 0))
+        m.box("brass", (1.25, 0.1, 0.1), loc=(cx, 0.0, 5.42), rot=(-30, 0, 0))
+
+
+def forge_bench(m, tier):
+    """Tier IV (tier=4) and Tier V (tier=5) forge benches."""
+    steel = tier >= 5
+    top = 3.8
+    # bench top (bound IV: X -4..4, Y +-2 = planks; V: steel plate 8.1 x 4.1)
+    if steel:
+        cbox(m, "wood_dark", (8.0, 4.0, 0.5), loc=(0, 0, top - 0.25), c=0.07)
+        m.box("metal", (8.1, 4.1, 0.12), loc=(0, 0, top + 0.06))
+        for x in (-3.84, 3.84):
+            for y in (-1.84, 1.84):
+                m.box("brass", (0.42, 0.42, 0.06), loc=(x, y, top + 0.14))
+    else:
+        plank_run(m, "wood", -4.0, 4.0, -2.0, 2.0, top - 0.5, top, 5, nails_at=(-3.4, 3.4), jit=0.02,
+                  mats=("wood", "wood", "wood_fresh"))
+        for x in (-2.6, 2.6):
+            m.box("metal_dark", (0.2, 4.0, 0.04), loc=(x, 0, top + 0.02))
+            for y in (-1.5, 0.0, 1.5):
+                nail(m, x, y, top + 0.04, "metal")
+    for y in (-1.8, 1.8):  # aprons
+        cbox(m, "wood_dark", (7.3, 0.2, 0.4), loc=(0, y, top - 0.7), c=0.042)
     for x in (-3.4, 3.4):
         for y in (-1.5, 1.5):
-            m.box("wood_dark", (0.7, 0.7, 3), loc=(x, y, 1.5), bevel=0.05)
-        m.box("wood_dark", (0.4, 3.2, 0.4), loc=(x, 0, 0.7))
-    m.box("wood_dark", (7.2, 3.4, 0.25), loc=(0, 0, 0.95), bevel=0.03)          # lower shelf
-    for i, x in enumerate((-2.4, -1.2, 0.2)):                                     # stock on the shelf
-        m.box("wood_fresh" if i % 2 else "wood", (1.0, 2.6, 0.3), loc=(x, 0, 1.23 + 0.3 * (i % 2)), rot=(0, 0, 4 * i))
-    m.box("metal_dark", (0.9, 0.9, 0.5), loc=(1.6, -1.1, 4.05), bevel=0.05)     # vise
-    m.box("metal", (0.2, 0.8, 0.12), loc=(1.6, -1.55, 4.2))
-    # rear tool board with pegs (tools hang on it, so nothing floats at Tier V)
-    m.box("wood_dark", (5.0, 0.25, 3.4), loc=(-1.2, 1.75, 5.9), bevel=0.04)
-    for x in (-3.6, 1.2):
-        m.box("wood_dark", (0.3, 0.3, 4.3), loc=(x, 1.75, 5.55))
-    for x in (-3.1, -2.1, -1.2, -0.4):
-        m.box("metal_dark", (0.08, 0.3, 0.08), loc=(x, 1.55, 7.2))
-    # forge: stone hearth with glowing coals, bellows and chimney
-    m.box("stone_dark", (3.4, 3, 2.6), loc=(6.4, 0.4, 1.3), bevel=0.15)
-    m.box("stone", (3.4, 3.0, 0.25), loc=(6.4, 0.4, 2.6), bevel=0.05)
-    m.box("embers", (2.4, 2, 0.3), loc=(6.4, 0.4, 2.7))
+            cbox(m, "wood_dark", (0.7, 0.7, top - 0.5), loc=(x, y, (top - 0.5) / 2), c=0.07)
+            m.box("metal_dark", (0.78, 0.78, 0.26), loc=(x, y, 0.13))
+        for a in (-1, 1):  # X-braces on the ends
+            m.box("wood", (0.14, 3.3, 0.2), loc=(x + (0.36 if x > 0 else -0.36), 0, 1.95), rot=(a * 36, 0, 0))
+    # drawers (V) under the top
+    if steel:
+        for x in (-2.2, 0.0, 2.2):
+            m.box("wood", (2.0, 0.1, 0.34), loc=(x, -1.93, top - 0.72))
+            m.box("brass", (0.4, 0.08, 0.08), loc=(x, -2.0, top - 0.72))
+    # lower shelf and stock
+    plank_run(m, "wood_dark", -3.05, 3.05, -1.3, 1.3, 0.95, 1.15, 3, gap=0.1, bevel=0, jit=0)
+    for i, (x, y, z) in enumerate(((-2.5, -0.5, 1.15), (-1.85, -0.5, 1.15), (-2.2, -0.5, 1.31))):
+        ingot(m, (x, y, z), mat=("brass" if steel and i == 2 else ("metal" if i % 2 else "metal_dark")))
+    for y, z in ((-0.35, 1.45), (0.35, 1.45)):
+        log_piece(m, (1.3, y, z), (3.0, y, z), 0.3)
+    # tool board with team-painted planks (bound: top rail under Z 7.7)
+    for x in (-3.65, 1.25):
+        cbox(m, "wood_dark", (0.3, 0.3, 3.7), loc=(x, 1.75, top + 1.75), c=0.042)
+    m.box("wood_dark", (4.6, 0.08, 3.0), loc=(-1.2, 1.84, top + 1.8))
     for i in range(4):
-        m.blob("charcoal", 0.3, loc=(5.8 + i * 0.4, 0.1 + (i % 2) * 0.5, 2.9), scale=(1, 1, 0.6), subdiv=1)
-    m.box("stone", (1.4, 1.4, 5), loc=(6.9, 1.3, 5.2), bevel=0.08)
-    m.box("stone_dark", (1.7, 1.4, 0.3), loc=(6.9, 1.3, 7.55))
-    m.box("leather_dark", (0.9, 1.4, 0.6), loc=(4.4, -1.0, 3.1), rot=(0, 0, 20), bevel=0.1)  # bellows
-    m.box("metal_dark", (0.8, 0.8, 0.9), loc=(4.4, 1.1, 4.25), bevel=0.06)     # anvil block on the bench
-    m.box("metal", (1.4, 0.6, 0.35), loc=(4.4, 1.1, 4.85), bevel=0.05)
+        m.box("team_paint", (1.08, 0.12, 2.96), loc=(-2.85 + i * 1.1, 1.74, top + 1.8 + m.rng.uniform(-0.03, 0.03)))
+    cbox(m, "wood_dark", (5.3, 0.38, 0.3), loc=(-1.2, 1.75, top + 3.55), c=0.056)
+    m.box("wood", (4.6, 0.14, 0.14), loc=(-1.2, 1.6, top + 2.6))
+    # smith's guild plaque: an anvil silhouette in iron (IV) or brass (V)
+    m.prism("brass" if steel else "metal_dark",
+            [(-0.36, 0.0), (0.36, 0.0), (0.24, 0.16), (0.18, 0.36), (0.72, 0.5), (0.8, 0.68), (-0.6, 0.68),
+             (-0.64, 0.5), (-0.24, 0.4), (-0.18, 0.36), (-0.24, 0.16)], 0.05, loc=(-1.1, 1.66, top + 2.74))
+    blade = "metal" if steel else "metal_dark"
+    hammer(m, (-2.55, 1.55, top + 2.7), rot=(0, 180, 0), s=1.05, kind="sledge", head=blade)
+    chisel(m, (-1.65, 1.58, top + 2.45), blade=blade)
+    hammer(m, (-1.1, 1.55, top + 2.7), rot=(0, 180, 0), s=0.95, head=blade)
+    if steel:
+        axe(m, (0.35, 1.55, top + 1.35), s=0.95, head="metal")
+    else:
+        rope_coil(m, (0.5, 1.52, top + 2.2), rot=(90, 0, 0), R=0.34)
+    # engineer's vise on the front edge
+    vm = "metal" if steel else "metal_dark"
+    vy = -1.45
+    m.box("metal_dark", (0.6, 0.7, 0.14), loc=(1.8, vy, top + 0.07 + (0.12 if steel else 0)))
+    cbox(m, vm, (0.5, 0.75, 0.4), loc=(1.8, vy, top + 0.35 + (0.12 if steel else 0)), c=0.056)
+    zj = top + 0.72 + (0.12 if steel else 0)
+    cbox(m, vm, (0.95, 0.2, 0.36), loc=(1.8, vy + 0.25, zj), c=0.042)
+    cbox(m, vm, (0.95, 0.2, 0.36), loc=(1.8, vy - 0.25, zj), c=0.042)
+    m.cylinder("metal_dark", 0.07, 0.07, 0.45, seg=6, loc=(1.8, vy - 0.08, zj - 0.1), rot=(90, 0, 0))
+    m.cylinder("metal_dark", 0.035, 0.035, 0.8, seg=5, loc=(1.4, -1.9, zj - 0.1), rot=(0, 90, 0))
+    for x in (1.4, 2.2):
+        m.box("brass" if steel else "metal_dark", (0.1, 0.1, 0.1), loc=(x, -1.9, zj - 0.1))
+    # anvil (horn toward the vise) and a crank grindstone on the left end
+    zt = top + (0.12 if steel else 0.0)
+    anvil(m, (3.05, 0.45, zt), rot=(0, 0, 180), s=1.0)
+    hammer(m, (3.1, 0.45, zt + 1.02), rot=(90, 0, 80), s=0.8, head=blade)
+    gx, gy = -2.7, -0.7
+    cbox(m, "wood", (1.5, 0.85, 0.28), loc=(gx, gy, zt + 0.14), c=0.042)
+    m.box("water", (1.3, 0.65, 0.04), loc=(gx, gy, zt + 0.27))
+    for y in (gy - 0.3, gy + 0.3):
+        m.box("wood" if not steel else "metal_dark", (0.2, 0.12, 1.2), loc=(gx, y, zt + 0.7))
+    m.cylinder("stone", 0.8, 0.8, 0.26, seg=12, loc=(gx, gy + 0.13, zt + 1.1), rot=(90, 0, 0), cap="stone_dark")
+    if steel:
+        m.cylinder("brass", 0.3, 0.3, 0.3, seg=8, loc=(gx, gy + 0.15, zt + 1.1), rot=(90, 0, 0))
+    m.cylinder("metal_dark", 0.06, 0.06, 1.0, seg=6, loc=(gx, gy + 0.45, zt + 1.1), rot=(90, 0, 0))
+    m.sweep("metal_dark", [(gx, gy - 0.55, zt + 1.1), (gx, gy - 0.55, zt + 0.72), (gx, gy - 0.85, zt + 0.72)],
+            0.05, seg=4)
+    m.cylinder("wood", 0.07, 0.07, 0.28, seg=6, loc=(gx, gy - 0.85, zt + 0.72), rot=(90, 0, 0))
+    # work in progress: a blade blank and leather apron
+    m.prism("metal", [(-0.7, 0), (0.55, 0), (0.78, 0.1), (0.55, 0.2), (-0.7, 0.2)], 0.05,
+            loc=(0.2, -0.6, zt + 0.03), rot=(90, 0, 12))
+    m.box("leather_stitch", (1.3, 0.9, 0.06), loc=(-0.6, 0.6, zt + 0.03), rot=(0, 0, 10))
+    _forge(m, tier)
+
+
+@asset("SM_Workbench_Level04", "SW_Base", "Structure", density=2.5, pivot=GROUND, footprint=[12, 4],
+       use="Workbench Tier IV: iron-strapped plank bench with an engineer's vise, anvil, crank "
+           "grindstone and team tool board, beside a stone forge (glowing coals, bellows, quench "
+           "trough, hood and chimney).",
+       notes="Team accent: painted tool board (team_paint). ForgeCoals neon from Camp.luau sits on the coal bed.")
+def workbench4(m):
+    # bounds locked: X -4..8.1, Y +-2, Z 0..7.7
+    forge_bench(m, 4)
 
 
 @asset("SM_Workbench_Level05", "SW_Base", "Structure", density=2.5, pivot=GROUND, footprint=[12, 4],
-       use="Workbench Tier V: steel-plated top, tool rack and forge.")
+       use="Workbench Tier V: riveted steel-plated bench with brass drawers, steel tools and vise, "
+           "and an iron-banded forge with crucible, lantern, metal hood and team pennant.",
+       notes="Team accent: tool board (team_paint) and hood pennant (team_cloth).")
 def workbench5(m):
-    workbench4(m)
-    m.box("metal", (8.1, 4.1, 0.12), loc=(0, 0, 3.86))
-    for x in (-3.9, 3.9):
-        for y in (-1.9, 1.9):
-            m.box("metal_dark", (0.3, 0.3, 0.14), loc=(x, y, 3.93))
-    # steel tools hanging from the board's pegs (was floating bars)
-    for x, ln in ((-3.1, 2.4), (-2.1, 2.0), (-1.2, 2.6)):
-        m.box("metal", (0.22, 0.12, ln), loc=(x, 1.5, 7.15 - ln / 2))
-    m.box("metal_dark", (0.7, 0.2, 0.35), loc=(-2.1, 1.5, 5.2))
-    m.box("metal_dark", (0.5, 0.2, 0.6), loc=(-1.2, 1.5, 4.6))
+    # bounds locked: X -4.05..8.1, Y +-2.05, Z 0..7.7
+    forge_bench(m, 5)
