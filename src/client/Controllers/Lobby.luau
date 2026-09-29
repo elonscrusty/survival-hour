@@ -783,12 +783,9 @@ function Lobby.Start()
 		{ "LobbyShop", "BUY COINS", "Get more coins", "🪙", "BuyCoins" },
 	}
 	for i, spec in TILES do
-		local tile = Buttons.tile(spec[2], spec[3], spec[4], { LayoutOrder = i, Parent = nav, Icon = "Lobby_" .. spec[5], Tone = if spec[2] == "BUY COINS" then "Gold" else "Neutral" }, function()
+		Buttons.tile(spec[2], spec[3], spec[4], { LayoutOrder = i, Parent = nav, Icon = "Lobby_" .. spec[5], Tone = if spec[2] == "BUY COINS" then "Gold" else "Neutral" }, function()
 			Panels.Toggle(spec[1])
 		end)
-		if UI.skin(tile, "UI_Pill") then
-			Buttons.refresh(tile)
-		end
 	end
 
 	partyBody = Panels.Create("Party", "PARTY", Vector2.new(560, 560), renderParty)
