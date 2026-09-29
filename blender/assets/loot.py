@@ -184,3 +184,41 @@ def ammo_rifle(m):
     m.box("wood", (1.3, 0.6, 0.35), loc=(0, 0, 0.18), bevel=0.04)
     m.box("metal_dark", (0.95, 0.1, 0.06), loc=(0, 0, 0.38))
     rounds(m, 5, -0.4, 0, 0.4, r=0.055, h=0.45, dx=0.2)
+
+
+@asset("SM_Medkit", "Loot", "Equippable", density=1.0,
+       pivot="Grip point (RightGripAttachment): the middle of the carry handle; the case hangs below.",
+       use="Medkit: chunky red hard case with a white cross, carry handle, latches and corner guards.")
+def medkit(m):
+    W, H, D = 1.4, 0.95, 0.6
+    top = -0.18  # case top sits just under the handle grip
+    cz = top - H / 2
+    # chunky two-part plastic shell (flat colours, rounded edges)
+    body = m.box("red_paint", (W, D, H * 0.64), loc=(0, 0, cz - H * 0.18), bevel=0.12)
+    lid = m.box("red_paint", (W, D, H * 0.34), loc=(0, 0, top - H * 0.17), bevel=0.12)
+    m.tone(body, 55)
+    m.tone(lid, 62)
+    band = m.box("metal_dark", (W + 0.03, D + 0.03, 0.06), loc=(0, 0, top - H * 0.35), bevel=0.02)
+    m.tone(band, 30)
+    # one-piece white cross on both faces, on the body below the seam
+    c, a2 = 0.08, 0.22
+    plus = [(-c, -a2), (c, -a2), (c, -c), (a2, -c), (a2, c), (c, c), (c, a2), (-c, a2), (-c, c), (-a2, c), (-a2, -c), (-c, -c)]
+    for s_ in (-1, 1):
+        v = m.prism("bone", plus, 0.05, loc=(0, s_ * (D / 2 + 0.02), cz - 0.08))
+        m.tone(v, 90)
+    # rounded corner bumpers
+    for x in (-W / 2 + 0.06, W / 2 - 0.06):
+        for z in (top - 0.06, top - H + 0.06):
+            v = m.box("metal_dark", (0.18, D + 0.06, 0.18), loc=(x, 0, z), bevel=0.07)
+            m.tone(v, 30)
+    # yellow latches
+    for x in (-0.4, 0.4):
+        v = m.box("brass", (0.16, 0.07, 0.18), loc=(x, -D / 2 - 0.03, top - H * 0.35), bevel=0.03)
+        m.tone(v, 70)
+    # carry handle: two posts + a chunky grip bar at the origin
+    for x in (-0.32, 0.32):
+        v = m.box("metal_dark", (0.1, 0.16, 0.22), loc=(x, 0, top + 0.06), bevel=0.03)
+        m.tone(v, 30)
+    v = m.cylinder("cloth_dark", 0.08, 0.08, 0.72, seg=10, loc=(-0.36, 0, 0.0), rot=(0, 90, 0))
+    m.tone(v, 25)
+    m.attach("Grip", (0, 0, 0))

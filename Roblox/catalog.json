@@ -10168,6 +10168,77 @@
   }
  },
  {
+  "name": "SM_Medkit",
+  "category": "Loot",
+  "kind": "Equippable",
+  "kind_note": "Held item: put in a Tool, rename to Handle.",
+  "use": "Medkit: chunky red hard case with a white cross, carry handle, latches and corner guards.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   1.46,
+   1.24,
+   0.71
+  ],
+  "footprint_studs": [
+   1.46,
+   0.71
+  ],
+  "tris": 608,
+  "verts": 332,
+  "materials": 1,
+  "texture_tiles": [
+   "bone",
+   "brass",
+   "cloth_dark",
+   "metal_dark",
+   "red_paint"
+  ],
+  "origin_offset": [
+   0.0,
+   0.542,
+   0.01
+  ],
+  "team_colored": false,
+  "pivot": "Grip point (RightGripAttachment): the middle of the carry handle; the case hangs below.",
+  "collision_fidelity": "Box",
+  "attachments": [
+   {
+    "name": "Grip_Att",
+    "cframe": [
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   }
+  ],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Loot/SM_Medkit.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/Loot/SM_Medkit.png",
+   "held": "Renders/Loot/SM_Medkit_Held.png"
+  }
+ },
+ {
   "name": "SM_Pistol",
   "category": "Firearms",
   "kind": "Equippable",
