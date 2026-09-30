@@ -35,6 +35,7 @@ export type Session = {
 	Saving: boolean,
 	Released: boolean,
 	LoadedEvent: BindableEvent,
+	Posted: { [string]: number }?, -- last value written to each leaderboard
 }
 
 local DataService = {}
@@ -422,17 +423,21 @@ end
 
 function DataService.PostLeaderboards(player: Player)
 	local s = sessions[player]
-	if not s or s.State ~= "Loaded" then
+	if not s or s.State ~= "Loaded" or s.LockLost then
 		return
 	end
 	local values = { Wins = s.Profile.Wins, XP = s.Profile.XP, Kills = s.Profile.Kills, Playtime = s.Profile.Stats.PlaySeconds or 0 }
 	for b, value in values do
 		local ods = boards[b]
-		if ods and value > 0 then
+		local posted = s.Posted or {}
+		s.Posted = posted
+		if ods and value > 0 and posted[b] ~= math.floor(value) then
 			local ok, err = pcall(function()
 				ods:SetAsync(key(player.UserId), math.floor(value))
 			end)
-			if not ok then
+			if ok then
+				posted[b] = math.floor(value) -- unchanged values aren't written again
+			else
 				warn("[DataService] leaderboard write failed:", err)
 			end
 		end

@@ -841,7 +841,7 @@ function Lobby.Start()
 	UI.list(Enum.FillDirection.Vertical, 6).Parent = lockerBody
 	profileBody = Panels.Create("Profile", "PROFILE & REWARDS", Vector2.new(620, 640), renderProfile)
 	UI.list(Enum.FillDirection.Vertical, 6).Parent = profileBody
-	shopBody = Panels.Create("LobbyShop", "TRADING POST", Vector2.new(600, 520), renderShop)
+	shopBody = Panels.Create("LobbyShop", "CAMP STORE", Vector2.new(600, 520), renderShop)
 	settingsBody = Panels.Create("Settings", "SETTINGS", Vector2.new(560, 380), renderSettings)
 	UI.list(Enum.FillDirection.Vertical, 8).Parent = settingsBody
 	UI.list(Enum.FillDirection.Vertical, 8).Parent = shopBody

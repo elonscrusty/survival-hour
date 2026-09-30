@@ -10039,7 +10039,7 @@ local LODGE_SPOTS = {
 	{ x = -7.5, z = 3.8 },
 	{ x = -11.7, z = 3.8 },
 	{ x = -3.8, z = 3.8 },
-	{ x = -15.4, z = 3.8 },
+	{ x = -14.4, z = 3.8 },
 }
 
 -- Class Hall + Camp Store: a two-storey log lodge west of the lobby fire (it faces the fire).
@@ -10116,6 +10116,10 @@ function Refuge.ClassHall(parent: Instance, O: Vector3, classes: { ClassDef }, m
 	shop.PrimaryPart = storeCounter
 	local lectern = part("Counter", Vector3.new(2.6, 3.2, 1.2), at(-9, F + 1.6, -0.9), LOG, Enum.Material.WoodPlanks)
 	part("Stage", Vector3.new(12.8, 0.6, 3.4), at(-9, F + 0.3, 2.8), DARK, Enum.Material.WoodPlanks)
+	-- keep players out of the class room (the mannequins don't collide); the lectern stays in front
+	local block = part("ClassBlock", Vector3.new(13, 9, 0.3), at(-9, F + 4.5, 0.3), DARK, Enum.Material.SmoothPlastic)
+	block.Transparency = 1
+	block.CanQuery = false
 	m.PrimaryPart = lectern
 	-- Lanterns (two carry lights) and barrels on the porch
 	for i, x in { -17.1, -3.6, 3.6, 17.1 } do
@@ -65329,7 +65333,7 @@ export type Session = {
 	Saving: boolean,
 	Released: boolean,
 	LoadedEvent: BindableEvent,
-	PlayMark: number?, -- os.time() playtime was last counted up to
+	Posted: { [string]: number }?, -- last value written to each leaderboard
 }
 
 local DataService = {}
@@ -65339,6 +65343,7 @@ local store: DataStore? = nil
 local boards: { [string]: OrderedDataStore } = {}
 local boardCache: { [string]: { { UserId: number, Name: string, Value: number } } } = { Wins = {}, XP = {}, Kills = {}, Playtime = {} }
 local names: { [number]: string } = {}
+local PLAY_TICK = 15 -- seconds between playtime counts (DataService._playtimeTick)
 local sessions: { [Player]: Session } = {}
 
 local function key(userId: number): string
@@ -65382,6 +65387,12 @@ function DataService.Init(c)
 end
 
 function DataService.Start()
+	task.spawn(function()
+		while true do
+			task.wait(PLAY_TICK)
+			DataService._playtimeTick()
+		end
+	end)
 	if ctx.Mode == "Lobby" and usePersistence() then
 		task.spawn(function()
 			while true do
@@ -65471,7 +65482,6 @@ function DataService._onJoin(player: Player)
 		if result == "ok" then
 			s.Profile = ProfileRules.Reconcile(data)
 			s.State = "Loaded"
-			s.PlayMark = os.time()
 		else
 			s.State = "Failed"
 			warn("[DataService] profile load failed; running without saving for", player.UserId)
@@ -65546,7 +65556,6 @@ function DataService.Save(player: Player, release: boolean): boolean
 		task.wait(0.1)
 	end
 	s.Saving = true
-	DataService._countPlaytime(s)
 	local snapshot = HttpService:JSONDecode(HttpService:JSONEncode(s.Profile))
 	local success = false
 	for attempt = 1, 3 do
@@ -65590,7 +65599,7 @@ function DataService._onLeave(player: Player)
 	end
 	if s.State == "Loaded" then
 		DataService.Save(player, true)
-		DataService.PostLeaderboards(player) -- playtime keeps counting in the lobby too
+		DataService.PostLeaderboards(player) -- playtime also grows in the lobby
 	end
 	sessions[player] = nil
 end
@@ -65697,32 +65706,36 @@ function DataService.Push(player: Player)
 	ctx.CosmeticService.Apply(player)
 end
 
--- Adds the time since the last count to the profile's playtime (Stats.PlaySeconds).
-function DataService._countPlaytime(s: Session)
-	local now = os.time()
-	if s.State == "Loaded" and s.PlayMark then
-		local add = math.clamp(now - s.PlayMark, 0, 6 * 3600) -- a clock jump can't add a day
-		s.Profile.Stats.PlaySeconds = (s.Profile.Stats.PlaySeconds or 0) + add
+-- Playtime (Stats.PlaySeconds) counts only active time: every PLAY_TICK seconds, players
+-- who did something within Config.Afk.WarnAfter get the tick (idling never climbs the board).
+function DataService._playtimeTick()
+	for player, s in sessions do
+		local last = ctx.Util.LastActive[player]
+		if (s.State == "Loaded" or s.State == "Memory") and last and os.clock() - last < Config.Afk.WarnAfter then
+			s.Profile.Stats.PlaySeconds = (s.Profile.Stats.PlaySeconds or 0) + PLAY_TICK
+		end
 	end
-	s.PlayMark = now
 end
 
 -- Leaderboards (OrderedDataStore; every call is pcall-guarded) ----------------------------
 
 function DataService.PostLeaderboards(player: Player)
 	local s = sessions[player]
-	if not s or s.State ~= "Loaded" then
+	if not s or s.State ~= "Loaded" or s.LockLost then
 		return
 	end
-	DataService._countPlaytime(s)
 	local values = { Wins = s.Profile.Wins, XP = s.Profile.XP, Kills = s.Profile.Kills, Playtime = s.Profile.Stats.PlaySeconds or 0 }
 	for b, value in values do
 		local ods = boards[b]
-		if ods and value > 0 then
+		local posted = s.Posted or {}
+		s.Posted = posted
+		if ods and value > 0 and posted[b] ~= math.floor(value) then
 			local ok, err = pcall(function()
 				ods:SetAsync(key(player.UserId), math.floor(value))
 			end)
-			if not ok then
+			if ok then
+				posted[b] = math.floor(value) -- unchanged values aren't written again
+			else
 				warn("[DataService] leaderboard write failed:", err)
 			end
 		end
@@ -71076,7 +71089,9 @@ function PowerupService.OnPlayerKill(killer: Player, victim: Player, eliminated:
 	end
 	local session = ctx.DataService.Get(killer)
 	if session and ctx.DataService.CanGrant(killer) then
-		session.Profile.Kills += 1
+		if n < KILL_REWARDS_PER_VICTIM then -- the public Most Kills board can't be farmed off one friend
+			session.Profile.Kills += 1
+		end
 		if eliminated then
 			session.Profile.Eliminations += 1
 		end
@@ -73345,7 +73360,7 @@ return function(WorldService: any)
 		for i = 0, 3 do
 			local a = math.rad(i * 90 + 45)
 			local pos = O + Vector3.new(math.cos(a) * 9.5, 0, math.sin(a) * 9.5)
-			local cf = CFrame.lookAt(pos, O) * CFrame.Angles(0, math.rad(90), 0) -- log runs across the view of the fire
+			local cf = CFrame.lookAt(pos, O) -- the log (local X) lies across the view of the fire
 			local logM = Build.Model("LogSeat", folder)
 			local logP = Build.Part({ Name = "Log", Shape = Enum.PartType.Cylinder, Size = Vector3.new(8.8, 2.5, 2.5), CFrame = cf * CFrame.new(0, 1.25, 0), Color = Color3.fromRGB(128, 86, 54), Material = Enum.Material.Wood, Parent = logM })
 			logM.PrimaryPart = logP
@@ -73354,7 +73369,7 @@ return function(WorldService: any)
 			end
 		end
 		for i = 0, 3 do
-			local a = math.rad(i * 90)
+			local a = math.rad(i * 90 + 22) -- beside the paths, not on them
 			Build.Cyl("Stump", 1.6, 2.2, CFrame.new(O + Vector3.new(math.cos(a) * 11, 0.8, math.sin(a) * 11)), Color3.fromRGB(120, 84, 54), Enum.Material.Wood, folder)
 		end
 
@@ -79768,7 +79783,7 @@ function Lobby.Start()
 	UI.list(Enum.FillDirection.Vertical, 6).Parent = lockerBody
 	profileBody = Panels.Create("Profile", "PROFILE & REWARDS", Vector2.new(620, 640), renderProfile)
 	UI.list(Enum.FillDirection.Vertical, 6).Parent = profileBody
-	shopBody = Panels.Create("LobbyShop", "TRADING POST", Vector2.new(600, 520), renderShop)
+	shopBody = Panels.Create("LobbyShop", "CAMP STORE", Vector2.new(600, 520), renderShop)
 	settingsBody = Panels.Create("Settings", "SETTINGS", Vector2.new(560, 380), renderSettings)
 	UI.list(Enum.FillDirection.Vertical, 8).Parent = settingsBody
 	UI.list(Enum.FillDirection.Vertical, 8).Parent = shopBody
@@ -79886,7 +79901,7 @@ local function buildBoard(face: BasePart, gui: Instance)
 	list.Padding = UDim.new(0, 8)
 	list.SortOrder = Enum.SortOrder.LayoutOrder
 	list.Parent = rows
-	label({ Name = "Hint", Text = "Claim rewards at the Hall of Fame", TextColor3 = DIM, Font = Enum.Font.GothamMedium, Position = UDim2.new(0, 20, 1, -40), Size = UDim2.new(1, -40, 0, 26) }, sg)
+	label({ Name = "Hint", Text = "Claim rewards at the leaderboards", TextColor3 = DIM, Font = Enum.Font.GothamMedium, Position = UDim2.new(0, 20, 1, -40), Size = UDim2.new(1, -40, 0, 26) }, sg)
 	board = { gui = sg, reset = reset, rows = rows }
 end
 

@@ -63,7 +63,7 @@ local function buildBoard(face: BasePart, gui: Instance)
 	list.Padding = UDim.new(0, 8)
 	list.SortOrder = Enum.SortOrder.LayoutOrder
 	list.Parent = rows
-	label({ Name = "Hint", Text = "Claim rewards at the Hall of Fame", TextColor3 = DIM, Font = Enum.Font.GothamMedium, Position = UDim2.new(0, 20, 1, -40), Size = UDim2.new(1, -40, 0, 26) }, sg)
+	label({ Name = "Hint", Text = "Claim rewards at the leaderboards", TextColor3 = DIM, Font = Enum.Font.GothamMedium, Position = UDim2.new(0, 20, 1, -40), Size = UDim2.new(1, -40, 0, 26) }, sg)
 	board = { gui = sg, reset = reset, rows = rows }
 end
 

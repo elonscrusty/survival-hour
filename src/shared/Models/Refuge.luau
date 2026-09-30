@@ -423,7 +423,7 @@ local LODGE_SPOTS = {
 	{ x = -7.5, z = 3.8 },
 	{ x = -11.7, z = 3.8 },
 	{ x = -3.8, z = 3.8 },
-	{ x = -15.4, z = 3.8 },
+	{ x = -14.4, z = 3.8 },
 }
 
 -- Class Hall + Camp Store: a two-storey log lodge west of the lobby fire (it faces the fire).
@@ -500,6 +500,10 @@ function Refuge.ClassHall(parent: Instance, O: Vector3, classes: { ClassDef }, m
 	shop.PrimaryPart = storeCounter
 	local lectern = part("Counter", Vector3.new(2.6, 3.2, 1.2), at(-9, F + 1.6, -0.9), LOG, Enum.Material.WoodPlanks)
 	part("Stage", Vector3.new(12.8, 0.6, 3.4), at(-9, F + 0.3, 2.8), DARK, Enum.Material.WoodPlanks)
+	-- keep players out of the class room (the mannequins don't collide); the lectern stays in front
+	local block = part("ClassBlock", Vector3.new(13, 9, 0.3), at(-9, F + 4.5, 0.3), DARK, Enum.Material.SmoothPlastic)
+	block.Transparency = 1
+	block.CanQuery = false
 	m.PrimaryPart = lectern
 	-- Lanterns (two carry lights) and barrels on the porch
 	for i, x in { -17.1, -3.6, 3.6, 17.1 } do

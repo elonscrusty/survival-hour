@@ -64,7 +64,7 @@ return function(WorldService: any)
 		for i = 0, 3 do
 			local a = math.rad(i * 90 + 45)
 			local pos = O + Vector3.new(math.cos(a) * 9.5, 0, math.sin(a) * 9.5)
-			local cf = CFrame.lookAt(pos, O) * CFrame.Angles(0, math.rad(90), 0) -- log runs across the view of the fire
+			local cf = CFrame.lookAt(pos, O) -- the log (local X) lies across the view of the fire
 			local logM = Build.Model("LogSeat", folder)
 			local logP = Build.Part({ Name = "Log", Shape = Enum.PartType.Cylinder, Size = Vector3.new(8.8, 2.5, 2.5), CFrame = cf * CFrame.new(0, 1.25, 0), Color = Color3.fromRGB(128, 86, 54), Material = Enum.Material.Wood, Parent = logM })
 			logM.PrimaryPart = logP
@@ -73,7 +73,7 @@ return function(WorldService: any)
 			end
 		end
 		for i = 0, 3 do
-			local a = math.rad(i * 90)
+			local a = math.rad(i * 90 + 22) -- beside the paths, not on them
 			Build.Cyl("Stump", 1.6, 2.2, CFrame.new(O + Vector3.new(math.cos(a) * 11, 0.8, math.sin(a) * 11)), Color3.fromRGB(120, 84, 54), Enum.Material.Wood, folder)
 		end
 
