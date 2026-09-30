@@ -1,5 +1,16 @@
 # Model polish: re-upload list
 
+## New lobby plaza models (upload as NEW assets, then send Claude the IDs)
+
+| File | What |
+|---|---|
+| `Export/Meshes/Lobby/SM_Lobby_Lodge.fbx` | Log lodge: Camp Store + Classes |
+| `Export/Meshes/Lobby/SM_Lobby_Leaderboard.fbx` | Roofed leaderboard (used 3 times) |
+| `Export/Meshes/Lobby/SM_Lobby_QuestBoard.fbx` | Daily Challenges board |
+| `Export/Meshes/Lobby/SM_Lobby_BigLog.fbx` | Big log seat |
+| `Export/Meshes/Lobby/SM_Lobby_Fence.fbx` | Fence segment |
+| `Export/Meshes/Lobby/SM_Lobby_FenceLantern.fbx` | Fence lantern post |
+
 Twenty-three models were reworked in `blender/assets/survival_wars.py` and `blender/assets/camp.py` and re-exported. **Each one keeps the
 exact outer size and pivot it was published with** (`tools/check_bounds.py` enforces this), so
 `src/shared/AssetIds.luau` does not change and the game works with either the old or the new uploads.

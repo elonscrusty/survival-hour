@@ -500,19 +500,16 @@ test("Lobby refuge: forest, props, signs, board", function()
 	folder.Parent = workspace
 	local st = lobbyStations(folder)
 	local water = { Ponds = { { X = 34, Z = -30, R = 9 } }, Stream = { { 50, -41 } } }
-	local board = Refuge.Dress(folder, Vector3.new(0, 0, 0), Vector3.new(0, 0, -38), st, water)
-	check(board ~= nil and board:IsA("TextLabel"), "hall of fame board label")
+	Refuge.Dress(folder, Vector3.new(0, 0, 0), Vector3.new(0, 0, -38), st, water)
 	local forest = folder:FindFirstChild("Forest")
 	check(forest ~= nil, "forest folder")
-	local n, deck, arch, wet = 0, false, false, 0
+	local n, arch, wet = 0, false, 0
 	for _, c in forest:GetChildren() do
 		n += 1
-		if c.Name == "GatheringDeck" then
-			deck = true
-		elseif c.Name == "ReadyArch" then
+		if c.Name == "ReadyArch" then
 			arch = true
 		end
-		if c:IsA("Model") and c.Name ~= "GatheringDeck" and c.Name ~= "ReadyArch" then
+		if c:IsA("Model") and c.Name ~= "ReadyArch" then
 			local p = c:GetPivot().Position
 			if (p - Vector3.new(34, 0, -30)).Magnitude < 9 then
 				wet += 1
@@ -520,26 +517,25 @@ test("Lobby refuge: forest, props, signs, board", function()
 		end
 	end
 	check(n > 60, "layered forest placed (" .. n .. ")")
-	check(deck and arch, "deck + ready arch")
+	check(arch, "ready arch")
 	check(wet == 0, "no decoration placed in the pond (" .. wet .. ")")
-	check(skinOf(st.Shop, "SM_Lobby_ShopDisplay") and skinOf(st.Party, "SM_Lobby_PartyArea"), "station props")
-	check(st.Shop.PrimaryPart.CanCollide ~= false, "counter keeps collision")
+	check(skinOf(st.Locker, "SM_Lobby_ShopDisplay") and skinOf(st.Party, "SM_Lobby_PartyArea"), "station props")
+	check(st.Locker.PrimaryPart.CanCollide ~= false, "counter keeps collision")
 	local signs = 0
 	for _, d in forest:GetDescendants() do
 		if d:IsA("SurfaceGui") then
 			signs += 1
 		end
 	end
-	check(signs == 6, "six signposts (" .. signs .. ")")
+	check(signs == 5, "five signposts (" .. signs .. ")")
 end)
 test("Lobby refuge without the pack stays procedural", function()
 	RS:SetAttribute("MeshSkins", false)
 	local folder = Instance.new("Folder")
 	folder.Parent = workspace
 	local st = lobbyStations(folder)
-	local board = Refuge.Dress(folder, Vector3.new(0, 0, 0), Vector3.new(0, 0, -38), st)
-	check(board ~= nil, "board without pack")
-	check(#skins(st.Shop) == 0 and st.Shop.PrimaryPart.Transparency < 1, "shop stays procedural")
+	Refuge.Dress(folder, Vector3.new(0, 0, 0), Vector3.new(0, 0, -38), st)
+	check(#skins(st.Locker) == 0 and st.Locker.PrimaryPart.Transparency < 1, "locker stays procedural")
 	RS:SetAttribute("MeshSkins", nil)
 end)
 
@@ -567,6 +563,26 @@ test("Lobby hub: class hall, challenge board, queue zone, string lights", functi
 	check(tools == 7, "every mannequin holds a tool (" .. tools .. ")")
 	local fp = hall:FindFirstChild("Footprint")
 	check(fp ~= nil and Refuge.InBox(fp, Vector3.new(-46, 0, 10), 0) and not Refuge.InBox(fp, Vector3.new(-20, 0, 0), 0), "footprint covers the hall only")
+	local shop = folder:FindFirstChild("Shop")
+	check(shop ~= nil and shop.PrimaryPart ~= nil and shop.PrimaryPart.Name == "Counter", "lodge camp store counter")
+	local lb = Refuge.Leaderboard(folder, CFrame.new(44, 0, 0), "Board_Wins", "MOST WINS")
+	Refuge.FillLeaderboard(lb, { { Name = "Ana", Value = "12" }, { Name = "Bo", Value = "9" } })
+	local rows = lb:FindFirstChild("Rows"):FindFirstChild("Rows")
+	check(rows.Row1.Player.Text == "Ana" and rows.Row2.Value.Text == "9" and rows.Row3.Player.Text == "", "leaderboard rows")
+	Refuge.FillLeaderboard(lb, {})
+	check(rows.Row1.Player.Text ~= "" and rows.Row2.Player.Text == "", "empty leaderboard shows a waiting line")
+	local fence = Refuge.Fence(folder, Vector3.new(0, 0, 0), 60, function(pos)
+		return math.abs(pos.X) > 8 and math.abs(pos.Z) > 8
+	end)
+	local segs, lamps = 0, 0
+	for _, c in fence:GetChildren() do
+		if c.Name == "FenceSegment" then
+			segs += 1
+		elseif c.Name == "FenceLantern" then
+			lamps += 1
+		end
+	end
+	check(segs > 30 and lamps > 5, "fence ring (" .. segs .. " segments, " .. lamps .. " lanterns)")
 	local board = Refuge.ChallengeBoard(folder, CFrame.new(14, 0, 22))
 	check(board:FindFirstChild("ChallengeBoardFace") ~= nil, "board face")
 	local q = Refuge.QueueZone(folder, Vector3.new(0, 0, -38), 11)

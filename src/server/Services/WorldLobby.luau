@@ -13,6 +13,7 @@ local Build = require(Models:WaitForChild("Build"))
 local Nature = require(Models:WaitForChild("Nature"))
 local Camp = require(Models:WaitForChild("Camp"))
 local Refuge = require(Models:WaitForChild("Refuge"))
+local Skins = require(Models:WaitForChild("Skins"))
 
 local terrain = workspace.Terrain
 
@@ -59,9 +60,21 @@ return function(WorldService: any)
 		if ring then
 			ring:Destroy()
 		end
-		for i = 0, 5 do
-			local a = math.rad(i * 60 + 30)
-			Build.Cyl("LogSeat", 6, 1.8, CFrame.new(O + Vector3.new(math.cos(a) * 9, 0.9, math.sin(a) * 9)) * CFrame.Angles(0, -a, 0) * CFrame.Angles(math.rad(90), 0, 0), Color3.fromRGB(120, 84, 54), Enum.Material.Wood, folder)
+		-- four big log seats round the fire, stumps between them
+		for i = 0, 3 do
+			local a = math.rad(i * 90 + 45)
+			local pos = O + Vector3.new(math.cos(a) * 9.5, 0, math.sin(a) * 9.5)
+			local cf = CFrame.lookAt(pos, O) * CFrame.Angles(0, math.rad(90), 0) -- log runs across the view of the fire
+			local logM = Build.Model("LogSeat", folder)
+			local logP = Build.Part({ Name = "Log", Shape = Enum.PartType.Cylinder, Size = Vector3.new(8.8, 2.5, 2.5), CFrame = cf * CFrame.new(0, 1.25, 0), Color = Color3.fromRGB(128, 86, 54), Material = Enum.Material.Wood, Parent = logM })
+			logM.PrimaryPart = logP
+			if Skins.Has("SM_Lobby_BigLog") then
+				Skins.Dress(logM, "SM_Lobby_BigLog", { cf = cf })
+			end
+		end
+		for i = 0, 3 do
+			local a = math.rad(i * 90)
+			Build.Cyl("Stump", 1.6, 2.2, CFrame.new(O + Vector3.new(math.cos(a) * 11, 0.8, math.sin(a) * 11)), Color3.fromRGB(120, 84, 54), Enum.Material.Wood, folder)
 		end
 
 		-- Ready ring (stand inside to ready up)
@@ -87,7 +100,8 @@ return function(WorldService: any)
 		-- Queue-zone look for the ring: hazard stripes, floor lettering, the live counter anchor
 		Refuge.QueueZone(folder, readyCenter, 11)
 
-		-- Stations: Shop (east), Class Hall (west), Party board (south), Outfitter (SE), Hall of Fame (SW)
+		-- Stations: the lodge (Camp Store + Classes, west), leaderboards and challenges (east),
+		-- Party board (south), Outfitter (SE)
 		local function stationPrompt(part: BasePart, name: string, label: string, promptText: string)
 			local prompt = Instance.new("ProximityPrompt")
 			prompt.Name = "StationPrompt"
@@ -113,9 +127,8 @@ return function(WorldService: any)
 			stationPrompt(counter, name, label, promptText)
 			return m
 		end
-		station("Shop", O + Vector3.new(40, 0, 0), Color3.fromRGB(230, 170, 60), "TRADING POST", "Open Shop")
-		-- Class Hall: a lit cabin with a mannequin per class in its windows (R15 rigs built
-		-- from a blank HumanoidDescription, so no uploaded assets; part figures if that fails)
+		-- The lodge: Camp Store counter and the Class Hall, with a mannequin per class (R15 rigs
+		-- built from a blank HumanoidDescription, so no uploaded assets; part figures if that fails)
 		local Classes = require(Shared:WaitForChild("Classes"))
 		local function mannequinRig(color: Color3): Model?
 			local desc = Instance.new("HumanoidDescription")
@@ -136,23 +149,67 @@ return function(WorldService: any)
 		if hall.PrimaryPart then
 			stationPrompt(hall.PrimaryPart, "Classes", "CLASS HALL", "Choose Class")
 		end
+		local shop = folder:FindFirstChild("Shop") :: Model
+		if shop and shop.PrimaryPart then
+			stationPrompt(shop.PrimaryPart, "Shop", "CAMP STORE", "Open Shop")
+		end
 		local party = station("Party", O + Vector3.new(0, 0, 40), Color3.fromRGB(110, 150, 230), "PARTY BOARD", "Manage Party")
 		local locker = station("Locker", O + Vector3.new(30, 0, 30), Color3.fromRGB(190, 110, 200), "OUTFITTER", "Open Locker")
-		local profile = station("Profile", O + Vector3.new(-30, 0, 30), Color3.fromRGB(240, 200, 90), "HALL OF FAME", "Profile & Rewards")
-		-- Daily Challenges board beside the spawn path, facing it (drawn per player by the client)
-		local boardPos = O + Vector3.new(14, 0, 22)
-		local challenges = Refuge.ChallengeBoard(folder, CFrame.lookAt(boardPos, O + Vector3.new(0, 0, 12)))
+		-- Leaderboards in a row east of the fire, facing it, then the Daily Challenges board
+		-- (drawn per player by the client)
+		local leaders = Build.Model("Leaderboards", folder)
+		local boards = {}
+		for i, spec in { { "Kills", "MOST KILLS", -15 }, { "Wins", "MOST WINS", -1.5 }, { "Playtime", "MOST PLAYTIME", 12 } } do
+			local pos = O + Vector3.new(44, 0, spec[3])
+			local b = Refuge.Leaderboard(leaders, CFrame.lookAt(pos, pos - Vector3.xAxis), "Board_" .. spec[1], spec[2])
+			boards[spec[1]] = b
+			if i == 2 and b.PrimaryPart then
+				leaders.PrimaryPart = b.PrimaryPart
+				stationPrompt(b.PrimaryPart, "Profile", "LEADERBOARDS", "Profile & Rewards")
+			end
+		end
+		local lfp = Build.Part({ Name = "Footprint", Size = Vector3.new(6, 16, 42), CFrame = CFrame.new(O + Vector3.new(44.5, 8, -1.5)), Transparency = 1, CanCollide = false, CanQuery = false, Parent = leaders })
+		lfp.CastShadow = false
+		WorldService.LobbyBoards = boards
+		local boardPos = O + Vector3.new(44, 0, 26.5)
+		local challenges = Refuge.ChallengeBoard(folder, CFrame.lookAt(boardPos, boardPos - Vector3.xAxis))
 		if challenges.PrimaryPart then
 			stationPrompt(challenges.PrimaryPart, "Profile", "DAILY CHALLENGES", "View Challenges")
 		end
-		WorldService.LobbyBoard = Refuge.Dress(folder, O, readyCenter, {
-			Shop = folder:FindFirstChild("Shop") :: Model,
+		local stations = {
+			Shop = shop,
 			Classes = hall,
 			Party = party,
 			Locker = locker,
-			Profile = profile,
+			Profile = leaders,
 			Board = challenges,
-		}, WorldService.LobbyWater)
+		}
+		Refuge.Dress(folder, O, readyCenter, stations, WorldService.LobbyWater)
+		-- Lantern fence round the plaza, open at the paths, water and buildings
+		local W = WorldService.LobbyWater
+		Refuge.Fence(folder, O, 60, function(pos: Vector3): boolean
+			local d = pos - O
+			if math.abs(d.X) < 8 or math.abs(d.Z) < 8 then
+				return false
+			end
+			for _, pd in W.Ponds do
+				if (pos - (O + Vector3.new(pd.X, 0, pd.Z))).Magnitude < pd.R + 5 then
+					return false
+				end
+			end
+			for _, pt in W.Stream do
+				if (pos - (O + Vector3.new(pt[1], 0, pt[2]))).Magnitude < 9 then
+					return false
+				end
+			end
+			for _, st in stations do
+				local fp = st and st:FindFirstChild("Footprint")
+				if fp and fp:IsA("BasePart") and Refuge.InBox(fp, pos, 2) then
+					return false
+				end
+			end
+			return true
+		end)
 
 		-- Title
 		local title = Build.Part({ Name = "Title", Size = Vector3.new(1, 1, 1), CFrame = CFrame.new(O + Vector3.new(0, 26, -50)), Transparency = 1, CanCollide = false, Parent = folder })
@@ -224,11 +281,12 @@ return function(WorldService: any)
 		end
 	end
 
-	-- Updates the Hall of Fame board text (called by LobbyService).
-	function WorldService.SetLobbyBoard(lines: { string })
-		local tl = WorldService.LobbyBoard
-		if tl and tl.Parent then
-			tl.Text = table.concat(lines, "\n")
+	-- Writes the plaza leaderboards (called by LobbyService): board key -> { { Name, Value } }.
+	function WorldService.SetLeaderboards(rows: { [string]: { { Name: string, Value: string } } })
+		for key, board in WorldService.LobbyBoards or {} do
+			if board.Parent then
+				Refuge.FillLeaderboard(board, rows[key] or {})
+			end
 		end
 	end
 end

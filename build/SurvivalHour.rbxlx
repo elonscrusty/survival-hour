@@ -9617,7 +9617,8 @@ return Nature
             <string name="Source"><![CDATA[--!nonstrict
 -- The lobby as a forest refuge (over a voxel forest floor with a stream and
 -- ponds, built by WorldService): layered forest ring, lobby props (gathering deck, stalls, party area, ready arch, class stands),
--- signposts, lanterns and the Hall of Fame board. Mesh-first over the
+-- signposts and lanterns; the lodge, leaderboards and lantern fence of the campfire plaza.
+-- Mesh-first over the
 -- procedural lobby, which keeps every collider, prompt and label.
 
 local Build = require("./Build")
@@ -9632,8 +9633,7 @@ local Refuge = {}
 -- procedural lobby underneath (colliders, prompts and labels stay on it).
 export type Water = { Ponds: { { X: number, Z: number, R: number } }, Stream: { { number } } }
 
-function Refuge.Dress(folder: Instance, O: Vector3, readyCenter: Vector3, stations: { [string]: Model }, water: Water?): TextLabel?
-	local board: TextLabel? = nil
+function Refuge.Dress(folder: Instance, O: Vector3, readyCenter: Vector3, stations: { [string]: Model }, water: Water?)
 	local rng = Random.new(1207)
 	local deco = Instance.new("Folder")
 	deco.Name = "Forest"
@@ -9682,7 +9682,7 @@ function Refuge.Dress(folder: Instance, O: Vector3, readyCenter: Vector3, statio
 	end
 	-- Layered forest: tall canopy at the rim, a mid layer, then undergrowth.
 	for _ = 1, 26 do
-		local pos = ringSpot(56, 70)
+		local pos = ringSpot(63, 70) -- outside the lantern fence (radius 60)
 		if not clearOfStations(pos) then
 			continue
 		end
@@ -9690,7 +9690,7 @@ function Refuge.Dress(folder: Instance, O: Vector3, readyCenter: Vector3, statio
 		Decor.Place(kind, flatCF(pos), rng, rng:NextNumber(0.8, 1.15), deco)
 	end
 	for _ = 1, 40 do
-		local pos = ringSpot(44, 60)
+		local pos = ringSpot(44, 57)
 		if clearOfStations(pos) then
 			local kind = ({ "Bush", "Bush", "Fern", "FallenLog", "Boulder", "Stump", "Sapling" })[rng:NextInteger(1, 7)]
 			Decor.Place(kind, flatCF(pos), rng, rng:NextNumber(0.8, 1.2), deco)
@@ -9703,22 +9703,8 @@ function Refuge.Dress(folder: Instance, O: Vector3, readyCenter: Vector3, statio
 			Decor.Place(kind, flatCF(pos), rng, 1, deco)
 		end
 	end
-	-- Central gathering deck around the fire
-	if Skins.Has("SM_Lobby_GatheringArea") then
-		local v = Skins.Visual("SM_Lobby_GatheringArea")
-		if v then
-			v:PivotTo(CFrame.new(O + Vector3.new(0, -0.3, 0)))
-			v.Name = "GatheringDeck"
-			v.Parent = deco
-			for _, seat in folder:GetChildren() do
-				if seat.Name == "LogSeat" and seat:IsA("BasePart") then
-					seat.Transparency = 1
-				end
-			end
-		end
-	end
 	-- Stations get their Blender props (procedural counters stay as colliders)
-	local DRESS = { Shop = "SM_Lobby_ShopDisplay", Party = "SM_Lobby_PartyArea", Locker = "SM_Lobby_ShopDisplay" }
+	local DRESS = { Party = "SM_Lobby_PartyArea", Locker = "SM_Lobby_ShopDisplay" }
 	for name, mesh in DRESS do
 		local m = stations[name]
 		if m and m.PrimaryPart then
@@ -9743,41 +9729,13 @@ function Refuge.Dress(folder: Instance, O: Vector3, readyCenter: Vector3, statio
 		Build.Part({ Name = "Legs", Size = Vector3.new(2, 2, 1), CFrame = base * CFrame.new(0, 1, 0), Color = Color3.fromRGB(60, 60, 70), Material = Enum.Material.Fabric, Parent = body })
 		Build.Ball("Head", 1.3, base * CFrame.new(0, 4.7, 0), Color3.fromRGB(210, 190, 160), Enum.Material.Wood, body)
 	end
-	-- Hall of Fame board: live leaderboard surface
-	local profile = stations.Profile
-	if profile and profile.PrimaryPart then
-		local counter = profile.PrimaryPart
-		-- panel centre matches SM_Sign_Board_Panel (5 studs above its base), just in front of it
-		local boardCF = counter.CFrame * CFrame.new(0, 3.3, 1.15)
-		local boardPart = Build.Part({ Name = "Board", Size = Vector3.new(9, 4.5, 0.3), CFrame = boardCF, Color = Color3.fromRGB(70, 52, 36), Material = Enum.Material.WoodPlanks, Parent = profile })
-		if Skins.Has("SM_Sign_Board") then
-			Skins.Dress(profile, "SM_Sign_Board", { cf = counter.CFrame * CFrame.new(0, -1.7, 1.4), noHide = true, extra = true })
-		end
-		local sg = Instance.new("SurfaceGui")
-		sg.Name = "Leaderboard"
-		sg.Face = Enum.NormalId.Front
-		sg.CanvasSize = Vector2.new(540, 270)
-		sg.LightInfluence = 0.2
-		sg.Parent = boardPart
-		local tl = Instance.new("TextLabel")
-		tl.Name = "Text"
-		tl.Size = UDim2.fromScale(1, 1)
-		tl.BackgroundTransparency = 1
-		tl.Font = Enum.Font.GothamBold
-		tl.TextColor3 = Color3.fromRGB(255, 225, 160)
-		tl.TextScaled = true
-		tl.Text = "HALL OF FAME\nMost wins — updating…"
-		tl.Parent = sg
-		board = tl
-	end
 	-- Signposts toward each station
 	local SIGNS = {
-		{ Dir = Vector3.new(1, 0, 0), Text = "→ TRADING POST" },
-		{ Dir = Vector3.new(-1, 0, 0), Text = "→ CLASS HALL" },
+		{ Dir = Vector3.new(1, 0, 0), Text = "→ LEADERBOARDS" },
+		{ Dir = Vector3.new(-1, 0, 0), Text = "→ CAMP STORE & CLASSES" },
 		{ Dir = Vector3.new(0, 0, 1), Text = "→ PARTY" },
 		{ Dir = Vector3.new(0, 0, -1), Text = "→ READY UP" },
 		{ Dir = Vector3.new(1, 0, 1).Unit, Text = "→ OUTFITTER" },
-		{ Dir = Vector3.new(-1, 0, 1).Unit, Text = "→ HALL OF FAME" },
 	}
 	for _, sgn in SIGNS do
 		local pos = O + sgn.Dir * 19 + sgn.Dir:Cross(Vector3.yAxis) * 6.5
@@ -9870,7 +9828,6 @@ function Refuge.Dress(folder: Instance, O: Vector3, readyCenter: Vector3, statio
 			Refuge.StringLights(tops[-1][1], tops[1][1], 6, 1, lights)
 		end
 	end
-	return board
 end
 
 -- True when `pos` lies inside `part`'s ground plan (X/Z only), grown by `margin` studs.
@@ -9919,14 +9876,9 @@ function Refuge.StringLights(a0: Attachment, a1: Attachment, bulbs: number, sag:
 	end
 end
 
--- Class Hall -------------------------------------------------------------------------------
--- A log cabin west of the lobby fire (it faces the fire). Each class stands as a mannequin
--- in its own warmly lit window, tinted in the class colour and holding a fitting tool, with a
--- name + ◆ price tag above; the free class greets you behind the counter in the doorway.
--- A neon "CLASSES" sign sits over the door. Returns the "Classes" station model: its
--- PrimaryPart is the Counter (the caller adds the station prompt) and a Footprint box marks
--- the ground it covers so decorations and lanterns keep clear.
--- `makeRig(color)` may return an R15 rig (server only); otherwise a part-built figure is used.
+-- Class Hall ------------------------------------------------------------------------------
+-- The class mannequins live in the lodge (Refuge.ClassHall below): tinted in the class colour,
+-- holding a fitting tool, with a name + ◆ price tag above.
 
 export type ClassDef = { Id: string, Name: string, Price: number, Order: number, Glyph: string, Color: { number } }
 
@@ -9939,7 +9891,6 @@ local HALL_TOOLS = {
 	Raider = "Sledgehammer",
 	Tracker = "CrudeSpear",
 }
-local HALL_BAYS = { 15.5, 10.5, 5.5, -5.5, -10.5, -15.5 } -- window centres (left to right from the fire)
 
 local function classColor(def: ClassDef): Color3
 	local c = def.Color or {}
@@ -10044,131 +9995,169 @@ local function holdTool(fig: Model, toolId: string?)
 	held.Parent = fig
 end
 
-function Refuge.ClassHall(parent: Instance, O: Vector3, classes: { ClassDef }, makeRig: ((Color3) -> Model?)?): Model
-	local m = Build.Model("Classes", parent)
-	local hallCF = CFrame.lookAt(O + Vector3.new(-42, 0, 1.5), O + Vector3.new(0, 0, 1.5)) -- clear of the SW pond bank
-	local function at(x: number, y: number, z: number): CFrame
-		return hallCF * CFrame.new(x, y, z)
-	end
-	local LOG = Color3.fromRGB(112, 78, 52)
-	local DARK = Color3.fromRGB(78, 54, 38)
-	local ROOF = Color3.fromRGB(70, 58, 52)
-	local TEAL = Color3.fromRGB(90, 230, 200)
-	local WARM = Color3.fromRGB(255, 190, 120)
-	local function part(name: string, size: Vector3, cf: CFrame, color: Color3, mat: Enum.Material, collide: boolean?): BasePart
-		return Build.Part({ Name = name, Size = size, CFrame = cf, Color = color, Material = mat, CanCollide = collide ~= false, Parent = m })
-	end
-	-- Shell: floor, back and side walls, the front wall with six windows and a doorway.
-	part("Floor", Vector3.new(37, 1, 11), at(0, 0.5, 5), DARK, Enum.Material.WoodPlanks)
-	part("BackWall", Vector3.new(37, 10, 1), at(0, 6, 10.5), LOG, Enum.Material.WoodPlanks)
-	for _, x in { -18.5, 18.5 } do
-		part("SideWall", Vector3.new(1, 10, 11), at(x, 6, 5), LOG, Enum.Material.WoodPlanks)
-	end
-	for _, x in { -10.5, 10.5 } do
-		part("Sill", Vector3.new(16, 1.6, 1), at(x, 1.8, 0), LOG, Enum.Material.WoodPlanks)
-	end
-	part("Lintel", Vector3.new(38, 2.4, 1), at(0, 9.8, 0), LOG, Enum.Material.WoodPlanks)
-	for _, x in { -18, -13, -8, 8, 13, 18 } do
-		part("Post", Vector3.new(1, 6, 1.1), at(x, 5.6, 0), DARK, Enum.Material.Wood)
-	end
-	for _, x in { -3, 3 } do
-		part("DoorPost", Vector3.new(1, 7.6, 1.2), at(x, 4.8, 0), DARK, Enum.Material.Wood)
-	end
-	local blocker = part("DoorBlock", Vector3.new(5, 7.6, 0.3), at(0, 4.8, 0), DARK, Enum.Material.SmoothPlastic)
-	blocker.Transparency = 1
-	blocker.CanQuery = false
-	-- Gable roof (ridge along the front) with filled gable ends.
-	local slope = math.atan2(4.2, 6.5)
-	local run = math.sqrt(4.2 * 4.2 + 6.5 * 6.5) + 1
-	part("Roof", Vector3.new(39.5, 0.8, run), at(0, 12.9, 1.6) * CFrame.Angles(-slope, 0, 0), ROOF, Enum.Material.Slate)
-	part("Roof", Vector3.new(39.5, 0.8, run), at(0, 12.9, 8.4) * CFrame.Angles(slope, 0, 0), ROOF, Enum.Material.Slate)
-	for _, x in { -18.5, 18.5 } do
-		Build.Part({ Class = "WedgePart", Name = "Gable", Size = Vector3.new(1, 4.2, 5), CFrame = at(x, 13.1, 2.5) * CFrame.Angles(0, math.pi, 0), Color = LOG, Material = Enum.Material.WoodPlanks, Parent = m })
-		Build.Part({ Class = "WedgePart", Name = "Gable", Size = Vector3.new(1, 4.2, 5.5), CFrame = at(x, 13.1, 7.75), Color = LOG, Material = Enum.Material.WoodPlanks, Parent = m })
-	end
-	part("Chimney", Vector3.new(2.4, 8, 2.4), at(12, 14.5, 8), Color3.fromRGB(110, 104, 98), Enum.Material.Cobblestone)
-	-- Display: a raised stage behind the glass, each bay backed by a warm glowing panel.
-	part("Stage", Vector3.new(36, 0.6, 4), at(0, 1.3, 3.5), Color3.fromRGB(96, 66, 46), Enum.Material.WoodPlanks)
-	for i, x in HALL_BAYS do
-		local glass = part("Window", Vector3.new(4, 6, 0.2), at(x, 5.6, 0), Color3.fromRGB(255, 226, 180), Enum.Material.Glass)
-		glass.Transparency = 0.6
-		glass.CastShadow = false
-		local glow = part("WindowGlow", Vector3.new(4.4, 6, 0.2), at(x, 5.2, 9.9), Color3.fromRGB(196, 116, 58), Enum.Material.Neon, false)
-		glow.CastShadow = false
-		-- flower box under each window
-		part("FlowerBox", Vector3.new(3.6, 0.6, 0.8), at(x, 2.3, -0.9), DARK, Enum.Material.Wood, false)
-		part("Flowers", Vector3.new(3.3, 0.4, 0.6), at(x, 2.75, -0.9), if i % 2 == 0 then Color3.fromRGB(240, 200, 80) else Color3.fromRGB(230, 120, 150), Enum.Material.Grass, false)
-	end
-	part("DoorGlow", Vector3.new(4.4, 7, 0.2), at(0, 4.6, 9.9), Color3.fromRGB(196, 116, 58), Enum.Material.Neon, false).CastShadow = false
-	for _, x in { -9, 9 } do
-		local lamp = part("Lamp", Vector3.new(0.6, 0.6, 0.6), at(x, 8.4, 2.5), WARM, Enum.Material.Neon, false)
-		local light = Instance.new("PointLight")
-		light.Color = WARM
-		light.Range = 14
-		light.Brightness = 1.4
-		light.Shadows = false
-		light.Parent = lamp
-	end
-	-- Porch and counter (the station prompt goes on the counter).
-	part("Porch", Vector3.new(16, 0.6, 5), at(0, 0.3, -2.5), LOG, Enum.Material.WoodPlanks)
-	local counter = part("Counter", Vector3.new(7, 3, 1.6), at(0, 2.1, -3.2), LOG, Enum.Material.WoodPlanks)
-	part("CounterTop", Vector3.new(7.6, 0.3, 2), at(0, 3.75, -3.2), DARK, Enum.Material.Wood)
-	part("CounterTrim", Vector3.new(7, 0.2, 0.2), at(0, 3.45, -4.1), TEAL, Enum.Material.Neon, false).CastShadow = false
-	m.PrimaryPart = counter
-	-- Neon sign over the door
-	local sign = part("Sign", Vector3.new(15, 3.4, 0.5), at(0, 12.3, -2.1), Color3.fromRGB(40, 30, 24), Enum.Material.WoodPlanks, false)
-	for _, s in { { 0, 1.8, 15.4, 0.25 }, { 0, -1.8, 15.4, 0.25 }, { -7.6, 0, 0.25, 3.6 }, { 7.6, 0, 0.25, 3.6 } } do
-		part("SignNeon", Vector3.new(s[3], s[4], 0.3), at(s[1], 12.3 + s[2], -2.3), TEAL, Enum.Material.Neon, false).CastShadow = false
-	end
-	for _, x in { -6, 6 } do
-		part("SignBracket", Vector3.new(0.4, 0.4, 2.2), at(x, 11, -1.1), DARK, Enum.Material.Wood, false)
-	end
+-- Surface text on an invisible part (stays readable when a mesh hides the procedural look).
+local function signText(parent: Instance, name: string, size: Vector2, cf: CFrame, text: string, color: Color3, glow: Color3?): TextLabel
+	local p = Build.Part({ Name = name, Size = Vector3.new(size.X, size.Y, 0.05), CFrame = cf, Transparency = 1, CanCollide = false, CanQuery = false, CastShadow = false, Parent = parent })
 	local sg = Instance.new("SurfaceGui")
 	sg.Name = "SignText"
 	sg.Face = Enum.NormalId.Front
-	sg.CanvasSize = Vector2.new(600, 136)
+	sg.PixelsPerStud = 40
+	sg.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
 	sg.LightInfluence = 0
-	sg.Parent = sign
+	sg.Parent = p
 	local tl = Instance.new("TextLabel")
 	tl.Size = UDim2.fromScale(1, 1)
 	tl.BackgroundTransparency = 1
-	tl.Font = Enum.Font.GothamBlack
-	tl.Text = "CLASSES"
+	tl.Font = Enum.Font.FredokaOne
 	tl.TextScaled = true
-	tl.TextColor3 = Color3.fromRGB(255, 226, 150)
+	tl.Text = text
+	tl.TextColor3 = color
 	tl.Parent = sg
 	local stroke = Instance.new("UIStroke")
-	stroke.Color = Color3.fromRGB(255, 140, 60)
+	stroke.Color = glow or Color3.fromRGB(70, 40, 20)
 	stroke.Thickness = 3
 	stroke.Parent = tl
-	local signLight = Instance.new("PointLight")
-	signLight.Color = TEAL
-	signLight.Range = 16
-	signLight.Brightness = 1.6
-	signLight.Shadows = false
-	signLight.Parent = sign
-	-- Ground plan for keep-clear checks (porch included)
-	local fp = part("Footprint", Vector3.new(40, 16, 19), at(0, 8, 4), DARK, Enum.Material.SmoothPlastic, false)
+	return tl
+end
+Refuge.SignText = signText
+
+local function warmLight(part: BasePart, range: number)
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(255, 180, 110)
+	light.Range = range
+	light.Brightness = 1.3
+	light.Shadows = false
+	light.Parent = part
+end
+
+-- Lodge layout (model space of SM_Lobby_Lodge: front wall at z 0, porch toward -z, +x is the
+-- viewer's left). Mannequin spots on the class stage behind the right-hand opening.
+local LODGE_SPOTS = {
+	{ x = -9.6, z = 1.9 }, -- free class, front and centre
+	{ x = -5.4, z = 1.9 },
+	{ x = -13.8, z = 1.9 },
+	{ x = -7.5, z = 3.8 },
+	{ x = -11.7, z = 3.8 },
+	{ x = -3.8, z = 3.8 },
+	{ x = -15.4, z = 3.8 },
+}
+
+-- Class Hall + Camp Store: a two-storey log lodge west of the lobby fire (it faces the fire).
+-- CAMP STORE (left) has the shop counter; CLASSES (right) has the class mannequins on a stage,
+-- each tinted in its class colour, holding a fitting tool, with a name + ◆ price tag above.
+-- Returns the "Classes" station model (PrimaryPart = its Counter, the caller adds the prompt)
+-- and creates a "Shop" station model beside it in `parent` (PrimaryPart = the store Counter).
+-- A Footprint box on the Classes model marks the ground the lodge covers.
+-- `makeRig(color)` may return an R15 rig (server only); otherwise a part-built figure is used.
+function Refuge.ClassHall(parent: Instance, O: Vector3, classes: { ClassDef }, makeRig: ((Color3) -> Model?)?): Model
+	local m = Build.Model("Classes", parent)
+	local shop = Build.Model("Shop", parent)
+	local hallCF = CFrame.lookAt(O + Vector3.new(-38, 0, 3), O + Vector3.new(0, 0, 3))
+	local function at(x: number, y: number, z: number): CFrame
+		return hallCF * CFrame.new(x, y, z)
+	end
+	local LOG = Color3.fromRGB(150, 98, 58)
+	local DARK = Color3.fromRGB(104, 68, 42)
+	local ROOF = Color3.fromRGB(96, 150, 78)
+	local WARM = Color3.fromRGB(255, 196, 120)
+	local function part(name: string, size: Vector3, cf: CFrame, color: Color3, mat: Enum.Material, collide: boolean?, into: Instance?): BasePart
+		return Build.Part({ Name = name, Size = size, CFrame = cf, Color = color, Material = mat, CanCollide = collide ~= false, Parent = into or m })
+	end
+	local F = 1.2
+	-- Floor, porch and steps (walkable: a ramp-like pair of steps across the whole front)
+	part("Floor", Vector3.new(36, F, 14), at(0, F / 2, 7), DARK, Enum.Material.WoodPlanks)
+	part("Porch", Vector3.new(37, F, 6.2), at(0, F / 2, -3.1), LOG, Enum.Material.WoodPlanks)
+	part("Step", Vector3.new(37, 0.8, 0.8), at(0, 0.4, -6.6), DARK, Enum.Material.WoodPlanks)
+	part("Step", Vector3.new(37, 0.4, 0.8), at(0, 0.2, -7.3), DARK, Enum.Material.WoodPlanks)
+	-- Walls: back, sides, the three front piers and the lintel; a wall between the shops
+	part("BackWall", Vector3.new(37, 10, 1), at(0, F + 5, 14), LOG, Enum.Material.WoodPlanks)
+	for _, x in { -18, 18 } do
+		part("SideWall", Vector3.new(1, 10, 15), at(x, F + 5, 7), LOG, Enum.Material.WoodPlanks)
+	end
+	for _, s in { { -16.75, 2.5 }, { 0, 5 }, { 16.75, 2.5 } } do
+		part("Pier", Vector3.new(s[2], 10, 1), at(s[1], F + 5, 0), LOG, Enum.Material.WoodPlanks)
+	end
+	part("Lintel", Vector3.new(37, 1.6, 1), at(0, F + 8.9, 0), DARK, Enum.Material.WoodPlanks)
+	part("Divider", Vector3.new(0.6, 9.8, 14), at(0, F + 4.9, 7), DARK, Enum.Material.WoodPlanks)
+	for _, x in { -9, 9 } do
+		local glow = part("BackGlow", Vector3.new(12.4, 5.8, 0.2), at(x, F + 3.6, 13.4), Color3.fromRGB(230, 170, 100), Enum.Material.Neon, false)
+		glow.CastShadow = false
+	end
+	-- Porch roof on four posts, and the roof over the ground floor
+	for _, x in { -18, -2.5, 2.5, 18 } do
+		part("PorchPost", Vector3.new(0.8, 9, 0.8), at(x, F + 4.5, -5.8), DARK, Enum.Material.Wood)
+	end
+	part("PorchBeam", Vector3.new(38, 0.9, 0.9), at(0, F + 9.1, -5.8), DARK, Enum.Material.Wood, false)
+	part("PorchRoof", Vector3.new(39, 0.5, 8.2), at(0, F + 11, -2.8) * CFrame.Angles(math.rad(-19), 0, 0), ROOF, Enum.Material.WoodPlanks, false)
+	part("Ceiling", Vector3.new(38, 0.6, 15), at(0, F + 10.2, 7), DARK, Enum.Material.WoodPlanks, false)
+	-- Upper storey with glowing windows and a gable roof
+	local UZ = F + 10.5
+	part("Upper", Vector3.new(22, 7.2, 12), at(0, UZ + 3.6, 7.5), LOG, Enum.Material.WoodPlanks, false)
+	for _, x in { -7, 7 } do
+		part("UpperWindow", Vector3.new(2.6, 3.2, 0.2), at(x, UZ + 3.8, 1.4), WARM, Enum.Material.Neon, false).CastShadow = false
+	end
+	local rise, half = 7.6, 12.6
+	local slope = math.atan2(rise, half)
+	local run = math.sqrt(rise * rise + half * half)
+	for _, s in { -1, 1 } do
+		part("UpperRoof", Vector3.new(run + 0.6, 0.6, 15), at(s * half / 2, UZ + 7 + rise / 2, 7) * CFrame.Angles(0, 0, -s * slope), ROOF, Enum.Material.WoodPlanks, false)
+	end
+	part("GableSign", Vector3.new(15.6, 5.2, 0.5), at(0, UZ + 9.6, -1.1), LOG, Enum.Material.WoodPlanks, false)
+	part("Chimney", Vector3.new(2.6, 17, 2.6), at(-12.5, F + 15.5, 11), Color3.fromRGB(140, 134, 126), Enum.Material.Cobblestone, false)
+	-- CAMP STORE counter (viewer's left) and the CLASSES lectern + mannequin stage (right)
+	local storeCounter = part("Counter", Vector3.new(11, 3.4, 1.4), at(9, F + 1.7, -0.8), LOG, Enum.Material.WoodPlanks, true, shop)
+	part("CounterTop", Vector3.new(11.6, 0.3, 1.8), at(9, F + 3.55, -0.8), DARK, Enum.Material.Wood, true, shop)
+	for i, x in { 13, 11, 9, 7, 5 } do
+		part("Goods", Vector3.new(0.8, 0.7, 0.6), at(x, F + 4.05, -0.8), if i % 2 == 0 then Color3.fromRGB(220, 170, 60) else Color3.fromRGB(110, 150, 80), Enum.Material.SmoothPlastic, false, shop)
+	end
+	for _, y in { F + 2.2, F + 4.2, F + 6.2 } do
+		part("Shelf", Vector3.new(12.4, 0.25, 1.4), at(9, y, 12.6), DARK, Enum.Material.Wood, false, shop)
+	end
+	shop.PrimaryPart = storeCounter
+	local lectern = part("Counter", Vector3.new(2.6, 3.2, 1.2), at(-9, F + 1.6, -0.9), LOG, Enum.Material.WoodPlanks)
+	part("Stage", Vector3.new(12.8, 0.6, 3.4), at(-9, F + 0.3, 2.8), DARK, Enum.Material.WoodPlanks)
+	m.PrimaryPart = lectern
+	-- Lanterns (two carry lights) and barrels on the porch
+	for i, x in { -17.1, -3.6, 3.6, 17.1 } do
+		local lamp = part("Lantern", Vector3.new(0.6, 0.8, 0.6), at(x, F + 7.5, -5.8), WARM, Enum.Material.Neon, false)
+		lamp.CastShadow = false
+		if i == 2 or i == 3 then
+			warmLight(lamp, 16)
+		end
+	end
+	for _, s in { -1, 1 } do
+		Build.Cyl("Barrel", 1.9, 1.8, at(s * 16.6, F + 0.95, -4.6), LOG, Enum.Material.Wood, m)
+	end
+	-- Words: the game's name on the gable, a sign over each shop
+	signText(m, "TitleSign", Vector2.new(14.6, 4.4), at(0, UZ + 9.6, -1.6), "SURVIVAL HOUR", Color3.fromRGB(255, 214, 120), Color3.fromRGB(120, 60, 20))
+	signText(shop, "StoreSign", Vector2.new(12, 1.8), at(10.25, F + 7.4, -6.5), "CAMP STORE", Color3.fromRGB(255, 232, 180))
+	signText(m, "ClassSign", Vector2.new(12, 1.8), at(-10.25, F + 7.4, -6.5), "CLASSES", Color3.fromRGB(255, 232, 180))
+	for _, x in { 10.25, -10.25 } do
+		part("ShopSign", Vector3.new(12.6, 2.3, 0.4), at(x, F + 7.4, -6.1), LOG, Enum.Material.WoodPlanks, false)
+	end
+	-- Ground plan for keep-clear checks (porch and steps included)
+	local fp = part("Footprint", Vector3.new(40, 16, 24), at(0, 8, 3.4), DARK, Enum.Material.SmoothPlastic, false)
 	fp.Transparency = 1
 	fp.CanQuery = false
+	-- The Blender lodge replaces the look; the parts above stay as colliders
+	if Skins.Has("SM_Lobby_Lodge") then
+		Skins.Dress(m, "SM_Lobby_Lodge", { cf = hallCF })
+		Skins.Hide(shop)
+	end
 
-	-- Mannequins: the free/first class in the doorway, the rest in the windows.
+	-- Mannequins: the free/first class front and centre, the rest around it
 	local list = table.clone(classes)
 	table.sort(list, function(a, b)
 		return (a.Order or 0) < (b.Order or 0)
 	end)
-	local spots: { { x: number, z: number } } = { { x = 0, z = 1.5 } }
-	for _, x in HALL_BAYS do
-		table.insert(spots, { x = x, z = 3.5 })
-	end
-	local function tag(def: ClassDef, x: number, color: Color3)
-		local anchor = part("Tag_" .. def.Id, Vector3.new(0.2, 0.2, 0.2), at(x, 9.6, -1.2), color, Enum.Material.SmoothPlastic, false)
+	local function tag(def: ClassDef, spot: { x: number, z: number }, color: Color3)
+		local anchor = part("Tag_" .. def.Id, Vector3.new(0.2, 0.2, 0.2), at(spot.x, if spot.z > 3 then 9.1 else 8.1, spot.z - 1.2), color, Enum.Material.SmoothPlastic, false)
 		anchor.Transparency = 1
 		anchor.CanQuery = false
 		local bb = Instance.new("BillboardGui")
 		bb.Name = "ClassTag"
-		bb.Size = UDim2.new(4.6, 0, 1.9, 0)
-		bb.MaxDistance = 70
+		bb.Size = UDim2.new(3.4, 0, 1.4, 0)
+		bb.MaxDistance = 60
 		bb.LightInfluence = 0
 		bb.AlwaysOnTop = false
 		bb.Adornee = anchor
@@ -10180,9 +10169,9 @@ function Refuge.ClassHall(parent: Instance, O: Vector3, classes: { ClassDef }, m
 		name.LayoutOrder = 1
 		name.Size = UDim2.fromScale(1, 0.56)
 		name.BackgroundTransparency = 1
-		name.Font = Enum.Font.GothamBlack
+		name.Font = Enum.Font.FredokaOne
 		name.TextScaled = true
-		name.Text = (def.Glyph or "") .. " " .. def.Name
+		name.Text = def.Name
 		name.TextColor3 = Build.Tint(color, 1.25)
 		name.TextStrokeTransparency = 0.3
 		name.Parent = bb
@@ -10198,13 +10187,13 @@ function Refuge.ClassHall(parent: Instance, O: Vector3, classes: { ClassDef }, m
 		price.Parent = bb
 	end
 	for i, def in list do
-		local spot = spots[i]
+		local spot = LODGE_SPOTS[i]
 		if not spot then
 			break
 		end
 		local color = classColor(def)
-		tag(def, spot.x, color)
-		local stand = at(spot.x, 1.6, spot.z) * CFrame.Angles(0, math.rad(((i * 37) % 21) - 10), 0)
+		tag(def, spot, color)
+		local stand = at(spot.x, F + 0.6, spot.z) * CFrame.Angles(0, math.rad(((i * 37) % 21) - 10), 0)
 		-- rigs load from the platform (they can yield), so each figure builds on its own thread
 		task.spawn(function()
 			local fig: Model? = nil
@@ -10226,6 +10215,95 @@ function Refuge.ClassHall(parent: Instance, O: Vector3, classes: { ClassDef }, m
 		end)
 	end
 	return m
+end
+
+-- Roofed leaderboard (Most Kills / Wins / Playtime) standing at `cf` (panel faces cf.LookVector).
+-- Refuge.FillLeaderboard writes its rows.
+local ROWS = 10
+function Refuge.Leaderboard(parent: Instance, cf: CFrame, name: string, title: string): Model
+	local m = Build.Model(name, parent)
+	local DARK = Color3.fromRGB(92, 62, 40)
+	for _, x in { -5.6, 5.6 } do
+		Build.Part({ Name = "Post", Size = Vector3.new(0.76, 12.6, 0.76), CFrame = cf * CFrame.new(x, 6.2, 0.2), Color = DARK, Material = Enum.Material.Wood, Parent = m })
+	end
+	local back = Build.Part({ Name = "Backboard", Size = Vector3.new(11, 10.6, 0.5), CFrame = cf * CFrame.new(0, 6.9, 0.2), Color = Color3.fromRGB(60, 42, 30), Material = Enum.Material.WoodPlanks, Parent = m })
+	Build.Part({ Name = "TitlePlank", Size = Vector3.new(9.6, 1.5, 0.35), CFrame = cf * CFrame.new(0, 11.1, -0.3), Color = Color3.fromRGB(226, 190, 140), Material = Enum.Material.WoodPlanks, CanCollide = false, Parent = m })
+	for _, s in { -1, 1 } do
+		Build.Part({ Name = "Roof", Size = Vector3.new(13, 0.4, 2.4), CFrame = cf * CFrame.new(0, 12.85, 0.2 + s * 0.95) * CFrame.Angles(math.rad(s * 30), 0, 0), Color = Color3.fromRGB(96, 150, 78), Material = Enum.Material.WoodPlanks, CanCollide = false, Parent = m })
+	end
+	for _, x in { -5.6, 5.6 } do
+		local lamp = Build.Part({ Name = "Lantern", Size = Vector3.new(0.55, 0.75, 0.55), CFrame = cf * CFrame.new(x, 10.75, -0.9), Color = Color3.fromRGB(255, 196, 120), Material = Enum.Material.Neon, CanCollide = false, CastShadow = false, Parent = m })
+		if x > 0 then
+			warmLight(lamp, 12)
+		end
+	end
+	m.PrimaryPart = back
+	if Skins.Has("SM_Lobby_Leaderboard") then
+		Skins.Dress(m, "SM_Lobby_Leaderboard", { cf = cf })
+	end
+	signText(m, "Title", Vector2.new(9.2, 1.4), cf * CFrame.new(0, 11.1, -0.5), title, Color3.fromRGB(120, 60, 24), Color3.fromRGB(255, 236, 200))
+	-- rows: a SurfaceGui on an invisible face just in front of the panel
+	local face = Build.Part({ Name = "Rows", Size = Vector3.new(10, 7.6, 0.05), CFrame = cf * CFrame.new(0, 6.4, -0.34), Transparency = 1, CanCollide = false, CanQuery = false, CastShadow = false, Parent = m })
+	local sg = Instance.new("SurfaceGui")
+	sg.Name = "Rows"
+	sg.Face = Enum.NormalId.Front
+	sg.CanvasSize = Vector2.new(500, 380)
+	sg.LightInfluence = 0
+	sg.Parent = face
+	local list = Instance.new("UIListLayout")
+	list.SortOrder = Enum.SortOrder.LayoutOrder
+	list.Parent = sg
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft = UDim.new(0, 18)
+	pad.PaddingRight = UDim.new(0, 18)
+	pad.PaddingTop = UDim.new(0, 8)
+	pad.Parent = sg
+	for i = 1, ROWS do
+		local row = Instance.new("Frame")
+		row.Name = "Row" .. i
+		row.LayoutOrder = i
+		row.Size = UDim2.new(1, 0, 0, 36)
+		row.BackgroundTransparency = 1
+		row.Parent = sg
+		local function cell(nm: string, x: number, w: number, align: Enum.TextXAlignment, color: Color3)
+			local t = Instance.new("TextLabel")
+			t.Name = nm
+			t.AutoLocalize = false
+			t.Position = UDim2.fromScale(x, 0)
+			t.Size = UDim2.fromScale(w, 1)
+			t.BackgroundTransparency = 1
+			t.Font = Enum.Font.FredokaOne
+			t.TextScaled = true
+			t.TextXAlignment = align
+			t.TextColor3 = color
+			t.Text = ""
+			t.Parent = row
+		end
+		local gold = i == 1
+		cell("Rank", 0, 0.16, Enum.TextXAlignment.Left, if gold then Color3.fromRGB(255, 210, 70) else Color3.fromRGB(240, 200, 140))
+		cell("Player", 0.17, 0.6, Enum.TextXAlignment.Left, Color3.fromRGB(255, 244, 225))
+		cell("Value", 0.77, 0.23, Enum.TextXAlignment.Right, Color3.fromRGB(240, 200, 140))
+	end
+	return m
+end
+
+-- Writes up to ten { Name, Value } rows onto a Refuge.Leaderboard (empty list: a waiting line).
+function Refuge.FillLeaderboard(board: Model, rows: { { Name: string, Value: string } })
+	local face = board:FindFirstChild("Rows")
+	local sg = face and face:FindFirstChild("Rows")
+	if not sg then
+		return
+	end
+	for i = 1, ROWS do
+		local row = sg:FindFirstChild("Row" .. i)
+		if row then
+			local r = rows[i]
+			local rank, player, value = row:FindFirstChild("Rank"), row:FindFirstChild("Player"), row:FindFirstChild("Value")
+			rank.Text = if r then (if i == 1 then "👑" else "#" .. i) else ""
+			player.Text = if r then r.Name elseif i == 1 and #rows == 0 then "Play a match to get on the board!" else ""
+			value.Text = if r then r.Value else ""
+		end
+	end
 end
 
 -- Daily Challenges board near the spawn (faces along cf.LookVector). The client draws this
@@ -10263,6 +10341,22 @@ function Refuge.ChallengeBoard(parent: Instance, cf: CFrame): Model
 	tl.Text = "DAILY CHALLENGES"
 	tl.Parent = sg
 	m.PrimaryPart = face
+	-- header plank with the title (stays when the Blender board replaces the look)
+	Build.Part({ Name = "Header", Size = Vector3.new(9, 2.2, 0.4), CFrame = cf * CFrame.new(0, 12, -0.2), Color = Color3.fromRGB(226, 190, 140), Material = Enum.Material.WoodPlanks, CanCollide = false, Parent = m })
+	for _, x in { -6.4, 6.4 } do
+		Build.Part({ Name = "HeaderPost", Size = Vector3.new(0.7, 4, 0.7), CFrame = cf * CFrame.new(x, 12, 0.3), Color = Color3.fromRGB(96, 66, 42), Material = Enum.Material.Wood, Parent = m })
+	end
+	if Skins.Has("SM_Lobby_QuestBoard") then
+		Skins.Dress(m, "SM_Lobby_QuestBoard", { cf = cf })
+		-- the client draws on the face: keep it as an invisible surface just in front of the mesh panel
+		face.Size = Vector3.new(11.2, 6.6, 0.05)
+		face.CFrame = cf * CFrame.new(0, 6, -0.34)
+		local static = face:FindFirstChild("BoardStatic")
+		if static and static:IsA("SurfaceGui") then
+			static.Enabled = true
+		end
+	end
+	signText(m, "Title", Vector2.new(8.6, 1.9), cf * CFrame.new(0, 12, -0.45), "DAILY CHALLENGES", Color3.fromRGB(120, 60, 24), Color3.fromRGB(255, 236, 200))
 	return m
 end
 
@@ -10308,6 +10402,51 @@ function Refuge.QueueZone(parent: Instance, center: Vector3, radius: number): Ba
 	tl.Parent = sg
 	local board = Build.Part({ Name = "QueueBoard", Size = Vector3.new(1, 1, 1), CFrame = CFrame.new(center + Vector3.new(0, 13, 0)), Transparency = 1, CanCollide = false, CanQuery = false, CastShadow = false, Parent = zone })
 	return board
+end
+
+-- Log fence ring round the plaza at `radius` from O, in 8-stud segments with a lantern post
+-- every fourth joint. `clear(pos)` drops segments over paths, water or buildings.
+function Refuge.Fence(parent: Instance, O: Vector3, radius: number, clear: (Vector3) -> boolean): Folder
+	local f = Instance.new("Folder")
+	f.Name = "Fence"
+	f.Parent = parent
+	local n = math.floor(2 * math.pi * radius / 8)
+	local WOOD = Color3.fromRGB(150, 104, 62)
+	local DARK = Color3.fromRGB(100, 68, 44)
+	local lit = 0
+	for i = 0, n - 1 do
+		local a0, a1 = i * 2 * math.pi / n, (i + 1) * 2 * math.pi / n
+		local p0 = O + Vector3.new(math.cos(a0) * radius, 0, math.sin(a0) * radius)
+		local p1 = O + Vector3.new(math.cos(a1) * radius, 0, math.sin(a1) * radius)
+		if not (clear(p0) and clear(p1) and clear((p0 + p1) / 2)) then
+			continue
+		end
+		local cf = CFrame.lookAt(p0, p1) * CFrame.Angles(0, math.pi / 2, 0) -- local +X runs from p0 to p1
+		local len = (p1 - p0).Magnitude
+		local seg = Build.Model("FenceSegment", f)
+		Build.Cyl("Post", 3.6, 0.8, cf * CFrame.new(0, 1.8, 0), DARK, Enum.Material.Wood, seg)
+		for _, y in { 1.1, 2.5 } do
+			Build.Part({ Name = "Rail", Shape = Enum.PartType.Cylinder, Size = Vector3.new(len, 0.48, 0.48), CFrame = cf * CFrame.new(len / 2, y, 0), Color = WOOD, Material = Enum.Material.Wood, Parent = seg })
+		end
+		seg.PrimaryPart = seg:FindFirstChild("Post") :: BasePart
+		if Skins.Has("SM_Lobby_Fence") then
+			Skins.Dress(seg, "SM_Lobby_Fence", { cf = cf })
+		end
+		if i % 4 == 0 then
+			local post = Build.Model("FenceLantern", f)
+			Build.Part({ Name = "Post", Size = Vector3.new(1.1, 3.8, 1.1), CFrame = cf * CFrame.new(0, 1.9, 0), Color = DARK, Material = Enum.Material.Wood, Parent = post })
+			local lamp = Build.Part({ Name = "Lantern", Size = Vector3.new(0.7, 0.95, 0.7), CFrame = cf * CFrame.new(0, 4.35, 0), Color = Color3.fromRGB(255, 196, 120), Material = Enum.Material.Neon, CanCollide = false, CastShadow = false, Parent = post })
+			post.PrimaryPart = post:FindFirstChild("Post") :: BasePart
+			if Skins.Has("SM_Lobby_FenceLantern") then
+				Skins.Dress(post, "SM_Lobby_FenceLantern", { cf = cf }) -- the hidden lantern keeps its light
+			end
+			lit += 1
+			if lit % 2 == 1 and lit <= 7 then -- a few real lights; the rest only glow (phones stay smooth)
+				warmLight(lamp, 14)
+			end
+		end
+	end
+	return f
 end
 
 return Refuge
@@ -65190,6 +65329,7 @@ export type Session = {
 	Saving: boolean,
 	Released: boolean,
 	LoadedEvent: BindableEvent,
+	PlayMark: number?, -- os.time() playtime was last counted up to
 }
 
 local DataService = {}
@@ -65197,7 +65337,7 @@ local DataService = {}
 local ctx: any
 local store: DataStore? = nil
 local boards: { [string]: OrderedDataStore } = {}
-local boardCache: { [string]: { { UserId: number, Name: string, Value: number } } } = { Wins = {}, XP = {} }
+local boardCache: { [string]: { { UserId: number, Name: string, Value: number } } } = { Wins = {}, XP = {}, Kills = {}, Playtime = {} }
 local names: { [number]: string } = {}
 local sessions: { [Player]: Session } = {}
 
@@ -65222,7 +65362,7 @@ function DataService.Init(c)
 	else
 		warn("[DataService] DataStore unavailable:", result)
 	end
-	for _, b in { "Wins", "XP" } do
+	for _, b in { "Wins", "XP", "Kills", "Playtime" } do
 		local okb, ods = pcall(function()
 			return DataStoreService:GetOrderedDataStore(Config.Data.StoreName .. "_Board_" .. b)
 		end)
@@ -65331,6 +65471,7 @@ function DataService._onJoin(player: Player)
 		if result == "ok" then
 			s.Profile = ProfileRules.Reconcile(data)
 			s.State = "Loaded"
+			s.PlayMark = os.time()
 		else
 			s.State = "Failed"
 			warn("[DataService] profile load failed; running without saving for", player.UserId)
@@ -65405,6 +65546,7 @@ function DataService.Save(player: Player, release: boolean): boolean
 		task.wait(0.1)
 	end
 	s.Saving = true
+	DataService._countPlaytime(s)
 	local snapshot = HttpService:JSONDecode(HttpService:JSONEncode(s.Profile))
 	local success = false
 	for attempt = 1, 3 do
@@ -65448,6 +65590,7 @@ function DataService._onLeave(player: Player)
 	end
 	if s.State == "Loaded" then
 		DataService.Save(player, true)
+		DataService.PostLeaderboards(player) -- playtime keeps counting in the lobby too
 	end
 	sessions[player] = nil
 end
@@ -65554,6 +65697,16 @@ function DataService.Push(player: Player)
 	ctx.CosmeticService.Apply(player)
 end
 
+-- Adds the time since the last count to the profile's playtime (Stats.PlaySeconds).
+function DataService._countPlaytime(s: Session)
+	local now = os.time()
+	if s.State == "Loaded" and s.PlayMark then
+		local add = math.clamp(now - s.PlayMark, 0, 6 * 3600) -- a clock jump can't add a day
+		s.Profile.Stats.PlaySeconds = (s.Profile.Stats.PlaySeconds or 0) + add
+	end
+	s.PlayMark = now
+end
+
 -- Leaderboards (OrderedDataStore; every call is pcall-guarded) ----------------------------
 
 function DataService.PostLeaderboards(player: Player)
@@ -65561,7 +65714,9 @@ function DataService.PostLeaderboards(player: Player)
 	if not s or s.State ~= "Loaded" then
 		return
 	end
-	for b, value in { Wins = s.Profile.Wins, XP = s.Profile.XP } do
+	DataService._countPlaytime(s)
+	local values = { Wins = s.Profile.Wins, XP = s.Profile.XP, Kills = s.Profile.Kills, Playtime = s.Profile.Stats.PlaySeconds or 0 }
+	for b, value in values do
 		local ods = boards[b]
 		if ods and value > 0 then
 			local ok, err = pcall(function()
@@ -68611,25 +68766,33 @@ function LobbyService.PushAll()
 	end
 end
 
--- Hall of Fame board in the lobby (top 5 wins + top 5 levels).
+-- Plaza leaderboards in the lobby: most kills, wins and playtime (top 10 each).
 local lastBoard = ""
 function LobbyService._board()
 	local boards = ctx.DataService.Boards()
-	local lines = { "HALL OF FAME" }
-	for _, spec in { { "Wins", "Most wins" }, { "XP", "Most XP" } } do
-		table.insert(lines, "— " .. spec[2] .. " —")
-		local list = boards[spec[1]] or {}
-		if #list == 0 then
-			table.insert(lines, "(live servers only)")
-		end
-		for i = 1, math.min(5, #list) do
-			table.insert(lines, string.format("%d. %s  %d", i, list[i].Name, list[i].Value))
-		end
+	local function playtime(sec: number): string
+		local h = math.floor(sec / 3600)
+		return if h >= 1 then h .. "h" else math.floor(sec / 60) .. "m"
 	end
-	local text = table.concat(lines, "\n")
+	local rows = {}
+	local sig = {}
+	for _, key in { "Kills", "Wins", "Playtime" } do
+		local list = {}
+		for i, e in boards[key] or {} do
+			if i > 10 then
+				break
+			end
+			local v = if key == "Playtime" then playtime(e.Value) else tostring(e.Value)
+			table.insert(list, { Name = e.Name, Value = v })
+			table.insert(sig, e.Name .. v)
+		end
+		rows[key] = list
+		table.insert(sig, "|")
+	end
+	local text = table.concat(sig, ",")
 	if text ~= lastBoard then
 		lastBoard = text
-		ctx.WorldService.SetLobbyBoard(lines)
+		ctx.WorldService.SetLeaderboards(rows)
 	end
 end
 
@@ -73131,6 +73294,7 @@ local Build = require(Models:WaitForChild("Build"))
 local Nature = require(Models:WaitForChild("Nature"))
 local Camp = require(Models:WaitForChild("Camp"))
 local Refuge = require(Models:WaitForChild("Refuge"))
+local Skins = require(Models:WaitForChild("Skins"))
 
 local terrain = workspace.Terrain
 
@@ -73177,9 +73341,21 @@ return function(WorldService: any)
 		if ring then
 			ring:Destroy()
 		end
-		for i = 0, 5 do
-			local a = math.rad(i * 60 + 30)
-			Build.Cyl("LogSeat", 6, 1.8, CFrame.new(O + Vector3.new(math.cos(a) * 9, 0.9, math.sin(a) * 9)) * CFrame.Angles(0, -a, 0) * CFrame.Angles(math.rad(90), 0, 0), Color3.fromRGB(120, 84, 54), Enum.Material.Wood, folder)
+		-- four big log seats round the fire, stumps between them
+		for i = 0, 3 do
+			local a = math.rad(i * 90 + 45)
+			local pos = O + Vector3.new(math.cos(a) * 9.5, 0, math.sin(a) * 9.5)
+			local cf = CFrame.lookAt(pos, O) * CFrame.Angles(0, math.rad(90), 0) -- log runs across the view of the fire
+			local logM = Build.Model("LogSeat", folder)
+			local logP = Build.Part({ Name = "Log", Shape = Enum.PartType.Cylinder, Size = Vector3.new(8.8, 2.5, 2.5), CFrame = cf * CFrame.new(0, 1.25, 0), Color = Color3.fromRGB(128, 86, 54), Material = Enum.Material.Wood, Parent = logM })
+			logM.PrimaryPart = logP
+			if Skins.Has("SM_Lobby_BigLog") then
+				Skins.Dress(logM, "SM_Lobby_BigLog", { cf = cf })
+			end
+		end
+		for i = 0, 3 do
+			local a = math.rad(i * 90)
+			Build.Cyl("Stump", 1.6, 2.2, CFrame.new(O + Vector3.new(math.cos(a) * 11, 0.8, math.sin(a) * 11)), Color3.fromRGB(120, 84, 54), Enum.Material.Wood, folder)
 		end
 
 		-- Ready ring (stand inside to ready up)
@@ -73205,7 +73381,8 @@ return function(WorldService: any)
 		-- Queue-zone look for the ring: hazard stripes, floor lettering, the live counter anchor
 		Refuge.QueueZone(folder, readyCenter, 11)
 
-		-- Stations: Shop (east), Class Hall (west), Party board (south), Outfitter (SE), Hall of Fame (SW)
+		-- Stations: the lodge (Camp Store + Classes, west), leaderboards and challenges (east),
+		-- Party board (south), Outfitter (SE)
 		local function stationPrompt(part: BasePart, name: string, label: string, promptText: string)
 			local prompt = Instance.new("ProximityPrompt")
 			prompt.Name = "StationPrompt"
@@ -73231,9 +73408,8 @@ return function(WorldService: any)
 			stationPrompt(counter, name, label, promptText)
 			return m
 		end
-		station("Shop", O + Vector3.new(40, 0, 0), Color3.fromRGB(230, 170, 60), "TRADING POST", "Open Shop")
-		-- Class Hall: a lit cabin with a mannequin per class in its windows (R15 rigs built
-		-- from a blank HumanoidDescription, so no uploaded assets; part figures if that fails)
+		-- The lodge: Camp Store counter and the Class Hall, with a mannequin per class (R15 rigs
+		-- built from a blank HumanoidDescription, so no uploaded assets; part figures if that fails)
 		local Classes = require(Shared:WaitForChild("Classes"))
 		local function mannequinRig(color: Color3): Model?
 			local desc = Instance.new("HumanoidDescription")
@@ -73254,23 +73430,67 @@ return function(WorldService: any)
 		if hall.PrimaryPart then
 			stationPrompt(hall.PrimaryPart, "Classes", "CLASS HALL", "Choose Class")
 		end
+		local shop = folder:FindFirstChild("Shop") :: Model
+		if shop and shop.PrimaryPart then
+			stationPrompt(shop.PrimaryPart, "Shop", "CAMP STORE", "Open Shop")
+		end
 		local party = station("Party", O + Vector3.new(0, 0, 40), Color3.fromRGB(110, 150, 230), "PARTY BOARD", "Manage Party")
 		local locker = station("Locker", O + Vector3.new(30, 0, 30), Color3.fromRGB(190, 110, 200), "OUTFITTER", "Open Locker")
-		local profile = station("Profile", O + Vector3.new(-30, 0, 30), Color3.fromRGB(240, 200, 90), "HALL OF FAME", "Profile & Rewards")
-		-- Daily Challenges board beside the spawn path, facing it (drawn per player by the client)
-		local boardPos = O + Vector3.new(14, 0, 22)
-		local challenges = Refuge.ChallengeBoard(folder, CFrame.lookAt(boardPos, O + Vector3.new(0, 0, 12)))
+		-- Leaderboards in a row east of the fire, facing it, then the Daily Challenges board
+		-- (drawn per player by the client)
+		local leaders = Build.Model("Leaderboards", folder)
+		local boards = {}
+		for i, spec in { { "Kills", "MOST KILLS", -15 }, { "Wins", "MOST WINS", -1.5 }, { "Playtime", "MOST PLAYTIME", 12 } } do
+			local pos = O + Vector3.new(44, 0, spec[3])
+			local b = Refuge.Leaderboard(leaders, CFrame.lookAt(pos, pos - Vector3.xAxis), "Board_" .. spec[1], spec[2])
+			boards[spec[1]] = b
+			if i == 2 and b.PrimaryPart then
+				leaders.PrimaryPart = b.PrimaryPart
+				stationPrompt(b.PrimaryPart, "Profile", "LEADERBOARDS", "Profile & Rewards")
+			end
+		end
+		local lfp = Build.Part({ Name = "Footprint", Size = Vector3.new(6, 16, 42), CFrame = CFrame.new(O + Vector3.new(44.5, 8, -1.5)), Transparency = 1, CanCollide = false, CanQuery = false, Parent = leaders })
+		lfp.CastShadow = false
+		WorldService.LobbyBoards = boards
+		local boardPos = O + Vector3.new(44, 0, 26.5)
+		local challenges = Refuge.ChallengeBoard(folder, CFrame.lookAt(boardPos, boardPos - Vector3.xAxis))
 		if challenges.PrimaryPart then
 			stationPrompt(challenges.PrimaryPart, "Profile", "DAILY CHALLENGES", "View Challenges")
 		end
-		WorldService.LobbyBoard = Refuge.Dress(folder, O, readyCenter, {
-			Shop = folder:FindFirstChild("Shop") :: Model,
+		local stations = {
+			Shop = shop,
 			Classes = hall,
 			Party = party,
 			Locker = locker,
-			Profile = profile,
+			Profile = leaders,
 			Board = challenges,
-		}, WorldService.LobbyWater)
+		}
+		Refuge.Dress(folder, O, readyCenter, stations, WorldService.LobbyWater)
+		-- Lantern fence round the plaza, open at the paths, water and buildings
+		local W = WorldService.LobbyWater
+		Refuge.Fence(folder, O, 60, function(pos: Vector3): boolean
+			local d = pos - O
+			if math.abs(d.X) < 8 or math.abs(d.Z) < 8 then
+				return false
+			end
+			for _, pd in W.Ponds do
+				if (pos - (O + Vector3.new(pd.X, 0, pd.Z))).Magnitude < pd.R + 5 then
+					return false
+				end
+			end
+			for _, pt in W.Stream do
+				if (pos - (O + Vector3.new(pt[1], 0, pt[2]))).Magnitude < 9 then
+					return false
+				end
+			end
+			for _, st in stations do
+				local fp = st and st:FindFirstChild("Footprint")
+				if fp and fp:IsA("BasePart") and Refuge.InBox(fp, pos, 2) then
+					return false
+				end
+			end
+			return true
+		end)
 
 		-- Title
 		local title = Build.Part({ Name = "Title", Size = Vector3.new(1, 1, 1), CFrame = CFrame.new(O + Vector3.new(0, 26, -50)), Transparency = 1, CanCollide = false, Parent = folder })
@@ -73342,11 +73562,12 @@ return function(WorldService: any)
 		end
 	end
 
-	-- Updates the Hall of Fame board text (called by LobbyService).
-	function WorldService.SetLobbyBoard(lines: { string })
-		local tl = WorldService.LobbyBoard
-		if tl and tl.Parent then
-			tl.Text = table.concat(lines, "\n")
+	-- Writes the plaza leaderboards (called by LobbyService): board key -> { { Name, Value } }.
+	function WorldService.SetLeaderboards(rows: { [string]: { { Name: string, Value: string } } })
+		for key, board in WorldService.LobbyBoards or {} do
+			if board.Parent then
+				Refuge.FillLeaderboard(board, rows[key] or {})
+			end
 		end
 	end
 end

@@ -160,6 +160,7 @@ NumberSequence = { new = function(...) return { ... } end }
 NumberSequenceKeypoint = { new = function(t, v, e) return { Time = t, Value = v, Envelope = e or 0 } end }
 ColorSequence = { new = function(...) return { ... } end }
 UDim2 = { new = function(...) return { ... } end, fromScale = function(...) return { ... } end, fromOffset = function(...) return { ... } end }
+UDim = { new = function(...) return { ... } end }
 Vector2 = { new = function(x, y) return { X = x, Y = y } end }
 local function enum(name)
 	return setmetatable({}, { __index = function(t, k)
@@ -256,7 +257,7 @@ Inst.__newindex = function(self, k, v)
 		end
 		return
 	end
-	if k == "Position" then
+	if k == "Position" and rawget(self, "_props").CFrame then -- GUI Position is a UDim2
 		local c = rawget(self, "_props").CFrame
 		rawget(self, "_props").CFrame = cf(v.X, v.Y, v.Z, c.r)
 		return

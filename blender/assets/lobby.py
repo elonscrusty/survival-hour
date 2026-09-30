@@ -291,3 +291,267 @@ def sharpshooter(m):
     for s in (-1, 1):
         raised(m, [(0, 0), (0.28, 0), (0.22, 0.1), (0, 0.06)], loc=(-0.85, -0.03, -0.7 + s * 0.05),
                rot=(0, -40 + s * 30, 0), mat="bone", depth=0.05)
+
+
+# --------------------------------------------------------------- campfire plaza
+# The evening plaza round the lobby fire: a log lodge (Camp Store + Classes), roofed
+# leaderboards, the Daily Challenges board, big log seats and a lantern fence.
+# Board faces are plain dark panels: every word is a SurfaceGui drawn by the game on a
+# part just in front of the panel (see src/shared/Models/Refuge.luau PLAZA).
+
+ROOF = "crate_paint"  # olive painted shingles
+
+
+def log(m, a, b, r, mat="bark"):
+    m.sweep(mat, [a, b], r, 8, cap_mat="end_grain")
+
+
+def lantern(m, x, y, z, name=None):
+    """Hanging lantern whose hook is at (x, y, z)."""
+    m.sweep("metal_dark", [(x, y, z), (x, y, z - 0.35)], 0.04, 4)
+    m.cone("metal_dark", 0.42, 0.35, seg=8, loc=(x, y, z - 0.7))
+    m.box("glow", (0.55, 0.55, 0.75), loc=(x, y, z - 1.1), bevel=0.06)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            m.box("metal_dark", (0.08, 0.08, 0.8), loc=(x + sx * 0.3, y + sy * 0.3, z - 1.1))
+    m.box("metal_dark", (0.7, 0.7, 0.14), loc=(x, y, z - 1.52), bevel=0.04)
+    if name:
+        m.attach(name, (x, y, z - 1.1))
+
+
+def shingle_roof(m, width, run, ridge, eave_drop, loc, rows=4):
+    """Gable roof along X: ridge at loc (x, y, z), slopes down toward -Y and +Y."""
+    x, y, z = loc
+    ang = math.degrees(math.atan2(eave_drop, run))
+    slope = math.hypot(run, eave_drop)
+    for s in (-1, 1):
+        for i in range(rows):  # overlapping shingle courses
+            t = (i + 0.5) / rows
+            m.box(ROOF, (width, slope / rows + 0.25, 0.28),
+                  loc=(x, y + s * run * t, z - eave_drop * t + 0.05 * (rows - i)),
+                  rot=(-s * ang, 0, 0), bevel=0.06)
+    m.box("wood_dark", (width + 0.3, 0.45, 0.45), loc=(x, y, z + 0.28), bevel=0.08)
+
+
+@asset("SM_Lobby_Leaderboard", "Lobby", "Lobby", density=3.0, pivot="Bottom centre on the ground; the panel faces -Z.",
+       footprint=[12, 3], fidelity="Box",
+       use="Roofed leaderboard (Most Kills / Wins / Playtime). Text drawn by the game.",
+       notes="Panel 10 x 7.6 centred 6.4 up, front face 0.3 in front of the pivot. Title plank 9.6 x 1.5 at 11.1. "
+             "Lanterns at Light1_Att / Light2_Att.")
+def leaderboard(m):
+    for x in (-5.6, 5.6):
+        log(m, (x, 0.2, -0.3), (x, 0.2, 12.4), 0.38)
+        m.blob("stone_dark", 0.6, loc=(x, 0.2, 0.2), scale=(1.2, 1.2, 0.6), jitter=0.05)
+    m.box("wood_dark", (11.0, 0.5, 10.6), loc=(0, 0.2, 6.9), bevel=0.1)  # backboard
+    m.box("wood_dark", (10.0, 0.2, 7.6), loc=(0, -0.2, 6.4), bevel=0.04)  # dark text panel
+    for z, h in ((2.4, 0.5), (10.4, 0.5)):  # frame rails
+        m.box("wood", (10.8, 0.5, h), loc=(0, -0.25, z), bevel=0.1)
+    for x in (-5.15, 5.15):
+        m.box("wood", (0.5, 0.5, 8.5), loc=(x, -0.25, 6.4), bevel=0.1)
+    m.box("wood_fresh", (9.6, 0.35, 1.5), loc=(0, -0.3, 11.1), bevel=0.1)  # title plank
+    for x in (-3.5, 3.5):
+        m.box("metal_dark", (0.15, 0.1, 0.15), loc=(x, -0.5, 11.1))
+    shingle_roof(m, 13.0, 1.9, 1.3, 1.1, (0, 0.2, 13.4))
+    for x in (-6.2, 6.2):  # gable end boards
+        m.prism("wood_dark", [(-0.1, 0), (0.1, 0), (0.1, 1.1), (-0.1, 1.1)], 3.6, loc=(x, 0.2, 12.2))
+    for i, x in enumerate((-5.6, 5.6)):
+        m.box("metal_dark", (0.12, 1.0, 0.12), loc=(x, -0.45, 11.9))
+        lantern(m, x, -0.9, 11.85, f"Light{i + 1}")
+    m.col_box((0, 0.1, 6.5), (12, 1.0, 13))
+
+
+@asset("SM_Lobby_QuestBoard", "Lobby", "Lobby", density=3.0, pivot="Bottom centre on the ground; the panel faces -Z.",
+       footprint=[13, 3], fidelity="Box",
+       use="Daily Challenges board: log frame, carved header sign with pine trees. Text drawn by the game.",
+       notes="Panel 11.2 x 6.6 centred 6 up, front face 0.3 in front of the pivot (matches ChallengeBoardFace). "
+             "Header plank 9 x 2.2 at 12.")
+def quest_board(m):
+    for x in (-6.4, 6.4):
+        log(m, (x, 0.2, -0.3), (x, 0.2, 13.8), 0.42)
+        m.blob("stone_dark", 0.65, loc=(x, 0.2, 0.2), scale=(1.2, 1.2, 0.6), jitter=0.05)
+        m.cone("wood_dark", 0.5, 0.6, seg=8, loc=(x, 0.2, 13.8))
+    m.box("wood_dark", (12.4, 0.5, 8.0), loc=(0, 0.2, 6.0), bevel=0.1)
+    m.box("wood_dark", (11.2, 0.2, 6.6), loc=(0, -0.2, 6.0), bevel=0.04)
+    for z in (2.45, 9.55):
+        log(m, (-6.2, -0.2, z), (6.2, -0.2, z), 0.3, "wood")
+    # header: plank sign between two little pines
+    m.box("wood_fresh", (9.0, 0.4, 2.2), loc=(0, -0.2, 12.0), bevel=0.12)
+    m.box("wood_dark", (9.6, 0.5, 0.3), loc=(0, -0.15, 10.8), bevel=0.06)
+    m.box("wood_dark", (9.6, 0.5, 0.3), loc=(0, -0.15, 13.2), bevel=0.06)
+    for x in (-5.4, 5.4):
+        for i, (r, h) in enumerate(((0.9, 1.2), (0.7, 1.1), (0.45, 1.0))):
+            m.cone("pine_needles_dark", r, h, seg=8, loc=(x, -0.2, 11.0 + i * 0.7))
+    for x in (-3.8, 3.8):
+        m.sweep("rope", [(x, -0.3, 13.4), (x, -0.3, 13.9)], 0.06, 4)
+    m.col_box((0, 0.1, 7), (13.4, 1.0, 14))
+
+
+@asset("SM_Lobby_BigLog", "Lobby", "Lobby", density=3.0, pivot="Bottom centre on the ground; the log runs along X.",
+       footprint=[9, 2.6], use="Chunky log seat for the campfire ring.")
+def big_log(m):
+    log(m, (-4.4, 0, 1.25), (4.4, 0, 1.25), 1.25)
+    m.cylinder("end_grain", 1.05, 1.05, 0.1, seg=10, loc=(4.42, 0, 1.25), rot=(0, 90, 0), cap="end_grain")
+    m.sweep("bark", [(-1.5, 0.6, 2.1), (-1.9, 1.1, 2.8)], [0.25, 0.12], 6)  # branch stub
+    m.blob("moss", 0.5, loc=(2.2, 0.4, 2.35), scale=(1.6, 1.1, 0.35), jitter=0.04)
+    m.col_box((0, 0, 1.25), (8.8, 2.5, 2.5))
+
+
+@asset("SM_Lobby_Fence", "Lobby", "Lobby", density=3.0, pivot="Bottom of the post at the -X end; rails run to +X.",
+       footprint=[8, 1], use="Log fence segment, 8 studs: a post and two rails (chain them end to end).")
+def fence(m):
+    log(m, (0, 0, -0.3), (0, 0, 3.3), 0.4, "wood_dark")
+    m.cone("wood_dark", 0.42, 0.4, seg=8, loc=(0, 0, 3.3))
+    for z in (1.1, 2.5):
+        log(m, (0.2, 0, z), (8.0, 0, z + 0.05), 0.24, "wood")
+    m.col_box((4, 0, 1.6), (8, 0.6, 3.2))
+
+
+@asset("SM_Lobby_FenceLantern", "Lobby", "Lobby", density=3.0, pivot="Bottom of the post.",
+       footprint=[1.5, 1.5], use="Thick fence post with a lantern on top (goes between fence segments).",
+       notes="Lantern light at Light_Att.")
+def fence_lantern(m):
+    m.box("wood_dark", (1.1, 1.1, 3.8), loc=(0, 0, 1.6), bevel=0.12)
+    m.box("wood", (1.4, 1.4, 0.3), loc=(0, 0, 3.6), bevel=0.08)
+    m.box("metal_dark", (0.9, 0.9, 0.15), loc=(0, 0, 3.8), bevel=0.04)
+    m.box("glow", (0.7, 0.7, 0.95), loc=(0, 0, 4.35), bevel=0.06)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            m.box("metal_dark", (0.1, 0.1, 1.0), loc=(sx * 0.4, sy * 0.4, 4.35))
+    m.cone("metal_dark", 0.62, 0.5, seg=4, loc=(0, 0, 4.85), rot=(0, 0, 45))
+    m.attach("Light", (0, 0, 4.35))
+    m.col_box((0, 0, 1.9), (1.2, 1.2, 3.8))
+
+
+@asset("SM_Lobby_Lodge", "Lobby", "Lobby", density=4.0, lod=True,
+       pivot="Ground level at the centre of the front wall; the lodge faces -Z (porch in front, 7.2 deep).",
+       footprint=[37, 23], fidelity="Default",
+       use="Two-storey log lodge: CAMP STORE (left) and CLASSES (right) shopfronts on a covered porch, "
+           "big gable sign board. Every word is drawn by the game.",
+       notes="Floor/porch top 1.2. In Roblox model space (+X is the viewer's left): store counter top at "
+             "(9, 4.9, -0.8), class lectern top at (-9, 4.65, -0.9), class stage top 1.8 from z 1.1 to 4.5 behind "
+             "the right opening. Shop sign panels 12 x 1.8 hang from the porch beam, faces at z -6.45, "
+             "centred (+-10.25, 8.6). Gable sign panel 14.6 x 4.4, face at z -1.55, centred (0, 21.3). Porch front edge z -6.2, steps to -7.7.")
+def lodge(m):
+    HW, D, F = 18.0, 14.0, 1.2  # half width, depth (back), floor height
+    # plinth, floor and porch deck with steps across the front
+    m.box("stone_dark", (2 * HW + 0.6, D + 0.6, 0.8), loc=(0, D / 2, 0.4), bevel=0.1)
+    m.box("wood_dark", (2 * HW, D, 0.4), loc=(0, D / 2, F - 0.2))
+    m.box("wood", (2 * HW + 1, 6.2, 0.5), loc=(0, -3.1, F - 0.25), bevel=0.08)
+    for i, (dy, h) in enumerate(((-6.6, 0.8), (-7.3, 0.4))):
+        m.box("wood_dark", (2 * HW + 1, 0.8, h), loc=(0, dy, h / 2), bevel=0.06)
+    for x in range(-17, 18, 3):  # porch plank lines
+        m.box("wood_dark", (0.08, 6.1, 0.05), loc=(x + 0.5, -3.1, F + 0.01))
+    # ground floor log walls: back, sides, front piers either side of two shop openings
+    ROW = 0.9
+    for i in range(11):
+        z = F + ROW / 2 + i * ROW
+        log(m, (-HW - 0.6, D, z), (HW + 0.6, D, z), ROW / 2)
+        for x in (-HW, HW):
+            log(m, (x, -0.6, z), (x, D + 0.6, z), ROW / 2)
+    for x0, x1 in ((-HW, -15.5), (-2.5, 2.5), (15.5, HW)):
+        for i in range(11):
+            z = F + ROW / 2 + i * ROW
+            log(m, (x0, 0, z), (x1, 0, z), ROW / 2)
+    for x in (-15.5, 15.5, -2.5, 2.5):
+        m.box("wood_dark", (0.6, 0.8, 7.6), loc=(x, 0, F + 3.8), bevel=0.08)
+    log(m, (-HW, 0, F + 8.2), (HW, 0, F + 8.2), 0.55)  # lintel
+    m.box("wood_dark", (0.6, D, 9.8), loc=(0, D / 2, F + 4.9))  # dividing wall
+    # interior back glow (warm light through the openings)
+    for sx in (-1, 1):
+        m.box("glow", (12.4, 0.2, 5.8), loc=(sx * 9, D - 0.6, F + 3.6))
+    # CAMP STORE on the viewer's left (Blender -X)
+    m.box("wood", (11.0, 1.4, 3.4), loc=(-9, -0.8, F + 1.7), bevel=0.1)  # counter
+    m.box("wood_dark", (11.6, 1.8, 0.3), loc=(-9, -0.8, F + 3.55), bevel=0.06)
+    for i, x in enumerate((-13, -11, -9, -7, -5)):  # goods on the counter
+        if i % 2:
+            m.cylinder("brass", 0.3, 0.3, 0.7, seg=8, loc=(x, -0.8, F + 3.7), cap="brass")
+        else:
+            m.box("crate_paint" if i else "leather", (0.8, 0.7, 0.6), loc=(x, -0.8, F + 4.0), bevel=0.06)
+    for z in (F + 2.2, F + 4.2, F + 6.2):  # back shelves with jars and boxes
+        m.box("wood_dark", (12.4, 1.4, 0.25), loc=(-9, D - 1.4, z))
+        for k in range(8):
+            x = -14.5 + k * 1.55
+            if k % 3 == 0:
+                m.cylinder("glow" if k % 2 else "brass", 0.3, 0.3, 0.8, seg=8, loc=(x, D - 1.4, z + 0.12), cap="metal_dark")
+            elif k % 3 == 1:
+                m.box("crate_paint", (0.9, 0.8, 0.8), loc=(x, D - 1.4, z + 0.52), bevel=0.06)
+            else:
+                m.box("red_paint", (0.8, 0.6, 1.0), loc=(x, D - 1.4, z + 0.62), bevel=0.06)
+    m.box("leather", (3.0, 0.1, 2.2), loc=(-6, D - 0.55, F + 7.2))  # map on the wall
+    # CLASSES (right): a raised stage where the class mannequins stand
+    m.box("wood_dark", (12.8, 3.4, 0.6), loc=(9, 2.8, F + 0.3), bevel=0.08)
+    m.box("wood", (2.6, 1.2, 3.2), loc=(9, -0.9, F + 1.6), bevel=0.1)  # lectern (class prompt)
+    m.box("wood_dark", (3.0, 1.5, 0.3), loc=(9, -0.9, F + 3.3), bevel=0.06)
+    # shop sign boards hung from the porch beam (text by the game)
+    for sx in (-1, 1):
+        m.box("wood", (12.6, 0.4, 2.3), loc=(sx * 10.25, -6.1, F + 7.4), bevel=0.1)
+        m.box("wood_dark", (12.0, 0.2, 1.8), loc=(sx * 10.25, -6.35, F + 7.4), bevel=0.04)
+        for dx in (-5, 5):
+            m.box("metal_dark", (0.12, 0.12, 0.7), loc=(sx * 10.25 + dx, -6.1, F + 8.8))
+    # porch posts, beam and roof
+    for x in (-HW, -2.5, 2.5, HW):
+        log(m, (x, -5.8, F), (x, -5.8, F + 8.9), 0.42)
+    log(m, (-HW - 0.6, -5.8, F + 9.1), (HW + 0.6, -5.8, F + 9.1), 0.45)
+    ang = math.degrees(math.atan2(2.6, 7.4))
+    for i in range(4):
+        t = (i + 0.5) / 4
+        m.box(ROOF, (2 * HW + 2, 7.9 / 4 + 0.3, 0.3), loc=(0, 0.8 - 7.6 * t, F + 12.3 - 2.6 * t + 0.05 * (4 - i)),
+              rot=(ang, 0, 0), bevel=0.06)
+    for i, x in enumerate((-17.1, -3.6, 3.6, 17.1)):
+        lantern(m, x, -5.8, F + 8.65, f"Porch{i + 1}")
+    # ground-floor roof over the sides and back
+    m.box("wood_dark", (2 * HW + 1.4, D + 1.4, 0.6), loc=(0, D / 2, F + 10.2))
+    for sx in (-1, 1):
+        a2 = math.degrees(math.atan2(1.8, 7.0))
+        m.box(ROOF, (7.6, D + 1.6, 0.3), loc=(sx * 14.9, D / 2, F + 11.3), rot=(0, sx * a2, 0), bevel=0.06)
+    # upper storey: log walls, glowing windows, balcony rail, gable with the big sign
+    UW, UZ = 11.0, F + 10.5
+    for i in range(8):
+        z = UZ + ROW / 2 + i * ROW
+        log(m, (-UW, 1.5, z), (UW, 1.5, z), ROW / 2)
+        log(m, (-UW, D - 1, z), (UW, D - 1, z), ROW / 2)
+        for x in (-UW, UW):
+            log(m, (x, 1.0, z), (x, D - 0.5, z), ROW / 2)
+    for x in (-7, 7):
+        m.box("glow", (2.6, 0.3, 3.2), loc=(x, 1.25, UZ + 3.8))
+        m.box("wood_dark", (3.2, 0.5, 0.3), loc=(x, 1.1, UZ + 2.1), bevel=0.05)
+        m.box("wood_dark", (3.2, 0.5, 0.3), loc=(x, 1.1, UZ + 5.5), bevel=0.05)
+        m.box("wood_dark", (0.3, 0.5, 3.6), loc=(x, 1.1, UZ + 3.8))
+    for sx in (-1, 1):  # side windows downstairs
+        for y in (4.5, 9.5):
+            m.box("glow", (0.3, 2.4, 2.8), loc=(sx * (HW + 0.2), y, F + 4.8))
+            m.box("wood_dark", (0.5, 3.0, 0.3), loc=(sx * (HW + 0.3), y, F + 3.3), bevel=0.05)
+    # upper gable roof (ridge along Y) and the front gable wall with the sign
+    RZ, EZ = UZ + 14.6, UZ + 7.0
+    ang2 = math.degrees(math.atan2(RZ - EZ, UW + 1.6))
+    slope = math.hypot(UW + 1.6, RZ - EZ)
+    for sx in (-1, 1):
+        for i in range(5):
+            t = (i + 0.5) / 5
+            m.box(ROOF, (slope / 5 + 0.3, D + 1.2, 0.34),
+                  loc=(sx * (UW + 1.6) * t, D / 2 - 0.3, RZ - (RZ - EZ) * t + 0.06 * (5 - i)),
+                  rot=(0, sx * ang2, 0), bevel=0.06)
+    m.box("wood_dark", (0.6, D + 1.6, 0.6), loc=(0, D / 2 - 0.3, RZ + 0.3), bevel=0.08)
+    m.prism("wood", [(-UW, 0), (UW, 0), (0, RZ - EZ)], 0.9, loc=(0, 1.5, EZ))
+    m.box("wood", (15.6, 0.5, 5.2), loc=(0, -1.1, UZ + 9.6), bevel=0.14)  # big sign
+    m.box("wood_dark", (14.6, 0.2, 4.4), loc=(0, -1.45, UZ + 9.6), bevel=0.05)
+    for x in (-6.6, 6.6):  # little pines standing on the sign's top corners
+        m.cone("pine_needles_dark", 0.9, 1.6, seg=8, loc=(x, -1.1, UZ + 12.2))
+        m.cone("pine_needles_dark", 0.6, 1.3, seg=8, loc=(x, -1.1, UZ + 13.2))
+    m.box("wood", (2 * UW + 1, 2.2, 0.3), loc=(0, 0.3, UZ + 0.1))  # balcony floor
+    log(m, (-UW, -0.7, UZ + 1.6), (UW, -0.7, UZ + 1.6), 0.18, "wood")
+    for x in range(-10, 11, 2):
+        m.box("wood_dark", (0.25, 0.25, 1.5), loc=(x, -0.7, UZ + 0.9))
+    lantern(m, -3, -0.7, UZ + 7.0, "Upper1")
+    lantern(m, 3, -0.7, UZ + 7.0, "Upper2")
+    # chimney
+    m.box("stone", (2.6, 2.6, 17), loc=(12.5, D - 3, F + 8.5 + 7), bevel=0.15)
+    m.box("stone_dark", (3.0, 3.0, 0.6), loc=(12.5, D - 3, F + 24.2), bevel=0.1)
+    # porch clutter: barrels and crates at the ends
+    for sx in (-1, 1):
+        m.cylinder("wood", 0.9, 0.9, 1.9, seg=10, loc=(sx * 16.6, -4.6, F), cap="end_grain")
+        m.torus("metal_dark", 0.92, 0.07, seg=10, tseg=4, loc=(sx * 16.6, -4.6, F + 0.5))
+        m.torus("metal_dark", 0.92, 0.07, seg=10, tseg=4, loc=(sx * 16.6, -4.6, F + 1.4))
+        m.box("crate_paint", (1.5, 1.5, 1.5), loc=(sx * 14.6, -5.0, F + 0.75), rot=(0, 0, 12 * sx), bevel=0.08)
+    m.attach("StoreCounter", (-9, -0.8, F + 3.4))
+    m.attach("ClassLectern", (9, -0.9, F + 3.2))

@@ -14328,6 +14328,634 @@
   }
  },
  {
+  "name": "SM_Lobby_Leaderboard",
+  "category": "Lobby",
+  "kind": "Lobby",
+  "kind_note": "Lobby prop.",
+  "use": "Roofed leaderboard (Most Kills / Wins / Playtime). Text drawn by the game.",
+  "notes": "Panel 10 x 7.6 centred 6.4 up, front face 0.3 in front of the pivot. Title plank 9.6 x 1.5 at 11.1. Lanterns at Light1_Att / Light2_Att.",
+  "size_studs_roblox_XYZ": [
+   13.3,
+   14.21,
+   4.1
+  ],
+  "footprint_studs": [
+   12,
+   3
+  ],
+  "tris": 1300,
+  "verts": 718,
+  "materials": 1,
+  "texture_tiles": [
+   "bark",
+   "crate_paint",
+   "end_grain",
+   "glow",
+   "metal_dark",
+   "stone_dark",
+   "wood",
+   "wood_dark",
+   "wood_fresh"
+  ],
+  "origin_offset": [
+   0.0,
+   -6.8025,
+   -0.2
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground; the panel faces -Z.",
+  "collision_fidelity": "Box",
+  "attachments": [
+   {
+    "name": "Light1_Att",
+    "cframe": [
+     5.6,
+     10.75,
+     -0.9,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   {
+    "name": "Light2_Att",
+    "cframe": [
+     -5.6,
+     10.75,
+     -0.9,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   }
+  ],
+  "collision_boxes": [
+   {
+    "cframe": [
+     0.0,
+     6.5,
+     0.1,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     12,
+     13,
+     1.0
+    ]
+   }
+  ],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Lobby/SM_Lobby_Leaderboard.fbx",
+   "collision": "Export/Collision/Lobby/COL_Lobby_Leaderboard.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 24,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/Lobby/SM_Lobby_Leaderboard.png"
+  }
+ },
+ {
+  "name": "SM_Lobby_QuestBoard",
+  "category": "Lobby",
+  "kind": "Lobby",
+  "kind_note": "Lobby prop.",
+  "use": "Daily Challenges board: log frame, carved header sign with pine trees. Text drawn by the game.",
+  "notes": "Panel 11.2 x 6.6 centred 6 up, front face 0.3 in front of the pivot (matches ChallengeBoardFace). Header plank 9 x 2.2 at 12.",
+  "size_studs_roblox_XYZ": [
+   14.32,
+   14.7,
+   2.13
+  ],
+  "footprint_studs": [
+   13,
+   3
+  ],
+  "tris": 628,
+  "verts": 356,
+  "materials": 1,
+  "texture_tiles": [
+   "bark",
+   "end_grain",
+   "pine_needles_dark",
+   "rope",
+   "stone_dark",
+   "wood",
+   "wood_dark",
+   "wood_fresh"
+  ],
+  "origin_offset": [
+   0.0245,
+   -7.05,
+   0.0375
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground; the panel faces -Z.",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [
+   {
+    "cframe": [
+     0.0,
+     7,
+     0.1,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     13.4,
+     14,
+     1.0
+    ]
+   }
+  ],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Lobby/SM_Lobby_QuestBoard.fbx",
+   "collision": "Export/Collision/Lobby/COL_Lobby_QuestBoard.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/Lobby/SM_Lobby_QuestBoard.png"
+  }
+ },
+ {
+  "name": "SM_Lobby_BigLog",
+  "category": "Lobby",
+  "kind": "Lobby",
+  "kind_note": "Lobby prop.",
+  "use": "Chunky log seat for the campfire ring.",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   8.92,
+   2.88,
+   2.5
+  ],
+  "footprint_studs": [
+   9,
+   2.6
+  ],
+  "tris": 164,
+  "verts": 90,
+  "materials": 1,
+  "texture_tiles": [
+   "bark",
+   "end_grain",
+   "moss"
+  ],
+  "origin_offset": [
+   0.06,
+   -1.4405,
+   0.0
+  ],
+  "team_colored": false,
+  "pivot": "Bottom centre on the ground; the log runs along X.",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [
+   {
+    "cframe": [
+     0.0,
+     1.25,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     8.8,
+     2.5,
+     2.5
+    ]
+   }
+  ],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Lobby/SM_Lobby_BigLog.fbx",
+   "collision": "Export/Collision/Lobby/COL_Lobby_BigLog.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/Lobby/SM_Lobby_BigLog.png"
+  }
+ },
+ {
+  "name": "SM_Lobby_Fence",
+  "category": "Lobby",
+  "kind": "Lobby",
+  "kind_note": "Lobby prop.",
+  "use": "Log fence segment, 8 studs: a post and two rails (chain them end to end).",
+  "notes": "",
+  "size_studs_roblox_XYZ": [
+   8.42,
+   4.0,
+   0.84
+  ],
+  "footprint_studs": [
+   8,
+   1
+  ],
+  "tris": 98,
+  "verts": 57,
+  "materials": 1,
+  "texture_tiles": [
+   "end_grain",
+   "wood",
+   "wood_dark"
+  ],
+  "origin_offset": [
+   3.791,
+   -1.7,
+   0.0
+  ],
+  "team_colored": false,
+  "pivot": "Bottom of the post at the -X end; rails run to +X.",
+  "collision_fidelity": "Box",
+  "attachments": [],
+  "collision_boxes": [
+   {
+    "cframe": [
+     -4,
+     1.6,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     8,
+     3.2,
+     0.6
+    ]
+   }
+  ],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Lobby/SM_Lobby_Fence.fbx",
+   "collision": "Export/Collision/Lobby/COL_Lobby_Fence.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/Lobby/SM_Lobby_Fence.png"
+  }
+ },
+ {
+  "name": "SM_Lobby_FenceLantern",
+  "category": "Lobby",
+  "kind": "Lobby",
+  "kind_note": "Lobby prop.",
+  "use": "Thick fence post with a lantern on top (goes between fence segments).",
+  "notes": "Lantern light at Light_Att.",
+  "size_studs_roblox_XYZ": [
+   1.4,
+   5.65,
+   1.4
+  ],
+  "footprint_studs": [
+   1.5,
+   1.5
+  ],
+  "tris": 230,
+  "verts": 133,
+  "materials": 1,
+  "texture_tiles": [
+   "glow",
+   "metal_dark",
+   "wood",
+   "wood_dark"
+  ],
+  "origin_offset": [
+   0.0,
+   -2.525,
+   0.0
+  ],
+  "team_colored": false,
+  "pivot": "Bottom of the post.",
+  "collision_fidelity": "Box",
+  "attachments": [
+   {
+    "name": "Light_Att",
+    "cframe": [
+     0.0,
+     4.35,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   }
+  ],
+  "collision_boxes": [
+   {
+    "cframe": [
+     0.0,
+     1.9,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     1.2,
+     3.8,
+     1.2
+    ]
+   }
+  ],
+  "parts": [],
+  "lod1_tris": null,
+  "files": {
+   "fbx": "Export/Meshes/Lobby/SM_Lobby_FenceLantern.fbx",
+   "collision": "Export/Collision/Lobby/COL_Lobby_FenceLantern.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 0,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/Lobby/SM_Lobby_FenceLantern.png"
+  }
+ },
+ {
+  "name": "SM_Lobby_Lodge",
+  "category": "Lobby",
+  "kind": "Lobby",
+  "kind_note": "Lobby prop.",
+  "use": "Two-storey log lodge: CAMP STORE (left) and CLASSES (right) shopfronts on a covered porch, big gable sign board. Every word is drawn by the game.",
+  "notes": "Floor/porch top 1.2. In Roblox model space (+X is the viewer's left): store counter top at (9, 4.9, -0.8), class lectern top at (-9, 4.65, -0.9), class stage top 1.8 from z 1.1 to 4.5 behind the right opening. Shop sign panels 12 x 1.8 hang from the porch beam, faces at z -6.45, centred (+-10.25, 8.6). Gable sign panel 14.6 x 4.4, face at z -1.55, centred (0, 21.3). Porch front edge z -6.2, steps to -7.7.",
+  "size_studs_roblox_XYZ": [
+   38.0,
+   26.9,
+   22.5
+  ],
+  "footprint_studs": [
+   37,
+   23
+  ],
+  "tris": 8120,
+  "verts": 4446,
+  "materials": 1,
+  "texture_tiles": [
+   "bark",
+   "brass",
+   "crate_paint",
+   "end_grain",
+   "glow",
+   "leather",
+   "metal_dark",
+   "pine_needles_dark",
+   "red_paint",
+   "stone",
+   "stone_dark",
+   "wood",
+   "wood_dark"
+  ],
+  "origin_offset": [
+   0.0,
+   -13.45,
+   -3.55
+  ],
+  "team_colored": false,
+  "pivot": "Ground level at the centre of the front wall; the lodge faces -Z (porch in front, 7.2 deep).",
+  "collision_fidelity": "Default",
+  "attachments": [
+   {
+    "name": "Porch1_Att",
+    "cframe": [
+     17.1,
+     8.75,
+     -5.8,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   {
+    "name": "Porch2_Att",
+    "cframe": [
+     3.6,
+     8.75,
+     -5.8,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   {
+    "name": "Porch3_Att",
+    "cframe": [
+     -3.6,
+     8.75,
+     -5.8,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   {
+    "name": "Porch4_Att",
+    "cframe": [
+     -17.1,
+     8.75,
+     -5.8,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   {
+    "name": "Upper1_Att",
+    "cframe": [
+     3,
+     17.6,
+     -0.7,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   {
+    "name": "Upper2_Att",
+    "cframe": [
+     -3,
+     17.6,
+     -0.7,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   {
+    "name": "StoreCounter_Att",
+    "cframe": [
+     9,
+     4.6,
+     -0.8,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   {
+    "name": "ClassLectern_Att",
+    "cframe": [
+     -9,
+     4.4,
+     -0.9,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   }
+  ],
+  "collision_boxes": [],
+  "parts": [],
+  "lod1_tris": 3552,
+  "files": {
+   "fbx": "Export/Meshes/Lobby/SM_Lobby_Lodge.fbx",
+   "lod1": "Export/LOD/Lobby/SM_Lobby_Lodge_LOD1.fbx"
+  },
+  "checks": {
+   "duplicate_faces": 0,
+   "open_edges": 0,
+   "nonmanifold_edges": 88,
+   "removed_degenerate": 0
+  },
+  "meta": {},
+  "renders": {
+   "preview": "Renders/Lobby/SM_Lobby_Lodge.png"
+  }
+ },
+ {
   "name": "SM_Cliff_Face01",
   "category": "SW_Landscape",
   "kind": "WorldProp",

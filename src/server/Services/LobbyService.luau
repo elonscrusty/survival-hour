@@ -495,25 +495,33 @@ function LobbyService.PushAll()
 	end
 end
 
--- Hall of Fame board in the lobby (top 5 wins + top 5 levels).
+-- Plaza leaderboards in the lobby: most kills, wins and playtime (top 10 each).
 local lastBoard = ""
 function LobbyService._board()
 	local boards = ctx.DataService.Boards()
-	local lines = { "HALL OF FAME" }
-	for _, spec in { { "Wins", "Most wins" }, { "XP", "Most XP" } } do
-		table.insert(lines, "— " .. spec[2] .. " —")
-		local list = boards[spec[1]] or {}
-		if #list == 0 then
-			table.insert(lines, "(live servers only)")
-		end
-		for i = 1, math.min(5, #list) do
-			table.insert(lines, string.format("%d. %s  %d", i, list[i].Name, list[i].Value))
-		end
+	local function playtime(sec: number): string
+		local h = math.floor(sec / 3600)
+		return if h >= 1 then h .. "h" else math.floor(sec / 60) .. "m"
 	end
-	local text = table.concat(lines, "\n")
+	local rows = {}
+	local sig = {}
+	for _, key in { "Kills", "Wins", "Playtime" } do
+		local list = {}
+		for i, e in boards[key] or {} do
+			if i > 10 then
+				break
+			end
+			local v = if key == "Playtime" then playtime(e.Value) else tostring(e.Value)
+			table.insert(list, { Name = e.Name, Value = v })
+			table.insert(sig, e.Name .. v)
+		end
+		rows[key] = list
+		table.insert(sig, "|")
+	end
+	local text = table.concat(sig, ",")
 	if text ~= lastBoard then
 		lastBoard = text
-		ctx.WorldService.SetLobbyBoard(lines)
+		ctx.WorldService.SetLeaderboards(rows)
 	end
 end
 
