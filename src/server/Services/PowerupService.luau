@@ -724,7 +724,9 @@ function PowerupService.OnPlayerKill(killer: Player, victim: Player, eliminated:
 	end
 	local session = ctx.DataService.Get(killer)
 	if session and ctx.DataService.CanGrant(killer) then
-		session.Profile.Kills += 1
+		if n < KILL_REWARDS_PER_VICTIM then -- the public Most Kills board can't be farmed off one friend
+			session.Profile.Kills += 1
+		end
 		if eliminated then
 			session.Profile.Eliminations += 1
 		end

@@ -35,7 +35,6 @@ export type Session = {
 	Saving: boolean,
 	Released: boolean,
 	LoadedEvent: BindableEvent,
-	PlayMark: number?, -- os.time() playtime was last counted up to
 }
 
 local DataService = {}
@@ -45,6 +44,7 @@ local store: DataStore? = nil
 local boards: { [string]: OrderedDataStore } = {}
 local boardCache: { [string]: { { UserId: number, Name: string, Value: number } } } = { Wins = {}, XP = {}, Kills = {}, Playtime = {} }
 local names: { [number]: string } = {}
+local PLAY_TICK = 15 -- seconds between playtime counts (DataService._playtimeTick)
 local sessions: { [Player]: Session } = {}
 
 local function key(userId: number): string
@@ -88,6 +88,12 @@ function DataService.Init(c)
 end
 
 function DataService.Start()
+	task.spawn(function()
+		while true do
+			task.wait(PLAY_TICK)
+			DataService._playtimeTick()
+		end
+	end)
 	if ctx.Mode == "Lobby" and usePersistence() then
 		task.spawn(function()
 			while true do
@@ -177,7 +183,6 @@ function DataService._onJoin(player: Player)
 		if result == "ok" then
 			s.Profile = ProfileRules.Reconcile(data)
 			s.State = "Loaded"
-			s.PlayMark = os.time()
 		else
 			s.State = "Failed"
 			warn("[DataService] profile load failed; running without saving for", player.UserId)
@@ -252,7 +257,6 @@ function DataService.Save(player: Player, release: boolean): boolean
 		task.wait(0.1)
 	end
 	s.Saving = true
-	DataService._countPlaytime(s)
 	local snapshot = HttpService:JSONDecode(HttpService:JSONEncode(s.Profile))
 	local success = false
 	for attempt = 1, 3 do
@@ -296,7 +300,7 @@ function DataService._onLeave(player: Player)
 	end
 	if s.State == "Loaded" then
 		DataService.Save(player, true)
-		DataService.PostLeaderboards(player) -- playtime keeps counting in the lobby too
+		DataService.PostLeaderboards(player) -- playtime also grows in the lobby
 	end
 	sessions[player] = nil
 end
@@ -403,14 +407,15 @@ function DataService.Push(player: Player)
 	ctx.CosmeticService.Apply(player)
 end
 
--- Adds the time since the last count to the profile's playtime (Stats.PlaySeconds).
-function DataService._countPlaytime(s: Session)
-	local now = os.time()
-	if s.State == "Loaded" and s.PlayMark then
-		local add = math.clamp(now - s.PlayMark, 0, 6 * 3600) -- a clock jump can't add a day
-		s.Profile.Stats.PlaySeconds = (s.Profile.Stats.PlaySeconds or 0) + add
+-- Playtime (Stats.PlaySeconds) counts only active time: every PLAY_TICK seconds, players
+-- who did something within Config.Afk.WarnAfter get the tick (idling never climbs the board).
+function DataService._playtimeTick()
+	for player, s in sessions do
+		local last = ctx.Util.LastActive[player]
+		if (s.State == "Loaded" or s.State == "Memory") and last and os.clock() - last < Config.Afk.WarnAfter then
+			s.Profile.Stats.PlaySeconds = (s.Profile.Stats.PlaySeconds or 0) + PLAY_TICK
+		end
 	end
-	s.PlayMark = now
 end
 
 -- Leaderboards (OrderedDataStore; every call is pcall-guarded) ----------------------------
@@ -420,7 +425,6 @@ function DataService.PostLeaderboards(player: Player)
 	if not s or s.State ~= "Loaded" then
 		return
 	end
-	DataService._countPlaytime(s)
 	local values = { Wins = s.Profile.Wins, XP = s.Profile.XP, Kills = s.Profile.Kills, Playtime = s.Profile.Stats.PlaySeconds or 0 }
 	for b, value in values do
 		local ods = boards[b]
