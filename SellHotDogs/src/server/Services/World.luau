@@ -72,14 +72,34 @@ local function setupLighting()
 	sky.MoonAngularSize = 9
 	sky.StarCount = 1500
 	-- painted original skybox once uploaded (assets/sky/*.png -> AssetIds.Images)
-	local AssetIds = require(Shared.AssetIds)
+	-- (AssetLoader resolves each uploaded Decal to its image in ReplicatedStorage.ImageIds; apply
+	-- the faces once all six have arrived so the sky never shows a mix of old and new)
 	local faces: { [string]: string } = { SkyboxBk = "sky_bk", SkyboxDn = "sky_dn", SkyboxFt = "sky_ft", SkyboxLf = "sky_lf", SkyboxRt = "sky_rt", SkyboxUp = "sky_up" }
-	for prop, img in faces do
-		local id = AssetIds.Images[img]
-		if id then
-			(sky :: any)[prop] = string.format("rbxthumb://type=Asset&id=%d&w=420&h=420", id)
+	task.spawn(function()
+		local ids = game:GetService("ReplicatedStorage"):WaitForChild("ImageIds", 60)
+		if not ids then
+			return
 		end
-	end
+		local function apply(): boolean
+			for _, img in faces do
+				if not ids:GetAttribute(img) then
+					return false
+				end
+			end
+			for prop, img in faces do
+				(sky :: any)[prop] = ids:GetAttribute(img)
+			end
+			return true
+		end
+		if not apply() then
+			local conn: RBXScriptConnection
+			conn = ids.AttributeChanged:Connect(function()
+				if apply() then
+					conn:Disconnect()
+				end
+			end)
+		end
+	end)
 	-- soft 3D clouds (built-in, nothing to upload)
 	local terrain = workspace:FindFirstChildOfClass("Terrain")
 	if terrain and not terrain:FindFirstChildOfClass("Clouds") then

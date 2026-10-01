@@ -266,7 +266,30 @@ function Kit.icon(key: string, size: number, parent: Instance?, pos: UDim2?, anc
 	}
 	if imageId then
 		local img = new("ImageLabel", base)
-		img.Image = string.format("rbxthumb://type=Asset&id=%d&w=150&h=150", imageId)
+		-- the server resolves the uploaded Decal to its image (ReplicatedStorage.ImageIds)
+		task.spawn(function()
+			local ids = ReplicatedStorage:WaitForChild("ImageIds", 60)
+			if not ids then
+				return
+			end
+			local function set()
+				local tex = ids:GetAttribute(def.model)
+				if typeof(tex) == "string" then
+					img.Image = tex
+				end
+			end
+			set()
+			if img.Image == "" then
+				local conn: RBXScriptConnection
+				conn = ids:GetAttributeChangedSignal(def.model):Connect(function()
+					set()
+					conn:Disconnect()
+				end)
+				img.Destroying:Once(function()
+					conn:Disconnect()
+				end)
+			end
+		end)
 		img.ScaleType = Enum.ScaleType.Fit
 		return img
 	end

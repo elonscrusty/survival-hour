@@ -85,7 +85,44 @@ local function loadOne(name: string, rec: { id: number, size: Vector3 }, folder:
 	end
 end
 
+-- Uploaded pictures are Decal assets. rbxthumb links to a Decal don't render, so load each Decal
+-- (owned by the publisher, like the meshes) and publish its real image as an attribute on
+-- ReplicatedStorage.ImageIds: <name> = "rbxassetid://<image id>". Kit.icon and the sky read it.
+local function loadImages()
+	local out = ReplicatedStorage:FindFirstChild("ImageIds")
+	if not out then
+		out = Instance.new("Folder")
+		out.Name = "ImageIds"
+		out.Parent = ReplicatedStorage
+	end
+	local queue = {}
+	for name, id in AssetIds.Images do
+		table.insert(queue, { name = name, id = id })
+	end
+	for _ = 1, 6 do
+		task.spawn(function()
+			while #queue > 0 do
+				local job = table.remove(queue)
+				if not job then
+					break
+				end
+				local ok, container = pcall(InsertService.LoadAsset, InsertService, job.id)
+				if ok and container then
+					local decal = (container :: Instance):FindFirstChildWhichIsA("Decal", true)
+					if decal and decal.Texture ~= "" then
+						(out :: Instance):SetAttribute(job.name, decal.Texture)
+					end
+					;(container :: Instance):Destroy()
+				else
+					warn("[AssetLoader] could not load image", job.name, container)
+				end
+			end
+		end)
+	end
+end
+
 function AssetLoader.init()
+	task.spawn(loadImages)
 	local folder = ReplicatedStorage:FindFirstChild("Assets") :: Folder?
 	if not folder then
 		local f = Instance.new("Folder")

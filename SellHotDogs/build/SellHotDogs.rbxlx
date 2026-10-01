@@ -4460,7 +4460,44 @@ local function loadOne(name: string, rec: { id: number, size: Vector3 }, folder:
 	end
 end
 
+-- Uploaded pictures are Decal assets. rbxthumb links to a Decal don't render, so load each Decal
+-- (owned by the publisher, like the meshes) and publish its real image as an attribute on
+-- ReplicatedStorage.ImageIds: <name> = "rbxassetid://<image id>". Kit.icon and the sky read it.
+local function loadImages()
+	local out = ReplicatedStorage:FindFirstChild("ImageIds")
+	if not out then
+		out = Instance.new("Folder")
+		out.Name = "ImageIds"
+		out.Parent = ReplicatedStorage
+	end
+	local queue = {}
+	for name, id in AssetIds.Images do
+		table.insert(queue, { name = name, id = id })
+	end
+	for _ = 1, 6 do
+		task.spawn(function()
+			while #queue > 0 do
+				local job = table.remove(queue)
+				if not job then
+					break
+				end
+				local ok, container = pcall(InsertService.LoadAsset, InsertService, job.id)
+				if ok and container then
+					local decal = (container :: Instance):FindFirstChildWhichIsA("Decal", true)
+					if decal and decal.Texture ~= "" then
+						(out :: Instance):SetAttribute(job.name, decal.Texture)
+					end
+					;(container :: Instance):Destroy()
+				else
+					warn("[AssetLoader] could not load image", job.name, container)
+				end
+			end
+		end)
+	end
+end
+
 function AssetLoader.init()
+	task.spawn(loadImages)
 	local folder = ReplicatedStorage:FindFirstChild("Assets") :: Folder?
 	if not folder then
 		local f = Instance.new("Folder")
@@ -5926,14 +5963,34 @@ local function setupLighting()
 	sky.MoonAngularSize = 9
 	sky.StarCount = 1500
 	-- painted original skybox once uploaded (assets/sky/*.png -> AssetIds.Images)
-	local AssetIds = require(Shared.AssetIds)
+	-- (AssetLoader resolves each uploaded Decal to its image in ReplicatedStorage.ImageIds; apply
+	-- the faces once all six have arrived so the sky never shows a mix of old and new)
 	local faces: { [string]: string } = { SkyboxBk = "sky_bk", SkyboxDn = "sky_dn", SkyboxFt = "sky_ft", SkyboxLf = "sky_lf", SkyboxRt = "sky_rt", SkyboxUp = "sky_up" }
-	for prop, img in faces do
-		local id = AssetIds.Images[img]
-		if id then
-			(sky :: any)[prop] = string.format("rbxthumb://type=Asset&id=%d&w=420&h=420", id)
+	task.spawn(function()
+		local ids = game:GetService("ReplicatedStorage"):WaitForChild("ImageIds", 60)
+		if not ids then
+			return
 		end
-	end
+		local function apply(): boolean
+			for _, img in faces do
+				if not ids:GetAttribute(img) then
+					return false
+				end
+			end
+			for prop, img in faces do
+				(sky :: any)[prop] = ids:GetAttribute(img)
+			end
+			return true
+		end
+		if not apply() then
+			local conn: RBXScriptConnection
+			conn = ids.AttributeChanged:Connect(function()
+				if apply() then
+					conn:Disconnect()
+				end
+			end)
+		end
+	end)
 	-- soft 3D clouds (built-in, nothing to upload)
 	local terrain = workspace:FindFirstChildOfClass("Terrain")
 	if terrain and not terrain:FindFirstChildOfClass("Clouds") then
@@ -8988,7 +9045,30 @@ function Kit.icon(key: string, size: number, parent: Instance?, pos: UDim2?, anc
 	}
 	if imageId then
 		local img = new("ImageLabel", base)
-		img.Image = string.format("rbxthumb://type=Asset&id=%d&w=150&h=150", imageId)
+		-- the server resolves the uploaded Decal to its image (ReplicatedStorage.ImageIds)
+		task.spawn(function()
+			local ids = ReplicatedStorage:WaitForChild("ImageIds", 60)
+			if not ids then
+				return
+			end
+			local function set()
+				local tex = ids:GetAttribute(def.model)
+				if typeof(tex) == "string" then
+					img.Image = tex
+				end
+			end
+			set()
+			if img.Image == "" then
+				local conn: RBXScriptConnection
+				conn = ids:GetAttributeChangedSignal(def.model):Connect(function()
+					set()
+					conn:Disconnect()
+				end)
+				img.Destroying:Once(function()
+					conn:Disconnect()
+				end)
+			end
+		end)
 		img.ScaleType = Enum.ScaleType.Fit
 		return img
 	end
