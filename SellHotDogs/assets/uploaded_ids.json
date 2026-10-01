@@ -1,9 +1,730 @@
 {
- "images": {},
+ "images": {
+  "AlienInvestor": {
+   "id": 87907448539693,
+   "sha": "f8bd4f780a0ba3f6b0d5dcb0fe8244448eee0d4919f6d5af94470c1afeca6dc3"
+  },
+  "BalloonBunch": {
+   "id": 137450992762114,
+   "sha": "11f74816e6a5524baea623cd5470eca4d81c8e23d2ddcfe5d750ae5d2ced19a6"
+  },
+  "Basket": {
+   "id": 117463995144491,
+   "sha": "c9cf7d6ea2845a11b4d48b46d12e206d3c33a799045de9575a160d0f64b9a426"
+  },
+  "Bench": {
+   "id": 134860312006724,
+   "sha": "5c636046c5b0dff06824de288965c180ff7fb01c193b9358661cd398be950f68"
+  },
+  "BigVan": {
+   "id": 137163575242129,
+   "sha": "c6212c551c1e1ed5244cb35b491d33e8a1e48e8db7e44c5224d1171faa5d9ef3"
+  },
+  "Billboard": {
+   "id": 127521404826322,
+   "sha": "7231e51f025d3b9e143c3e20ce006531f119592b0b1fddfe721167604f7b25fc"
+  },
+  "Bird": {
+   "id": 136552745511729,
+   "sha": "7b87bd24b28ac31e69d62f92f0e952c8d189f1178143c4148ad0bd10a94b17d9"
+  },
+  "Blimp": {
+   "id": 80289363230241,
+   "sha": "d7cae849ea025c72f39f875f79943d9872e3b330f306b2031eefaf1967457b4e"
+  },
+  "BogoSign": {
+   "id": 120157182809042,
+   "sha": "4d2e933991941864cdd4319c734d43b1c1e7487af8ad6de34c9e93e22e1e83a8"
+  },
+  "BookStack": {
+   "id": 117918209171059,
+   "sha": "3095b3d7fa1ef1a388eef3b6dd36011c0df6d54c495165ade0f9a8e7f6278fe7"
+  },
+  "BoxingMachine": {
+   "id": 91676329784007,
+   "sha": "a2e939ed8c131d22f4d910157f3f988fd53766c41b0775cced4621c5b4a7a83f"
+  },
+  "BrokerDesk": {
+   "id": 139754909539494,
+   "sha": "d7faaf24701628ab4b54bddc7b5133d68572596f0e9c269be503afb7e9d4a2c5"
+  },
+  "BullStatue": {
+   "id": 82040258678662,
+   "sha": "d56647f4252bea04e10d86f158ac13a36a360c1d84c14cb7dc8ae8852444951a"
+  },
+  "Bun": {
+   "id": 77550012464549,
+   "sha": "f963af9e9eb3838dcbbbbcecad00326339f9639f602b026bb06d6650f455f359"
+  },
+  "BunRack": {
+   "id": 78492605129250,
+   "sha": "3e72b9390d5d507602f6e8ff45f4ec9c6f449e098f8f2d1be604db1ae2da65b9"
+  },
+  "CashRegister": {
+   "id": 121271939384045,
+   "sha": "9ade64bd350156a0e14ead43832d3ca8f9359b616b2aa4a7db6919002d86083b"
+  },
+  "CashStack": {
+   "id": 118300766911202,
+   "sha": "85c48f843cb8403eecde747a10b469b86a9ecae8dc7d47b93af5d5d97eb9fa5c"
+  },
+  "Clipboard": {
+   "id": 93164890088906,
+   "sha": "df7b780f4d75a0177ef4932b3528c970eddf09b07a9b98e1b7692f9b3bf58f7e"
+  },
+  "ClockBoard": {
+   "id": 137822532221323,
+   "sha": "6471c61380a25ff4fc79d22ab7e86d99d677407af9a97aa008218ab44d625d02"
+  },
+  "CloudPuff": {
+   "id": 129282120944228,
+   "sha": "0febc1591c7b8c90c8e2a13753902bb98f32cb9326e294266550cc52948f54d3"
+  },
+  "Coin": {
+   "id": 92880949226313,
+   "sha": "d7506ca541567d8ecbf9ce76f5451b9daeb5b0b8b83c53349416c1bfb6c24a47"
+  },
+  "CondimentStation": {
+   "id": 119690785463845,
+   "sha": "a99a642d77433eaa2d2205530870f119b1b17c0a56480b1e158d61549b4658b3"
+  },
+  "CosmicPortal": {
+   "id": 135836134082019,
+   "sha": "c0f6cb866bbe4203417bc272e1c3905df3e77925d6141dfd39ac198438f789b6"
+  },
+  "CustomerA": {
+   "id": 128600326123855,
+   "sha": "5a51e84b58891827196974f866c1370f08a069ae4581fd115ed76faadb9ccf1d"
+  },
+  "CustomerB": {
+   "id": 78328180590443,
+   "sha": "7a00a6a9772a45c39125536f0a287516a4fc0a109675f3b1daf077d33a52652c"
+  },
+  "CustomerC": {
+   "id": 95349846900849,
+   "sha": "269ffef10beb4c3457ae6c21deae41ec33fd7b1c18a6bf4f6ed153530b7d9f78"
+  },
+  "DashArcade": {
+   "id": 72625984337185,
+   "sha": "81cac3913d440d847373fb6822969cd63bc55c45fa04fe597192d9d72d29508c"
+  },
+  "DashFloor": {
+   "id": 113202787472518,
+   "sha": "71dbc0c4ab382b45c98386e9a5a59338ed82a338a682c6a65a5d8b09759e0b07"
+  },
+  "DashShop": {
+   "id": 94655505999998,
+   "sha": "8070c48dec6ddb3c331e245c69b530107a0ce760dcc4e0ac17439d10f28627c5"
+  },
+  "DashWalls": {
+   "id": 138176029935819,
+   "sha": "ba3767723e496694cc8780f29f932c2950de30c35eb71057cc723180688cdfde"
+  },
+  "DeliveryBike": {
+   "id": 101768135558735,
+   "sha": "4d5316803b9b81bded0e28184626c2d130d5878070521d689584211aee22cd42"
+  },
+  "DeliveryVan": {
+   "id": 131602054856192,
+   "sha": "666a310db0e475b95a04a71d5063801d0e267b57f8582e4e5bdd9a56429a77b0"
+  },
+  "DepotBuilding": {
+   "id": 127556894596258,
+   "sha": "9cecd191fbad361c7604e25f3e400a45e44ae26c06b77182c95c925c78081a6d"
+  },
+  "DepotOffice": {
+   "id": 130966687091637,
+   "sha": "4237aa4c783464f9becbda993874e771d6f0482d5ac259a0816512403d4d2657"
+  },
+  "DepotTruck": {
+   "id": 71965478197322,
+   "sha": "daf14c70622572e56b65f3782131748e1680bd456a065dd949696433745465c7"
+  },
+  "DispatchDesk": {
+   "id": 95338517575764,
+   "sha": "2709efe98236e853d45a59ea35ec8cd5fa7129801708cba1502326c4792e1f37"
+  },
+  "ExpressSign": {
+   "id": 94259671858131,
+   "sha": "d02804ffa95d67a4d7adf71464ecc189d7af6f8f3fcc79021c7d682e06a66379"
+  },
+  "FeeBoard": {
+   "id": 72246695365628,
+   "sha": "9dc6713b7a19c13368b9292e7e0ac9bc59ca043994788bbd368215fe31f32aa7"
+  },
+  "FlameGrill": {
+   "id": 135790953147692,
+   "sha": "669bb17a306315f4de294341089254636a4dc4d65d795ffbaa258098a84a8eaa"
+  },
+  "FlowerArch": {
+   "id": 99168136630308,
+   "sha": "a7eb2e1af62f99c1d030d2fc0dd0116e759aea626dd2e471dfe34d0f167a09a2"
+  },
+  "FlyerStand": {
+   "id": 133859950679382,
+   "sha": "1fa3ab2c555e2edf531e5ab4324a4f4da272f9b5a1765646bba6e9fc165f2dab"
+  },
+  "Fountain": {
+   "id": 132909511852054,
+   "sha": "594b17a47739feaefe7907e3ad26953c840f465566fab767b03dd55fa96e06ae"
+  },
+  "FridgeTruck": {
+   "id": 98947222637299,
+   "sha": "0a5a6911cf327aed3b69f1ea0de46e130377651022f93073f95a1dc2ac9bdadb"
+  },
+  "FuelTank": {
+   "id": 123349352243456,
+   "sha": "ef768d96247b44720afe1053ab9cf9fe94c2456cdb1ab4d66fe4fecc6178be64"
+  },
+  "GpsTower": {
+   "id": 106923098878227,
+   "sha": "370cf395c98746a57f71085cac11954d44d59da30a33732ed202b5872b589289"
+  },
+  "HotAirBalloon": {
+   "id": 127271826046194,
+   "sha": "fada5eb61b5e1582deed83034f394cbd2a72d29d812356a68a1eb183d4159c13"
+  },
+  "HotDog": {
+   "id": 111604804632443,
+   "sha": "a04ce3779ef53b48adf7d1ba59cba375ae529f62ff4515e487f8cb840398920e"
+  },
+  "HotDogRocket": {
+   "id": 120142141122114,
+   "sha": "a9b9aef1d2f377653ed4c52397c727c0396b5dd81e71a641080d890d8d25eeea"
+  },
+  "HotDogStand": {
+   "id": 100563315338883,
+   "sha": "034f719f4728f3ac40d671d58a7bf28cb5d041da8cdf74fa569c2a270a7a3c9a"
+  },
+  "HotDogStatue": {
+   "id": 112424027116682,
+   "sha": "f410dd5ed6ca3234c12f86fb41c0a4c93dea5d27e98e96f054757e3ba248cae6"
+  },
+  "HotDogTopiary": {
+   "id": 134516868521217,
+   "sha": "43295c0ec3756538ab57d506d955ddde1b5348b09c606478cf69c8085e46852e"
+  },
+  "InfinityToken": {
+   "id": 113968065089070,
+   "sha": "62d0b3f85e3620071ca2b3840afc7d9e930c56da2b68cce2ca5c210ccd676f82"
+  },
+  "IngredientCrate": {
+   "id": 86535135974095,
+   "sha": "b3a2f288babbbd2a19045acb4b6771f95c008ebce3974522dbcd84a4d189ac6c"
+  },
+  "IngredientRack": {
+   "id": 88795817861850,
+   "sha": "603c2485753a3fa458a760ddbe57f69c8551bbf7f1302f05d0653396edf0a95f"
+  },
+  "InsuranceBooth": {
+   "id": 96290407320837,
+   "sha": "77605776f68ae56a589d0f3ebfcea33e78fca776aa00e50049ad99f32b893c3b"
+  },
+  "KitchenRobot": {
+   "id": 107479962853516,
+   "sha": "f7812a146d47df887f8d10c0c1f2e454495b1f5356198d57c548b8f247a8460a"
+  },
+  "LabBuilding": {
+   "id": 131765581594653,
+   "sha": "e03eea5b333e42500b50b1a91dbf3bca6dfb2ffee4d0bf5eee2b7d7250a9c201"
+  },
+  "LabMachine": {
+   "id": 80390485367734,
+   "sha": "bf61e2b9f9ecc132aa7893d7b764513eb0b64241541902663de1d571c9fc7a18"
+  },
+  "LampPost": {
+   "id": 70712978227257,
+   "sha": "edede66aecab8333df3617b23576599b001aa4113df21c83602d72eb996fd8c0"
+  },
+  "LaunchSite": {
+   "id": 134299030930178,
+   "sha": "c88dc39ebf2613d7b703d1f8a5d86839ebd58183e5c1774a323346cd5ad84014"
+  },
+  "LedDisplay": {
+   "id": 89663926073087,
+   "sha": "ec01ab63c0c00416718389a36c23a12c21cdf9578b2b9409ee84836824cfab93"
+  },
+  "LoadingConveyor": {
+   "id": 94234701762975,
+   "sha": "ab0ea1d3ca57a5eaf03a94fc427763ff1785bf0bec1a7c7345c8e08a439ce4ac"
+  },
+  "Lock": {
+   "id": 106590019814651,
+   "sha": "bcfd3080b7d0878adadbefd9f6d8bda819bd18a11a9a980a4c6314e3a1303780"
+  },
+  "MissionConsole": {
+   "id": 86932471264422,
+   "sha": "c5bb3de77a1f210c6fb1ce6553865193e35236b664446c36f61041071940fc62"
+  },
+  "MoneyBag": {
+   "id": 124872600724615,
+   "sha": "c84a4acb9ce30781e98e4433cf98c3fff863081f90de084c9257675d085f0e09"
+  },
+  "NeonSign": {
+   "id": 112145231939840,
+   "sha": "be837c9a127ace23b9e3590bf4a2d98274ee18fa56b2e876837abeffc549b6c0"
+  },
+  "PalletStack": {
+   "id": 81231484378727,
+   "sha": "d0d39df4e1c8219a0b14d95da1b9fbc14e38ff649e4ace3f167e3621b19e5831"
+  },
+  "PatioUmbrella": {
+   "id": 111068962235457,
+   "sha": "ad27cf5eaa661cbe9c7af7dc8702eb557f3e994b9651d2288e960f2797ff7e5b"
+  },
+  "PicnicTable": {
+   "id": 87822959308179,
+   "sha": "ecd7706a72171bad1a77f6aed64597a21a8050faeda3f8cea3ce44bd3f24de22"
+  },
+  "Planter": {
+   "id": 133019522418584,
+   "sha": "06982dfce9f33d4599503a2584f04cfc783719324ad1bc5c94bf9cc2215f3fe8"
+  },
+  "RelishMixer": {
+   "id": 86142778191800,
+   "sha": "477fb37c0fc99940c650b5c8e482dc3c77be5b639794f6cff00edccf93a667a1"
+  },
+  "RemoteControl": {
+   "id": 137420638386665,
+   "sha": "72963df270704139b6eb578b07dc62fcc6e3f1b8f3ba4b12c60976d8fdf3dcf7"
+  },
+  "RepublicCapitol": {
+   "id": 103956944928786,
+   "sha": "a4fd57c0d5c1c143481e6b8725f132f8a971819db23d22a8b711851bae3ab8e5"
+  },
+  "RepublicMonument": {
+   "id": 126315727900886,
+   "sha": "bf4e62403d32c5eb738e75b2f80bc562281c18a2fdfef66629e81332cb6af1e8"
+  },
+  "RobotTruck": {
+   "id": 126522896399204,
+   "sha": "ae27c4489c8e789421addfe4c26010c69731844ef2bb9d771ca85f0f21d71b2e"
+  },
+  "RoboticsFactory": {
+   "id": 129940481562685,
+   "sha": "c6befd5572a059f28d1ed7e29da20121ecf4e6458883c1673a4e05d8024b5b7e"
+  },
+  "SauceVault": {
+   "id": 94916217865572,
+   "sha": "93b7b7d4ddd0eeb9a8f39311efa4ebd9e774cdd5ccc9acafb3db5b5512f851d6"
+  },
+  "ScientistBot": {
+   "id": 119248300104461,
+   "sha": "ba4ad4dd4236c6a3722241d6527a5eb3530378e4e7bf1d8f2eed814c88775285"
+  },
+  "Sneaker": {
+   "id": 115442150258717,
+   "sha": "3cf3658f90d2ce20cc6bf4e3e5a73011dff6fa596724707983a69307439d9fc0"
+  },
+  "Staircase": {
+   "id": 138783609878982,
+   "sha": "6be45b0b78a9e8eb4a1cd80fbb64242e88d4deffe2092fb81c56af20d684b4a1"
+  },
+  "Stopwatch": {
+   "id": 129950495104416,
+   "sha": "d45d6523ea953d27d51bfc8250392d23bacaa0357fef771eb1ad3844e1c688cd"
+  },
+  "StringLights": {
+   "id": 138779842053087,
+   "sha": "453c1624a0d50ba1b207b4916fbd36db3a5f295c1b4ffbe09b1ded6f0bc83839"
+  },
+  "TradingFloor": {
+   "id": 93804760161652,
+   "sha": "60d46bb9385f0aa9fdb7bd63bd49bae99dd706303acc6e7d704900c193260e32"
+  },
+  "TradingTicker": {
+   "id": 121240977049125,
+   "sha": "d8cd64570dd2e6afead9fd8c0318456cd71bff314f7e1d100d75035d773da597"
+  },
+  "TurboEngine": {
+   "id": 107375775927814,
+   "sha": "9d5650f9d4197da5013a26382833d57761d23101ebe1c1c3a21c56c09c4bc260"
+  },
+  "Ufo": {
+   "id": 109037694444945,
+   "sha": "3981cc471365c11b2effb68cf2eae31d956dde7b9fb1aa9899dc7a856a60703a"
+  },
+  "VoidHotDog": {
+   "id": 86756668375228,
+   "sha": "36c26d9353c82f69aab11e4a545bc3a5f79a74d32b489316f553726f1a0c71fc"
+  },
+  "sky_bk": {
+   "id": 119367131585962,
+   "sha": "7ff64738da407f92707dd2f5a8299e712504db05f31a16d536c49893d863894e"
+  },
+  "sky_dn": {
+   "id": 92670956976406,
+   "sha": "a3357d98f80eb9c59c2f183c2c4d22361f755429d59c0730158ed732614e5fc0"
+  },
+  "sky_ft": {
+   "id": 102829934205050,
+   "sha": "eb61dc0e5da4902fd5ca850fd2bdf9fd5f6b3480924fe0ac58b42eee0896f6b3"
+  },
+  "sky_lf": {
+   "id": 140260235019960,
+   "sha": "c7ebd3459056908f300dd32c21ae95732b9a8fd441047a1b901bb897a86f2d77"
+  },
+  "sky_preview": {
+   "id": 91690977566544,
+   "sha": "a5d7d79bb223ec7c4fbcb46f1cdd581176fc99c8f95a36bc3d43d6322cf1a20e"
+  },
+  "sky_rt": {
+   "id": 76319282650440,
+   "sha": "85fbc506b51aac6fa279c73b51fac6ee2d7b63f758e36f924df4b0988b0471ea"
+  },
+  "sky_up": {
+   "id": 113938075694970,
+   "sha": "7f52168f2b6e9c4cf65bbfe3b9ae38f00e978a0ab17e4835b4fc49868ff48d5d"
+  }
+ },
  "models": {
+  "AlienInvestor": {
+   "id": 93615194180163,
+   "sha": "159da631272450a67f63b23a3ec2cb35ee420d9e7639feb2a73a33c9e7862954"
+  },
+  "BalloonBunch": {
+   "id": 120881087785544,
+   "sha": "07703ba0f1480e5ea1655184c12952092bbeb7472c7e3973285b646a14893744"
+  },
+  "Basket": {
+   "id": 82502587136876,
+   "sha": "a2bb9b36dc854092e38e4af0fa1dfdb1c3070a8ba73e349271809bd9d7a7bda1"
+  },
+  "Bench": {
+   "id": 117490344900867,
+   "sha": "72f0083e0840e7ae87feeda8a24f31798da0be080a374d38991fec274a069437"
+  },
+  "BigVan": {
+   "id": 102977409968622,
+   "sha": "cb67e95375db6c8144bce2e11a0a75ff2248d7cabe2caab8bb7059a73f8800e7"
+  },
+  "Billboard": {
+   "id": 75778995184480,
+   "sha": "eec4b9f36c479c51b59a177c931e9d3cad466943cc5a2f01efbfedd417885908"
+  },
+  "Bird": {
+   "id": 118233292728923,
+   "sha": "cf25c58c3b5bd3cda549106d63d462932b2c21880807b6d4e2b4ec00b42f5c1c"
+  },
+  "Blimp": {
+   "id": 135116576632374,
+   "sha": "0274723bb874aa14c53739090426d61273567ef1154255d0f2d65207e002e66b"
+  },
+  "BogoSign": {
+   "id": 108742301985788,
+   "sha": "67d15c77a16698eae6e6c335c91c02310ef81ecbe9c168ba1eafff47daf96daa"
+  },
+  "BookStack": {
+   "id": 94795050549047,
+   "sha": "fb5bb9db3f2432b5fedb9e10f3fbb4818737a8cd3832b949c91b8e9624e44cbc"
+  },
+  "BoxingMachine": {
+   "id": 78082157671109,
+   "sha": "9da2cbdecfcd8c2d8e24883809082b422ba31e26cab5bc2510e8cba62e9c4fe2"
+  },
+  "BrokerDesk": {
+   "id": 85375294681075,
+   "sha": "a95862724becaf22ce8d7a3c380c9b4a4894b016af53df363017a04cfdc19fab"
+  },
+  "BullStatue": {
+   "id": 126337606039710,
+   "sha": "c35bb46f92708d6ef5ff24c1894f63b89fd02f7cca63ecb6702fce44727404ff"
+  },
+  "Bun": {
+   "id": 123709135223249,
+   "sha": "7e1768a5398bbf0895826d20a0a48d65ade14db4048e91b040ef5e9ee51dcad4"
+  },
+  "BunRack": {
+   "id": 129592427329666,
+   "sha": "ac08a3c5c3673a404b347e34beac0df8e0199d1b956ace66a8be3d2a1bb26996"
+  },
+  "CashRegister": {
+   "id": 118399302753288,
+   "sha": "f3e1bebd2ed6e30f9cf70848edba9996a1f0817aa68b45e527c53d83da30c6f9"
+  },
+  "CashStack": {
+   "id": 74724800435232,
+   "sha": "6b242f115669c6779b36a90a1003272d48f9514644366130fef3b5472e4aba9f"
+  },
+  "Clipboard": {
+   "id": 81074005043989,
+   "sha": "2ec0136b7b0de55441fc4c39317619d7dfd1f3dc0f61d8f299b91292ae8bb073"
+  },
+  "ClockBoard": {
+   "id": 105408094797699,
+   "sha": "ab8f79208db38771604825df5eb45996f089603a49e7fc3d0ddae658de89daa7"
+  },
+  "CloudPuff": {
+   "id": 106158907641131,
+   "sha": "0b9215312c513fd00f8e589618cab52ebc3843a06191a7fb8bef8c7d51092a7a"
+  },
+  "Coin": {
+   "id": 76902321908086,
+   "sha": "962db4985a00f0a4c23ccb3ca3df038821b930786d82f6926be951b40d39e7b9"
+  },
+  "CondimentStation": {
+   "id": 125621269403459,
+   "sha": "1fb7f45ac06046d4f52f3f2b80a4f05a976152318eb342cadea29292564b4989"
+  },
+  "CosmicPortal": {
+   "id": 115764105003295,
+   "sha": "31a8ee124285e3935df31857ea6660b331b3432d278e44f4de0c9fd5d35c1b3c"
+  },
+  "CustomerA": {
+   "id": 108778274871077,
+   "sha": "62cb935ca2565c92bd4df4a45b3d7cded0490fa8f5df800652089bcf1edb636e"
+  },
+  "CustomerB": {
+   "id": 73686970586413,
+   "sha": "e01cc31a7a33ad757ce7e0696d924c0021958be0db69c232cb87427564e726ff"
+  },
+  "CustomerC": {
+   "id": 93056996280405,
+   "sha": "f07147d39ae29856786866d6b1bad4155b367b5e7c627e5082182a488fe00098"
+  },
+  "DashArcade": {
+   "id": 127754253328628,
+   "sha": "b7f6a9777b896b8223d1b406e0fc62aa183e7a3e6210405775fa652dcf8723d7"
+  },
+  "DashFloor": {
+   "id": 100949694492678,
+   "sha": "36a192017fbdc608567a222211cc52ffa722296e99c03cb95f68b8f1e9c79dde"
+  },
+  "DashShop": {
+   "id": 72001880889605,
+   "sha": "44365b4ce49a7627f963593da186373cf74c2455dd8f6da2348aec3e47d5ddf3"
+  },
+  "DashWalls": {
+   "id": 100507467219814,
+   "sha": "6d0fa4eb9c714291a7d0836b020cab8c64f4798cc3620b1ad1e7115ba0d15cd4"
+  },
+  "DeliveryBike": {
+   "id": 132664867047670,
+   "sha": "acfc1ec129cc99e41886620204e70a4be5ba4c5d9179218239eca4b7c545d1ad"
+  },
+  "DeliveryVan": {
+   "id": 120144046340499,
+   "sha": "3ad3c2b24cbf597cfb02ab4fa3c6b61160d8ecd8dbe717789d8edbf65e61a066"
+  },
+  "DepotBuilding": {
+   "id": 120939298084781,
+   "sha": "4a0b64c71f22d466ece9a7d94e231863d1de72a29af5e417cb211cea855dd775"
+  },
+  "DepotOffice": {
+   "id": 112107257212687,
+   "sha": "fd2bfc0e3dc6682de4222dc5887f17426ca7cada46a0d7e65b1ca4db714b9e67"
+  },
+  "DepotTruck": {
+   "id": 70866602795250,
+   "sha": "72f648720e0f95462e13d5dae0affb1bbe75b64ad59cf0c668be763cf3625c44"
+  },
+  "DispatchDesk": {
+   "id": 82623071245414,
+   "sha": "8d4bbf9b406d3603083dce74430f585f0164e3ae8a02d077f43c10e9e6d5fd69"
+  },
+  "ExpressSign": {
+   "id": 120438903115163,
+   "sha": "e2ffbf33a08092fb50a55f8ed6ac08e5d092919e116abfaa9a1ca694392b29ad"
+  },
+  "FeeBoard": {
+   "id": 128105382056737,
+   "sha": "40f31af28be1fe2337dd79d97260b77359ecb167534a6b0717093f1c3bc5d1b8"
+  },
+  "FlameGrill": {
+   "id": 139210527990925,
+   "sha": "7eb0dc8efc65c0796eda3e3f274550a4221e5e04c3afabc0e3e13e1b5e83ac41"
+  },
+  "FlowerArch": {
+   "id": 116025777992746,
+   "sha": "1da70e9f73f47b9198dfe1b29e6c19b3c16b56c78f37dc9edf4606808931f31b"
+  },
+  "FlyerStand": {
+   "id": 129491397929525,
+   "sha": "785d7322494719a084e9350b86a277057a0c39e47fc36fc7365f2f498eb8c79b"
+  },
+  "Fountain": {
+   "id": 89991890955484,
+   "sha": "e5d84627036aa8a4459612a9bb30551ba6fe00371d88b93bacecc81b3137dda8"
+  },
+  "FridgeTruck": {
+   "id": 79704206671842,
+   "sha": "83d932f155cd2f33ed9cdfd36d084d802e290dda3c613ac2ed89767076bc9eae"
+  },
+  "FuelTank": {
+   "id": 78000153004217,
+   "sha": "892a0c05325bc0deff2548220a0c77330f9057892bb289ddccd172021b0cda65"
+  },
+  "GpsTower": {
+   "id": 76753079736465,
+   "sha": "f3f6216b5f55696fdc0a5844c378210365f2bc8b6f17160d2c5ed5adf007125f"
+  },
+  "HotAirBalloon": {
+   "id": 129769431493127,
+   "sha": "82067a4a43ee1b3ebb727a0181422c0185096e254a942ac0823ac440d073471e"
+  },
   "HotDog": {
    "id": 83378072580112,
    "sha": "93088bc187d54f82bf94e3a8527bc9b499bb509b2e97cb088ca9d7d0e611fe30"
+  },
+  "HotDogRocket": {
+   "id": 110153986934911,
+   "sha": "b687d6fed916bae04e78a9edcf11f8dcb5d0d9db991105ac4209f0f9067798e9"
+  },
+  "HotDogStand": {
+   "id": 105137472717693,
+   "sha": "0dd729f415e0c104c3819ea3a1b1e6f0b7dd1b0878a91eb93c2371bac4e22734"
+  },
+  "HotDogStatue": {
+   "id": 107127604310494,
+   "sha": "f98a9e4ab77273bd441e13d6e5df9670a85b85f1361a18f980bf91284e468bb3"
+  },
+  "HotDogTopiary": {
+   "id": 93009430967259,
+   "sha": "f3dd64c5c408396561647ae899da1dd232e929b8eab229be43609aafc7fb311e"
+  },
+  "InfinityToken": {
+   "id": 84924161764651,
+   "sha": "f61756f8c9c2031523f4381270a3e342d386df521eeecc43565707c8c69b501f"
+  },
+  "IngredientCrate": {
+   "id": 113809909422065,
+   "sha": "6609a78ad9475f19c555db0df254502191101660c9350256e5d3587dc203cc9c"
+  },
+  "IngredientRack": {
+   "id": 99042448546467,
+   "sha": "8cb3dfe5ead88e58bdee2c83fbe53033be79c17a9e7a007632230de737fcd087"
+  },
+  "InsuranceBooth": {
+   "id": 115730142532817,
+   "sha": "11a37beb7e3e292be4eb1a1eb01a029c40dac814a4c2ebe55271fe3d0e9c5872"
+  },
+  "KitchenRobot": {
+   "id": 122914884366422,
+   "sha": "a5d6926e01b08e89cb34e48d7f75348897a7196c6063630bb41222508a1bb9d4"
+  },
+  "LabBuilding": {
+   "id": 114273722192843,
+   "sha": "5036be707d5a74b1fc6f43330615251e05728db0ee04d3f4998a69460c063ac6"
+  },
+  "LabMachine": {
+   "id": 124481715728401,
+   "sha": "2434a4229ae306daf1ee23a0b494bf3e8fc0b66742d0083625c622590c3c4f17"
+  },
+  "LampPost": {
+   "id": 105504102805601,
+   "sha": "7886abef6c8fbe68fcc5480755650a72390395be46feb0fea761fc9dfd91d54f"
+  },
+  "LaunchSite": {
+   "id": 94215306840290,
+   "sha": "886d96f4b4f490ff18c4234904abb2befe9236ed0616687f7a65d9324da7d28e"
+  },
+  "LedDisplay": {
+   "id": 134286346731676,
+   "sha": "5646b134f6602925a3141988e2b49fedd4ed7f5f47a3c8da9c55098ea43c0f48"
+  },
+  "LoadingConveyor": {
+   "id": 123955459887422,
+   "sha": "8539c2491b0ebb8a8a5b89eae5e308646182b427f43dce01bbbae215c4a26ff0"
+  },
+  "Lock": {
+   "id": 112194112089259,
+   "sha": "1f16b38e120be4300b02a52264b54628ef5699bab7bd1fa6bf2811457f60ecd7"
+  },
+  "MissionConsole": {
+   "id": 117693695060629,
+   "sha": "46b63483360618e226196ff1aae2540fca45cc7587e45d1be400f3144a6eb94f"
+  },
+  "MoneyBag": {
+   "id": 140333333843661,
+   "sha": "ce492615f2b1ea7e236cba176f0e79556ba92fdfc4aa7eaf1712bef9dfdc10b5"
+  },
+  "NeonSign": {
+   "id": 91481104135455,
+   "sha": "8de9f2e93a8c565cf67a8684b007d5609552a32919fb7ada85f99c81c5dc76ff"
+  },
+  "PalletStack": {
+   "id": 102126739497095,
+   "sha": "216c50847a5afd84683328f617ff2f9f3c33b4292e0f7f33c79fd91820709fbc"
+  },
+  "PatioUmbrella": {
+   "id": 93842414906295,
+   "sha": "07f79a9cba57c4abf19db3c5c35b1790998cba3019f6f73e2ed4ce2a4d1be870"
+  },
+  "PicnicTable": {
+   "id": 125783371566319,
+   "sha": "1c7cf7d0c811a5ff2f4d49bb0de9aca99c9ca4fa61b34764db44da4c180c009d"
+  },
+  "Planter": {
+   "id": 114617110414933,
+   "sha": "4eaed9f2b67ec0311ea39a74366201ed0b7f59ee02a73e47ae81c8b098731398"
+  },
+  "RelishMixer": {
+   "id": 116640378054606,
+   "sha": "7e1cca0a09703d1c883930bc79e40db6089ec9d26f6608f7c1c18556ac905bad"
+  },
+  "RemoteControl": {
+   "id": 109086321814329,
+   "sha": "a5059689e5646e167f7e5cc3d5a2af804e8b39c6d6ce316d4e7d757c473d3db3"
+  },
+  "RepublicCapitol": {
+   "id": 137773953843424,
+   "sha": "11dbfb7c371371f8a7ff44de9fb504bc43f0827c810e179f5178dad15fa33413"
+  },
+  "RepublicMonument": {
+   "id": 121994869890774,
+   "sha": "32a33d36f147f163874055b9e8c741f12ca7d15ae845267c1e18a0507342716e"
+  },
+  "RobotTruck": {
+   "id": 115581497676693,
+   "sha": "652280293e69f08eb621783d59570048f36322c3f61c2d898580875a68bef62c"
+  },
+  "RoboticsFactory": {
+   "id": 137666632112022,
+   "sha": "4ee29455258d13143b7100a158a4e1b194fa5733d1077281cdfc351da01f00ee"
+  },
+  "SauceVault": {
+   "id": 81950864962985,
+   "sha": "7424e33617e6d4356b3cf7ee127424aa0317a2a3f0cf3e285744d15065b0c38f"
+  },
+  "ScientistBot": {
+   "id": 74745092533500,
+   "sha": "f1fd8e995366d9555a79800d7f7c7c3042187748ba013b930dad81e64e878dd7"
+  },
+  "Sneaker": {
+   "id": 86943597298682,
+   "sha": "d364ef12d7ac4622e68b0d1eb539b78f29b6844e4ed47f6cb679c168aac2219b"
+  },
+  "Staircase": {
+   "id": 94761380709923,
+   "sha": "12adbdeaa04bb3d2a4ae2a8eabb422010c026a53bf62ff4937f11e29d86b2d29"
+  },
+  "Stopwatch": {
+   "id": 83660821703670,
+   "sha": "a122b8e0a1667ae7b7e95c32b8e848bb311f8694b0c91220e75fe8f166d80440"
+  },
+  "StringLights": {
+   "id": 131878587011021,
+   "sha": "c46fca1553930d165d6e20f1e13c45ffe66866c94fc15510dab3e85a55b807df"
+  },
+  "TradingFloor": {
+   "id": 87031305281592,
+   "sha": "91740682a1d9fae356ccf0826027e59a1d889bf87a19401f3614cd8ed70b1c44"
+  },
+  "TradingTicker": {
+   "id": 117312806189734,
+   "sha": "c517bd32c30c2252adc9af26f053e56cf52f96184b8ac85da89fca7fca746805"
+  },
+  "TurboEngine": {
+   "id": 97048490606763,
+   "sha": "f43bb7d78dc9ed32599ab1ef757b4d4f2e0ca47ccaced204b0ddd819f65a7770"
+  },
+  "Ufo": {
+   "id": 137269804315134,
+   "sha": "3ca15a9d0773a154486a32cd6b60f4a80ef593ba4e7cf4b5cef84a1188b42f07"
+  },
+  "VoidHotDog": {
+   "id": 84840676078210,
+   "sha": "86a38f26cf409eff0bf3bd42d342d0977824de4047508baa6da9256e72a6c4d4"
   }
  }
 }
