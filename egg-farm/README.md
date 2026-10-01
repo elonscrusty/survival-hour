@@ -13,8 +13,8 @@ original (see `docs/DESIGN.md` and `docs/REFERENCE_COVERAGE.md`).
 ## What's in the box
 | Path | What |
 |---|---|
-| `build/EggFarm.rbxlx` | The game place (production adapters) |
-| `build/EggFarm.Test.rbxlx` | The test place: memory saves, simulated checkout, DEV panel (F8) |
+| `build/EggFarm.rbxl` (+ `.rbxlx`) | The game place (production adapters) |
+| `build/EggFarm.Test.rbxl` (+ `.rbxlx`) | The test place: memory saves, simulated checkout, DEV panel (F8) |
 | `src/` | All Luau source (`shared`, `server`, `client`) |
 | `test/` | Test-place-only scripts and fixtures |
 | `tests/` | Unit tests for the Luau CLI (`tests/run.luau`) |

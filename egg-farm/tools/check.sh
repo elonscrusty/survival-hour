@@ -26,5 +26,8 @@ if [ "${1:-}" != "--quick" ]; then
 	mkdir -p build
 	if "$T/rojo/rojo" build default.project.json -o build/EggFarm.rbxlx >/dev/null 2>&1; then echo "build (game): ok"; else echo "build (game): FAILED"; fail=1; fi
 	if "$T/rojo/rojo" build test.project.json -o build/EggFarm.Test.rbxlx >/dev/null 2>&1; then echo "build (test place): ok"; else echo "build (test place): FAILED"; fail=1; fi
+	# binary copies (.rbxl): browsers download these as files instead of showing XML text
+	"$T/rojo/rojo" build default.project.json -o build/EggFarm.rbxl >/dev/null 2>&1 || { echo "build (game .rbxl): FAILED"; fail=1; }
+	"$T/rojo/rojo" build test.project.json -o build/EggFarm.Test.rbxl >/dev/null 2>&1 || { echo "build (test .rbxl): FAILED"; fail=1; }
 fi
 exit $fail
