@@ -1683,6 +1683,26 @@ function Economy.ComputeOffline(self: Farm, now: number)
 	end
 end
 
+-- Keeps the newest `keep` one-off receipt ids (Roblox stops re-delivering a receipt once it is
+-- acknowledged, so old ids are safe to drop). PASS- keys are fixed per pass and always kept.
+function Economy.TrimReceipts(s: any, keep: number)
+	local ids = {}
+	for id, t in s.receipts do
+		if string.sub(id, 1, 5) ~= "PASS-" then
+			table.insert(ids, { id = id, t = t })
+		end
+	end
+	if #ids <= keep then
+		return
+	end
+	table.sort(ids, function(a, b)
+		return a.t > b.t
+	end)
+	for i = keep + 1, #ids do
+		s.receipts[ids[i].id] = nil
+	end
+end
+
 -- Robux purchase fulfilment (called by the server's commerce layer after a confirmed receipt).
 -- Idempotent per purchase id: a replayed receipt grants nothing the second time.
 function Economy.GrantProduct(self: Farm, productId: string, purchaseId: string, now: number): (boolean, string)
@@ -1698,6 +1718,7 @@ function Economy.GrantProduct(self: Farm, productId: string, purchaseId: string,
 		return true, "already"
 	end
 	s.receipts[purchaseId] = now
+	Economy.TrimReceipts(s, 200)
 	if p.grant.pass then
 		s.passes[p.grant.pass] = true
 	end
@@ -4780,7 +4801,11 @@ local function onJoin(player: Player)
 	end
 	local ok = FarmService.Load(player)
 	if not ok then
-		PlotService.Release(player)
+		-- only release if this Player is still here: if they left during the load and already
+		-- rejoined, the registry (keyed by UserId) now belongs to the NEW session's plot
+		if player.Parent == Players then
+			PlotService.Release(player)
+		end
 		return
 	end
 	spawnCharacter(player)
@@ -4800,6 +4825,7 @@ for _, p in Players:GetPlayers() do
 end
 
 game:BindToClose(function()
+	DataService.Closing = true
 	-- ProfileStore also flushes on close; releasing here makes the memory adapter consistent too
 	for _, p in Players:GetPlayers() do
 		pcall(onLeave, p)
@@ -4863,20 +4889,24 @@ end
 function Adapter:OnSessionEnd(handle, fn: () -> ()) end
 
 function Adapter:Release(handle): (boolean, string?)
-	-- retry an interrupted final save a few times before giving up the lock
+	-- Retry an interrupted final save a few times before giving up the lock. Retries go through
+	-- Save (which keeps the lock); MemoryStore.Release clears the lock even when its save fails,
+	-- so retrying Release itself could only ever answer "session lost".
+	if not handle.active then
+		return true, nil
+	end
 	for _ = 1, 3 do
-		if not handle.active then
-			return true, nil
-		end
-		local ok, err = self.store:Release(handle)
+		local ok, err = self.store:Save(handle)
 		if ok then
-			return true, nil
+			return self.store:Release(handle)
 		end
 		if err == "session lost" then
+			handle.active = false
 			return false, err
 		end
-		handle.active = true -- MemoryStore marks it inactive; retry
 	end
+	-- give up: unlock so the player can rejoin; the last good copy stays in the store
+	self.store:Release(handle)
 	return false, "save failed"
 end
 
@@ -5095,6 +5125,11 @@ function Adapter:OnSessionEnd(handle, fn: () -> ())
 	handle.profile.OnSessionEnd:Connect(fn)
 end
 
+-- true once ProfileStore's own BindToClose has started ending sessions
+function Adapter:IsClosing(): boolean
+	return ProfileStore.IsClosing == true
+end
+
 function Adapter:Release(handle): (boolean, string?)
 	if handle.active then
 		handle.active = false
@@ -5140,11 +5175,17 @@ local CommerceService = {}
 local ctx
 local testCheckout = nil
 local limiter = RateLimiter.new(4, 0.5)
-local byRobuxId: { [number]: any } = {}
+-- pass ids and developer product ids are separate Roblox id spaces: keep separate maps
+local passById: { [number]: any } = {}
+local productById: { [number]: any } = {}
 
 for _, p in Products.List do
 	if p.robuxId then
-		byRobuxId[p.robuxId] = p
+		if p.kind == "pass" then
+			passById[p.robuxId] = p
+		else
+			productById[p.robuxId] = p
+		end
 	end
 end
 
@@ -5209,7 +5250,7 @@ end
 -- purchase id is confirmed, so a crash can't lose a paid grant.
 local function processReceipt(receipt)
 	local player = Players:GetPlayerByUserId(receipt.PlayerId)
-	local p = byRobuxId[receipt.ProductId]
+	local p = productById[receipt.ProductId]
 	if not player or not p then
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
@@ -5246,7 +5287,7 @@ function CommerceService.Init(c)
 	if not testCheckout then
 		MarketplaceService.ProcessReceipt = processReceipt
 		MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passId, purchased)
-			local p = byRobuxId[passId]
+			local p = passById[passId]
 			if purchased and p and p.kind == "pass" then
 				grant(player, p.id, "PASS-" .. player.UserId .. "-" .. passId)
 			end
@@ -5256,7 +5297,19 @@ function CommerceService.Init(c)
 				status = if purchased then "ok" else "cancelled",
 			})
 		end)
+		-- UI feedback only: the grant itself happens in ProcessReceipt
+		MarketplaceService.PromptProductPurchaseFinished:Connect(function(userId, productId, purchased)
+			local player = Players:GetPlayerByUserId(userId)
+			local p = productById[productId]
+			if player and p then
+				local remote = Net.Get("FarmEvent") :: RemoteEvent
+				remote:FireClient(player, "Checkout", { productId = p.id, status = if purchased then "ok" else "cancelled" })
+			end
+		end)
 	end
+	Players.PlayerRemoving:Connect(function(player)
+		limiter:Forget(player)
+	end)
 	ctx.FarmService.OnReady(function(player)
 		CommerceService.SyncPasses(player)
 	end)
@@ -5286,6 +5339,7 @@ local Migrations = require(Shared.Logic.Migrations)
 local State = require(Shared.Logic.State)
 
 local DataService = {}
+DataService.Closing = false -- set by Main's BindToClose: sessions ending at shutdown aren't "stolen"
 
 local adapter
 local handles: { [Player]: any } = {}
@@ -5351,7 +5405,9 @@ function DataService.Load(player: Player, now: number): any?
 	handles[player] = handle
 	adapter:OnSessionEnd(handle, function()
 		-- another server took the session (ProfileStore): stop this one from playing on stale data
-		if handles[player] == handle and player.Parent == Players then
+		if handles[player] == handle and player.Parent == Players and not DataService.Closing
+			and not (adapter.IsClosing and adapter:IsClosing())
+		then
 			handles[player] = nil
 			player:Kick("Your farm was opened on another server.")
 		end
@@ -5429,6 +5485,8 @@ local lastSnap: { [Player]: number } = {}
 local ctx
 -- burst of 25 requests, refilling 14/s: enough for held Spawn (8/s) plus menu taps
 local limiter = RateLimiter.new(25, 14)
+-- codes get their own slow bucket (6 tries, then 1 every 10 s) so they can't be brute-forced
+local codeLimiter = RateLimiter.new(6, 0.1)
 local readyCallbacks = {}
 
 local timeOffset = 0 -- test place only (dev "next day"); always 0 in the real game
@@ -5499,6 +5557,9 @@ local function onAction(player: Player, action: any)
 	if not limiter:Allow(player, os.clock()) then
 		return { ok = false, code = "rate_limited", message = "Slow down a little!" }
 	end
+	if type(action) == "table" and action.type == "redeemCode" and not codeLimiter:Allow(player, os.clock()) then
+		return { ok = false, code = "rate_limited", message = "Too many code attempts. Wait a little and try again." }
+	end
 	local ok, res = pcall(farm.Apply, farm, action, FarmService.Now())
 	if not ok then
 		warn("[Farm] action error: " .. tostring(res))
@@ -5549,6 +5610,7 @@ function FarmService.Unload(player: Player)
 	farms[player] = nil
 	lastSnap[player] = nil
 	limiter:Forget(player)
+	codeLimiter:Forget(player)
 	ctx.DataService.Release(player)
 end
 
@@ -5878,6 +5940,10 @@ local EXTRA_RADIUS = 2 -- forgiveness around the ring's visible edge
 local MAX_HEIGHT = 9
 
 local ctx
+-- last checked position per player: a jump far beyond walking speed (teleport exploit, or a
+-- respawn) skips ring actions for that check, so rings need real presence across two checks
+local lastPos: { [Player]: { pos: Vector3, t: number } } = {}
+local SPEED_SLACK = 1.6
 
 -- Horizontal distance check against a flat ring part (radius = half its largest X/Z size).
 function ZoneService.Inside(part: BasePart, pos: Vector3): boolean
@@ -5900,6 +5966,15 @@ local function check(player: Player)
 	end
 	local now = ctx.FarmService.Now()
 	local pos = root.Position
+	local prev = lastPos[player]
+	lastPos[player] = { pos = pos, t = os.clock() }
+	if not prev then
+		return
+	end
+	local flat = Vector3.new(pos.X - prev.pos.X, 0, pos.Z - prev.pos.Z).Magnitude
+	if flat > hum.WalkSpeed * SPEED_SLACK * (os.clock() - prev.t) + 6 then
+		return
+	end
 	for slot, ring in zones.collect do
 		local h = farm.state.housing[slot]
 		if h and h.tier > 0 and h.eggs > 0 and ring.Parent and ZoneService.Inside(ring, pos) then
@@ -5916,6 +5991,9 @@ function ZoneService.Init(c)
 end
 
 function ZoneService.Start()
+	Players.PlayerRemoving:Connect(function(player)
+		lastPos[player] = nil
+	end)
 	local acc = 0
 	RunService.Heartbeat:Connect(function(dt)
 		acc += dt
@@ -10326,6 +10404,13 @@ function Hud.Start(s: any, h: any)
 
 	-- portrait phones: keep the auto toggle above the spawn button if there's no room beside it
 	local function relayout(_, logical: Vector2)
+		-- short landscape phones: there's no vertical room for the quick column under the left
+		-- column, so it moves beside it (the left nav is vertically centred)
+		if logical.Y < 520 and logical.X > logical.Y then
+			quick.Position = UDim2.new(0, Theme.Size.Nav + 26, 1, -10)
+		else
+			quick.Position = UDim2.new(0, 8, 1, -10)
+		end
 		if logical.X < 500 then
 			autoBtn.Instance.AnchorPoint = Vector2.new(1, 1)
 			autoBtn.Instance.Position = UDim2.new(1, 0, 0, -6)
@@ -10504,6 +10589,13 @@ function Offline.Start(store: any, host: any)
 	local showing = false
 	local nextTry = 0
 
+	-- Back/Escape can close the modal without the button; forget "showing" when it's gone
+	host.Router:Subscribe(function()
+		if showing and host.Router:Modal() ~= "offline" then
+			showing = false
+		end
+	end)
+
 	store.OnChanged(function(snap: any)
 		if showing or snap.offline.pending <= 0 or os.clock() < nextTry then
 			return
@@ -10601,6 +10693,12 @@ function Prompts.Start(host: any)
 	local watched: { [ProximityPrompt]: boolean } = setmetatable({}, { __mode = "k" }) :: any
 
 	local function apply(prompt: ProximityPrompt)
+		if prompt:GetAttribute("Fox") then
+			-- the Lucky Fox model carries its owner's UserId; only the owner can catch it
+			local fox = prompt:FindFirstAncestorOfClass("Model")
+			prompt.Enabled = fox ~= nil and fox:GetAttribute("OwnerUserId") == me.UserId
+			return
+		end
 		if prompt:GetAttribute("Menu") == nil then
 			return
 		end
@@ -10625,6 +10723,16 @@ function Prompts.Start(host: any)
 			end
 		end
 	end
+
+	-- fox models are parented to plots after their prompt exists; re-check once they land
+	Workspace.DescendantAdded:Connect(function(d: Instance)
+		if d:IsA("ProximityPrompt") and d:GetAttribute("Fox") then
+			local prompt = d :: ProximityPrompt
+			task.defer(function()
+				apply(prompt)
+			end)
+		end
+	end)
 
 	local function hookPlots(plots: Instance)
 		plots.DescendantAdded:Connect(function(d)
@@ -10661,6 +10769,13 @@ function Prompts.Start(host: any)
 		end
 		local menu = prompt:GetAttribute("Menu")
 		if type(menu) ~= "string" or not Prompts.IsMine(prompt) then
+			return
+		end
+		-- boards for things the tutorial hasn't revealed yet stay quiet
+		local rev = host:Reveals()
+		local gate = ({ Housing = rev.housing, Shipping = rev.shipping, Workers = rev.workers, Silos = rev.nav, Upgrades = rev.nav, Eggs = rev.eggs })[menu]
+		if gate == false then
+			host:Toast("Finish the tutorial to unlock this!", "info")
 			return
 		end
 		local slot = prompt:GetAttribute("Slot")
@@ -12926,6 +13041,10 @@ function Host:_sync()
 	if want then
 		local b = self:_build(want)
 		if b then
+			local snapNow = self.Store.Get()
+			if snapNow then
+				self:_applyReveals(snapNow) -- hide tutorial-locked tabs before the first frame
+			end
 			local tab = r:GetTab(want)
 			if b.panel.Tabs and tab then
 				b.panel.Tabs:Select(tab)
@@ -13988,6 +14107,7 @@ local Theme = require(UI.Theme)
 local Util = require(UI.Util)
 local Card = require(UI.Card)
 local PurchaseButton = require(UI.PurchaseButton)
+local Num = require(UI.Num)
 local Common = require(script.Parent.Common)
 
 local M = {
@@ -14036,6 +14156,22 @@ function M.Build(host: any, panel: any)
 						expect = levels[u.id] or 0,
 					})
 				end,
+				-- Epic upgrades spend Gold Eggs: honour the "Confirm Gold Eggs" setting like the shops
+				confirm = if epic
+					then function(snap)
+						if not snap.settings.confirmSpend then
+							return nil
+						end
+						local price = Common.Quote("upgrade", snap, u.id)
+						return {
+							title = "Spend Gold Eggs?",
+							icon = "gold",
+							color = Theme.Color.GoldDark,
+							text = string.format("Upgrade %s for %s Gold Eggs?", u.name, Num.Short(price or 0)),
+							confirmText = "Upgrade",
+						}
+					end
+					else nil,
 			})
 			table.insert(rows, {
 				refresh = function(snap)
@@ -17844,7 +17980,7 @@ gui.Parent = player:WaitForChild("PlayerGui")
 
 local toggle = Instance.new("TextButton")
 toggle.Size = UDim2.fromOffset(56, 28)
-toggle.Position = UDim2.new(0.5, -28, 0, 6)
+toggle.Position = UDim2.new(1, -64, 0, 6)
 toggle.Text = "DEV"
 toggle.Font = Enum.Font.GothamBlack
 toggle.TextSize = 14
@@ -17856,7 +17992,7 @@ Instance.new("UICorner", toggle).CornerRadius = UDim.new(0, 8)
 local panel = Instance.new("ScrollingFrame")
 panel.Visible = false
 panel.Size = UDim2.fromOffset(220, 360)
-panel.Position = UDim2.new(0.5, -110, 0, 40)
+panel.Position = UDim2.new(1, -228, 0, 40)
 panel.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
 panel.BackgroundTransparency = 0.1
 panel.AutomaticCanvasSize = Enum.AutomaticSize.Y

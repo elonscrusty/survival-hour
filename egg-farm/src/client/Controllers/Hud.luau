@@ -506,6 +506,13 @@ function Hud.Start(s: any, h: any)
 
 	-- portrait phones: keep the auto toggle above the spawn button if there's no room beside it
 	local function relayout(_, logical: Vector2)
+		-- short landscape phones: there's no vertical room for the quick column under the left
+		-- column, so it moves beside it (the left nav is vertically centred)
+		if logical.Y < 520 and logical.X > logical.Y then
+			quick.Position = UDim2.new(0, Theme.Size.Nav + 26, 1, -10)
+		else
+			quick.Position = UDim2.new(0, 8, 1, -10)
+		end
 		if logical.X < 500 then
 			autoBtn.Instance.AnchorPoint = Vector2.new(1, 1)
 			autoBtn.Instance.Position = UDim2.new(1, 0, 0, -6)

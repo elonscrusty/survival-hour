@@ -14,6 +14,7 @@ local Theme = require(UI.Theme)
 local Util = require(UI.Util)
 local Card = require(UI.Card)
 local PurchaseButton = require(UI.PurchaseButton)
+local Num = require(UI.Num)
 local Common = require(script.Parent.Common)
 
 local M = {
@@ -62,6 +63,22 @@ function M.Build(host: any, panel: any)
 						expect = levels[u.id] or 0,
 					})
 				end,
+				-- Epic upgrades spend Gold Eggs: honour the "Confirm Gold Eggs" setting like the shops
+				confirm = if epic
+					then function(snap)
+						if not snap.settings.confirmSpend then
+							return nil
+						end
+						local price = Common.Quote("upgrade", snap, u.id)
+						return {
+							title = "Spend Gold Eggs?",
+							icon = "gold",
+							color = Theme.Color.GoldDark,
+							text = string.format("Upgrade %s for %s Gold Eggs?", u.name, Num.Short(price or 0)),
+							confirmText = "Upgrade",
+						}
+					end
+					else nil,
 			})
 			table.insert(rows, {
 				refresh = function(snap)

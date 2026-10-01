@@ -150,6 +150,10 @@ H.wait(0.2)
 H.section("double tap on a purchase button sends one request")
 a:click(Lib.hud(a, "Upgrades"))
 H.wait(0.2)
+a:run(function()
+	host:Open("Upgrades", "COMMON") -- Cash upgrades buy on tap (Epic ones ask first, checked below)
+end)
+H.wait(0.2)
 local up = Lib.panel(a, "Upgrades")
 -- first visible, affordable purchase button in the COMMON tab
 local target, title
@@ -180,12 +184,36 @@ local sent = Lib.actionCount() - n0
 local lv1 = levels()
 H.check("three rapid taps -> exactly one request reaches the server", sent == 1, { requests = sent })
 H.check("the upgrade was bought exactly once", lv0 ~= lv1, { before = lv0, after = lv1 })
-local confirmOn = Lib.state(a).settings.confirmSpend
-H.note("FINDING: Upgrades tab remembered EPIC; this Gold-Egg-priced Epic upgrade bought on tap without the 'Confirm Gold Eggs' dialog (Shop/Boosts ask)", { item = title, confirmSpend = confirmOn, modalShown = host.Router:Modal() })
 -- a tap after the reply buys the next level (the button isn't stuck)
 a:click(target)
 H.wait(1)
 H.check("a later tap sends a fresh request", Lib.actionCount() - n0 == 2, { requests = Lib.actionCount() - n0 })
+
+-- Epic upgrades spend Gold Eggs: with "Confirm Gold Eggs" on, a tap opens the confirm modal first
+Lib.request(a, { type = "setSetting", id = "confirmSpend", value = true })
+Lib.dev(a, "gold")
+H.wait(0.5)
+a:run(function()
+	host:Open("Upgrades", "EPIC")
+end)
+H.wait(0.3)
+local epicBtn
+for _, d in up:GetDescendants() do
+	if d:IsA("TextButton") and d.Name == "Button" and a:isShown(d) and d.Parent and d.Parent.Name == "Action" then
+		epicBtn = d
+		break
+	end
+end
+local nE = Lib.actionCount()
+if epicBtn then
+	a:click(epicBtn)
+	H.wait(0.3)
+end
+H.check("Epic upgrade tap asks to confirm Gold Eggs first (no request yet)", epicBtn ~= nil and host.Router:Modal() == "confirm" and Lib.actionCount() == nE, { modal = host.Router:Modal(), requests = Lib.actionCount() - nE })
+a:run(function()
+	host.Router:CloseModal()
+end)
+H.wait(0.2)
 a:click(up:FindFirstChild("Close", true))
 H.wait(0.2)
 
