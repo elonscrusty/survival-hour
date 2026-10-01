@@ -43,7 +43,7 @@ per-scenario output: `docs/HEADLESS_RESULTS.md`. Latest run after the final fixe
 | reconnect_and_saves | 14 pass: rejoin restores, failed load kicks without touching the save, failed save retries |
 | shop_codes_boosts | 26 pass: simulated checkout, all code responses, boost buy/use/expire |
 | render_dump | 3 pass: HUD fits at 1280x720, 390x844 and 844x390 (approximate layout engine) |
-| perf_large_population | see HEADLESS_RESULTS.md (8 full farms at 3.2M chickens; flock bounded at the cap; ~2.9 KB snapshots at 2/s) |
+| perf_large_population | 7 pass: 8 full farms at 3.2M chickens for 600 simulated s; server 0.26 ms/frame avg (p95 2.0); one client 3.8 ms/frame on flock=high, 1.1 on low (mock Luau time); own flock capped at 120 rigs, neighbours 4; snapshots 2.9 KB at 2/s |
 
 0 runtime errors in game code across all scenarios.
 
