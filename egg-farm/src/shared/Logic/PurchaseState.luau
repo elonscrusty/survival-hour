@@ -97,9 +97,10 @@ function PurchaseState.Caption(state: string): string?
 	return nil
 end
 
--- Whether a rejection should be remembered (all failures except our own dedupe).
+-- Whether a failed result should show the red "rejected" state. Our own in-flight dedupe
+-- ("busy") and a checkout the player cancelled themselves are not rejections.
 function PurchaseState.IsRejection(result: { ok: boolean, code: string }?): boolean
-	return result ~= nil and not result.ok and result.code ~= "busy"
+	return result ~= nil and not result.ok and result.code ~= "busy" and result.code ~= "cancelled"
 end
 
 return PurchaseState

@@ -40,8 +40,9 @@ export type Opts = {
 	-- optional confirmation; return nil to skip
 	confirm: ((snap: any) -> any?)?,
 	onResult: ((Result) -> ())?,
+	-- custom text for a local "can't do that" tap (code = PurchaseState code); nil = Contract text
+	explain: ((code: string, snap: any) -> string?)?,
 	successSound: string?,
-	quiet: boolean?, -- no success toast
 }
 
 export type Handle = {
@@ -169,6 +170,14 @@ function PurchaseButton.new(o: Opts): Handle
 		end)
 	end
 
+	local function why(code: string?, snap: any): string?
+		if not code then
+			return nil
+		end
+		local custom = if o.explain then o.explain(code, snap) else nil
+		return custom or Contract.Messages[code]
+	end
+
 	local function run(snap: any)
 		busy = true
 		h:Refresh(snap)
@@ -180,6 +189,9 @@ function PurchaseButton.new(o: Opts): Handle
 		if result.ok then
 			o.host:Sound(o.successSound or "buy")
 			Util.Pop(btn.Instance, 0.1)
+			h:Refresh(o.host.Store.Get())
+		elseif result.code == "cancelled" then
+			o.host:Toast(result.message or "Purchase cancelled.", "info")
 			h:Refresh(o.host.Store.Get())
 		elseif PurchaseState.IsRejection(result) then
 			reject(result.message or Contract.Messages[result.code] or "That didn't work.")
@@ -198,7 +210,7 @@ function PurchaseButton.new(o: Opts): Handle
 			return
 		end
 		if not out.canRequest then
-			reject(if out.code then Contract.Messages[out.code] else nil)
+			reject(why(out.code, snap))
 			return
 		end
 		local confirmOpts = if o.confirm then o.confirm(snap) else nil
@@ -209,7 +221,7 @@ function PurchaseButton.new(o: Opts): Handle
 				if again.canRequest then
 					task.spawn(run, now)
 				else
-					reject(if again.code then Contract.Messages[again.code] else nil)
+					reject(why(again.code, now))
 				end
 			end)
 		else

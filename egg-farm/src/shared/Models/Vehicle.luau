@@ -101,7 +101,7 @@ function Vehicle.Build(tier: number?): Model
 		p("Stripe", Vector3.new(7.1, 0.5, 13.1), Vector3.new(0, 3.0, 1.5), Color3.fromRGB(120, 240, 255), { material = Enum.Material.Neon })
 		for _, x in { -2.6, 2.6 } do
 			for _, z in { -3.5, 6 } do
-				p("HoverPad", Vector3.new(0.6, 2.4, 2.4), Vector3.new(x, 1.3, z), Color3.fromRGB(120, 240, 255), { shape = "Cylinder", material = Enum.Material.Neon })
+				Kit.Column(m, CFrame.new(x, 1.0, z), 0.6, 2.4, { name = "HoverPad", color = Color3.fromRGB(120, 240, 255), material = Enum.Material.Neon, collide = false, shadow = false })
 			end
 		end
 		p("Fin", Vector3.new(0.4, 2.5, 2.5), Vector3.new(0, 6, 7.2), F.darkMetal, { shape = "Wedge" })

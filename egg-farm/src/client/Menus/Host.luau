@@ -118,7 +118,7 @@ function Host.new(store: any, modules: { MenuModule })
 		self:_sync()
 	end)
 
-	store.OnChanged(function(snap)
+	store.OnChanged(function(snap: any)
 		self:_refresh(snap)
 	end)
 

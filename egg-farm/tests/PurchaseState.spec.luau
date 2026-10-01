@@ -55,6 +55,8 @@ return {
 		t.eq(PurchaseState.Caption("affordable"), nil)
 		t.ok(PurchaseState.IsRejection({ ok = false, code = "cant_afford" }))
 		t.no(PurchaseState.IsRejection({ ok = false, code = "busy" }))
+		t.no(PurchaseState.IsRejection({ ok = false, code = "cancelled" }), "player closed the Robux prompt")
+		t.ok(PurchaseState.IsRejection({ ok = false, code = "not_configured" }))
 		t.no(PurchaseState.IsRejection({ ok = true, code = "ok" }))
 	end,
 	with_real_prices = function(t)

@@ -11,6 +11,7 @@ local Data = Shared:WaitForChild("Data")
 local Prices = require(Logic:WaitForChild("Prices"))
 local State = require(Logic:WaitForChild("State"))
 local Boosts = require(Data:WaitForChild("Boosts"))
+local RewardData = require(Data:WaitForChild("Rewards"))
 local Eggs = require(Data:WaitForChild("Eggs"))
 local GameInfo = require(Shared:WaitForChild("GameInfo"))
 
@@ -177,6 +178,23 @@ function Common.Note(parent: Instance, text: string, order: number): TextLabel
 		order = order,
 		parent = parent,
 	})
+end
+
+-- Playtime today, advanced locally between snapshots (the server counts it while you play).
+function Common.Playtime(snap: any, now: number): number
+	return snap.gifts.playtime + math.max(0, now - snap.serverNow)
+end
+
+-- Playtime gifts that can be claimed right now.
+function Common.GiftsReady(snap: any, now: number): number
+	local play = Common.Playtime(snap, now)
+	local n = 0
+	for i, g in RewardData.Gifts do
+		if not snap.gifts.claimed[tostring(i)] and play >= g.minutes * 60 then
+			n += 1
+		end
+	end
+	return n
 end
 
 function Common.Countdown(seconds: number): string
