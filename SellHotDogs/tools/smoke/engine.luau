@@ -101,7 +101,7 @@ end
 Engine.sig = sig
 
 local EVENTS = {
-	Instance = { "ChildAdded", "ChildRemoved", "DescendantAdded", "AncestryChanged", "Destroying" },
+	Instance = { "ChildAdded", "ChildRemoved", "DescendantAdded", "AncestryChanged", "Destroying", "Changed" },
 	BasePart = { "Touched", "TouchEnded" },
 	ProximityPrompt = { "Triggered" },
 	GuiButton = { "Activated", "MouseButton1Down", "MouseButton1Up", "MouseButton1Click", "MouseLeave", "MouseEnter" },
@@ -231,6 +231,11 @@ R.implementMethod("Player", "Kick", function(self, msg)
 	self.Parent = nil
 end)
 R.implementMethod("Sound", "Play", function() end)
+R.implementMethod("ParticleEmitter", "Emit", function() end)
+R.implementMethod("Model", "ScaleTo", function() end)
+R.implementMethod("Model", "GetScale", function()
+	return 1
+end)
 R.implementMethod("Workspace", "GetServerTimeNow", function()
 	return os.clock()
 end)
@@ -321,14 +326,18 @@ local function serviceStubs(dm, side)
 	end })
 	s.TweenService = {
 		Create = function(_, inst, info, goal)
+			local completed = Signal.new("TweenCompleted")
 			return {
+				Completed = completed,
 				Play = function()
 					for k, v in goal do
 						pcall(function()
 							inst[k] = v
 						end)
 					end
+					completed:Fire(Enum and Enum.PlaybackState and Enum.PlaybackState.Completed or nil)
 				end,
+				Cancel = function() end,
 			}
 		end,
 	}
@@ -424,6 +433,8 @@ function Engine.newSide(dm, side)
 			NumberRange = R.NumberRange,
 			NumberSequence = R.NumberSequence,
 			ColorSequence = R.ColorSequence,
+			ColorSequenceKeypoint = R.ColorSequenceKeypoint,
+			NumberSequenceKeypoint = R.NumberSequenceKeypoint,
 			BrickColor = R.BrickColor,
 			Rect = R.Rect,
 			Enum = R.Enum,

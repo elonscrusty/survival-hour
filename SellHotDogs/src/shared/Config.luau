@@ -19,5 +19,9 @@ local Config = {
 	InteractRange = 40, -- studs from a business to click/upgrade without Manage
 	PadRange = 14, -- studs from a pad for a prompt purchase without Remote Buy
 	BaseWalkSpeed = 16,
+
+	-- Extra yaw (degrees) applied to every uploaded mesh, in case the importer faces them
+	-- backwards. Check one model in Studio after the first upload and set 0 or 180.
+	MeshYaw = 0,
 }
 return Config

@@ -11,6 +11,7 @@ local specs = {
 	"./Phone.spec",
 	"./Dash.spec",
 	"./Names.spec",
+	"./Decor.spec",
 }
 
 local passed, failed = 0, 0

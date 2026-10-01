@@ -92,7 +92,8 @@ local function buildManage(d: any)
 			continue
 		end
 		local f = card(108, i)
-		Kit.label({ Text = biz.name, Size = UDim2.new(0.5, -10, 0, 28), Position = UDim2.fromOffset(10, 6), Parent = f, TextColor3 = C.ink, TextXAlignment = Enum.TextXAlignment.Left, MaxText = 24 })
+		Kit.icon(biz.id, 34, f, UDim2.fromOffset(8, 3))
+		Kit.label({ Text = biz.name, Size = UDim2.new(0.5, -50, 0, 28), Position = UDim2.fromOffset(48, 6), Parent = f, TextColor3 = C.ink, TextXAlignment = Enum.TextXAlignment.Left, MaxText = 24 })
 		local out = Kit.label({ Text = "", Size = UDim2.new(0.5, -10, 0, 28), Position = UDim2.new(0.5, 0, 0, 6), Parent = f, TextColor3 = C.greenDark, TextXAlignment = Enum.TextXAlignment.Right, MaxText = 24 })
 		local barBtn = new("TextButton", { Size = UDim2.new(0.55, -10, 0, 30), Position = UDim2.fromOffset(10, 40), BackgroundColor3 = Color3.fromRGB(40, 70, 40), Text = "", AutoButtonColor = false, Parent = f }, { Kit.corner(8) })
 		local fill = new("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = C.green, Parent = barBtn }, { Kit.corner(8) })
@@ -135,7 +136,6 @@ local function refreshManage(d: any)
 end
 
 ---------------------------------------------------------------- Powers
-local POWER_ICONS = { manage = "📋", runFaster = "👟", stack = "📚", remoteBuy = "📡", expertPicker = "🧺" }
 
 local function buildPowers(d: any)
 	local order = 0
@@ -143,7 +143,8 @@ local function buildPowers(d: any)
 		order += 1
 		local st = d.powers[pw.id]
 		local f = card(120, order)
-		Kit.label({ Text = (POWER_ICONS[pw.id] or "⚡") .. " " .. pw.name, Size = UDim2.new(1, -150, 0, 30), Position = UDim2.fromOffset(10, 6), Parent = f, TextColor3 = C.ink, TextXAlignment = Enum.TextXAlignment.Left, MaxText = 24 })
+		Kit.icon(pw.id, 34, f, UDim2.fromOffset(8, 4))
+		Kit.label({ Text = pw.name, Size = UDim2.new(1, -190, 0, 30), Position = UDim2.fromOffset(48, 6), Parent = f, TextColor3 = C.ink, TextXAlignment = Enum.TextXAlignment.Left, MaxText = 24 })
 		Kit.label({ Text = string.format("Level %d / %d", st.tier, pw.tiers), Size = UDim2.fromOffset(130, 26), Position = UDim2.new(1, -140, 0, 8), Parent = f, TextColor3 = C.violet, TextXAlignment = Enum.TextXAlignment.Right, MaxText = 20 })
 		Kit.label({ Text = pw.desc, Size = UDim2.new(1, -20, 0, 34), Position = UDim2.fromOffset(10, 38), Parent = f, TextColor3 = C.inkSoft, Font = Kit.FONT_BODY, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, MaxText = 17 })
 		local inv = Kit.button({ text = "", color = C.green, dark = C.greenDark, size = UDim2.new(0.5, -15, 0, 38), pos = UDim2.new(0, 10, 1, -44), parent = f, textSize = 18, onClick = function()
@@ -173,7 +174,7 @@ local function buildShop(d: any)
 	for _, prod in Products.list do
 		order += 1
 		local f = card(92, order)
-		Kit.label({ Text = prod.icon, Size = UDim2.fromOffset(60, 60), Position = UDim2.fromOffset(8, 16), Parent = f, MaxText = 44 })
+		Kit.icon(prod.key, 64, f, UDim2.fromOffset(6, 14))
 		Kit.label({ Text = PRODUCT_NAMES[prod.key] or prod.key, Size = UDim2.new(1, -230, 0, 30), Position = UDim2.fromOffset(74, 8), Parent = f, TextColor3 = C.ink, TextXAlignment = Enum.TextXAlignment.Left, MaxText = 22 })
 		Kit.label({ Text = prod.blurb, Size = UDim2.new(1, -230, 0, 40), Position = UDim2.fromOffset(74, 40), Parent = f, TextColor3 = C.inkSoft, Font = Kit.FONT_BODY, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, MaxText = 16 })
 		local owned = d.owned[prod.key]
@@ -197,6 +198,47 @@ local function buildShop(d: any)
 	end
 end
 
+---------------------------------------------------------------- Decor
+local function buildDecor(d: any)
+	local cash = Bus.big(d.cash)
+	local intro = card(56, 0)
+	Kit.label({ Text = "Decorate your plot! Decorations are just for looks and stay forever, even after resets.", Size = UDim2.new(1, -20, 1, -10), Position = UDim2.fromOffset(10, 5), Parent = intro, TextColor3 = C.inkSoft, Font = Kit.FONT_BODY, TextWrapped = true, MaxText = 16 })
+	for i, item in Economy.Catalog.decor.items do
+		local f = card(84, i)
+		Kit.icon(item.model, 68, f, UDim2.fromOffset(6, 8))
+		Kit.label({ Text = item.name, Size = UDim2.new(1, -240, 0, 30), Position = UDim2.fromOffset(82, 10), Parent = f, TextColor3 = C.ink, TextXAlignment = Enum.TextXAlignment.Left, MaxText = 22 })
+		Kit.label({ Text = Format.cash(item.price), Size = UDim2.new(1, -240, 0, 24), Position = UDim2.fromOffset(82, 44), Parent = f, TextColor3 = C.greenDark, TextXAlignment = Enum.TextXAlignment.Left, MaxText = 20 })
+		local owned = d.decor and d.decor[item.id]
+		local b = Kit.button({ text = if owned then "Placed ✓" else "Buy", color = C.green, dark = C.greenDark, size = UDim2.fromOffset(140, 52), pos = UDim2.new(1, -150, 0.5, 0), anchor = Vector2.new(0, 0.5), parent = f, textSize = 22, onClick = function()
+			State.send("buyDecor", item.id)
+		end })
+		b.setEnabled(not owned and BigNum.gte(cash, BigNum.new(item.price)))
+	end
+end
+
+local lastSig = ""
+local function tabSignature(d: any): string
+	local cash = Bus.big(d.cash)
+	local parts = { current }
+	if current == "Decor" then
+		for _, item in Economy.Catalog.decor.items do
+			table.insert(parts, (d.decor and d.decor[item.id] and "o" or "") .. (BigNum.gte(cash, BigNum.new(item.price)) and "a" or "-"))
+		end
+	elseif current == "Powers" then
+		local inv = Bus.big(d.investors)
+		for id, st in d.powers do
+			table.insert(parts, id .. st.tier .. (st.cost and BigNum.gte(inv, Bus.big(st.cost)) and "a" or "-") .. tostring(d.owned[id]))
+		end
+		table.sort(parts)
+	else
+		for k, v in d.owned do
+			table.insert(parts, k .. tostring(v))
+		end
+		table.sort(parts)
+	end
+	return table.concat(parts, "|")
+end
+
 local function rebuild()
 	local d = State.data
 	if not d or not gui.Enabled then
@@ -208,8 +250,18 @@ local function rebuild()
 		refreshManage(d)
 	elseif current == "Powers" then
 		buildPowers(d)
+	elseif current == "Decor" then
+		buildDecor(d)
 	else
 		buildShop(d)
+	end
+	-- cards slide in one after another
+	local n = 0
+	for _, c in list:GetChildren() do
+		if c:IsA("Frame") then
+			n += 1
+			Kit.popIn(c, math.min(n, 8) * 0.03)
+		end
 	end
 	for name, b in tabs do
 		b.setColor(if name == current then C.blue else C.grey, if name == current then C.blueDark else Color3.fromRGB(120, 115, 110))
@@ -218,8 +270,13 @@ end
 
 function Panels.open(tab: string)
 	current = tab
+	lastSig = ""
+	local wasOpen = gui.Enabled
 	gui.Enabled = true
 	panel.Size = UDim2.new(0, 560, 1, -150)
+	if not wasOpen then
+		Kit.popIn(panel)
+	end
 	rebuild()
 end
 
@@ -238,8 +295,8 @@ function Panels.init()
 	local tabRow = new("Frame", { Size = UDim2.new(1, -80, 0, 52), Position = UDim2.fromOffset(12, 12), BackgroundTransparency = 1, Parent = panel }, {
 		new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8) }),
 	})
-	for i, name in { "Manage", "Powers", "Shop" } do
-		local b = Kit.button({ text = name, color = C.grey, dark = Color3.fromRGB(120, 115, 110), size = UDim2.fromOffset(140, 50), parent = tabRow, textSize = 22, onClick = function()
+	for i, name in { "Manage", "Powers", "Decor", "Shop" } do
+		local b = Kit.button({ text = name, color = C.grey, dark = Color3.fromRGB(120, 115, 110), size = UDim2.fromOffset(108, 50), parent = tabRow, textSize = 20, onClick = function()
 			current = name
 			rebuild()
 		end })
@@ -289,9 +346,14 @@ function Panels.init()
 				rebuild()
 			end
 			refreshManage(d)
-		elseif os.clock() - lastBuild > 1 then
+		elseif os.clock() - lastBuild > 0.5 then
+			-- rebuild only when something visible changed (owned / affordable / tiers)
 			lastBuild = os.clock()
-			rebuild()
+			local sig = tabSignature(d)
+			if sig ~= lastSig then
+				lastSig = sig
+				rebuild()
+			end
 		end
 	end)
 	Bus.BulkChanged:Connect(function()

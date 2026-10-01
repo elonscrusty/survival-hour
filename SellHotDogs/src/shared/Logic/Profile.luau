@@ -17,6 +17,7 @@ export type Profile = {
 	pads: { [string]: boolean },
 	forever: { [string]: boolean },
 	foreverTokens: number,
+	decor: { [string]: boolean }, -- looks-only plot decorations (never reset)
 	investors: Big,
 	evolutions: number,
 	ascensions: number,
@@ -57,6 +58,7 @@ function Profile.new(now: number): Profile
 		pads = {},
 		forever = {},
 		foreverTokens = 0,
+		decor = {},
 		investors = BigNum.zero,
 		evolutions = 0,
 		ascensions = 0,
@@ -143,6 +145,13 @@ function Profile.migrate(raw: any, now: number): (Profile?, string?)
 	p.pads = padSet(d.pads)
 	p.forever = padSet(d.forever)
 	p.foreverTokens = int(d.foreverTokens, 0, 1e6) or 0
+	if type(d.decor) == "table" then
+		for _, item in Economy.Catalog.decor.items do
+			if d.decor[item.id] == true then
+				p.decor[item.id] = true
+			end
+		end
+	end
 	p.evolutions = int(d.evolutions, 0, 1e6) or 0
 	p.ascensions = int(d.ascensions, 0, 1e6) or 0
 	p.lastSeen = if type(d.lastSeen) == "number" and d.lastSeen == d.lastSeen then d.lastSeen else now

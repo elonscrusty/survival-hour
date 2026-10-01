@@ -92,9 +92,14 @@ local function afterChange(s: Data.Session)
 	local plot = World.plotOf(s.player)
 	if plot then
 		local appeared = World.sync(plot, s.profile, s.profile.name or Names.default(s.player.DisplayName))
-		if #appeared > 0 then
+		local quiet = not s.rt.synced -- joining: show the plot as it is, no build fanfare
+		s.rt.synced = true
+		if #appeared > 0 and not quiet then
 			GameService.notify(s.player, "built", appeared)
 		end
+	end
+	for _, amount in Game.newMilestones(s.profile) do
+		GameService.notify(s.player, "milestone", { kind = "cash", amount = BigNum.new(amount) })
 	end
 	local skip = Game.flushSkips(s.profile)
 	if skip then
@@ -193,6 +198,14 @@ function GameService.snapshot(s: Data.Session): any
 		pads = pads,
 		nextPad = next and next.id,
 		dash = Game.owns(p, "dash:dashgame"),
+		decor = p.decor,
+		tiers = (function()
+			local t = {}
+			for _, def in Economy.businesses do
+				t[def.id] = if Game.bizOwned(p, def.id) then Game.levelTier(p, def.id) else 0
+			end
+			return t
+		end)(),
 		earned = s.rt.earned,
 		mock = Config.MockPurchases and game:GetService("RunService"):IsStudio(),
 	}
@@ -240,7 +253,14 @@ GameService.register("upgrade", 0.05, function(s, bizId, count)
 	if Game.powerTier(s.profile, "manage") < 1 and not nearLot(s, bizId) then
 		return GameService.toast(s.player, "Walk closer, or unlock Manage", "error")
 	end
-	local ok, msg = Game.upgradeLevel(s.profile, bizId, count)
+	local tierBefore = Game.levelTier(s.profile, bizId)
+	local ok, msg, n = Game.upgradeLevel(s.profile, bizId, count)
+	if ok then
+		GameService.notify(s.player, "leveled", { bizId = bizId, n = n, level = s.profile.biz[bizId].level })
+		if Game.levelTier(s.profile, bizId) > tierBefore then
+			GameService.notify(s.player, "milestone", { kind = "level", bizId = bizId, level = s.profile.biz[bizId].level })
+		end
+	end
 	result(s, ok, msg)
 end)
 
@@ -254,7 +274,10 @@ local function tryPad(s: Data.Session, padId: string, how: string)
 	end
 	local ok, msg = Game.buyPad(s.profile, padId)
 	if ok then
-		GameService.notify(s.player, "bought", { padId = padId, name = pad.name })
+		GameService.notify(s.player, "bought", { padId = padId, name = pad.name, kind = pad.kind, mult = pad.mult, bizId = pad.bizId })
+		if pad.kind == "unlock" then
+			GameService.notify(s.player, "milestone", { kind = "unlock", name = pad.name })
+		end
 	end
 	result(s, ok, msg)
 end
@@ -273,6 +296,17 @@ GameService.register("buyNext", 0.15, function(s)
 	if nextPad then
 		tryPad(s, nextPad.id, "remote")
 	end
+end)
+
+GameService.register("buyDecor", 0.2, function(s, id)
+	if type(id) ~= "string" then
+		return
+	end
+	local ok, msg = Game.buyDecor(s.profile, id)
+	if ok then
+		GameService.notify(s.player, "decor", { id = id, msg = msg })
+	end
+	result(s, ok, msg)
 end)
 
 GameService.register("buyPower", 0.2, function(s, id)
@@ -540,6 +574,11 @@ function GameService.init()
 			end
 			if syncAcc >= Config.SyncSeconds then
 				syncAcc = 0
+				for _, s in Data.sessions do
+					for _, amount in Game.newMilestones(s.profile) do
+						GameService.notify(s.player, "milestone", { kind = "cash", amount = BigNum.new(amount) })
+					end
+				end
 				for _, s in Data.sessions do
 					if s.rt.dirty and World.plotOf(s.player) then
 						sync(s)

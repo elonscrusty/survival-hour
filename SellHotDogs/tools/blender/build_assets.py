@@ -69,6 +69,15 @@ PAL = {
     "lavender": "C3A8FF",
     "peach": "FFC79E",
     "sky": "9ED8FF",
+    "window": "86D0E6",
+    "kraft": "C99A62",
+    "kraft_dark": "A87A45",
+    "concrete": "CFCAC0",
+    "concrete_dark": "A9A49A",
+    "steel": "8C97A3",
+    "frost": "DDF3FA",
+    "leaf": "4FA33A",
+    "brick": "C25B43",
 }
 
 
@@ -828,6 +837,11 @@ def build_RepublicMonument():
 
 
 def build_HotDogRocket():
+    hotdog_rocket()
+
+
+def hotdog_rocket():
+    """The HotDogX rocket on its round pad (shared by HotDogRocket and LaunchSite)."""
     # launch pad
     cyl(5.0, 0.8, (0, 0, 0.4), M("chrome", metal=0.2, rough=0.6), verts=8, bevel=0.15, name="pad")
     cyl(3.8, 0.12, (0, 0, 0.86), M("mustard"), verts=8, name="pad_ring")
@@ -989,6 +1003,712 @@ def build_MoneyBag():
     xform(hotdog(lod=0.5), (0, -0.73, 0.55), (rad(90 - 12), 0, rad(15)), 0.27)
 
 
+# ---------------------------------------------------------------- detail helpers (buildings + upgrade props)
+def chrome():
+    return M("chrome", metal=0.5, rough=0.35)
+
+
+def lerp3(a, b, t):
+    return tuple(p + (q - p) * t for p, q in zip(a, b))
+
+
+def place(fn, loc=(0, 0, 0), rotz=0.0, s=1.0, rot=None):
+    """Build fn() in local space (front = -Y, base at z=0) and move it into place."""
+    return xform(track(fn), loc, rot if rot is not None else (0, 0, rotz), s)
+
+
+def rivets(p0, p1, n, r=0.06, mat="chrome"):
+    m = chrome() if mat == "chrome" else M(mat)
+    for i in range(n):
+        sphere(r, lerp3(p0, p1, i / max(n - 1, 1)), m, segs=6, rings=4, name="rivet")
+
+
+def window(w, h, frame="cream", glass="window", cols=2, rows=1, sill=True):
+    """Framed window centred at the origin on a wall plane y=0, facing -Y."""
+    box((w + 0.36, 0.2, h + 0.36), (0, -0.1, 0), M(frame), bevel=0.06, segs=1, name="win_frame")
+    box((w, 0.06, h), (0, -0.22, 0), M(glass, rough=0.15), bevel=0, name="win_glass")
+    for i in range(1, cols):
+        box((0.12, 0.08, h), (-w / 2 + w * i / cols, -0.27, 0), M(frame), bevel=0, name="mullion")
+    for j in range(1, rows):
+        box((w, 0.08, 0.12), (0, -0.27, -h / 2 + h * j / rows), M(frame), bevel=0, name="transom")
+    if sill:
+        box((w + 0.7, 0.45, 0.16), (0, -0.22, -h / 2 - 0.24), M(frame), bevel=0.04, segs=1, name="sill")
+
+
+def door(w, h, col="teal", frame="cream", glass=True, handle_side=1):
+    """Door with its bottom at z=0 on a wall plane y=0, facing -Y."""
+    box((w + 0.4, 0.2, h + 0.2), (0, -0.1, (h + 0.2) / 2), M(frame), bevel=0.05, segs=1, name="door_frame")
+    box((w, 0.08, h), (0, -0.24, h / 2), M(col), bevel=0.03, segs=1, name="door")
+    if glass:
+        box((w * 0.6, 0.04, h * 0.42), (0, -0.29, h * 0.66), M("window", rough=0.15), bevel=0, name="door_glass")
+    box((w * 0.7, 0.04, 0.12), (0, -0.29, h * 0.28), M(frame), bevel=0, name="kick")
+    cyl(0.07, 0.3, (handle_side * w * 0.36, -0.36, h * 0.48), chrome(), rot=(rad(90), 0, 0), verts=8, name="handle")
+
+
+def rollup(w, h, col="cream", frame="mustard", slats=9):
+    """Roll-up garage / loading door, bottom at z=0 on wall plane y=0, facing -Y."""
+    box((w + 0.9, 0.3, h + 0.5), (0, -0.15, (h + 0.5) / 2), M(frame), bevel=0.08, segs=1, name="bay_frame")
+    box((w, 0.1, h), (0, -0.35, h / 2), M(col), bevel=0, name="bay_door")
+    for i in range(1, slats):
+        box((w, 0.06, 0.07), (0, -0.42, h * i / slats), M("steel"), bevel=0, name="slat")
+    box((w * 0.3, 0.1, 0.14), (0, -0.46, 0.45), chrome(), bevel=0.02, segs=1, name="bay_handle")
+    box((w + 0.7, 0.7, 0.55), (0, -0.4, h + 0.5), M(frame), bevel=0.1, segs=2, name="roll_housing")
+
+
+def sign_panel(w, h, frame="ketchup", face="cream", bulbs=0):
+    """Blank sign (flat face left for SurfaceGui text), centred at origin, front at about y=-0.35."""
+    box((w + 0.6, 0.3, h + 0.6), (0, -0.15, 0), M(frame), bevel=0.12, segs=2, name="sign_frame")
+    box((w, 0.06, h), (0, -0.33, 0), M(face), bevel=0, name="sign_face")
+    if bulbs:
+        m = M("mustard", emit=1.2) if frame != "mustard" else M("cream", emit=1.2)
+        n = max(3, int(w / 1.1))
+        for i in range(n):
+            x = -w / 2 + w * i / (n - 1)
+            for z in (h / 2 + 0.3, -h / 2 - 0.3):
+                sphere(0.11, (x, -0.33, z), m, segs=8, rings=4, name="bulb")
+
+
+def bush(loc, r=0.6, col="relish"):
+    x, y, z = loc
+    for dx, dy, dz, k in ((0, 0, 0, 1.0), (r * 0.6, r * 0.2, -r * 0.25, 0.72), (-r * 0.6, -r * 0.15, -r * 0.25, 0.72)):
+        sphere(r * k, (x + dx, y + dy, z + dz), M(col, rough=0.8), segs=10, rings=6, name="bush")
+
+
+def planter(loc, w=1.6, d=1.0, h=0.9, col="ketchup", leaf="relish"):
+    x, y, z = loc
+    box((w, d, h), (x, y, z + h / 2), M(col), bevel=0.08, segs=2, name="planter")
+    box((w + 0.12, d + 0.12, 0.14), (x, y, z + h - 0.02), M("cream"), bevel=0.03, segs=1, name="planter_lip")
+    box((w - 0.2, d - 0.2, 0.05), (x, y, z + h), M("wood_dark"), bevel=0, name="soil")
+    bush((x, y, z + h + min(w, d) * 0.3), r=min(w, d) * 0.42, col=leaf)
+
+
+def cone(loc, h=1.2):
+    x, y, z = loc
+    box((h * 0.72, h * 0.72, 0.1), (x, y, z + 0.05), M("ketchup"), bevel=0.03, segs=1, name="cone_base")
+    cyl(h * 0.28, h * 0.9, (x, y, z + 0.1 + h * 0.45), M("ketchup"), r2=h * 0.06, verts=14, name="cone")
+    cyl(h * 0.205, h * 0.18, (x, y, z + 0.1 + h * 0.45), M("cream"), r2=h * 0.16, verts=14, name="cone_band")
+
+
+def cbox(size, loc, rotz=0.0, tape="mustard", label=True):
+    """Cardboard box with tape and a small label; loc is the bottom centre."""
+    w, d, h = size
+
+    def f():
+        box((w, d, h), (0, 0, h / 2), M("kraft", rough=0.85), bevel=0.04, segs=1, name="carton")
+        box((w * 0.2, d + 0.03, 0.03), (0, 0, h + 0.005), M(tape), bevel=0, name="tape")
+        box((w * 0.2, 0.03, h * 0.3), (0, -d / 2 - 0.005, h * 0.85), M(tape), bevel=0, name="tape_front")
+        if label:
+            box((w * 0.32, 0.03, h * 0.22), (w * 0.22, -d / 2 - 0.005, h * 0.4), M("cream"), bevel=0, name="label")
+    return place(f, loc, rotz)
+
+
+def monitor(w=1.6, h=1.0, glow="relish", kind="chart"):
+    """Desk monitor standing at z=0, screen facing -Y."""
+    box((0.7, 0.45, 0.06), (0, 0.1, 0.03), M("navy"), bevel=0.02, segs=1, name="mon_foot")
+    box((0.14, 0.1, 0.5), (0, 0.15, 0.3), M("navy"), bevel=0, name="mon_neck")
+    zc = 0.5 + h / 2
+    box((w, 0.12, h), (0, 0.1, zc), M("navy"), bevel=0.04, segs=1, name="mon_bezel")
+    box((w - 0.14, 0.03, h - 0.14), (0, 0.03, zc), M("screen", rough=0.3), bevel=0, name="mon_screen")
+    gm = M(glow, emit=1.2)
+    if kind == "chart":
+        pts = [(-w * 0.38 + w * 0.76 * i / 5, 0.0, zc - h * 0.3 + h * 0.6 * (i / 5) + (0.12 * h if i % 2 else 0))
+               for i in range(6)]
+        tube(pts, 0.035, gm, name="mon_chart")
+    elif kind == "bars":
+        for i in range(5):
+            bh = h * (0.15 + 0.12 * ((i * 3) % 5))
+            box((w * 0.1, 0.03, bh), (-w * 0.32 + i * w * 0.16, 0.0, zc - h * 0.36 + bh / 2), gm, bevel=0, name="mon_bar")
+    elif kind == "map":
+        tube([(-w * 0.35, 0.0, zc - h * 0.2), (-w * 0.1, 0.0, zc + h * 0.15), (w * 0.15, 0.0, zc - h * 0.05),
+              (w * 0.35, 0.0, zc + h * 0.25)], 0.03, gm, name="mon_route")
+        sphere(0.07, (w * 0.35, -0.02, zc + h * 0.25), M("ketchup", emit=1.0), segs=8, rings=4, name="mon_pin")
+
+
+def hazard(x0, x1, y, z, h, n, depth=0.06):
+    """Mustard/black warning stripe along X facing -Y."""
+    w = (x1 - x0) / n
+    for i in range(n):
+        box((w, depth, h), (x0 + w * (i + 0.5), y, z), M("mustard" if i % 2 == 0 else "black"), bevel=0,
+            rot=(0, 0, 0), name="hazard")
+
+
+def railing(p0, p1, h=1.1, n=5, mat="chrome"):
+    m = chrome() if mat == "chrome" else M(mat)
+    for i in range(n):
+        p = lerp3(p0, p1, i / (n - 1))
+        cyl(0.05, h, (p[0], p[1], p[2] + h / 2), m, verts=8, name="rail_post")
+    tube([(p0[0], p0[1], p0[2] + h), (p1[0], p1[1], p1[2] + h)], 0.06, m, name="rail_top")
+    tube([(p0[0], p0[1], p0[2] + h * 0.5), (p1[0], p1[1], p1[2] + h * 0.5)], 0.04, m, name="rail_mid")
+
+
+def pallet(loc, w=2.4, d=2.0, rotz=0.0):
+    def f():
+        for k in range(5):
+            box((w, d * 0.15, 0.08), (0, -d / 2 + d * 0.075 + k * (d * 0.85 / 4), 0.36), M("wood"), bevel=0.015, segs=1,
+                name="pallet_board")
+        for x in (-w / 2 + 0.12, 0, w / 2 - 0.12):
+            box((0.22, d, 0.22), (x, 0, 0.21), M("wood_dark"), bevel=0.02, segs=1, name="pallet_runner")
+        for y in (-d / 2 + 0.12, d / 2 - 0.12):
+            box((w, 0.24, 0.08), (0, y, 0.05), M("wood"), bevel=0.015, segs=1, name="pallet_base")
+    return place(f, loc, rotz)
+
+
+def gear(r, th, loc, mat, teeth=10, rot=(rad(90), 0, 0)):
+    """Flat gear emblem (disc + teeth) lying in local XY, rotated to face -Y by default."""
+    def f():
+        cyl(r, th, (0, 0, 0), mat, verts=teeth * 3, name="gear")
+        for i in range(teeth):
+            a = TAU * i / teeth
+            box((r * 0.32, r * 0.3, th), (math.cos(a) * r * 1.08, math.sin(a) * r * 1.08, 0), mat, rot=(0, 0, a),
+                bevel=0.02, segs=1, name="gear_tooth")
+        cyl(r * 0.38, th + 0.06, (0, 0, 0), M("cream"), verts=16, name="gear_hub")
+    return place(f, loc, rot=rot)
+
+
+def lamp_post(loc, h=4.0, col="navy"):
+    x, y, z = loc
+    cyl(0.22, 0.3, (x, y, z + 0.15), M(col), verts=12, name="lamp_foot")
+    cyl(0.09, h, (x, y, z + h / 2), M(col), verts=10, name="lamp_pole")
+    sphere(0.32, (x, y, z + h + 0.2), M("cream", emit=1.2), segs=12, rings=8, name="lamp_globe")
+    cyl(0.3, 0.12, (x, y, z + h + 0.5), M(col), r2=0.1, verts=12, name="lamp_cap")
+
+
+def wavy_mustard(x0, x1, top, amp=0.09, freq=5.0, r=0.034, n=24):
+    pts = []
+    for i in range(n + 1):
+        x = x0 + (x1 - x0) * i / n
+        y = amp * math.sin(x * math.pi * freq)
+        pts.append((x, y, top + math.sqrt(max(0.2 ** 2 - y * y, 0)) + 0.03))
+    return tube(pts, r, M("mustard", rough=0.35), name="mustard")
+
+
+def mascot_dog(eyes=True):
+    """Cheerful hot-dog mascot at hotdog scale (2 long): googly eyes + speed lines."""
+    hotdog(lod=0.9, condiments=False)
+    wavy_mustard(-0.78, 0.18, 0.5)
+    if eyes:
+        for x in (0.42, 0.7):
+            sphere(0.13, (x, 0, 0.73), M("cream"), segs=12, rings=8, name="eye")
+            sphere(0.065, (x + 0.01, -0.03, 0.84), M("black", rough=0.2), segs=10, rings=6, name="pupil")
+    for z, ln in ((0.22, 0.7), (0.42, 0.95), (0.62, 0.6)):
+        capsule(0.05, ln, (-1.12 - ln / 2, 0.0, z), M("cream"), "X", segs=8, steps=2, name="speed_line")
+
+
+# ---------------------------------------------------------------- business buildings
+def build_DashShop():
+    W, D, H = 28.0, 14.0, 10.0
+    y0 = 1.6
+    fy = y0 - D / 2
+    zb = 0.5
+    red, yel = "ketchup", "mustard"
+    # pavement + foundation (extends forward as a sidewalk)
+    box((W + 1.2, D + 4.0, zb), (0, y0 - 1.6, zb / 2), M("concrete"), bevel=0.08, segs=1, name="sidewalk")
+    box((W + 1.25, 0.5, 0.12), (0, y0 - 1.6 - (D + 4.0) / 2 + 0.25, zb + 0.02), M("concrete_dark"), bevel=0,
+        name="curb")
+    box((2.0, 8.4, 0.3), (W / 2 + 1.5, y0 + 3.3, 0.15), M("concrete_dark"), bevel=0.06, segs=1, name="apron")
+    # shell
+    box((W, D, H), (0, y0, zb + H / 2), M("cream"), bevel=0.15, segs=2, name="walls")
+    box((W + 0.12, D + 0.12, 1.3), (0, y0, zb + 0.65), M(red), bevel=0.06, segs=1, name="base_band")
+    box((W + 0.5, D + 0.5, 0.9), (0, y0, zb + H + 0.25), M(yel), bevel=0.12, segs=2, name="cornice")
+    top = zb + H + 0.7
+    box((W - 0.2, D - 0.2, 0.06), (0, y0, top + 0.03), M("concrete"), bevel=0, name="roof_deck")
+    for sx in (-1, 1):
+        box((0.4, D + 0.5, 0.6), (sx * (W / 2 + 0.05), y0, top + 0.3), M(red), bevel=0.06, segs=1, name="parapet")
+        box((0.9, 0.9, H), (sx * W / 2, fy + 0.2, zb + H / 2), M(red), bevel=0.1, segs=1, name="pilaster")
+    for sy in (-1, 1):
+        box((W + 0.5, 0.4, 0.6), (0, y0 + sy * (D / 2 + 0.05), top + 0.3), M(red), bevel=0.06, segs=1, name="parapet")
+    rivets((-W / 2 + 1.2, fy - 0.27, zb + H + 0.25), (W / 2 - 1.2, fy - 0.27, zb + H + 0.25), 16, r=0.09,
+           mat="cream")
+    # shop windows with hot-dog decals
+    for sx in (-1, 1):
+        place(lambda: window(9.0, 3.6, frame=red, cols=3), (sx * 7.6, fy, zb + 3.4))
+        xform(hotdog(lod=0.5), (sx * 7.6, fy - 0.31, zb + 3.1), (rad(90), 0, rad(8 * sx)), (1.6, 1.6, 0.12))
+    # double doors + step + transom
+    for sx in (-1, 1):
+        place(lambda: door(1.7, 4.4, col="teal", frame=red, handle_side=-1), (sx * 0.95, fy, zb))
+    place(lambda: window(3.6, 0.7, frame=red, cols=1, sill=False), (0, fy, zb + 5.1))
+    box((5.0, 1.3, 0.2), (0, fy - 0.65, zb + 0.1), M("concrete_dark"), bevel=0.05, segs=1, name="step")
+    # striped awning
+    adepth, tilt, az = 3.3, 16, zb + 6.0
+    ay = fy - 0.05 - adepth / 2 * math.cos(rad(tilt))
+    stripes(-13.2, 13.2, 14, ay, az, adepth, 0.14, tilt, [red, "cream"])
+    fy2 = fy - 0.05 - adepth * math.cos(rad(tilt))
+    fz = az - adepth / 2 * math.sin(rad(tilt))
+    scallops(-13.2, 13.2, 14, fy2, fz, 0.4, [red, "cream"])
+    for x in (-12.6, -4.4, 4.4, 12.6):
+        tube([(x, fy, zb + 4.6), (x, fy2 + 0.3, fz - 0.05)], 0.06, chrome(), name="awning_strut")
+    # blank sign with bulbs
+    place(lambda: sign_panel(15.0, 2.0, frame=red, face="cream", bulbs=1), (0, fy, zb + 8.45))
+    # planters + bollards by the door
+    for sx in (-1, 1):
+        planter((sx * 3.4, fy - 0.9, zb), w=1.8, d=1.0, h=0.9, col=yel)
+        for x in (sx * 10.5, sx * 5.5):
+            cyl(0.2, 0.9, (x, fy - 3.6, zb + 0.45), M(yel), verts=12, name="bollard")
+            sphere(0.2, (x, fy - 3.6, zb + 0.9), M(yel), segs=10, rings=5, name="bollard_cap")
+    # side garage door (+X) with its own small sign + side window
+    place(lambda: rollup(7.0, 6.0, col="cream", frame=yel), (W / 2, y0 + 3.4, zb), rad(90))
+    place(lambda: sign_panel(5.0, 0.9, frame=red), (W / 2, y0 + 3.4, zb + 8.6), rad(90))
+    place(lambda: window(3.0, 2.6, frame=red, cols=2), (W / 2, fy + 2.4, zb + 4.0), rad(90))
+    for sy in (-0.4, 7.2):
+        sphere(0.25, (W / 2 + 0.3, y0 + sy, zb + 7.3), M("cream", emit=1.0), segs=10, rings=6, name="wall_lamp")
+    # downspouts
+    for sx in (-1, 1):
+        cyl(0.18, H, (sx * (W / 2 + 0.2), y0 + D / 2 - 0.6, zb + H / 2), M("teal"), verts=10, name="downspout")
+    # roof: AC unit, vents, mascot on plinth
+    box((3.2, 2.4, 1.4), (-9.0, y0 + 3.5, top + 0.7), M("chrome", metal=0.5, rough=0.35), bevel=0.12, segs=2,
+        name="ac_unit")
+    torus(0.75, 0.1, (-9.0, y0 + 3.5, top + 1.42), M("navy"), segs=20, rsegs=6, name="ac_fan_ring")
+    cyl(0.68, 0.06, (-9.0, y0 + 3.5, top + 1.41), M("navy"), verts=20, name="ac_fan")
+    for x in (8.0, 10.0):
+        cyl(0.3, 1.2, (x, y0 + 4.5, top + 0.6), chrome(), verts=12, name="vent")
+        cyl(0.45, 0.2, (x, y0 + 4.5, top + 1.3), chrome(), r2=0.15, verts=12, name="vent_cap")
+    cyl(3.0, 0.7, (0, y0 + 1.0, top + 0.35), M(red), verts=28, bevel=0.08, name="plinth")
+    torus(3.0, 0.14, (0, y0 + 1.0, top + 0.68), M(yel), segs=28, rsegs=6, name="plinth_ring")
+    for x in (-2.0, 2.0):
+        cyl(0.16, 1.4, (x * 0.9, y0 + 1.0, top + 1.1), chrome(), verts=10, name="mascot_pole")
+    place(mascot_dog, (0, y0 + 1.0, top + 1.4), rot=(rad(20), 0, 0), s=4.9)
+
+
+def build_DepotBuilding():
+    W, D, H = 34.0, 15.5, 11.0
+    y0 = 2.0
+    fy = y0 - D / 2
+    zb = 0.4
+    wall, rib = "teal", "teal_dark"
+    box((W + 1.0, D + 1.0, zb), (0, y0, zb / 2), M("concrete"), bevel=0.06, segs=1, name="slab")
+    box((W, D, H), (0, y0, zb + H / 2), M(wall), bevel=0.12, segs=2, name="walls")
+    # company stripe (ketchup + mustard) wrapping the building
+    box((W + 0.14, D + 0.14, 0.75), (0, y0, zb + 8.6), M("ketchup"), bevel=0.04, segs=1, name="stripe")
+    box((W + 0.14, D + 0.14, 0.3), (0, y0, zb + 7.85), M("mustard"), bevel=0.02, segs=1, name="stripe2")
+    box((W + 0.5, D + 0.5, 0.5), (0, y0, zb + H + 0.1), M("cream"), bevel=0.1, segs=1, name="coping")
+    top = zb + H + 0.35
+    # corrugated ribs on the front and +X walls
+    for i in range(35):
+        x = -W / 2 + 0.5 + i * (W - 1.0) / 34
+        box((0.14, 0.12, 7.2), (x, fy - 0.05, zb + 3.6 + 0.2), M(rib), bevel=0, name="rib")
+        box((0.14, 0.12, 1.75), (x, fy - 0.05, zb + 9.95), M(rib), bevel=0, name="rib")
+    for i in range(16):
+        y = fy + 0.5 + i * (D - 1.0) / 15
+        box((0.12, 0.14, 7.2), (W / 2 + 0.05, y, zb + 3.8), M(rib), bevel=0, name="rib")
+    # loading dock platform with hazard edge, bumpers, steps + rail
+    dz = 1.4
+    dx0, dx1 = -W / 2 + 0.2, 6.0
+    box((dx1 - dx0, 3.2, dz), ((dx0 + dx1) / 2, fy - 1.6, dz / 2), M("concrete"), bevel=0.06, segs=1, name="dock")
+    hazard(dx0, dx1, fy - 3.23, dz - 0.15, 0.3, 26)
+    for k in range(4):
+        box((1.8, 0.42, dz * (k + 1) / 4), (dx1 + 0.9, fy - 1.6 - 1.05 + k * 0.42, dz * (k + 1) / 8),
+            M("concrete_dark"), bevel=0.03, segs=1, name="dock_step")
+    railing((dx1 - 0.1, fy - 3.0, dz), (dx1 - 0.1, fy - 0.3, dz), h=1.0, n=3, mat="mustard")
+    for i, x in enumerate((-12.0, -5.0, 2.0)):
+        place(lambda: rollup(5.4, 5.6, col="cream", frame="mustard"), (x, fy, dz))
+        for sx in (-1, 1):
+            box((0.5, 0.5, 0.9), (x + sx * 2.3, fy - 0.3 - 0.25 - 0.3, dz + 0.55), M("black", rough=0.8), bevel=0.06,
+                segs=1, name="dock_bumper")
+        box((4.2, 1.0, 0.1), (x, fy - 0.7, dz + 0.05), M("steel"), bevel=0.02, segs=1, name="dock_plate")
+        sphere(0.25, (x, fy - 0.9, dz + 7.25), M("mustard", emit=1.0), segs=10, rings=6, name="bay_light")
+        box((0.5, 0.5, 0.3), (x, fy - 0.65, dz + 7.4), M("navy"), bevel=0.05, segs=1, name="bay_light_hood")
+        place(lambda: sign_panel(1.0, 0.7, frame="navy", face="cream"), (x - 3.6, fy - 0.12, dz + 5.0))
+    # office corner with door + windows
+    ox = 11.6
+    box((9.4, 2.0, 7.2), (ox, fy - 1.0, zb + 3.6), M("cream"), bevel=0.15, segs=2, name="office")
+    box((9.6, 2.2, 0.5), (ox, fy - 1.0, zb + 7.3), M("ketchup"), bevel=0.08, segs=1, name="office_cap")
+    place(lambda: door(1.8, 3.8, col="ketchup", frame="navy"), (ox - 2.6, fy - 2.0, zb))
+    place(lambda: window(4.4, 2.2, frame="navy", cols=3), (ox + 1.6, fy - 2.0, zb + 2.6))
+    place(lambda: window(7.6, 1.6, frame="navy", cols=4), (ox, fy - 2.0, zb + 5.6))
+    box((3.6, 1.4, 0.15), (ox - 2.6, fy - 2.6, zb + 4.4), M("mustard"), bevel=0.04, segs=1, name="door_canopy")
+    planter((ox + 3.8, fy - 2.9, zb), w=1.4, d=0.9, h=0.8, col="navy")
+    # roof: turbine vents, skylights, rooftop company sign
+    for x in (-13.0, -6.0, 1.0, 8.0, 14.0):
+        cyl(0.55, 0.8, (x, y0 + 4.0, top + 0.4), M("steel"), verts=14, name="vent_neck")
+        lathe([(0, 0), (0.95, 0), (0.95, 0.5), (0.7, 1.0), (0, 1.15)], chrome(), loc=(x, y0 + 4.0, top + 0.8),
+              segs=14, name="turbine")
+        for k in range(7):
+            a = TAU * k / 7
+            box((0.06, 0.4, 0.55), (x + 0.93 * math.cos(a), y0 + 4.0 + 0.93 * math.sin(a), top + 1.08),
+                M("steel"), rot=(0, 0, a), bevel=0, name="turbine_fin")
+    for x in (-10.0, 0.0, 10.0):
+        box((4.0, 2.4, 0.5), (x, y0 + 0.2, top + 0.25), M("window", rough=0.15), bevel=0.12, segs=1, name="skylight")
+    for x in (-10.0, 2.0):
+        box((0.3, 0.3, 1.4), (x, fy + 1.0, top + 0.7), M("navy"), bevel=0.03, segs=1, name="sign_leg")
+    place(lambda: sign_panel(14.0, 2.4, frame="ketchup", face="cream", bulbs=1), (-4.0, fy + 0.9, top + 2.9))
+
+
+def build_TradingFloor():
+    W, D = 23.6, 15.6
+    zb = 0.6
+    FH = 6.2
+    box((26.0, 18.0, zb), (0, 0, zb / 2), M("stone_dark"), bevel=0.1, segs=1, name="plaza")
+    fy = -D / 2
+    for f in range(3):
+        z0 = zb + f * FH
+        box((W, D, FH - 0.6), (0, 0, z0 + (FH - 0.6) / 2), M("window", rough=0.15), bevel=0.05, segs=1,
+            name="curtain_wall")
+        box((W + 1.4, D + 1.4, 0.6), (0, 0, z0 + FH - 0.3), M("cream"), bevel=0.12, segs=2, name="slab")
+        box((W + 1.46, D + 1.46, 0.16), (0, 0, z0 + FH - 0.42), M("teal"), bevel=0, name="slab_fascia")
+        for i in range(13):
+            x = -W / 2 + i * W / 12
+            box((0.16, 0.16, FH - 0.6), (x, fy - 0.06, z0 + (FH - 0.6) / 2), chrome(), bevel=0, name="mullion")
+        for i in range(9):
+            y = fy + i * D / 8
+            box((0.16, 0.16, FH - 0.6), (W / 2 + 0.06, y, z0 + (FH - 0.6) / 2), chrome(), bevel=0, name="mullion")
+        if f > 0:
+            box((W + 0.1, 0.12, 0.14), (0, fy - 0.08, z0 + 1.0), chrome(), bevel=0, name="transom")
+            box((0.12, D + 0.1, 0.14), (W / 2 + 0.08, 0, z0 + 1.0), chrome(), bevel=0, name="transom")
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            box((0.9, 0.9, 3 * FH), (sx * W / 2, sy * D / 2, zb + 1.5 * FH), M("cream"), bevel=0.12, segs=1,
+                name="corner_column")
+    # ground floor entrance, canopy and blank sign
+    box((8.0, 1.0, 3.8), (0, fy - 0.4, zb + 1.9), M("navy"), bevel=0.06, segs=1, name="entrance_frame")
+    for sx in (-1, 1):
+        place(lambda: door(1.6, 3.2, col="window", frame="navy", glass=False, handle_side=-1),
+              (sx * 0.85, fy - 0.9, zb))
+    box((9.5, 3.2, 0.3), (0, fy - 1.9, zb + 4.0), M("teal"), bevel=0.08, segs=1, name="canopy")
+    for x in (-4.4, 4.4):
+        cyl(0.12, 4.0, (x, fy - 3.3, zb + 2.0), chrome(), verts=10, name="canopy_post")
+    place(lambda: sign_panel(9.0, 1.2, frame="navy", face="cream", bulbs=1), (0, fy - 0.06, zb + 4.95))
+    for sx in (-1, 1):
+        planter((sx * 7.0, fy - 1.5, zb), w=2.4, d=1.0, h=0.8, col="navy")
+    # roof: ticker band on posts around the perimeter
+    top = zb + 3 * FH
+    bz = top + 1.6
+    for sx in (-1, 0, 1):
+        for sy in (-1, 1):
+            box((0.3, 0.3, 1.0), (sx * (W / 2 - 0.3), sy * (D / 2 - 0.3), top + 0.5), M("navy"), bevel=0, name="band_post")
+    for sy in (-1, 1):
+        box((W, 0.35, 1.5), (0, sy * (D / 2 - 0.2), bz + 0.2), M("navy"), bevel=0.06, segs=1, name="ticker_band")
+    for sx in (-1, 1):
+        box((0.35, D, 1.5), (sx * (W / 2 - 0.2), 0, bz + 0.2), M("navy"), bevel=0.06, segs=1, name="ticker_band")
+    for z in (bz + 1.0, bz - 0.6):
+        for sy in (-1, 1):
+            box((W + 0.2, 0.55, 0.14), (0, sy * (D / 2 - 0.2), z), M("mustard"), bevel=0, name="band_trim")
+        for sx in (-1, 1):
+            box((0.55, D + 0.2, 0.14), (sx * (W / 2 - 0.2), 0, z), M("mustard"), bevel=0, name="band_trim")
+    cols = ("relish", "relish", "ketchup", "relish", "mustard")
+    for i in range(22):
+        x = -W / 2 + 0.8 + i * (W - 1.6) / 21
+        box((0.6, 0.05, 0.3 + 0.15 * (i % 3)), (x, -D / 2 + 0.0, bz + 0.2), M(cols[i % 5], emit=1.3), bevel=0,
+            name="ticker_mark")
+    for i in range(14):
+        y = -D / 2 + 0.8 + i * (D - 1.6) / 13
+        box((0.05, 0.6, 0.3 + 0.15 * (i % 3)), (W / 2 + 0.0, y, bz + 0.2), M(cols[(i + 2) % 5], emit=1.3), bevel=0,
+            name="ticker_mark")
+    # rooftop plant, mast with an up-arrow
+    box((6.0, 4.0, 1.6), (-4.0, 2.0, top + 0.8), M("cream"), bevel=0.12, segs=1, name="roof_plant")
+    for i in range(4):
+        box((5.0, 0.06, 0.12), (-4.0, -0.03, top + 0.4 + i * 0.3), M("steel"), bevel=0, name="louvre")
+    cyl(0.18, 4.4, (5.0, 2.0, top + 2.2), chrome(), verts=10, name="mast")
+    box((0.9, 0.4, 1.6), (5.0, 2.0, top + 3.8), M("relish", emit=0.5), bevel=0.05, segs=1, name="arrow_stem")
+    wedge_prism([(-1.0, 0), (1.0, 0), (0, 1.1)], 0.4, M("relish", emit=0.5), loc=(5.0, 2.0, top + 4.6), bevel=0.04,
+                name="arrow_head")
+
+
+def build_LabBuilding():
+    W, D, H = 26.0, 15.0, 9.0
+    y0 = 1.0
+    fy = y0 - D / 2
+    zb = 0.5
+    box((W + 1.4, D + 4.0, zb), (0, y0 - 1.3, zb / 2), M("concrete"), bevel=0.08, segs=1, name="slab")
+    box((W, D, H), (0, y0, zb + H / 2), M("cream"), bevel=1.0, segs=4, name="lab_shell")
+    box((W + 0.1, D + 0.1, 0.7), (0, y0, zb + 0.95), M("teal"), bevel=0.3, segs=2, name="band_low")
+    box((W + 0.1, D + 0.1, 0.4), (0, y0, zb + H - 1.4), M("teal"), bevel=0.15, segs=2, name="band_high")
+    top = zb + H
+    # round porthole windows
+    for x in (-10.0, -7.0, -4.0, 4.0, 7.0, 10.0):
+        torus(0.95, 0.18, (x, fy - 0.05, zb + 4.6), chrome(), rot=(rad(90), 0, 0), segs=20, rsegs=6, name="porthole")
+        cyl(0.9, 0.1, (x, fy - 0.02, zb + 4.6), M("window", rough=0.15), rot=(rad(90), 0, 0), verts=20, name="port_glass")
+        box((2.2, 0.3, 0.15), (x, fy - 0.15, zb + 3.3), M("teal"), bevel=0.04, segs=1, name="port_sill")
+    for y in (fy + 3.5, fy + 7.0, fy + 10.5):
+        torus(0.95, 0.18, (W / 2 + 0.05, y, zb + 4.6), chrome(), rot=(0, rad(90), 0), segs=20, rsegs=6, name="porthole")
+        cyl(0.9, 0.1, (W / 2 + 0.02, y, zb + 4.6), M("window", rough=0.15), rot=(0, rad(90), 0), verts=20,
+            name="port_glass")
+    # entrance pod with rounded canopy + doors
+    box((7.0, 1.6, 5.4), (0, fy - 0.6, zb + 2.7), M("teal"), bevel=0.6, segs=3, name="entry_pod")
+    for sx in (-1, 1):
+        place(lambda: door(1.6, 3.6, col="cream", frame="teal_dark", handle_side=-1), (sx * 0.85, fy - 1.4, zb))
+    box((8.6, 2.6, 0.4), (0, fy - 1.9, zb + 5.6), M("cream"), bevel=0.18, segs=3, name="canopy")
+    box((8.7, 2.7, 0.14), (0, fy - 1.9, zb + 5.4), M("teal_dark"), bevel=0.05, segs=1, name="canopy_trim")
+    for x in (-3.9, 3.9):
+        cyl(0.13, 5.4, (x, fy - 2.9, zb + 2.7), chrome(), verts=10, name="canopy_post")
+    place(lambda: sign_panel(11.0, 1.6, frame="teal_dark", face="cream", bulbs=1), (0, fy, zb + 7.35))
+    for sx in (-1, 1):
+        planter((sx * 5.2, fy - 1.2, zb), w=2.0, d=1.0, h=0.8, col="teal", leaf="relish")
+    # roof parapet + glass dome with a hot dog inside
+    box((W - 1.6, D - 1.6, 0.25), (0, y0, top + 0.1), M("concrete"), bevel=0.05, segs=1, name="roof_deck")
+    dx, dyy = -5.5, y0 + 1.0
+    cyl(5.3, 0.9, (dx, dyy, top + 0.45), chrome(), verts=32, bevel=0.1, name="dome_drum")
+    torus(5.3, 0.16, (dx, dyy, top + 0.92), M("teal"), segs=32, rsegs=6, name="dome_ring")
+    cyl(1.0, 1.4, (dx, dyy, top + 1.6), M("teal"), verts=16, name="dome_pedestal")
+    xform(hotdog(lod=0.8), (dx, dyy, top + 2.3), (0, 0, rad(-25)), 2.4)
+    R = 5.0
+    prof = [(R, 0)] + [(R * math.cos(a), R * 0.95 * math.sin(a)) for a in [rad(d) for d in range(10, 91, 10)]]
+    prof[-1] = (0, R * 0.95)
+    lathe(prof, M("glass", transmission=1.0), loc=(dx, dyy, top + 0.9), segs=32, cap=False, name="dome")
+    for k in range(6):
+        a = TAU * k / 6
+        pts = [((R + 0.04) * math.cos(t) * math.cos(a) + dx, (R + 0.04) * math.cos(t) * math.sin(a) + dyy,
+                top + 0.9 + (R * 0.95 + 0.04) * math.sin(t)) for t in [rad(d) for d in range(0, 91, 10)]]
+        tube(pts, 0.08, M("teal"), name="dome_rib")
+    sphere(0.4, (dx, dyy, top + 0.9 + R * 0.95 + 0.25), M("ketchup", emit=0.8), segs=12, rings=8, name="dome_beacon")
+    # chimney with puffs
+    cx, cy = 9.5, y0 + 4.0
+    cyl(0.95, 6.0, (cx, cy, top + 3.0), M("teal_dark"), verts=18, name="chimney")
+    for z in (top + 1.5, top + 4.0):
+        cyl(1.05, 0.4, (cx, cy, z), M("cream"), verts=18, name="chimney_band")
+    cyl(1.2, 0.5, (cx, cy, top + 6.1), chrome(), verts=18, name="chimney_cap")
+    for i, (ox, oz, r) in enumerate(((0.2, 7.2, 0.8), (-0.6, 8.0, 0.65), (0.5, 8.6, 0.5))):
+        sphere(r, (cx + ox, cy, top + oz), M("cream", rough=0.9), segs=14, rings=8, name="puff")
+    # giant beakers on the roof
+    def beaker(x, y, h, liquid):
+        cyl(1.0, 0.25, (x, y, top + 0.37), M("teal_dark"), verts=16, name="beaker_base")
+        prof = [(0, 0), (0.95, 0), (1.0, 0.15), (0.95, 0.4 * h), (0.35, 0.8 * h), (0.32, h), (0.42, h + 0.1),
+                (0, h + 0.1)]
+        lathe(prof, M("glass", transmission=1.0), loc=(x, y, top + 0.5), segs=20, name="beaker")
+        lathe([(0, 0.05), (0.88, 0.05), (0.9, 0.35 * h), (0.55, 0.55 * h), (0, 0.55 * h)], M(liquid, emit=0.9),
+              loc=(x, y, top + 0.5), segs=20, name="beaker_liquid")
+        sphere(0.2, (x + 0.1, y, top + 0.5 + h + 0.5), M(liquid, emit=0.9), segs=8, rings=5, name="bubble")
+    beaker(2.4, y0 - 4.0, 2.6, "relish")
+    beaker(5.6, y0 - 4.4, 2.0, "pink")
+    beaker(8.6, y0 - 3.4, 2.4, "mustard")
+    tube([(2.4, y0 - 4.0, top + 2.7), (2.4, y0 - 2.0, top + 3.6), (6.0, y0 - 1.2, top + 3.6), (9.5, y0 + 3.0,
+          top + 3.0)], 0.12, M("teal"), name="roof_pipe")
+
+
+def build_RoboticsFactory():
+    W, D, H = 30.0, 17.0, 8.0
+    y0 = 1.4
+    fy = y0 - D / 2
+    zb = 0.4
+    box((W + 1.0, D + 3.0, zb), (0, y0 - 1.0, zb / 2), M("concrete"), bevel=0.06, segs=1, name="slab")
+    box((W, D, H), (0, y0, zb + H / 2), M("cream"), bevel=0.12, segs=2, name="walls")
+    box((W + 0.14, D + 0.14, 2.2), (0, y0, zb + 1.1), M("navy"), bevel=0.06, segs=1, name="plinth_band")
+    box((W + 0.4, D + 0.4, 0.45), (0, y0, zb + H), M("mustard"), bevel=0.08, segs=1, name="eave")
+    top = zb + H + 0.22
+    # sawtooth roof (4 teeth over -X part, flat deck over +X part)
+    tw, th = 5.5, 3.0
+    x0 = -W / 2
+    for i in range(4):
+        xa = x0 + i * tw
+        wedge_prism([(xa, 0), (xa + tw, 0), (xa + tw, th)], D, M("teal"), loc=(0, y0, top), bevel=0.05,
+                    name="saw_tooth")
+        box((0.12, D - 0.8, th - 0.5), (xa + tw + 0.04, y0, top + (th - 0.5) / 2 + 0.15), M("window", rough=0.15),
+            bevel=0, name="saw_glass")
+        for k in range(1, 6):
+            box((0.16, 0.12, th - 0.5), (xa + tw + 0.08, y0 - D / 2 + k * D / 6, top + (th - 0.5) / 2 + 0.15),
+                chrome(), bevel=0, name="saw_mullion")
+    box((W - 4 * tw - 0.2, D - 0.2, 0.2), (x0 + 4 * tw + (W - 4 * tw) / 2, y0, top + 0.1), M("concrete"), bevel=0,
+        name="flat_deck")
+    # front: hangar door, windows strip, gear emblem, blank sign
+    place(lambda: rollup(8.0, 5.6, col="chrome", frame="mustard"), (-8.0, fy, zb))
+    hazard(-12.4, -3.6, fy - 0.5, zb + 0.15, 0.3, 14)
+    for x in (2.0, 9.5):
+        place(lambda: window(5.0, 1.8, frame="navy", cols=4), (x, fy, zb + 5.0))
+    place(lambda: door(1.8, 3.4, col="ketchup", frame="navy"), (12.4, fy, zb))
+    gear(1.25, 0.3, (5.6, fy - 0.2, zb + 2.3), M("mustard"), teeth=10)
+    place(lambda: sign_panel(11.0, 1.4, frame="navy", face="cream", bulbs=1), (-6.0, fy, zb + 7.0))
+    for i in range(14):
+        cyl(0.07, 0.12, (-W / 2 + 1 + i * (W - 2) / 13, fy - 0.06, zb + 2.0), chrome(), rot=(rad(90), 0, 0),
+            verts=8, name="rivet")
+    # +X side: loading door + pipes
+    place(lambda: rollup(5.0, 4.6, col="cream", frame="mustard"), (W / 2, y0 + 2.5, zb), rad(90))
+    for k, z in enumerate((zb + 6.2, zb + 6.8)):
+        tube([(W / 2 + 0.3, fy + 0.5, z), (W / 2 + 0.3, y0 + D / 2 - 0.5, z)], 0.14,
+             M("ketchup" if k else "relish"), name="wall_pipe")
+    # robot arm on the flat deck
+    ax, ay = 10.0, y0 - 1.0
+    cyl(1.8, 0.6, (ax, ay, top + 0.5), M("navy"), verts=24, bevel=0.08, name="arm_base")
+    cyl(1.3, 0.9, (ax, ay, top + 1.2), M("mustard"), verts=24, bevel=0.08, name="arm_turret")
+    sh = Vector((ax, ay, top + 2.2))
+    el = Vector((ax - 2.4, ay + 0.4, top + 6.6))
+    wr = Vector((ax - 5.2, ay - 0.4, top + 5.0))
+    sphere(0.85, sh, M("chrome", metal=0.5, rough=0.35), segs=16, rings=10, name="shoulder")
+    sphere(0.7, el, M("chrome", metal=0.5, rough=0.35), segs=16, rings=10, name="elbow")
+    for a, b, r in ((sh, el, 0.55), (el, wr, 0.42)):
+        d = b - a
+        mid = (a + b) / 2
+        q = d.to_track_quat("Z", "Y").to_euler()
+        o = capsule(r, d.length + r, (0, 0, 0), M("mustard"), "Z", segs=16, steps=3, name="arm_link")
+        xform([o], tuple(mid), tuple(q))
+    for a, b in ((sh, el), (el, wr)):
+        d = b - a
+        q = d.to_track_quat("Z", "Y").to_euler()
+        place(lambda: cyl(0.6, 0.3, (0, 0, 0), M("navy"), verts=16, name="arm_band"), tuple((a + b) / 2), rot=tuple(q))
+    sphere(0.45, wr, M("navy"), segs=12, rings=8, name="wrist")
+    for sx in (-1, 1):
+        box((0.22, 0.4, 1.1), (wr.x + sx * 0.45, wr.y, wr.z - 0.75), chrome(), bevel=0.04, segs=1, name="gripper")
+    xform(hotdog(lod=0.6), (wr.x, wr.y, wr.z - 1.55), (0, 0, rad(90)), 1.0)
+    box((2.6, 2.0, 1.2), (12.6, y0 + 5.0, top + 0.6), chrome(), bevel=0.1, segs=1, name="roof_unit")
+    torus(0.6, 0.08, (12.6, y0 + 5.0, top + 1.22), M("navy"), segs=16, rsegs=5, name="roof_fan")
+    # smokestack (ground to 20) with bands + smoke
+    sx_, sy_ = -12.8, y0 + D / 2 - 1.8
+    cyl(1.4, 18.0, (sx_, sy_, 9.1), M("brick"), r2=1.1, verts=20, name="stack")
+    for z in (11.5, 14.0, 16.5):
+        cyl(1.42 - (z - 0.1) * 0.0158 + 0.05, 0.6, (sx_, sy_, z), M("cream"), verts=20, name="stack_band")
+    cyl(1.35, 0.5, (sx_, sy_, 18.3), M("navy"), verts=20, name="stack_lip")
+    for ox, oz, r in ((0.2, 19.2, 0.95), (1.3, 19.9, 0.7)):
+        sphere(r, (sx_ + ox, sy_, oz), M("cream", rough=0.9), segs=12, rings=8, name="smoke")
+    # forklift parking cones out front
+    for x in (-2.5, 0.0):
+        cone((x, fy - 1.6, zb), 1.0)
+
+
+def build_RepublicCapitol():
+    zb = 2.4
+    stone, dark, gold = "stone", "stone_dark", "gold"
+    gm = M(gold, metal=0.6, rough=0.35)
+    box((34.0, 18.0, zb), (0, 2.0, zb / 2), M(dark), bevel=0.12, segs=2, name="podium")
+    box((34.3, 18.3, 0.3), (0, 2.0, zb - 0.1), M(stone), bevel=0.05, segs=1, name="podium_lip")
+    fy_pod = 2.0 - 9.0
+    n = 6
+    for k in range(n):
+        dep = (n - k) * 0.7
+        box((14.0 - k * 0.2, dep, (k + 1) * zb / n), (0, fy_pod - dep / 2 + 0.05, (k + 1) * zb / n / 2),
+            M(stone if k % 2 == 0 else dark), bevel=0.04, segs=1, name="stair")
+    for sx in (-1, 1):
+        box((1.2, n * 0.7, zb + 0.5), (sx * 7.6, fy_pod - n * 0.35, (zb + 0.5) / 2), M(stone), bevel=0.08, segs=1,
+            name="stair_cheek")
+        sphere(0.55, (sx * 7.6, fy_pod - n * 0.7 + 0.6, zb + 0.9), gm, segs=12, rings=8, name="cheek_ball")
+    # main hall
+    hy = 4.0
+    box((30.0, 12.0, 8.0), (0, hy, zb + 4.0), M(stone), bevel=0.1, segs=2, name="hall")
+    box((30.4, 12.4, 0.8), (0, hy, zb + 8.2), M(dark), bevel=0.08, segs=1, name="hall_cornice")
+    box((30.2, 12.2, 0.6), (0, hy, zb + 0.3), M(dark), bevel=0.05, segs=1, name="hall_base")
+    hfy = hy - 6.0
+    for x in (-12.5, -9.5, 9.5, 12.5):
+        place(lambda: window(1.6, 3.4, frame="cream", cols=1, rows=2), (x, hfy, zb + 4.0))
+        cyl(0.98, 0.2, (x, hfy - 0.1, zb + 5.7), M("cream"), rot=(rad(90), 0, 0), verts=16, name="arch")
+        cyl(0.8, 0.22, (x, hfy - 0.15, zb + 5.7), M("window", rough=0.15), rot=(rad(90), 0, 0), verts=16, name="arch_glass")
+    for y in (hy - 3.0, hy + 1.0, hy + 4.5):
+        place(lambda: window(1.6, 3.4, frame="cream", cols=1, rows=2), (15.0, y, zb + 4.0), rad(90))
+    # portico: columns, entablature with blank sign, pediment
+    py = hfy - 1.8
+    for i in range(6):
+        x = -6.25 + i * 2.5
+        lathe([(0, 0), (0.85, 0), (0.85, 0.35), (0.62, 0.5), (0.55, 0.7), (0.48, 6.3), (0.6, 6.5), (0.85, 6.75),
+               (0.85, 7.0), (0, 7.0)], M("cream"), loc=(x, py, zb), segs=16, name="column")
+    ez = zb + 7.0
+    box((16.4, 4.4, 1.7), (0, py + 1.2, ez + 0.85), M(stone), bevel=0.08, segs=1, name="entablature")
+    place(lambda: sign_panel(11.0, 0.8, frame=gold, face="cream"), (0, py - 1.0, ez + 0.85))
+    wedge_prism([(-8.6, 0), (8.6, 0), (0, 2.8)], 4.6, M(stone), loc=(0, py + 1.2, ez + 1.7), bevel=0.06,
+                name="pediment")
+    wedge_prism([(-7.4, 0), (7.4, 0), (0, 2.1)], 0.2, M(dark), loc=(0, py - 1.1, ez + 1.95), name="tympanum")
+    xform(hotdog(lod=0.6), (0, py - 1.25, ez + 2.35), (rad(90), 0, 0), (1.8, 1.8, 0.2))
+    box((16.4, 4.6, 0.25), (0, py + 1.2, ez + 1.82), M(gold, metal=0.6, rough=0.35), bevel=0.03, segs=1,
+        name="gold_trim")
+    place(lambda: door(2.6, 4.6, col="wood_dark", frame=gold, glass=False), (0, hfy, zb))
+    # drum + colonnade + golden dome + lantern + hot dog
+    dz = zb + 8.6
+    cyl(6.2, 0.8, (0, hy, dz + 0.4), M(dark), verts=36, bevel=0.06, name="drum_base")
+    cyl(5.3, 3.6, (0, hy, dz + 2.6), M(stone), verts=36, name="drum")
+    for i in range(16):
+        a = TAU * i / 16
+        cyl(0.22, 3.4, (5.75 * math.cos(a), hy + 5.75 * math.sin(a), dz + 2.5), M("cream"), verts=10,
+            name="drum_column")
+    cyl(6.1, 0.4, (0, hy, dz + 4.4), M(dark), verts=36, name="drum_cornice")
+    R = 5.0
+    prof = [(R, 0)] + [(R * math.cos(a), R * 1.1 * math.sin(a)) for a in [rad(d) for d in range(8, 91, 8)]] + [
+        (0, R * 1.1)]
+    lathe(prof, gm, loc=(0, hy, dz + 4.6), segs=36, name="dome")
+    for k in range(12):
+        a = TAU * k / 12
+        pts = [((R + 0.06) * math.cos(t) * math.cos(a), hy + (R + 0.06) * math.cos(t) * math.sin(a),
+                dz + 4.6 + (R * 1.1 + 0.06) * math.sin(t)) for t in [rad(d) for d in range(0, 81, 8)]]
+        tube(pts, 0.1, M("mustard"), name="dome_rib")
+    lz = dz + 4.6 + R * 1.1 - 0.2
+    cyl(1.0, 1.4, (0, hy, lz + 0.7), M("cream"), verts=16, name="lantern")
+    for i in range(8):
+        a = TAU * i / 8
+        cyl(0.1, 1.2, (1.05 * math.cos(a), hy + 1.05 * math.sin(a), lz + 0.7), gm, verts=6, name="lantern_col")
+    lathe([(1.15, 0), (0.9, 0.4), (0.4, 0.75), (0, 0.85)], gm, loc=(0, hy, lz + 1.4), segs=16, name="lantern_dome")
+    cyl(0.12, 0.6, (0, hy, lz + 2.5), gm, verts=8, name="spire")
+    xform(hotdog(lod=1.0), (0, hy, lz + 2.75), (0, 0, 0), 2.6)
+    # flags + bushes on the podium
+    for sx in (-1, 1):
+        flag((sx * 15.8, -5.6, zb), 7.5, "ketchup" if sx < 0 else "mustard", w=2.4, fh=1.5)
+        for x in (sx * 10.5, sx * 13.0):
+            cyl(0.55, 0.7, (x, -5.0, zb + 0.35), M(dark), r2=0.4, verts=14, name="urn")
+            bush((x, -5.0, zb + 1.1), r=0.6)
+
+
+def build_LaunchSite():
+    W, D = 40.0, 28.0
+    box((W, D, 0.5), (0, 0, 0.25), M("concrete"), bevel=0.1, segs=1, name="pad_slab")
+    zb = 0.5
+    hazard(-W / 2 + 0.4, W / 2 - 0.4, -D / 2 + 0.6, zb + 0.01, 0.02, 40, depth=0.6)
+    rx, ry = -9.0, 3.0
+    cyl(7.2, 0.06, (rx, ry, zb + 0.03), M("mustard"), verts=40, name="pad_ring")
+    cyl(6.6, 0.08, (rx, ry, zb + 0.04), M("concrete_dark"), verts=40, name="pad_inner")
+    box((4.0, 12.0, 0.1), (rx, ry - 9.0, zb + 0.05), M("concrete_dark"), bevel=0, name="flame_trench")
+    place(hotdog_rocket, (rx, ry, zb), s=1.08)
+    # gantry tower (lattice) beside the rocket
+    tx, ty = rx + 9.0, ry + 0.5
+    TW, TH = 3.6, 32.0
+    red = M("ketchup")
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            box((0.36, 0.36, TH), (tx + sx * TW / 2, ty + sy * TW / 2, zb + TH / 2), red, bevel=0.04, segs=1,
+                name="tower_post")
+    nlev = 10
+    for k in range(nlev + 1):
+        z = zb + 0.6 + k * (TH - 0.6) / nlev
+        for sy in (-1, 1):
+            box((TW, 0.22, 0.22), (tx, ty + sy * TW / 2, z), red, bevel=0, name="tower_beam")
+        for sx in (-1, 1):
+            box((0.22, TW, 0.22), (tx + sx * TW / 2, ty, z), red, bevel=0, name="tower_beam")
+        if k < nlev:
+            z2 = zb + 0.6 + (k + 1) * (TH - 0.6) / nlev
+            a, b = (-1, 1) if k % 2 else (1, -1)
+            tube([(tx + a * TW / 2, ty - TW / 2 - 0.02, z), (tx + b * TW / 2, ty - TW / 2 - 0.02, z2)], 0.08,
+                 M("cream"), name="brace")
+            tube([(tx + TW / 2 + 0.02, ty + a * TW / 2, z), (tx + TW / 2 + 0.02, ty + b * TW / 2, z2)], 0.08,
+                 M("cream"), name="brace")
+            tube([(tx - TW / 2 - 0.02, ty + a * TW / 2, z), (tx - TW / 2 - 0.02, ty + b * TW / 2, z2)], 0.08,
+                 M("cream"), name="brace")
+    box((TW + 0.8, TW + 0.8, 0.4), (tx, ty, zb + TH + 0.2), M("navy"), bevel=0.08, segs=1, name="tower_cap")
+    cyl(0.1, 3.0, (tx, ty, zb + TH + 1.9), chrome(), verts=8, name="lightning_rod")
+    sphere(0.3, (tx, ty, zb + TH + 3.4), M("ketchup", emit=1.5), segs=10, rings=6, name="beacon")
+    box((1.8, 1.8, 2.4), (tx, ty, zb + 1.2), M("mustard"), bevel=0.06, segs=1, name="elevator")
+    # crew access arms to the rocket
+    for z, ln in ((zb + 23.5, 6.0), (zb + 14.0, 5.6)):
+        box((ln, 1.0, 0.4), (tx - TW / 2 - ln / 2, ty, z), M("navy"), bevel=0.05, segs=1, name="access_arm")
+        railing((tx - TW / 2 - ln + 0.6, ty - 0.45, z + 0.2), (tx - TW / 2, ty - 0.45, z + 0.2), h=0.8, n=4,
+                mat="mustard")
+        box((1.4, 1.6, 1.6), (tx - TW / 2 - ln + 0.3, ty, z + 1.0), M("cream"), bevel=0.12, segs=1,
+            name="white_room")
+    tube([(tx - TW / 2, ty + 1.0, zb + 18.5), (rx + 2.2, ry + 1.0, zb + 17.0)], 0.15, chrome(), name="umbilical")
+    # fuel tanks (mustard + ketchup) on saddles with pipes
+    for i, (x, col) in enumerate(((13.0, "mustard"), (17.5, "ketchup"))):
+        capsule(1.9, 10.0, (x, 4.0, zb + 2.6), M(col, rough=0.35), "Y", segs=20, name="fuel_tank")
+        for y in (0.6, 7.4):
+            box((3.2, 0.7, 1.2), (x, y, zb + 0.6), M("concrete_dark"), bevel=0.06, segs=1, name="saddle")
+        for y in (0.2, 7.8):
+            torus(1.92, 0.12, (x, y, zb + 2.6), M("navy"), rot=(rad(90), 0, 0), segs=24, rsegs=5, name="tank_band")
+        tube([(x, -0.6, zb + 2.6), (x, -1.6, zb + 2.6), (x, -1.6, zb + 0.6), (tx + 2.2, -1.6, zb + 0.6),
+              (tx + 2.2, ty - 1.2, zb + 0.6)], 0.18, chrome(), name="fuel_pipe")
+        cyl(0.4, 0.15, (x, -1.6, zb + 1.9), M("ketchup" if col == "mustard" else "mustard"), verts=12,
+            name="valve_wheel")
+    sphere(2.6, (15.2, -6.8, zb + 4.3), M("cream"), segs=24, rings=14, name="sphere_tank")
+    for a in range(4):
+        ang = TAU * a / 4 + TAU / 8
+        cyl(0.18, 3.4, (15.2 + 1.9 * math.cos(ang), -6.8 + 1.9 * math.sin(ang), zb + 1.7), M("steel"), verts=8,
+            name="tank_leg")
+    torus(2.62, 0.1, (15.2, -6.8, zb + 4.3), M("teal"), segs=28, rsegs=5, name="tank_equator")
+    # blockhouse with blank sign
+    bx, by = 5.0, -9.5
+    box((8.0, 4.4, 3.4), (bx, by, zb + 1.7), M("cream"), bevel=0.4, segs=3, name="blockhouse")
+    box((8.2, 4.6, 0.4), (bx, by, zb + 3.4), M("navy"), bevel=0.1, segs=1, name="blockhouse_roof")
+    place(lambda: window(4.0, 0.9, frame="navy", cols=4, sill=False), (bx + 0.8, by - 2.2, zb + 2.2))
+    place(lambda: door(1.3, 2.4, col="ketchup", frame="navy"), (bx - 2.6, by - 2.2, zb))
+    for x in (bx - 3.0, bx + 3.0):
+        box((0.3, 0.3, 1.4), (x, by + 0.6, zb + 4.3), M("navy"), bevel=0, name="sign_leg")
+    place(lambda: sign_panel(8.5, 1.8, frame="ketchup", face="cream", bulbs=1), (bx, by + 0.6, zb + 6.0))
+    box((1.6, 1.6, 1.0), (bx + 2.8, by + 1.0, zb + 4.1), chrome(), bevel=0.1, segs=1, name="antenna_box")
+    for x in (-17.0, -1.0):
+        lamp_post((x, -12.6, zb), h=5.0)
+
+
+# @@PROPS@@
+
 ASSETS_LIST = [
     ("HotDog", build_HotDog, (2, 0.8, 0.8)),
     ("Bun", build_Bun, (2, 0.8, 0.6)),
@@ -1012,6 +1732,15 @@ ASSETS_LIST = [
     ("AlienInvestor", build_AlienInvestor, (2.5, 2, 5)),
     ("MoneyBag", build_MoneyBag, (1.5, 1.5, 1.8)),
     ("VoidHotDog", build_VoidHotDog, (2, 0.8, 0.8)),
+    # business buildings (front entrance faces -Y, blank sign panel for SurfaceGui text)
+    ("DashShop", build_DashShop, (30, 18, 16)),
+    ("DepotBuilding", build_DepotBuilding, (36, 20, 16)),
+    ("TradingFloor", build_TradingFloor, (26, 18, 24)),
+    ("LabBuilding", build_LabBuilding, (28, 18, 18)),
+    ("RoboticsFactory", build_RoboticsFactory, (32, 20, 20)),
+    ("RepublicCapitol", build_RepublicCapitol, (34, 22, 26)),
+    ("LaunchSite", build_LaunchSite, (40, 28, 34)),
+    # @@PROPLIST@@
 ]
 FOOD = {"HotDog", "Bun", "VoidHotDog", "MoneyBag", "IngredientCrate"}
 

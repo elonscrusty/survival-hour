@@ -177,7 +177,33 @@ local function refresh(d: any)
 	end
 end
 
+-- Big floating word over a business card ("x2 CASH!", "LEVEL UP!").
+local function burst(bizId: string, text: string, color: Color3)
+	local card = cards[bizId]
+	if not card then
+		return
+	end
+	local frame = card.gui:FindFirstChildOfClass("Frame")
+	local l = Kit.label({ Text = text, Size = UDim2.new(1, 0, 0, 40), Position = UDim2.fromOffset(0, 30), Parent = frame, TextColor3 = color, MaxText = 36, ZIndex = 6 })
+	Kit.textStroke(3).Parent = l
+	Kit.popIn(l)
+	Kit.tween(l, 1.1, { Position = UDim2.fromOffset(0, -50), TextTransparency = 1 })
+	task.delay(1.15, function()
+		l:Destroy()
+	end)
+	Kit.pulse(card.output, 0.25)
+end
+
 function WorldUI.init()
+	State.Notify:Connect(function(kind, data)
+		if kind == "bought" and (data.kind == "cash" or data.kind == "speed") then
+			burst(data.bizId, string.format("x%s %s!", tostring(data.mult), if data.kind == "cash" then "CASH" else "SPEED"), if data.kind == "cash" then C.gold else C.teal)
+		elseif kind == "bought" and data.kind == "auto" then
+			burst(data.bizId, "AUTOMATIC!", C.green)
+		elseif kind == "leveled" then
+			burst(data.bizId, if data.n > 1 then "LEVEL UP x" .. data.n .. "!" else "LEVEL UP!", C.white)
+		end
+	end)
 	State.Changed:Connect(refresh)
 	Bus.BulkChanged:Connect(function()
 		if State.data then

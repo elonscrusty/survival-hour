@@ -39,8 +39,12 @@ local function clearBody()
 end
 
 local function show(kind: string, title: string, height: number)
+	local fresh = openKind ~= kind or not gui.Enabled
 	openKind = kind
 	gui.Enabled = true
+	if fresh then
+		Kit.popIn(box)
+	end
 	titleLabel.Text = title
 	box.Size = UDim2.fromOffset(520, height)
 	clearBody()

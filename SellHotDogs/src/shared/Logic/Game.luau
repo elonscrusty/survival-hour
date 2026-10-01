@@ -359,6 +359,58 @@ function Game.buyPower(p: Profile, id: string): (boolean, string)
 end
 
 ---------------------------------------------------------------------------
+-- Decor (looks only; bought with cash, kept through every reset)
+---------------------------------------------------------------------------
+local DECOR: { [string]: any } = {}
+for _, item in Catalog.decor.items do
+	DECOR[item.id] = item
+end
+Game.DECOR = DECOR
+
+function Game.buyDecor(p: Profile, id: string): (boolean, string)
+	local item = DECOR[id]
+	if not item then
+		return false, "Unknown decoration"
+	end
+	if p.decor[id] then
+		return false, "Already owned"
+	end
+	if not spend(p, BigNum.new(item.price)) then
+		return false, "Not enough cash"
+	end
+	p.decor[id] = true
+	return true, item.name .. " placed!"
+end
+
+---------------------------------------------------------------------------
+-- Progress milestones (banners only)
+---------------------------------------------------------------------------
+-- Returns the lifetime-earnings milestones newly passed since the last call.
+function Game.newMilestones(p: Profile): { number }
+	local list = Catalog.progress.cashMilestones.value
+	local done = p.stats.milestone or 0
+	local out = {}
+	while done < #list and BigNum.gte(p.totalEarned, BigNum.new(list[done + 1])) do
+		done += 1
+		table.insert(out, list[done])
+	end
+	p.stats.milestone = done
+	return out
+end
+
+-- How many level milestones a business has reached (drives extra props/customers).
+function Game.levelTier(p: Profile, bizId: string): number
+	local lv = p.biz[bizId].level
+	local n = 0
+	for _, m in Catalog.progress.levelMilestones.value do
+		if lv >= m then
+			n += 1
+		end
+	end
+	return n
+end
+
+---------------------------------------------------------------------------
 -- Prestige and resets
 ---------------------------------------------------------------------------
 

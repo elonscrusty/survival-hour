@@ -265,7 +265,7 @@
           "src": "W-stand",
           "requires": "billboard",
           "requiresStatus": "hypothesis",
-          "model": "CondimentStation"
+          "model": "RelishMixer"
         },
         {
           "id": "flyers",
@@ -278,7 +278,7 @@
           "src": "W-stand",
           "requires": "relish",
           "requiresStatus": "hypothesis",
-          "model": "Flyers"
+          "model": "FlyerStand"
         },
         {
           "id": "grill",
@@ -291,7 +291,7 @@
           "src": "W-stand",
           "requires": "flyers",
           "requiresStatus": "hypothesis",
-          "model": "Grill"
+          "model": "FlameGrill"
         },
         {
           "id": "bogo",
@@ -304,7 +304,7 @@
           "src": "W-stand",
           "requires": "grill",
           "requiresStatus": "hypothesis",
-          "model": "Sign"
+          "model": "BogoSign"
         }
       ]
     },
@@ -327,7 +327,7 @@
           "kind": "structure",
           "status": "observed",
           "src": "N 02:10",
-          "model": "Floor"
+          "model": "DashFloor"
         },
         {
           "id": "walls",
@@ -339,7 +339,7 @@
           "src": "W-dash",
           "requires": "floor",
           "requiresStatus": "hypothesis",
-          "model": "Walls"
+          "model": "DashWalls"
         },
         {
           "id": "fees",
@@ -352,7 +352,7 @@
           "src": "W-dash",
           "requires": "walls",
           "requiresStatus": "hypothesis",
-          "model": "Sign"
+          "model": "FeeBoard"
         },
         {
           "id": "bike",
@@ -375,7 +375,7 @@
           "kind": "auto",
           "status": "secondary",
           "src": "W-dash; W-income",
-          "model": "CashRegister"
+          "model": "DispatchDesk"
         },
         {
           "id": "dashgame",
@@ -386,7 +386,7 @@
           "status": "placeholder",
           "src": "N 03:20 (locked pad seen; price not readable)",
           "note": "UNRESOLVED price.",
-          "model": "Arcade"
+          "model": "DashArcade"
         }
       ]
     },
@@ -423,7 +423,7 @@
           "src": "W-depot",
           "requires": "fleet",
           "requiresStatus": "hypothesis",
-          "model": "DepotTruck"
+          "model": "FridgeTruck"
         },
         {
           "id": "loading",
@@ -435,7 +435,7 @@
           "src": "W-depot",
           "requires": "fridge",
           "requiresStatus": "hypothesis",
-          "model": "Conveyor"
+          "model": "LoadingConveyor"
         },
         {
           "id": "depotmgr",
@@ -445,7 +445,7 @@
           "kind": "auto",
           "status": "secondary",
           "src": "W-income",
-          "model": "CashRegister"
+          "model": "DepotOffice"
         },
         {
           "id": "boxing",
@@ -457,7 +457,7 @@
           "src": "W-depot",
           "requires": "loading",
           "requiresStatus": "hypothesis",
-          "model": "Crates"
+          "model": "BoxingMachine"
         },
         {
           "id": "gps",
@@ -469,7 +469,7 @@
           "src": "W-depot",
           "requires": "boxing",
           "requiresStatus": "hypothesis",
-          "model": "Antenna"
+          "model": "GpsTower"
         },
         {
           "id": "express",
@@ -482,7 +482,7 @@
           "src": "W-depot",
           "requires": "gps",
           "requiresStatus": "hypothesis",
-          "model": "Sign"
+          "model": "ExpressSign"
         },
         {
           "id": "insurance",
@@ -494,7 +494,7 @@
           "src": "W-depot",
           "requires": "express",
           "requiresStatus": "hypothesis",
-          "model": "Sign"
+          "model": "InsuranceBooth"
         },
         {
           "id": "fleet2",
@@ -506,7 +506,7 @@
           "src": "W-depot",
           "requires": "insurance",
           "requiresStatus": "hypothesis",
-          "model": "DeliveryVan"
+          "model": "BigVan"
         },
         {
           "id": "wholesale",
@@ -518,7 +518,7 @@
           "src": "W-depot",
           "requires": "fleet2",
           "requiresStatus": "hypothesis",
-          "model": "Sign"
+          "model": "PalletStack"
         },
         {
           "id": "exterior",
@@ -531,7 +531,7 @@
           "src": "W-depot; B 04:40 (name seen as a Forever Purchase target)",
           "requires": "wholesale",
           "requiresStatus": "hypothesis",
-          "model": "Sign"
+          "model": "LedDisplay"
         },
         {
           "id": "branding",
@@ -555,7 +555,7 @@
           "src": "W-depot",
           "requires": "branding",
           "requiresStatus": "hypothesis",
-          "model": "Antenna"
+          "model": "TurboEngine"
         },
         {
           "id": "selfdrive",
@@ -567,7 +567,7 @@
           "src": "W-depot",
           "requires": "turbo",
           "requiresStatus": "hypothesis",
-          "model": "DepotTruck"
+          "model": "RobotTruck"
         },
         {
           "id": "fuel",
@@ -580,7 +580,7 @@
           "src": "W-depot",
           "requires": "selfdrive",
           "requiresStatus": "hypothesis",
-          "model": "Conveyor"
+          "model": "FuelTank"
         }
       ]
     },
@@ -604,7 +604,7 @@
           "status": "secondary",
           "src": "W-trading",
           "note": "CONFLICT: below unlock price.",
-          "model": "TradingTicker"
+          "model": "BrokerDesk"
         },
         {
           "id": "sauce",
@@ -615,7 +615,7 @@
           "mult": 3,
           "status": "secondary",
           "src": "W-trading",
-          "model": "TradingTicker"
+          "model": "SauceVault"
         },
         {
           "id": "tradingmgr",
@@ -625,7 +625,7 @@
           "kind": "auto",
           "status": "secondary",
           "src": "W-income",
-          "model": "CashRegister"
+          "model": "BullStatue"
         },
         {
           "id": "allday",
@@ -638,7 +638,7 @@
           "note": "UNRESOLVED cost.",
           "requires": "sauce",
           "requiresStatus": "hypothesis",
-          "model": "TradingTicker"
+          "model": "ClockBoard"
         }
       ]
     },
@@ -661,7 +661,7 @@
           "kind": "auto",
           "status": "secondary",
           "src": "W-income",
-          "model": "KitchenRobot"
+          "model": "ScientistBot"
         },
         {
           "id": "testing",
@@ -742,7 +742,7 @@
           "kind": "auto",
           "status": "secondary",
           "src": "W-income",
-          "model": "HotDogRocket"
+          "model": "MissionConsole"
         }
       ]
     }
@@ -1141,5 +1141,124 @@
       "grants": "investors currently offered, without resetting",
       "secondaryRobux": 99
     }
-  ]
+  ],
+  "decor": {
+    "_note": "Looks-only plot decorations (Sell Hot Dogs addition, not in the reference). Bought with in-game cash, kept forever (never reset), no effect on earnings. Prices are our choice.",
+    "items": [
+      {
+        "id": "planter",
+        "name": "Flower Planters",
+        "model": "Planter",
+        "price": 250
+      },
+      {
+        "id": "bench",
+        "name": "Park Bench",
+        "model": "Bench",
+        "price": 1000
+      },
+      {
+        "id": "lamps",
+        "name": "Lamp Posts",
+        "model": "LampPost",
+        "price": 2500
+      },
+      {
+        "id": "picnic",
+        "name": "Picnic Table",
+        "model": "PicnicTable",
+        "price": 10000
+      },
+      {
+        "id": "umbrella",
+        "name": "Patio Umbrella",
+        "model": "PatioUmbrella",
+        "price": 25000
+      },
+      {
+        "id": "balloons",
+        "name": "Balloon Bunch",
+        "model": "BalloonBunch",
+        "price": 50000
+      },
+      {
+        "id": "lights",
+        "name": "String Lights",
+        "model": "StringLights",
+        "price": 250000
+      },
+      {
+        "id": "arch",
+        "name": "Flower Arch",
+        "model": "FlowerArch",
+        "price": 1000000
+      },
+      {
+        "id": "neon",
+        "name": "Neon Diner Sign",
+        "model": "NeonSign",
+        "price": 10000000
+      },
+      {
+        "id": "topiary",
+        "name": "Hot Dog Topiary",
+        "model": "HotDogTopiary",
+        "price": 100000000
+      },
+      {
+        "id": "fountain",
+        "name": "Hot Dog Fountain",
+        "model": "Fountain",
+        "price": 1000000000
+      },
+      {
+        "id": "statue",
+        "name": "Mascot Statue",
+        "model": "HotDogStatue",
+        "price": 1000000000000
+      }
+    ],
+    "status": "placeholder",
+    "src": "OURS"
+  },
+  "progress": {
+    "_note": "Feel-good feedback only (Sell Hot Dogs addition): banners, bigger plots, more customers. No effect on earnings.",
+    "cashMilestones": {
+      "value": [
+        100,
+        1000,
+        10000,
+        100000,
+        1000000.0,
+        1000000000.0,
+        1000000000000.0,
+        1000000000000000.0,
+        1e+18,
+        1e+21,
+        1e+24,
+        1e+30,
+        1e+40,
+        1e+50,
+        1e+60,
+        1e+80,
+        1e+100
+      ],
+      "status": "placeholder",
+      "src": "OURS",
+      "note": "Lifetime-earnings banners."
+    },
+    "levelMilestones": {
+      "value": [
+        10,
+        25,
+        50,
+        100
+      ],
+      "status": "placeholder",
+      "src": "OURS",
+      "note": "Business levels that add extra props/customers around it."
+    },
+    "status": "placeholder",
+    "src": "OURS"
+  }
 }

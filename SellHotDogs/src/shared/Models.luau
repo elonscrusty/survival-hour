@@ -542,6 +542,189 @@ B.LaunchSite = function(m)
 	s.Name = "BizSign"
 end
 
+-- Decor (looks-only shop items) ------------------------------------------------------
+B.Planter = function(m)
+	part(m, Vector3.new(6, 1.6, 2), at(0, 0.8, 0), C.wood)
+	part(m, Vector3.new(5.6, 0.3, 1.6), at(0, 1.65, 0), Color3.fromRGB(110, 75, 50))
+	for i = 0, 6 do
+		ball(m, 0.8, at(-2.4 + i * 0.8, 2.1 + (i % 2) * 0.3, (i % 3 - 1) * 0.4), ({ C.ketchup, C.mustard, C.cream, C.violet })[i % 4 + 1], { collide = false })
+	end
+end
+
+B.Bench = function(m)
+	for _, x in { -2.4, 2.4 } do
+		part(m, Vector3.new(0.4, 1.6, 2), at(x, 0.8, 0), C.dark)
+	end
+	for i = 0, 2 do
+		part(m, Vector3.new(6, 0.25, 0.55), at(0, 1.7, -0.6 + i * 0.6), C.wood)
+	end
+	for i = 0, 1 do
+		part(m, Vector3.new(6, 0.5, 0.2), at(0, 2.4 + i * 0.7, 0.95), C.wood)
+	end
+end
+
+B.LampPost = function(m)
+	cyl(m, 0.4, 1.6, at(0, 0.2, 0) * UP, C.dark)
+	cyl(m, 8.5, 0.35, at(0, 4.6, 0) * UP, C.dark)
+	part(m, Vector3.new(1.4, 1.6, 1.4), at(0, 9.4, 0), Color3.fromRGB(255, 240, 190), { neon = true })
+	part(m, Vector3.new(1.8, 0.3, 1.8), at(0, 10.3, 0), C.dark)
+	local light = Instance.new("PointLight")
+	light.Range = 14
+	light.Brightness = 0.8
+	light.Color = Color3.fromRGB(255, 225, 170)
+	light.Parent = m:FindFirstChildWhichIsA("Part", true)
+end
+
+B.PicnicTable = function(m)
+	part(m, Vector3.new(6, 0.35, 2.6), at(0, 2.6, 0), C.wood)
+	for _, z in { -2.1, 2.1 } do
+		part(m, Vector3.new(6, 0.3, 0.9), at(0, 1.5, z), C.wood)
+	end
+	for _, x in { -2.4, 2.4 } do
+		part(m, Vector3.new(0.35, 2.6, 4.6), at(x, 1.3, 0), C.woodDark)
+	end
+	cyl(m, 0.9, 0.35, at(-0.4, 3.2, 0) * UP, C.ketchup)
+	cyl(m, 0.9, 0.35, at(0.4, 3.2, 0) * UP, C.mustard)
+end
+
+B.PatioUmbrella = function(m)
+	cyl(m, 0.3, 4, at(0, 2.5, 0) * UP, C.cream)
+	cyl(m, 2.5, 0.3, at(0, 1.3, 0) * UP, C.steel)
+	cyl(m, 7, 0.25, at(0, 4.5, 0) * UP, C.steel)
+	for i = 0, 7 do
+		local a = i / 8 * math.pi * 2
+		part(m, Vector3.new(3.4, 0.2, 1.4), CFrame.Angles(0, a, 0) * at(1.7, 7.6, 0) * CFrame.Angles(0, 0, math.rad(-18)), if i % 2 == 0 then C.ketchup else C.cream)
+	end
+end
+
+B.BalloonBunch = function(m)
+	part(m, Vector3.new(1, 0.6, 1), at(0, 0.3, 0), C.dark)
+	local cols = { C.ketchup, C.mustard, C.relish, C.teal, C.violet }
+	for i = 1, 5 do
+		local a = i / 5 * math.pi * 2
+		local pos = Vector3.new(math.cos(a) * 1, 7.5 + (i % 2), math.sin(a) * 1)
+		ball(m, 1.8, CFrame.new(pos), cols[i], { collide = false })
+		part(m, Vector3.new(0.05, 7, 0.05), CFrame.lookAt(Vector3.new(0, 0.6, 0):Lerp(pos, 0.5), pos) * CFrame.Angles(math.rad(90), 0, 0), C.white, { collide = false })
+	end
+end
+
+B.StringLights = function(m)
+	for _, x in { -6.5, 6.5 } do
+		cyl(m, 9, 0.35, at(x, 4.5, 0) * UP, C.woodDark)
+	end
+	for i = 0, 12 do
+		local x = -6 + i
+		local y = 8.4 - math.sin(i / 12 * math.pi) * 1.2
+		ball(m, 0.45, at(x, y, 0), ({ C.mustard, C.ketchup, C.relish, C.teal })[i % 4 + 1], { neon = true, collide = false })
+	end
+end
+
+B.FlowerArch = function(m)
+	for i = 0, 10 do
+		local a = i / 10 * math.pi
+		ball(m, 1.6, at(math.cos(a) * 4, 1 + math.sin(a) * 8, 0), if i % 3 == 0 then C.ketchup elseif i % 3 == 1 then Color3.fromRGB(110, 200, 95) else C.cream, { collide = false })
+	end
+	for _, x in { -4, 4 } do
+		part(m, Vector3.new(0.8, 2, 0.8), at(x, 1, 0), C.woodDark)
+	end
+end
+
+B.NeonSign = function(m)
+	cyl(m, 9, 0.6, at(0, 4.5, 0) * UP, C.dark)
+	part(m, Vector3.new(4, 3, 0.6), at(0, 9.5, 0), C.dark)
+	part(m, Vector3.new(3.4, 2.4, 0.2), at(0, 9.5, -0.35), C.ketchup, { neon = true })
+	part(m, Vector3.new(3, 0.7, 0.3), at(0.8, 7.4, -0.3) * CFrame.Angles(0, 0, math.rad(-20)), C.mustard, { neon = true })
+end
+
+B.HotDogTopiary = function(m)
+	part(m, Vector3.new(8, 1.4, 3), at(0, 0.7, 0), C.wood)
+	part(m, Vector3.new(7, 1.8, 2.4), at(0, 2.3, 0), Color3.fromRGB(90, 170, 80), { material = Enum.Material.Grass })
+	cyl(m, 7.6, 1.4, at(0, 3.5, 0), Color3.fromRGB(70, 140, 60), { material = Enum.Material.Grass })
+end
+
+B.Fountain = function(m)
+	cyl(m, 1.4, 10, at(0, 0.7, 0) * UP, C.cream, { material = Enum.Material.Marble })
+	cyl(m, 1.2, 9, at(0, 0.9, 0) * UP, C.teal, { transparency = 0.25, material = Enum.Material.Glass })
+	cyl(m, 3, 1.6, at(0, 2.5, 0) * UP, C.cream, { material = Enum.Material.Marble })
+	Models.hotDog(m, at(0, 4.6, 0) * CFrame.Angles(0, 0, math.rad(60)), 1.6)
+end
+
+B.HotDogStatue = function(m)
+	part(m, Vector3.new(5, 2, 5), at(0, 1, 0), C.cream, { material = Enum.Material.Marble })
+	Models.hotDog(m, at(0, 7, 0) * CFrame.Angles(0, 0, math.rad(90)), 4.5, C.mustard, C.sausage)
+	ball(m, 0.5, at(-0.4, 9, -1.1), C.dark)
+	ball(m, 0.5, at(0.4, 9, -1.1), C.dark)
+end
+
+-- Customers (blocky friendly people) --------------------------------------------------
+local function person(m: Model, shirt: Color3, pants: Color3, holding: boolean)
+	part(m, Vector3.new(0.8, 1.8, 0.8), at(-0.45, 0.9, 0), pants, { name = "LegL" })
+	part(m, Vector3.new(0.8, 1.8, 0.8), at(0.45, 0.9, 0), pants, { name = "LegR" })
+	part(m, Vector3.new(1.9, 1.9, 1), at(0, 2.75, 0), shirt, { name = "Torso" })
+	part(m, Vector3.new(1.2, 1.2, 1.2), at(0, 4.3, 0), Color3.fromRGB(255, 205, 160), { name = "Head" })
+	ball(m, 0.22, at(-0.25, 4.4, -0.62), C.dark, { collide = false })
+	ball(m, 0.22, at(0.25, 4.4, -0.62), C.dark, { collide = false })
+	if holding then
+		Models.hotDog(m, at(1.2, 2.9, -0.6), 0.5)
+	end
+	for _, d in m:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.CanCollide = false
+			d.CanQuery = false
+		end
+	end
+end
+B.CustomerA = function(m)
+	person(m, C.teal, Color3.fromRGB(60, 70, 120), false)
+end
+B.CustomerB = function(m)
+	person(m, C.ketchup, Color3.fromRGB(80, 60, 50), false)
+end
+B.CustomerC = function(m)
+	person(m, C.mustard, Color3.fromRGB(50, 90, 60), true)
+end
+
+-- Sky objects -------------------------------------------------------------------------
+B.Blimp = function(m)
+	cyl(m, 34, 11, at(0, 7, 0), C.sausage, { collide = false })
+	ball(m, 11, at(17, 7, 0), C.sausage, { collide = false })
+	ball(m, 11, at(-17, 7, 0), C.sausage, { collide = false })
+	part(m, Vector3.new(30, 5, 12), at(0, 4, 0), C.bun, { collide = false })
+	part(m, Vector3.new(6, 2, 3), at(0, 0.6, 0), C.cream, { collide = false })
+	for _, r in { 0, 90, 180 } do
+		part(m, Vector3.new(6, 0.5, 5), at(-20, 7, 0) * CFrame.Angles(math.rad(r), 0, 0) * at(0, 0, 3), C.mustard, { collide = false })
+	end
+end
+B.HotAirBalloon = function(m)
+	for i = 0, 7 do
+		local a = i / 8 * math.pi * 2
+		part(m, Vector3.new(3.6, 10, 2), CFrame.Angles(0, a, 0) * at(0, 12, 4.4), if i % 2 == 0 then C.ketchup else C.mustard, { collide = false })
+	end
+	ball(m, 11, at(0, 13, 0), C.mustard, { collide = false })
+	part(m, Vector3.new(3, 2.4, 3), at(0, 1.2, 0), C.wood, { collide = false })
+end
+B.CloudPuff = function(m)
+	for i = 0, 5 do
+		ball(m, 8 + (i % 3) * 2, at(-12 + i * 5, 5 + (i % 2) * 2, (i % 3 - 1) * 3), C.white, { collide = false })
+	end
+end
+B.Bird = function(m)
+	part(m, Vector3.new(0.6, 0.4, 1.2), at(0, 0.4, 0), C.dark, { collide = false })
+	part(m, Vector3.new(2, 0.1, 0.6), at(0, 0.5, 0), C.dark, { collide = false, name = "Wings" })
+end
+
+-- Upgrades without their own stand-in reuse the closest one until the meshes load.
+local ALIAS: { [string]: string } = {
+	RelishMixer = "CondimentStation", FlyerStand = "Flyers", FlameGrill = "Grill", BogoSign = "Sign",
+	DashFloor = "Floor", DashWalls = "Walls", FeeBoard = "Sign", DispatchDesk = "CashRegister", DashArcade = "Arcade",
+	FridgeTruck = "DepotTruck", LoadingConveyor = "Conveyor", DepotOffice = "CashRegister", BoxingMachine = "Crates",
+	GpsTower = "Antenna", ExpressSign = "Sign", InsuranceBooth = "CashRegister", BigVan = "DeliveryVan",
+	PalletStack = "Crates", LedDisplay = "TradingTicker", TurboEngine = "Grill", RobotTruck = "DepotTruck",
+	FuelTank = "Conveyor", BrokerDesk = "TradingTicker", SauceVault = "CashRegister", BullStatue = "HotDogStatue",
+	ClockBoard = "TradingTicker", ScientistBot = "KitchenRobot", MissionConsole = "TradingTicker",
+}
+Models.ALIAS = ALIAS
+
 Models.BUILDING_FOR = {
 	stand = "HotDogStand",
 	dash = "DashShop",
@@ -554,6 +737,16 @@ Models.BUILDING_FOR = {
 }
 
 -- Build a model by name. Imported meshes in ReplicatedStorage.Assets win over stand-ins.
+function Models.has(name: string): boolean
+	return B[name] ~= nil or ALIAS[name] ~= nil
+end
+
+-- True once the uploaded mesh for `name` has been loaded into ReplicatedStorage.Assets.
+function Models.hasMesh(name: string): boolean
+	local assets = ReplicatedStorage:FindFirstChild("Assets")
+	return assets ~= nil and assets:FindFirstChild(name) ~= nil
+end
+
 function Models.build(name: string): Model
 	local assets = ReplicatedStorage:FindFirstChild("Assets")
 	local imported = assets and assets:FindFirstChild(name)
@@ -568,7 +761,7 @@ function Models.build(name: string): Model
 	end
 	local m = Instance.new("Model")
 	m.Name = name
-	local f = B[name] or B.Sign
+	local f = B[name] or B[ALIAS[name] or ""] or B.Sign
 	f(m)
 	m.WorldPivot = CFrame.new()
 	return m

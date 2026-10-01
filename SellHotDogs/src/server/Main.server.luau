@@ -7,10 +7,14 @@ local World = require(Services.World)
 local GameService = require(Services.GameService)
 local Extras = require(Services.Extras)
 local Data = require(Services.Data)
+local AssetLoader = require(Services.AssetLoader)
 
 game:GetService("Players").CharacterAutoLoads = true
 World.init()
 GameService.init()
 Extras.init()
 Data.init()
+-- uploaded Blender meshes replace the native-part stand-ins as they arrive
+AssetLoader.onLoaded = World.swap
+AssetLoader.init()
 print("[SellHotDogs] server ready")

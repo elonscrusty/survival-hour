@@ -229,6 +229,79 @@ if pick then
 	check("pickup: far touch ignored, near touch pays once", farOk and pick.Parent == nil and session.profile.stats.pickups == 1, "stats.pickups=" .. tostring(session.profile.stats.pickups))
 end
 
+-- Pass 2 features ----------------------------------------------------------------------
+local hud0 = pg.Hud
+local walletFrame = hud0:FindFirstChild("Wallet", true)
+check("wallet is compact (200 x 42 design px)", walletFrame and walletFrame.Size.X.Offset == 200 and walletFrame.Size.Y.Offset == 42)
+local nextBarFrame = hud0:FindFirstChild("NextUnlock", true)
+local nextLabel
+for _, dd in (nextBarFrame and nextBarFrame:GetDescendants() or {}) do
+	if dd:IsA("TextLabel") and dd.Text:find("^Next:") then
+		nextLabel = dd.Text
+	end
+end
+check("next-unlock bar names the next purchase", nextLabel ~= nil and nextLabel:find("Bun Rack") ~= nil or (nextLabel or ""):find("Billboard") ~= nil or (nextLabel or ""):find("Next:") ~= nil, tostring(nextLabel))
+local amb = dm:GetService("Workspace"):FindFirstChild("LocalAmbient")
+check("sky objects, traffic and customers spawned locally", amb ~= nil and amb:FindFirstChild("Blimp") ~= nil and amb:FindFirstChild("CustomerA") ~= nil or (amb and amb:FindFirstChild("CustomerB") ~= nil), amb and (#amb:GetChildren() .. " local objects") or "none")
+
+-- decor shop through the UI
+session.profile.cash = BigNum.new(400) -- SETUP
+local milestoneSeen = {}
+local prevHook = Engine.onClientEvent
+Engine.onClientEvent = function(name, _, kind, data)
+	if name == "Notify" and kind == "milestone" then
+		table.insert(milestoneSeen, data.kind)
+	end
+end
+task.wait(0.4)
+Engine.press(Engine.findButton(pg.Hud, "^Decor$"))
+task.wait(0.4)
+local panelsGui = pg.Panels
+local icons = 0
+for _, dd in panelsGui:GetDescendants() do
+	if dd:IsA("ViewportFrame") or dd:IsA("ImageLabel") then
+		icons += 1
+	end
+end
+check("Decor tab lists items with picture icons", panelsGui.Enabled and icons >= 6, icons .. " icon views")
+Engine.press(Engine.findButton(panelsGui, "^Buy$"))
+task.wait(0.5)
+check("buying Flower Planters spends $250 and places it on the plot", session.profile.decor.planter == true and math.abs(cash() - 150) < 30 and plot:FindFirstChild("Decor_planter") ~= nil, Format.cash(session.profile.cash))
+Engine.press(Engine.findButton(panelsGui, "✕"))
+-- milestone banner: lifetime earnings past $1,000
+session.profile.totalEarned = BigNum.new(1500) -- SETUP
+task.wait(0.6)
+check("milestone banner sent when lifetime cash passes $1,000", table.find(milestoneSeen, "cash") ~= nil)
+-- level milestone props
+session.profile.cash = BigNum.new(1e6) -- SETUP
+local lvlBefore = session.profile.biz.stand.level
+session.profile.biz.stand.level = 9 -- SETUP: one level from the first milestone
+Action:FireServer("upgrade", "stand", 1)
+task.wait(0.5)
+check("reaching level 10 adds a milestone prop and banner", plot:FindFirstChild("Tier_stand_1") ~= nil and table.find(milestoneSeen, "level") ~= nil)
+session.profile.biz.stand.level = lvlBefore -- SETUP: restore for later checks
+Engine.onClientEvent = prevHook
+-- uploaded mesh swap (simulated: a fake loaded asset replaces the stand-in)
+do
+	local assets = rs:FindFirstChild("Assets") or R.Instance.new("Folder")
+	assets.Name = "Assets"
+	assets.Parent = rs
+	local fake = R.Instance.new("Model")
+	fake.Name = "Planter"
+	local mp = R.Instance.new("Part")
+	mp.Name = "Mesh"
+	mp.Size = R.Vector3.new(6, 2.5, 2)
+	mp.CFrame = R.CFrame.new(0, 1.25, 0)
+	mp.Parent = fake
+	fake.Parent = assets
+	local World = server.require(sss.Server.Services.World)
+	World.swap("Planter")
+	local placed = plot:FindFirstChild("Decor_planter")
+	check("loaded mesh replaces the stand-in in place", placed ~= nil and placed:FindFirstChild("Mesh") ~= nil)
+	fake:Destroy()
+end
+session.profile.cash = BigNum.new(250)
+
 -- Manage panel ------------------------------------------------------------------------
 local hud = pg.Hud
 Engine.press(Engine.findButton(hud, "Manage"))

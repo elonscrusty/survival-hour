@@ -19,7 +19,7 @@ local Phone = require(Shared.Logic.Phone)
 local Products = require(Shared.Products)
 local Data = require("./Data")
 local GameService = require("./GameService")
-local Models = require("./Models")
+local Models = require(Shared.Models)
 local World = require("./World")
 
 local Extras = {}

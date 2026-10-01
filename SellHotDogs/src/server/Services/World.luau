@@ -11,7 +11,7 @@ local Layout = require(Shared.Layout)
 local Economy = require(Shared.Logic.Economy)
 local Game = require(Shared.Logic.Game)
 local Format = require(Shared.Logic.Format)
-local Models = require("./Models")
+local Models = require(Shared.Models)
 
 local C = Models.Colors
 local part = Models.part
@@ -30,6 +30,8 @@ export type Plot = {
 	anchors: { [string]: BasePart },
 	prompts: { [string]: ProximityPrompt },
 	extras: { [string]: Model }, -- portal, staircase, investor kiosk
+	decor: { [string]: Model }, -- looks-only decorations by decor id
+	tiers: { [string]: Model }, -- level-milestone props, key bizId .. ":" .. tier
 	sign: BasePart,
 	shown: { [string]: boolean? }, -- keyed by "pad:"/"prop:"/"biz:"/"extra:" + id
 }
@@ -39,6 +41,7 @@ World.plots = {} :: { Plot }
 World.onPadTouched = nil :: ((Player, string) -> ())?
 World.onBizPrompt = nil :: ((Player, string) -> ())?
 World.onExtraPrompt = nil :: ((Player, string) -> ())?
+local register: (string, any, string, string, CFrame, number?) -> ()
 
 local function setupLighting()
 	Lighting.ClockTime = 14.2
@@ -64,7 +67,28 @@ local function setupLighting()
 	atm.Color = Color3.fromRGB(200, 230, 255)
 	atm.Decay = Color3.fromRGB(150, 200, 240)
 	atm.Glare = 0.15
-	ensure("Sky", "Sky")
+	local sky = ensure("Sky", "Sky") :: Sky
+	sky.SunAngularSize = 16
+	sky.MoonAngularSize = 9
+	sky.StarCount = 1500
+	-- painted original skybox once uploaded (assets/sky/*.png -> AssetIds.Images)
+	local AssetIds = require(Shared.AssetIds)
+	local faces: { [string]: string } = { SkyboxBk = "sky_bk", SkyboxDn = "sky_dn", SkyboxFt = "sky_ft", SkyboxLf = "sky_lf", SkyboxRt = "sky_rt", SkyboxUp = "sky_up" }
+	for prop, img in faces do
+		local id = AssetIds.Images[img]
+		if id then
+			(sky :: any)[prop] = string.format("rbxthumb://type=Asset&id=%d&w=420&h=420", id)
+		end
+	end
+	-- soft 3D clouds (built-in, nothing to upload)
+	local terrain = workspace:FindFirstChildOfClass("Terrain")
+	if terrain and not terrain:FindFirstChildOfClass("Clouds") then
+		local clouds = Instance.new("Clouds")
+		clouds.Cover = 0.58
+		clouds.Density = 0.55
+		clouds.Color = Color3.fromRGB(255, 255, 255)
+		clouds.Parent = terrain
+	end
 	local cc = ensure("ColorCorrectionEffect", "Vibrance") :: ColorCorrectionEffect
 	cc.Saturation = 0.18
 	cc.Contrast = 0.05
@@ -204,6 +228,55 @@ local function makePad(plot: Plot, pad: Economy.PadDef, pos: Vector3)
 	plot.pads[pad.id] = base
 end
 
+-- Props that appear as a business reaches its level milestones (catalog progress.levelMilestones).
+local TIER_MODELS = { "PicnicTable", "PatioUmbrella", "BalloonBunch", "HotDogStatue" }
+
+-- Every placed model by asset name, so uploaded meshes can replace the stand-ins later.
+type Slot = { plot: Plot, kind: string, key: string, cf: CFrame, fit: number? }
+local slots: { [string]: { Slot } } = {}
+register = function(name: string, plot: Plot, kind: string, key: string, cf: CFrame, fit: number?)
+	local list = slots[name]
+	if not list then
+		list = {}
+		slots[name] = list
+	end
+	table.insert(list, { plot = plot, kind = kind, key = key, cf = cf, fit = fit })
+end
+
+-- Swap the stand-ins of `name` for the freshly loaded mesh (keeps signs, prompts and labels).
+local KEEP = { NameSign = true, BizSign = true }
+function World.swap(name: string)
+	local list: { Slot } = slots[name] or {}
+	for _, slot in list do
+		local plot = slot.plot
+		local old: Model?
+		if slot.kind == "racks" then
+			old = (plot.folder :: any).Decor:FindFirstChild(slot.key) :: Model?
+		else
+			old = (plot :: any)[slot.kind][slot.key]
+		end
+		if not old then
+			continue
+		end
+		local m = Models.build(name)
+		if slot.fit then
+			Models.fit(m, slot.fit)
+		end
+		m:PivotTo(slot.cf)
+		m.Name = old.Name
+		for _, child in old:GetChildren() do
+			if KEEP[child.Name] or (child:IsA("BasePart") and child:FindFirstChildWhichIsA("ProximityPrompt")) then
+				child.Parent = m
+			end
+		end
+		m.Parent = old.Parent
+		old:Destroy()
+		if slot.kind ~= "racks" then
+			(plot :: any)[slot.kind][slot.key] = m
+		end
+	end
+end
+
 local function buildPlot(index: number): Plot
 	local origin = Layout.plotOrigin(index)
 	local folder = Instance.new("Folder")
@@ -224,6 +297,8 @@ local function buildPlot(index: number): Plot
 		anchors = {},
 		prompts = {},
 		extras = {},
+		decor = {},
+		tiers = {},
 		sign = nil :: any,
 		shown = {},
 	}
@@ -289,6 +364,17 @@ local function buildPlot(index: number): Plot
 		Models.place(b, origin * CFrame.new(lot.pos), plot.hidden)
 		b.Name = biz.id
 		plot.buildings[biz.id] = b
+		register(Models.BUILDING_FOR[biz.id], plot, "buildings", biz.id, origin * CFrame.new(lot.pos), nil)
+		-- extra props that appear as the business reaches level milestones
+		for tier, model in TIER_MODELS do
+			local cf = origin * CFrame.new(Layout.tierPos(biz.id, tier))
+			local tm = Models.build(model)
+			Models.fit(tm, 7)
+			Models.place(tm, cf, plot.hidden)
+			tm.Name = "Tier_" .. biz.id .. "_" .. tier
+			plot.tiers[biz.id .. ":" .. tier] = tm
+			register(model, plot, "tiers", biz.id .. ":" .. tier, cf, 7)
+		end
 		local nProps = 0
 		for _, pad in biz.pads do
 			if pad.kind ~= "structure" then
@@ -302,10 +388,13 @@ local function buildPlot(index: number): Plot
 			if pad.kind == "structure" then
 				-- floors and walls belong to the whole lot
 				Models.place(prop, origin * CFrame.new(lot.pos), plot.hidden)
+				register(pad.model or "Sign", plot, "padModels", pad.id, origin * CFrame.new(lot.pos), nil)
 			else
 				slot += 1
 				Models.fit(prop, Layout.PROP_SLOT)
-				Models.place(prop, origin * CFrame.new(Layout.propPos(biz.id, slot, nProps)), plot.hidden)
+				local cf = origin * CFrame.new(Layout.propPos(biz.id, slot, nProps))
+				Models.place(prop, cf, plot.hidden)
+				register(pad.model or "Sign", plot, "padModels", pad.id, cf, Layout.PROP_SLOT)
 			end
 			prop.Name = "Prop_" .. pad.id
 			plot.padModels[pad.id] = prop
@@ -351,16 +440,32 @@ local function buildPlot(index: number): Plot
 			end
 		end)
 		plot.extras[name] = m
+		register(model, plot, "extras", name, origin * CFrame.new(pos), nil)
 	end
 	extra("InvestorKiosk", "AlienInvestor", Layout.investorDesk + Vector3.new(-10, 0, 0), "investors", "Alien Investors")
 	extra("Portal", "CosmicPortal", Layout.portal, "evolve", "Void Evolution")
 	extra("Staircase", "Staircase", Layout.staircase, "ascend", "Ascension")
 
+	-- looks-only decorations (shown once bought)
+	for _, item in Economy.Catalog.decor.items do
+		local pos = Layout.decorSpots[item.id]
+		if pos then
+			local cf = origin * CFrame.new(pos) * CFrame.Angles(0, math.pi, 0)
+			local m = Models.build(item.model)
+			Models.place(m, cf, plot.hidden)
+			m.Name = "Decor_" .. item.id
+			plot.decor[item.id] = m
+			register(item.model, plot, "decor", item.id, cf, nil)
+		end
+	end
+
 	-- ingredient racks (always there; crates are spawned by the Pickups service)
 	for i, pos in Layout.racks do
 		local r = Models.build("IngredientRack")
-		Models.place(r, origin * CFrame.new(pos) * CFrame.Angles(0, if pos.X > 0 then math.rad(-90) else math.rad(90), 0), decor)
+		local cf = origin * CFrame.new(pos) * CFrame.Angles(0, if pos.X > 0 then math.rad(-90) else math.rad(90), 0)
+		Models.place(r, cf, decor)
 		r.Name = "Rack" .. i
+		register("IngredientRack", plot, "racks", "Rack" .. i, cf, nil)
 	end
 	return plot
 end
@@ -431,6 +536,12 @@ function World.reset(plot: Plot)
 	for id, inst in plot.extras do
 		show(plot, "extra:" .. id, inst, false, plot.folder)
 	end
+	for id, inst in plot.decor do
+		show(plot, "decor:" .. id, inst, false, plot.folder)
+	end
+	for id, inst in plot.tiers do
+		show(plot, "tier:" .. id, inst, false, plot.folder)
+	end
 	for _, pr in plot.prompts do
 		pr.Enabled = false
 	end
@@ -473,7 +584,23 @@ function World.sync(plot: Plot, p: any, name: string): { string }
 	end
 	for _, biz in Economy.businesses do
 		local owned = Game.bizOwned(p, biz.id)
-		plot.prompts[biz.id].Enabled = owned and not require(Shared.Logic.Economy).isAutomated(ms, biz)
+		plot.prompts[biz.id].Enabled = owned and not Economy.isAutomated(ms, biz)
+		local tier = if owned then Game.levelTier(p, biz.id) else 0
+		for t = 1, #TIER_MODELS do
+			local key = biz.id .. ":" .. t
+			local on = t <= tier
+			if on and not plot.shown["tier:" .. key] then
+				table.insert(appeared, "tier:" .. key)
+			end
+			show(plot, "tier:" .. key, plot.tiers[key], on, plot.folder)
+		end
+	end
+	for id, m in plot.decor do
+		local on = p.decor[id] == true
+		if on and not plot.shown["decor:" .. id] then
+			table.insert(appeared, "decor:" .. id)
+		end
+		show(plot, "decor:" .. id, m, on, plot.folder)
 	end
 	-- landmarks: kiosk once investors are on offer or held, portal once evolution progress shows,
 	-- staircase once every pad is owned

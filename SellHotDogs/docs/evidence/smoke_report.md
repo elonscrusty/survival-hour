@@ -24,7 +24,7 @@ This drives the real server and client scripts from the built place with a simul
 | 15 | one-second manual cycle pays $1.00 after it completes | PASS | mid=$0.00 end=$1.00 |
 | 16 | wallet shows server cash | PASS |  |
 | 17 | repeated clicks during a cycle pay once | PASS | $2.00 |
-| 18 | earn to $6.20 by clicking | PASS | $7.00 after 5 more cycles |
+| 18 | earn to $6.20 by clicking | PASS | $7.00 after 7 more cycles |
 | 19 | Condiment Station costs $6.20 exactly | PASS | $7.00 -> $0.80 |
 | 20 | stand output label now $2.00 | PASS |  |
 | 21 | unaffordable Cash Register rejected, cash unchanged | PASS |  |
@@ -47,7 +47,7 @@ This drives the real server and client scripts from the built place with a simul
 | 38 | Remote Buy walks the whole ladder (all 8 businesses, every pad) | PASS | 46/46 after 43 requests |
 | 39 | every business building is in the world | PASS |  |
 | 40 | staircase appears once everything is owned | PASS |  |
-| 41 | fast production stays aggregated (client messages per second) | PASS | 5.0 msgs/s |
+| 41 | fast production stays aggregated (client messages per second) | PASS | 9.0 msgs/s |
 | 42 | wallet formats a 10^564 balance | PASS | $3e564 |
 | 43 | Investors dialog shows offer | PASS |  |
 | 44 | rebirth asks to confirm with resets listed | PASS |  |
@@ -70,7 +70,7 @@ This drives the real server and client scripts from the built place with a simul
 | 61 | good name saved and shown on plot sign | PASS |  |
 | 62 | phone offer arrives | PASS |  |
 | 63 | raise flow ends in a better/final offer or a walk-away without errors | PASS |  |
-| 64 | accepting pays the offered amount once | PASS | $1,943 |
+| 64 | accepting pays the offered amount once | PASS | $5,822 |
 | 65 | DogDash locked without the game pad | PASS |  |
 | 66 | race starts and takes a 10% bet | PASS | $99.978 million |
 | 67 | race finishes and settles | PASS |  |
@@ -84,7 +84,7 @@ This drives the real server and client scripts from the built place with a simul
 | 75 | rejoin restores progress | PASS |  |
 | 76 | offline income banked for the claim popup (automated businesses only) | PASS | $83,939 |
 | 77 | offline amount = 100% of automated income x elapsed | PASS | $83,939 vs $83,916 |
-| 78 | offline claim pays once | PASS | gained $83,954, pending was $83,939 |
+| 78 | offline claim pays once | PASS | gained $83,962, pending was $83,939 |
 | 79 | failed load gives temporary profile with saving off | PASS |  |
 | 80 | failed-load session never overwrites the stored save | PASS |  |
 | 81 | failed save on leave leaves previous save intact | PASS |  |

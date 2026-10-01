@@ -2,6 +2,7 @@
 -- Small UI kit: theme colours, instance builder, buttons with pressed/disabled feedback,
 -- and a scaled design canvas that respects device safe areas.
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local Kit = {}
@@ -99,7 +100,7 @@ export type Button = {
 }
 
 -- Chunky game button: coloured face, dark lip, shrink on press, grey when disabled.
-function Kit.button(props: { text: string, color: Color3?, dark: Color3?, size: UDim2, pos: UDim2?, anchor: Vector2?, parent: Instance?, onClick: () -> (), textSize: number? }): Button
+function Kit.button(props: { text: string, color: Color3?, dark: Color3?, size: UDim2, pos: UDim2?, anchor: Vector2?, parent: Instance?, onClick: () -> (), textSize: number?, icon: string? }): Button
 	local color, dark = props.color or C.green, props.dark or C.greenDark
 	local enabled, pending = true, false
 	local holder = new("TextButton", {
@@ -118,7 +119,15 @@ function Kit.button(props: { text: string, color: Color3?, dark: Color3?, size: 
 		Parent = holder,
 	}, { Kit.corner(12) })
 	new("UIGradient", { Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(225, 225, 225)), Rotation = 90, Parent = face })
-	local text = Kit.label({ Text = props.text, Size = UDim2.new(1, -12, 1, -8), Position = UDim2.fromOffset(6, 4), Parent = face, MaxText = props.textSize or 30 })
+	local text: TextLabel
+	if props.icon then
+		-- icon on the left, label on the right
+		local h = props.size.Y.Offset - 13
+		Kit.icon(props.icon, math.max(16, h), face, UDim2.new(0, 4, 0.5, 0), Vector2.new(0, 0.5))
+		text = Kit.label({ Text = props.text, Size = UDim2.new(1, -(h + 12), 1, -8), Position = UDim2.fromOffset(h + 8, 4), Parent = face, MaxText = props.textSize or 30 })
+	else
+		text = Kit.label({ Text = props.text, Size = UDim2.new(1, -12, 1, -8), Position = UDim2.fromOffset(6, 4), Parent = face, MaxText = props.textSize or 30 })
+	end
 	local scale = new("UIScale", { Parent = holder })
 	local function paint()
 		local on = enabled and not pending
@@ -132,8 +141,11 @@ function Kit.button(props: { text: string, color: Color3?, dark: Color3?, size: 
 	holder.MouseButton1Up:Connect(function()
 		TweenService:Create(scale, TweenInfo.new(0.1, Enum.EasingStyle.Back), { Scale = 1 }):Play()
 	end)
+	holder.MouseEnter:Connect(function()
+		TweenService:Create(scale, TweenInfo.new(0.12), { Scale = 1.05 }):Play()
+	end)
 	holder.MouseLeave:Connect(function()
-		scale.Scale = 1
+		TweenService:Create(scale, TweenInfo.new(0.12), { Scale = 1 }):Play()
 	end)
 	holder.Activated:Connect(function()
 		if enabled and not pending then
@@ -211,6 +223,102 @@ function Kit.canvas(name: string, order: number): (ScreenGui, Frame)
 	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
 	fit()
 	return gui, root
+end
+
+---------------------------------------------------------------- icons
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local AssetIds = require(Shared.AssetIds)
+local Icons = require(Shared.Icons)
+local Models = require(Shared.Models)
+
+local function frameCamera(vp: ViewportFrame, m: Model)
+	local minV, maxV = Vector3.new(math.huge, math.huge, math.huge), Vector3.new(-math.huge, -math.huge, -math.huge)
+	for _, d in m:GetDescendants() do
+		if d:IsA("BasePart") then
+			local p, s = d.CFrame.Position, d.Size / 2
+			minV = Vector3.new(math.min(minV.X, p.X - s.X), math.min(minV.Y, p.Y - s.Y), math.min(minV.Z, p.Z - s.Z))
+			maxV = Vector3.new(math.max(maxV.X, p.X + s.X), math.max(maxV.Y, p.Y + s.Y), math.max(maxV.Z, p.Z + s.Z))
+		end
+	end
+	if minV.X == math.huge then
+		return
+	end
+	local centre = (minV + maxV) / 2
+	local radius = (maxV - minV).Magnitude / 2
+	local cam = Instance.new("Camera")
+	cam.FieldOfView = 30
+	local dist = radius / math.tan(math.rad(15)) * 1.05
+	cam.CFrame = CFrame.lookAt(centre + Vector3.new(0.75, 0.55, -1).Unit * dist, centre)
+	cam.Parent = vp
+	vp.CurrentCamera = cam
+end
+
+-- A square picture for `key` (see Shared/Icons). Uploaded render > live 3D preview > emoji.
+function Kit.icon(key: string, size: number, parent: Instance?, pos: UDim2?, anchor: Vector2?): GuiObject
+	local def = Icons[key] or { model = key, emoji = "⭐" }
+	local imageId = AssetIds.Images[def.model]
+	local base = {
+		Size = UDim2.fromOffset(size, size),
+		Position = pos or UDim2.new(),
+		AnchorPoint = anchor or Vector2.zero,
+		BackgroundTransparency = 1,
+		Parent = parent,
+	}
+	if imageId then
+		local img = new("ImageLabel", base)
+		img.Image = string.format("rbxthumb://type=Asset&id=%d&w=150&h=150", imageId)
+		img.ScaleType = Enum.ScaleType.Fit
+		return img
+	end
+	if Models.hasMesh(def.model) or Models.has(def.model) then
+		local vp = new("ViewportFrame", base)
+		vp.Ambient = Color3.fromRGB(200, 200, 200)
+		vp.LightColor = Color3.new(1, 1, 1)
+		vp.LightDirection = Vector3.new(-1, -1.5, 1)
+		local m = Models.build(def.model)
+		m:PivotTo(CFrame.new())
+		m.Parent = vp
+		frameCamera(vp, m)
+		return vp
+	end
+	local l = Kit.label({ Text = def.emoji, Size = base.Size, Position = base.Position, AnchorPoint = base.AnchorPoint, Parent = parent, MaxText = 80 })
+	return l
+end
+
+---------------------------------------------------------------- motion
+-- Pop a frame in from small with a little overshoot (panels, dialogs, banners).
+function Kit.popIn(frame: GuiObject, delay: number?)
+	local s = frame:FindFirstChildOfClass("UIScale") or new("UIScale", { Parent = frame })
+	s.Scale = 0.6
+	task.delay(delay or 0, function()
+		TweenService:Create(s, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	end)
+end
+
+-- Quick bounce (cash gained, button became available).
+function Kit.pulse(frame: GuiObject, amount: number?)
+	local s = frame:FindFirstChildOfClass("UIScale") or new("UIScale", { Parent = frame })
+	s.Scale = 1 + (amount or 0.12)
+	TweenService:Create(s, TweenInfo.new(0.35, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+end
+
+-- Gentle continuous wiggle for things that want attention (returns a stop function).
+function Kit.wiggle(frame: GuiObject): () -> ()
+	local alive = true
+	task.spawn(function()
+		while alive and frame.Parent do
+			TweenService:Create(frame, TweenInfo.new(0.12), { Rotation = 6 }):Play()
+			task.wait(0.12)
+			TweenService:Create(frame, TweenInfo.new(0.12), { Rotation = -6 }):Play()
+			task.wait(0.12)
+			TweenService:Create(frame, TweenInfo.new(0.12), { Rotation = 0 }):Play()
+			task.wait(1.6)
+		end
+	end)
+	return function()
+		alive = false
+		frame.Rotation = 0
+	end
 end
 
 function Kit.tween(inst: Instance, t: number, goal: { [string]: any }, style: Enum.EasingStyle?)

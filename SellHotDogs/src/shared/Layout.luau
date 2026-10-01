@@ -70,6 +70,33 @@ function Layout.propPos(bizId: string, k: number, n: number): Vector3
 	return lot.pos + Vector3.new(x, 0, z)
 end
 
+-- Level-milestone prop `tier` (1-4) of a business: front strip of the lot (stand: behind it).
+function Layout.tierPos(bizId: string, tier: number): Vector3
+	local lot = Layout.lots[bizId]
+	local side = if tier % 2 == 1 then -1 else 1
+	if bizId == "stand" then
+		return lot.pos + Vector3.new(side * (if tier <= 2 then 14 else 7), 0, 11)
+	end
+	local inset = if tier <= 2 then lot.size.X / 2 - 14 else lot.size.X / 2 - 22
+	return lot.pos + Vector3.new(side * inset, 0, -lot.size.Y / 2 + 5)
+end
+
+-- Where each looks-only decoration goes (clear of lots, pads, paths' centre and racks).
+Layout.decorSpots = {
+	planter = Vector3.new(-12, 0, 12),
+	bench = Vector3.new(12, 0, 12),
+	lamps = Vector3.new(-10, 0, 84),
+	picnic = Vector3.new(-22, 0, 136),
+	umbrella = Vector3.new(-40, 0, 134),
+	balloons = Vector3.new(-26, 0, 0),
+	lights = Vector3.new(0, 0, 58),
+	arch = Vector3.new(0, 0, 112),
+	neon = Vector3.new(-26, 0, 58),
+	topiary = Vector3.new(-45, 0, 300),
+	fountain = Vector3.new(22, 0, 136),
+	statue = Vector3.new(-20, 0, 302),
+} :: { [string]: Vector3 }
+
 function Layout.plotOrigin(index: number): CFrame
 	return CFrame.new((index - 1) * Layout.PLOT_SPACING, 0, 0)
 end

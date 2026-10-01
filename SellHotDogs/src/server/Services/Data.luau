@@ -94,6 +94,9 @@ local function onJoin(player: Player)
 			session = { player = player, profile = Profile.new(now()), canSave = false, dirty = false, saving = false, lastSave = 0, rt = { loadError = "Your save couldn't be read (" .. tostring(why) .. "). Progress this visit won't be saved." } }
 		else
 			session = { player = player, profile = profile, canSave = true, dirty = false, saving = false, lastSave = os.clock(), rt = {} }
+			if profile.stats.milestone == nil then
+				Game.newMilestones(profile) -- older saves: mark passed milestones without banners
+			end
 			if why ~= "new" then
 				session.offlineFound = Game.applyReturn(profile, now())
 				Game.flushSkips(profile)
