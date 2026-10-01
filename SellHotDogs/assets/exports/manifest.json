@@ -1,0 +1,661 @@
+{
+  "_meta": {
+    "generator": "tools/blender/build_assets.py",
+    "blender": "5.0.1",
+    "units": "1 Blender unit = 1 Roblox stud; size is [X width, Y depth, Z height]",
+    "provenance": "original, procedurally generated, no third-party content"
+  },
+  "HotDog": {
+    "size": [
+      2.0,
+      0.803,
+      0.716
+    ],
+    "target": [
+      2,
+      0.8,
+      0.8
+    ],
+    "triangles": 2576,
+    "materials": [
+      "bun",
+      "cream",
+      "sausage",
+      "ketchup",
+      "mustard"
+    ],
+    "files": {
+      "blend": "assets/blender/HotDog.blend",
+      "fbx": "assets/exports/HotDog.fbx",
+      "obj": "assets/exports/HotDog.obj",
+      "render": "assets/renders/HotDog.png"
+    }
+  },
+  "Bun": {
+    "size": [
+      1.76,
+      0.723,
+      0.622
+    ],
+    "target": [
+      2,
+      0.8,
+      0.6
+    ],
+    "triangles": 1280,
+    "materials": [
+      "bun",
+      "cream"
+    ],
+    "files": {
+      "blend": "assets/blender/Bun.blend",
+      "fbx": "assets/exports/Bun.fbx",
+      "obj": "assets/exports/Bun.obj",
+      "render": "assets/renders/Bun.png"
+    }
+  },
+  "HotDogStand": {
+    "size": [
+      7.851,
+      4.696,
+      8.245
+    ],
+    "target": [
+      8,
+      5,
+      8
+    ],
+    "triangles": 7196,
+    "materials": [
+      "ketchup",
+      "cream",
+      "mustard",
+      "bun",
+      "sausage",
+      "tire",
+      "chrome",
+      "teal"
+    ],
+    "files": {
+      "blend": "assets/blender/HotDogStand.blend",
+      "fbx": "assets/exports/HotDogStand.fbx",
+      "obj": "assets/exports/HotDogStand.obj",
+      "render": "assets/renders/HotDogStand.png"
+    }
+  },
+  "CondimentStation": {
+    "size": [
+      4.0,
+      2.6,
+      3.925
+    ],
+    "target": [
+      4,
+      3,
+      4
+    ],
+    "triangles": 2404,
+    "materials": [
+      "wood",
+      "relish",
+      "wood_dark",
+      "mustard",
+      "ketchup",
+      "cream",
+      "teal"
+    ],
+    "files": {
+      "blend": "assets/blender/CondimentStation.blend",
+      "fbx": "assets/exports/CondimentStation.fbx",
+      "obj": "assets/exports/CondimentStation.obj",
+      "render": "assets/renders/CondimentStation.png"
+    }
+  },
+  "BunRack": {
+    "size": [
+      4.1,
+      2.4,
+      4.95
+    ],
+    "target": [
+      4,
+      2.5,
+      5
+    ],
+    "triangles": 7272,
+    "materials": [
+      "wood_dark",
+      "wood",
+      "bun",
+      "cream",
+      "ketchup"
+    ],
+    "files": {
+      "blend": "assets/blender/BunRack.blend",
+      "fbx": "assets/exports/BunRack.fbx",
+      "obj": "assets/exports/BunRack.obj",
+      "render": "assets/renders/BunRack.png"
+    }
+  },
+  "CashRegister": {
+    "size": [
+      2.945,
+      2.3,
+      4.7
+    ],
+    "target": [
+      3,
+      2.5,
+      4
+    ],
+    "triangles": 3174,
+    "materials": [
+      "wood",
+      "teal",
+      "cream",
+      "ketchup",
+      "chrome",
+      "mustard",
+      "cream_e0.4",
+      "wood_dark",
+      "gold"
+    ],
+    "files": {
+      "blend": "assets/blender/CashRegister.blend",
+      "fbx": "assets/exports/CashRegister.fbx",
+      "obj": "assets/exports/CashRegister.obj",
+      "render": "assets/renders/CashRegister.png"
+    }
+  },
+  "Billboard": {
+    "size": [
+      12.0,
+      2.685,
+      12.12
+    ],
+    "target": [
+      12,
+      1.5,
+      12
+    ],
+    "triangles": 4108,
+    "materials": [
+      "wood_dark",
+      "stone_dark",
+      "chrome",
+      "teal",
+      "cream",
+      "mustard",
+      "bun",
+      "sausage",
+      "ketchup",
+      "tire",
+      "mustard_e1"
+    ],
+    "files": {
+      "blend": "assets/blender/Billboard.blend",
+      "fbx": "assets/exports/Billboard.fbx",
+      "obj": "assets/exports/Billboard.obj",
+      "render": "assets/renders/Billboard.png"
+    }
+  },
+  "IngredientRack": {
+    "size": [
+      6.202,
+      3.616,
+      6.1
+    ],
+    "target": [
+      6,
+      3,
+      6
+    ],
+    "triangles": 11492,
+    "materials": [
+      "wood_dark",
+      "wood",
+      "teal",
+      "cream",
+      "mustard",
+      "sausage",
+      "bun"
+    ],
+    "files": {
+      "blend": "assets/blender/IngredientRack.blend",
+      "fbx": "assets/exports/IngredientRack.fbx",
+      "obj": "assets/exports/IngredientRack.obj",
+      "render": "assets/renders/IngredientRack.png"
+    }
+  },
+  "IngredientCrate": {
+    "size": [
+      1.54,
+      1.54,
+      1.154
+    ],
+    "target": [
+      1.5,
+      1.5,
+      1.2
+    ],
+    "triangles": 3244,
+    "materials": [
+      "wood",
+      "wood_dark",
+      "sausage"
+    ],
+    "files": {
+      "blend": "assets/blender/IngredientCrate.blend",
+      "fbx": "assets/exports/IngredientCrate.fbx",
+      "obj": "assets/exports/IngredientCrate.obj",
+      "render": "assets/renders/IngredientCrate.png"
+    }
+  },
+  "DeliveryBike": {
+    "size": [
+      5.152,
+      1.49,
+      2.768
+    ],
+    "target": [
+      5,
+      2,
+      4
+    ],
+    "triangles": 4232,
+    "materials": [
+      "tire",
+      "chrome",
+      "cream",
+      "teal",
+      "cream_e0.5",
+      "bun",
+      "sausage",
+      "ketchup",
+      "mustard"
+    ],
+    "files": {
+      "blend": "assets/blender/DeliveryBike.blend",
+      "fbx": "assets/exports/DeliveryBike.fbx",
+      "obj": "assets/exports/DeliveryBike.obj",
+      "render": "assets/renders/DeliveryBike.png"
+    }
+  },
+  "DeliveryVan": {
+    "size": [
+      11.8,
+      7.397,
+      8.907
+    ],
+    "target": [
+      12,
+      6,
+      9
+    ],
+    "triangles": 8828,
+    "materials": [
+      "teal",
+      "cream",
+      "screen",
+      "bun",
+      "sausage",
+      "ketchup",
+      "mustard",
+      "chrome",
+      "cream_e0.6",
+      "ketchup_e0.3",
+      "tire"
+    ],
+    "files": {
+      "blend": "assets/blender/DeliveryVan.blend",
+      "fbx": "assets/exports/DeliveryVan.fbx",
+      "obj": "assets/exports/DeliveryVan.obj",
+      "render": "assets/renders/DeliveryVan.png"
+    }
+  },
+  "DepotTruck": {
+    "size": [
+      15.71,
+      9.6,
+      9.435
+    ],
+    "target": [
+      16,
+      7,
+      10
+    ],
+    "triangles": 6852,
+    "materials": [
+      "tire",
+      "cream",
+      "ketchup",
+      "mustard",
+      "bun",
+      "sausage",
+      "chrome",
+      "teal",
+      "screen",
+      "cream_e0.6"
+    ],
+    "files": {
+      "blend": "assets/blender/DepotTruck.blend",
+      "fbx": "assets/exports/DepotTruck.fbx",
+      "obj": "assets/exports/DepotTruck.obj",
+      "render": "assets/renders/DepotTruck.png"
+    }
+  },
+  "TradingTicker": {
+    "size": [
+      8.6,
+      3.5,
+      8.8
+    ],
+    "target": [
+      8,
+      3,
+      9
+    ],
+    "triangles": 2854,
+    "materials": [
+      "teal",
+      "cream",
+      "mustard_e0.6",
+      "ketchup_e0.8",
+      "relish_e0.8",
+      "chrome",
+      "navy",
+      "screen",
+      "teal_dark",
+      "bun",
+      "sausage",
+      "ketchup",
+      "mustard"
+    ],
+    "files": {
+      "blend": "assets/blender/TradingTicker.blend",
+      "fbx": "assets/exports/TradingTicker.fbx",
+      "obj": "assets/exports/TradingTicker.obj",
+      "render": "assets/renders/TradingTicker.png"
+    }
+  },
+  "LabMachine": {
+    "size": [
+      5.7,
+      3.85,
+      6.63
+    ],
+    "target": [
+      6,
+      4,
+      7
+    ],
+    "triangles": 5400,
+    "materials": [
+      "cream",
+      "teal",
+      "teal_dark",
+      "ketchup",
+      "chrome",
+      "mustard",
+      "relish",
+      "screen",
+      "relish_e1.5",
+      "bun",
+      "sausage",
+      "glass_glass",
+      "relish_e1.2",
+      "mint_e0.8",
+      "mustard_e0.8"
+    ],
+    "files": {
+      "blend": "assets/blender/LabMachine.blend",
+      "fbx": "assets/exports/LabMachine.fbx",
+      "obj": "assets/exports/LabMachine.obj",
+      "render": "assets/renders/LabMachine.png"
+    }
+  },
+  "KitchenRobot": {
+    "size": [
+      4.133,
+      2.894,
+      6.25
+    ],
+    "target": [
+      4,
+      3,
+      7
+    ],
+    "triangles": 5532,
+    "materials": [
+      "tire",
+      "teal",
+      "cream",
+      "ketchup_e0.8",
+      "chrome",
+      "navy",
+      "void_glow_e2",
+      "ketchup",
+      "mustard_e1",
+      "wood_dark",
+      "bun",
+      "sausage",
+      "mustard"
+    ],
+    "files": {
+      "blend": "assets/blender/KitchenRobot.blend",
+      "fbx": "assets/exports/KitchenRobot.fbx",
+      "obj": "assets/exports/KitchenRobot.obj",
+      "render": "assets/renders/KitchenRobot.png"
+    }
+  },
+  "RepublicMonument": {
+    "size": [
+      14.0,
+      14.0,
+      22.2
+    ],
+    "target": [
+      14,
+      14,
+      24
+    ],
+    "triangles": 5524,
+    "materials": [
+      "stone",
+      "stone_dark",
+      "gold",
+      "bun",
+      "cream",
+      "sausage",
+      "ketchup",
+      "mustard",
+      "chrome",
+      "relish"
+    ],
+    "files": {
+      "blend": "assets/blender/RepublicMonument.blend",
+      "fbx": "assets/exports/RepublicMonument.fbx",
+      "obj": "assets/exports/RepublicMonument.obj",
+      "render": "assets/renders/RepublicMonument.png"
+    }
+  },
+  "HotDogRocket": {
+    "size": [
+      9.943,
+      9.952,
+      28.6
+    ],
+    "target": [
+      10,
+      10,
+      30
+    ],
+    "triangles": 5588,
+    "materials": [
+      "chrome",
+      "mustard",
+      "tire",
+      "ketchup",
+      "sausage",
+      "bun",
+      "teal",
+      "cream"
+    ],
+    "files": {
+      "blend": "assets/blender/HotDogRocket.blend",
+      "fbx": "assets/exports/HotDogRocket.fbx",
+      "obj": "assets/exports/HotDogRocket.obj",
+      "render": "assets/renders/HotDogRocket.png"
+    }
+  },
+  "Staircase": {
+    "size": [
+      12.073,
+      12.115,
+      19.675
+    ],
+    "target": [
+      12,
+      12,
+      20
+    ],
+    "triangles": 9692,
+    "materials": [
+      "pink_e0.35",
+      "cream_e1.5",
+      "mint_e0.35",
+      "lavender_e0.35",
+      "peach_e0.35",
+      "sky_e0.35",
+      "lavender_e0.5",
+      "void_glow_e1.5",
+      "cream_e0.5"
+    ],
+    "files": {
+      "blend": "assets/blender/Staircase.blend",
+      "fbx": "assets/exports/Staircase.fbx",
+      "obj": "assets/exports/Staircase.obj",
+      "render": "assets/renders/Staircase.png"
+    }
+  },
+  "CosmicPortal": {
+    "size": [
+      14.0,
+      3.0,
+      14.44
+    ],
+    "target": [
+      14,
+      3,
+      14
+    ],
+    "triangles": 7284,
+    "materials": [
+      "navy",
+      "lavender",
+      "void_glow_e3",
+      "violet_e2",
+      "violet_e1.2",
+      "teal_e1.4",
+      "violet_e1.6",
+      "teal_e1.8",
+      "teal_e2.2",
+      "violet_e2.4",
+      "cream_e2",
+      "mustard_e2",
+      "void_glow_e2"
+    ],
+    "files": {
+      "blend": "assets/blender/CosmicPortal.blend",
+      "fbx": "assets/exports/CosmicPortal.fbx",
+      "obj": "assets/exports/CosmicPortal.obj",
+      "render": "assets/renders/CosmicPortal.png"
+    }
+  },
+  "AlienInvestor": {
+    "size": [
+      2.589,
+      1.61,
+      5.0
+    ],
+    "target": [
+      2.5,
+      2,
+      5
+    ],
+    "triangles": 3112,
+    "materials": [
+      "navy",
+      "black",
+      "cream",
+      "ketchup",
+      "mustard",
+      "alien",
+      "cream_e0.5",
+      "sausage_dark",
+      "mustard_e0.8",
+      "wood_dark",
+      "gold"
+    ],
+    "files": {
+      "blend": "assets/blender/AlienInvestor.blend",
+      "fbx": "assets/exports/AlienInvestor.fbx",
+      "obj": "assets/exports/AlienInvestor.obj",
+      "render": "assets/renders/AlienInvestor.png"
+    }
+  },
+  "MoneyBag": {
+    "size": [
+      1.63,
+      1.695,
+      1.7
+    ],
+    "target": [
+      1.5,
+      1.5,
+      1.8
+    ],
+    "triangles": 2100,
+    "materials": [
+      "bun",
+      "sausage_dark",
+      "cream",
+      "sausage",
+      "ketchup",
+      "mustard",
+      "gold"
+    ],
+    "files": {
+      "blend": "assets/blender/MoneyBag.blend",
+      "fbx": "assets/exports/MoneyBag.fbx",
+      "obj": "assets/exports/MoneyBag.obj",
+      "render": "assets/renders/MoneyBag.png"
+    }
+  },
+  "VoidHotDog": {
+    "size": [
+      2.0,
+      0.803,
+      0.716
+    ],
+    "target": [
+      2,
+      0.8,
+      0.8
+    ],
+    "triangles": 2576,
+    "materials": [
+      "void_bun",
+      "lavender",
+      "void_glow_e2.5",
+      "pink_e2",
+      "violet_e2"
+    ],
+    "files": {
+      "blend": "assets/blender/VoidHotDog.blend",
+      "fbx": "assets/exports/VoidHotDog.fbx",
+      "obj": "assets/exports/VoidHotDog.obj",
+      "render": "assets/renders/VoidHotDog.png"
+    }
+  }
+}
