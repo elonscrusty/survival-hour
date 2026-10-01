@@ -1,0 +1,629 @@
+{
+ "BigBarn": {
+  "category": "Housing",
+  "tris": 1074,
+  "studs": [
+   34.6,
+   28.41,
+   38.28
+  ],
+  "materials": [
+   "EF_Path",
+   "EF_Roof",
+   "EF_White",
+   "EF_RoofDark",
+   "EF_WoodDark",
+   "EF_Glass",
+   "EF_GreyDark",
+   "EF_Accent"
+  ]
+ },
+ "BoxTruck": {
+  "category": "Vehicles",
+  "tris": 1464,
+  "studs": [
+   9.55,
+   10.8,
+   23.65
+  ],
+  "materials": [
+   "EF_Tyre",
+   "EF_Metal",
+   "EF_GreyDark",
+   "EF_Green",
+   "EF_Glass",
+   "EF_Light",
+   "EF_Accent",
+   "EF_White",
+   "EF_Grey",
+   "EF_Comb"
+  ]
+ },
+ "Bush": {
+  "category": "Props",
+  "tris": 224,
+  "studs": [
+   4.93,
+   3.31,
+   3.43
+  ],
+  "materials": [
+   "EF_Leaf",
+   "EF_LeafDark",
+   "EF_Accent",
+   "EF_White"
+  ]
+ },
+ "Chicken": {
+  "category": "Creatures",
+  "tris": 878,
+  "studs": [
+   1.06,
+   1.51,
+   1.67
+  ],
+  "materials": [
+   "EF_Beak",
+   "EF_White",
+   "EF_Cream",
+   "EF_Comb",
+   "EF_Black"
+  ]
+ },
+ "ChickenBrown": {
+  "category": "Creatures",
+  "tris": 878,
+  "studs": [
+   1.06,
+   1.51,
+   1.67
+  ],
+  "materials": [
+   "EF_Beak",
+   "EF_BrownLight",
+   "EF_Brown",
+   "EF_WoodDark",
+   "EF_Comb",
+   "EF_Black"
+  ]
+ },
+ "DeliveryVan": {
+  "category": "Vehicles",
+  "tris": 1044,
+  "studs": [
+   8.13,
+   8.2,
+   17.6
+  ],
+  "materials": [
+   "EF_Tyre",
+   "EF_Metal",
+   "EF_GreyDark",
+   "EF_White",
+   "EF_Glass",
+   "EF_Light",
+   "EF_Accent",
+   "EF_Roof",
+   "EF_Comb"
+  ]
+ },
+ "Egg": {
+  "category": "Creatures",
+  "tris": 468,
+  "studs": [
+   0.98,
+   1.3,
+   1.0
+  ],
+  "materials": [
+   "EF_White"
+  ]
+ },
+ "EggCrate": {
+  "category": "Props",
+  "tris": 768,
+  "studs": [
+   3.08,
+   1.52,
+   2.08
+  ],
+  "materials": [
+   "EF_WoodDark",
+   "EF_Wood",
+   "EF_Straw",
+   "EF_White",
+   "EF_Cream"
+  ]
+ },
+ "EggFactory": {
+  "category": "Housing",
+  "tris": 1668,
+  "studs": [
+   42.5,
+   26.6,
+   31.0
+  ],
+  "materials": [
+   "EF_GreyDark",
+   "EF_Cream",
+   "EF_Grey",
+   "EF_Roof",
+   "EF_Glass",
+   "EF_White",
+   "EF_Accent",
+   "EF_Wood"
+  ]
+ },
+ "EggHauler": {
+  "category": "Vehicles",
+  "tris": 3174,
+  "studs": [
+   10.31,
+   13.2,
+   47.85
+  ],
+  "materials": [
+   "EF_Tyre",
+   "EF_Metal",
+   "EF_GreyDark",
+   "EF_Accent",
+   "EF_Light",
+   "EF_Glass",
+   "EF_Roof",
+   "EF_White",
+   "EF_Green",
+   "EF_Comb"
+  ]
+ },
+ "Egg_cactus": {
+  "category": "Creatures",
+  "tris": 468,
+  "studs": [
+   0.98,
+   1.3,
+   1.0
+  ],
+  "materials": [
+   "EF_Egg_cactus_Shell",
+   "EF_Egg_cactus_Spots"
+  ]
+ },
+ "Egg_clover": {
+  "category": "Creatures",
+  "tris": 468,
+  "studs": [
+   0.98,
+   1.3,
+   1.0
+  ],
+  "materials": [
+   "EF_Egg_clover_Shell",
+   "EF_Egg_clover_Spots"
+  ]
+ },
+ "Egg_crystal": {
+  "category": "Creatures",
+  "tris": 468,
+  "studs": [
+   0.98,
+   1.3,
+   1.0
+  ],
+  "materials": [
+   "EF_Egg_crystal_Shell",
+   "EF_Egg_crystal_Spots"
+  ]
+ },
+ "Egg_farm": {
+  "category": "Creatures",
+  "tris": 468,
+  "studs": [
+   0.98,
+   1.3,
+   1.0
+  ],
+  "materials": [
+   "EF_Egg_farm_Shell",
+   "EF_Egg_farm_Spots"
+  ]
+ },
+ "Egg_frost": {
+  "category": "Creatures",
+  "tris": 468,
+  "studs": [
+   0.98,
+   1.3,
+   1.0
+  ],
+  "materials": [
+   "EF_Egg_frost_Shell",
+   "EF_Egg_frost_Spots"
+  ]
+ },
+ "Egg_honey": {
+  "category": "Creatures",
+  "tris": 468,
+  "studs": [
+   0.98,
+   1.3,
+   1.0
+  ],
+  "materials": [
+   "EF_Egg_honey_Shell",
+   "EF_Egg_honey_Spots"
+  ]
+ },
+ "Egg_magma": {
+  "category": "Creatures",
+  "tris": 468,
+  "studs": [
+   0.98,
+   1.3,
+   1.0
+  ],
+  "materials": [
+   "EF_Egg_magma_Shell",
+   "EF_Egg_magma_Spots"
+  ]
+ },
+ "Egg_nebula": {
+  "category": "Creatures",
+  "tris": 468,
+  "studs": [
+   0.98,
+   1.3,
+   1.0
+  ],
+  "materials": [
+   "EF_Egg_nebula_Shell",
+   "EF_Egg_nebula_Spots"
+  ]
+ },
+ "Egg_seashell": {
+  "category": "Creatures",
+  "tris": 468,
+  "studs": [
+   0.98,
+   1.3,
+   1.0
+  ],
+  "materials": [
+   "EF_Egg_seashell_Shell",
+   "EF_Egg_seashell_Spots"
+  ]
+ },
+ "Egg_sunburst": {
+  "category": "Creatures",
+  "tris": 468,
+  "studs": [
+   0.98,
+   1.3,
+   1.0
+  ],
+  "materials": [
+   "EF_Egg_sunburst_Shell",
+   "EF_Egg_sunburst_Spots"
+  ]
+ },
+ "FarmPickup": {
+  "category": "Vehicles",
+  "tris": 1250,
+  "studs": [
+   7.93,
+   6.0,
+   16.3
+  ],
+  "materials": [
+   "EF_Tyre",
+   "EF_Metal",
+   "EF_GreyDark",
+   "EF_Roof",
+   "EF_Light",
+   "EF_Glass",
+   "EF_White",
+   "EF_WoodDark",
+   "EF_Comb",
+   "EF_Black",
+   "EF_Wood"
+  ]
+ },
+ "Farmhand": {
+  "category": "Workers",
+  "tris": 378,
+  "studs": [
+   3.95,
+   5.7,
+   2.4
+  ],
+  "materials": [
+   "EF_Denim",
+   "EF_WoodDark",
+   "EF_Shirt",
+   "EF_Accent",
+   "EF_Skin",
+   "EF_Black",
+   "EF_Hair",
+   "EF_Straw",
+   "EF_Roof"
+  ]
+ },
+ "Fence": {
+  "category": "Props",
+  "tris": 72,
+  "studs": [
+   8.05,
+   3.5,
+   0.73
+  ],
+  "materials": [
+   "EF_WoodDark",
+   "EF_White"
+  ]
+ },
+ "Fox": {
+  "category": "Creatures",
+  "tris": 724,
+  "studs": [
+   0.9,
+   1.93,
+   3.77
+  ],
+  "materials": [
+   "EF_Black",
+   "EF_Fox",
+   "EF_White"
+  ]
+ },
+ "HenHouse": {
+  "category": "Housing",
+  "tris": 602,
+  "studs": [
+   16.0,
+   14.4,
+   14.65
+  ],
+  "materials": [
+   "EF_Path",
+   "EF_Wood",
+   "EF_White",
+   "EF_WoodDark",
+   "EF_Roof",
+   "EF_RoofDark",
+   "EF_Accent",
+   "EF_Glass",
+   "EF_Black",
+   "EF_GreyDark"
+  ]
+ },
+ "HenTower": {
+  "category": "Housing",
+  "tris": 1486,
+  "studs": [
+   15.6,
+   39.1,
+   15.6
+  ],
+  "materials": [
+   "EF_Wood",
+   "EF_White",
+   "EF_Roof",
+   "EF_Accent",
+   "EF_Glass",
+   "EF_Cream",
+   "EF_RoofDark",
+   "EF_GreyDark"
+  ]
+ },
+ "LittleCoop": {
+  "category": "Housing",
+  "tris": 358,
+  "studs": [
+   9.77,
+   8.12,
+   10.75
+  ],
+  "materials": [
+   "EF_WoodDark",
+   "EF_Wood",
+   "EF_White",
+   "EF_Roof",
+   "EF_Black",
+   "EF_Accent",
+   "EF_Glass"
+  ]
+ },
+ "MegaDome": {
+  "category": "Housing",
+  "tris": 1304,
+  "studs": [
+   50.0,
+   31.9,
+   50.85
+  ],
+  "materials": [
+   "EF_Path",
+   "EF_Roof",
+   "EF_Accent",
+   "EF_White",
+   "EF_Glass",
+   "EF_Light"
+  ]
+ },
+ "PoultryHall": {
+  "category": "Housing",
+  "tris": 1204,
+  "studs": [
+   44.0,
+   15.5,
+   29.84
+  ],
+  "materials": [
+   "EF_Path",
+   "EF_White",
+   "EF_Roof",
+   "EF_Wood",
+   "EF_RoofDark",
+   "EF_Glass",
+   "EF_Metal",
+   "EF_GreyDark",
+   "EF_Accent"
+  ]
+ },
+ "RedBarn": {
+  "category": "Housing",
+  "tris": 764,
+  "studs": [
+   25.6,
+   20.74,
+   32.28
+  ],
+  "materials": [
+   "EF_Path",
+   "EF_Roof",
+   "EF_White",
+   "EF_RoofDark",
+   "EF_WoodDark",
+   "EF_Glass"
+  ]
+ },
+ "RoboPicker": {
+  "category": "Workers",
+  "tris": 892,
+  "studs": [
+   3.63,
+   4.75,
+   2.86
+  ],
+  "materials": [
+   "EF_GreyDark",
+   "EF_Black",
+   "EF_Metal",
+   "EF_Accent",
+   "EF_Comb",
+   "EF_RoboEye",
+   "EF_Straw",
+   "EF_Cream",
+   "EF_White"
+  ]
+ },
+ "Rock": {
+  "category": "Props",
+  "tris": 100,
+  "studs": [
+   4.06,
+   1.9,
+   3.34
+  ],
+  "materials": [
+   "EF_Rock",
+   "EF_RockDark"
+  ]
+ },
+ "Signboard": {
+  "category": "Props",
+  "tris": 264,
+  "studs": [
+   8.4,
+   6.8,
+   1.27
+  ],
+  "materials": [
+   "EF_WoodDark",
+   "EF_Wood",
+   "EF_Cream",
+   "EF_Roof",
+   "EF_Accent",
+   "EF_Path"
+  ]
+ },
+ "Silo": {
+  "category": "Buildings",
+  "tris": 1176,
+  "studs": [
+   13.98,
+   28.52,
+   11.2
+  ],
+  "materials": [
+   "EF_GreyDark",
+   "EF_Metal",
+   "EF_Grey",
+   "EF_Roof",
+   "EF_Accent",
+   "EF_Wood"
+  ]
+ },
+ "SkyRoost": {
+  "category": "Housing",
+  "tris": 978,
+  "studs": [
+   18.48,
+   49.6,
+   20.06
+  ],
+  "materials": [
+   "EF_Path",
+   "EF_Wood",
+   "EF_White",
+   "EF_WoodDark",
+   "EF_Cream",
+   "EF_Roof",
+   "EF_Glass",
+   "EF_GreyDark",
+   "EF_Accent"
+  ]
+ },
+ "Tree": {
+  "category": "Props",
+  "tris": 244,
+  "studs": [
+   8.02,
+   13.81,
+   7.15
+  ],
+  "materials": [
+   "EF_Trunk",
+   "EF_Leaf",
+   "EF_LeafDark",
+   "EF_Comb"
+  ]
+ },
+ "TwinCoop": {
+  "category": "Housing",
+  "tris": 644,
+  "studs": [
+   18.1,
+   8.32,
+   11.15
+  ],
+  "materials": [
+   "EF_WoodDark",
+   "EF_Wood",
+   "EF_White",
+   "EF_Roof",
+   "EF_Black",
+   "EF_Accent",
+   "EF_Glass",
+   "EF_RoofDark"
+  ]
+ },
+ "Warehouse": {
+  "category": "Buildings",
+  "tris": 968,
+  "studs": [
+   37.6,
+   20.54,
+   31.84
+  ],
+  "materials": [
+   "EF_Grey",
+   "EF_Metal",
+   "EF_Roof",
+   "EF_GreyDark",
+   "EF_Path",
+   "EF_Accent",
+   "EF_Black",
+   "EF_White"
+  ]
+ }
+}
