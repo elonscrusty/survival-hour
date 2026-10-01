@@ -246,6 +246,8 @@ check("sky objects, traffic and customers spawned locally", amb ~= nil and amb:F
 
 -- decor shop through the UI
 session.profile.cash = BigNum.new(400) -- SETUP
+send("sync")
+task.wait(0.6)
 local milestoneSeen = {}
 local prevHook = Engine.onClientEvent
 Engine.onClientEvent = function(name, _, kind, data)
@@ -264,7 +266,13 @@ for _, dd in panelsGui:GetDescendants() do
 	end
 end
 check("Decor tab lists items with picture icons", panelsGui.Enabled and icons >= 6, icons .. " icon views")
-Engine.press(Engine.findButton(panelsGui, "^Buy$"))
+local planterBtn
+for _, card in panelsGui:GetDescendants() do
+	if card:IsA("TextLabel") and card.Text == "Flower Planters" then
+		planterBtn = Engine.findButton(card.Parent, "^Buy$")
+	end
+end
+Engine.press(planterBtn)
 task.wait(0.5)
 check("buying Flower Planters spends $250 and places it on the plot", session.profile.decor.planter == true and math.abs(cash() - 150) < 30 and plot:FindFirstChild("Decor_planter") ~= nil, Format.cash(session.profile.cash))
 Engine.press(Engine.findButton(panelsGui, "✕"))
@@ -276,8 +284,10 @@ check("milestone banner sent when lifetime cash passes $1,000", table.find(miles
 session.profile.cash = BigNum.new(1e6) -- SETUP
 local lvlBefore = session.profile.biz.stand.level
 session.profile.biz.stand.level = 9 -- SETUP: one level from the first milestone
+place(R.CFrame.new(standAnchor.Position - R.Vector3.new(0, 14, 12))) -- stand close enough to upgrade
+task.wait(0.3)
 Action:FireServer("upgrade", "stand", 1)
-task.wait(0.5)
+task.wait(0.6)
 check("reaching level 10 adds a milestone prop and banner", plot:FindFirstChild("Tier_stand_1") ~= nil and table.find(milestoneSeen, "level") ~= nil)
 session.profile.biz.stand.level = lvlBefore -- SETUP: restore for later checks
 Engine.onClientEvent = prevHook
@@ -297,7 +307,19 @@ do
 	local World = server.require(sss.Server.Services.World)
 	World.swap("Planter")
 	local placed = plot:FindFirstChild("Decor_planter")
-	check("loaded mesh replaces the stand-in in place", placed ~= nil and placed:FindFirstChild("Mesh") ~= nil)
+	local meshes = 0
+	for _, dd in (placed and placed:GetDescendants() or {}) do
+		if dd.Name == "Mesh" then
+			meshes += 1
+		end
+	end
+	local kids = 0
+	for _, c in (placed and placed:GetChildren() or {}) do
+		if c:IsA("Model") then
+			kids += 1 -- (a build highlight may also be parented here)
+		end
+	end
+	check("loaded mesh replaces the stand-ins in place (all 4 planters)", meshes == 4 and kids == 4, meshes .. " meshes, " .. kids .. " pieces")
 	fake:Destroy()
 end
 session.profile.cash = BigNum.new(250)
@@ -359,8 +381,13 @@ for _, id in { "stand", "dash", "depot", "trading", "labs", "robotics", "republi
 	end
 end
 check("every business building is in the world", allBuildings)
--- dump top-down geometry of the finished plot for tools/smoke/render_map.py
+-- dump top-down geometry of the finished plot (every decoration bought) for tools/smoke/render_map.py
 do
+	for _, item in server.require(rs.Shared.Catalog).decor.items do
+		session.profile.decor[item.id] = true -- SETUP: show every decoration for the layout render
+	end
+	server.require(sss.Server.Services.GameService).afterChange(session)
+	task.wait(0.3)
 	local origin = plot.SpawnPoint.CFrame.Position - R.Vector3.new(0, 3, 6)
 	local out = {}
 	for _, d in plot:GetDescendants() do

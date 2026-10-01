@@ -46,8 +46,8 @@ src/shared/                 Config (runtime switches), Products (Robux IDs, empt
 src/server/Services/        Data+Store (saves), World+Models (plots, native-part models), GameService (loop, actions), Extras (pickups, phone, DogDash, names, Robux)
 src/client/                 HUD, world controls, panels, dialogs, phone, DogDash, effects; UI kit
 assets/                     original Blender .blend, FBX/OBJ exports, renders, synthesised audio (assets/ASSETS.md)
-tests/                      94 unit tests (Luau CLI)
-tools/smoke/                Lune mini-engine + 77-check headless playthrough of the built place
+tests/                      103 unit tests (Luau CLI)
+tools/smoke/                Lune mini-engine + 91-check headless playthrough of the built place
 docs/                       catalog, research register, testing report, save schema, live setup, Studio plan, review
 ```
 
@@ -71,6 +71,18 @@ docs/                       catalog, research register, testing report, save sch
 | Versioned saves, failed-load protection, mock storage, idempotent receipts, mock purchases | **Done** (mock storage only). Real DataStore code exists but is **untested**. |
 | Studio playtest on desktop/phone/tablet, screenshots | **Not done**: Studio was unavailable. Use the Studio test plan. |
 | Mesh import, live Robux products, publishing | **Not done** (outside this handoff's authorisation). See `docs/LIVE_SETUP.md`. |
+
+## Pass 2 (owner checklist)
+
+| Item | State |
+|---|---|
+| Smaller HUD (wallet + name about 1/3 of the old area), next-unlock bar | **Done** |
+| Every building, upgrade, decoration, customer and sky object has its own original Blender model (87 models) | **Done** in Blender. **Not visible in game until uploaded** (`tools/upload_assets.py` with Carter's Open Cloud key); native stand-ins until then |
+| Picture icons (87 renders) | **Done**; shown as live 3D previews until uploaded |
+| Decor shop: 12 looks-only decorations, designed placements (sets of planters, lamps, balloons, topiaries…), kept forever | **Done** |
+| More UI animation (pop-ins, hover/press, pulses, wiggles, banners, confetti) | **Done** |
+| More detailed sky: 3D clouds, blimp, balloons, birds, cloud puffs, road traffic; painted skybox once uploaded | **Done** |
+| Progress feels rewarding: grow-in builds with confetti, x2 CASH / LEVEL UP bursts, milestone banners, level-milestone props, customers that multiply | **Done** |
 
 ## Key documents
 

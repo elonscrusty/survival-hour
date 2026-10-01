@@ -1,9 +1,9 @@
 [Store] mode = mock
 [SellHotDogs] server ready
-[Shop][mock] Carter key=manage receipt=mock-209fb17e-03d8 -> granted
-[Shop][mock] Carter key=manage receipt=mock-209fb17e-03d8 -> granted
-[Shop][mock] Carter key=remoteBuy receipt=mock-40474a53-fa53 -> granted
-[Shop][mock] Carter key=forever receipt=mock-7ab4c52f-8a14 -> granted
+[Shop][mock] Carter key=manage receipt=mock-3d733bbd-fafc -> granted
+[Shop][mock] Carter key=manage receipt=mock-3d733bbd-fafc -> granted
+[Shop][mock] Carter key=remoteBuy receipt=mock-52acfdab-84e2 -> granted
+[Shop][mock] Carter key=forever receipt=mock-7bef7401-bf17 -> granted
 [warn] [Store] load attempt 1 failed (injected)
 [warn] [Store] load attempt 2 failed (injected)
 [warn] [Store] load attempt 3 failed (injected)

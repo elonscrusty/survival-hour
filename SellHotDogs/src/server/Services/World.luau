@@ -252,6 +252,10 @@ function World.swap(name: string)
 		local old: Model?
 		if slot.kind == "racks" then
 			old = (plot.folder :: any).Decor:FindFirstChild(slot.key) :: Model?
+		elseif slot.kind == "decorChild" then
+			local id, i = slot.key:match("^(.-)|(%d+)$")
+			local container = plot.decor[id :: string]
+			old = container and container:FindFirstChild(tostring(id) .. "_" .. tostring(i)) :: Model?
 		else
 			old = (plot :: any)[slot.kind][slot.key]
 		end
@@ -271,7 +275,7 @@ function World.swap(name: string)
 		end
 		m.Parent = old.Parent
 		old:Destroy()
-		if slot.kind ~= "racks" then
+		if slot.kind ~= "racks" and slot.kind ~= "decorChild" then
 			(plot :: any)[slot.kind][slot.key] = m
 		end
 	end
@@ -318,6 +322,9 @@ local function buildPlot(index: number): Plot
 			part(decor, Vector3.new(inner - 7 + 1, 0.3, 8), origin * CFrame.new(sign * (7 + inner) / 2, 0.16, lot.pos.Z), Color3.fromRGB(235, 222, 196), { material = Enum.Material.Pebble })
 		end
 	end
+	-- round plaza on the path between the first and second rows (fountain spot)
+	local plaza = part(decor, Vector3.new(0.32, 26, 26), origin * CFrame.new(Layout.plaza + Vector3.new(0, 0.17, 0)) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(232, 214, 186), { shape = Enum.PartType.Cylinder, material = Enum.Material.Pebble, name = "Plaza" })
+	plaza.CastShadow = false
 	-- plot border hedges with a gap at the road
 	for _, x in { -Layout.PLOT_HALF_WIDTH, Layout.PLOT_HALF_WIDTH } do
 		part(decor, Vector3.new(3, 3, Layout.PLOT_DEPTH - 20), origin * CFrame.new(x, 1.5, Layout.PLOT_DEPTH / 2 + 4), Color3.fromRGB(80, 160, 70), { material = Enum.Material.Grass })
@@ -327,7 +334,7 @@ local function buildPlot(index: number): Plot
 		tree(decor, origin.Position + Vector3.new(-98, 0, z), 1.1)
 		tree(decor, origin.Position + Vector3.new(98, 0, z + 8), 1.2)
 	end
-	for _, z in { 64, 128, 212, 292 } do
+	for _, z in { 64, 160, 212, 288 } do
 		flowers(decor, origin.Position + Vector3.new(-12, 0, z), 6)
 		flowers(decor, origin.Position + Vector3.new(12, 0, z), 6)
 	end
@@ -446,16 +453,23 @@ local function buildPlot(index: number): Plot
 	extra("Portal", "CosmicPortal", Layout.portal, "evolve", "Void Evolution")
 	extra("Staircase", "Staircase", Layout.staircase, "ascend", "Ascension")
 
-	-- looks-only decorations (shown once bought)
+	-- looks-only decorations (shown once bought): one container per item holding every placement
 	for _, item in Economy.Catalog.decor.items do
-		local pos = Layout.decorSpots[item.id]
-		if pos then
-			local cf = origin * CFrame.new(pos) * CFrame.Angles(0, math.pi, 0)
-			local m = Models.build(item.model)
-			Models.place(m, cf, plot.hidden)
-			m.Name = "Decor_" .. item.id
-			plot.decor[item.id] = m
-			register(item.model, plot, "decor", item.id, cf, nil)
+		local spots = Layout.decorSpots[item.id]
+		if spots then
+			local container = Instance.new("Model")
+			container.Name = "Decor_" .. item.id
+			for i, sp in spots do
+				-- models face -Z; lookAt points -Z at the target, so the front faces `face`
+				local cf = origin * CFrame.lookAt(sp.pos, sp.pos + sp.face)
+				local m = Models.build(item.model)
+				Models.place(m, cf, container)
+				m.Name = item.id .. "_" .. i
+				register(item.model, plot, "decorChild", item.id .. "|" .. i, cf, nil)
+			end
+			container.WorldPivot = origin * CFrame.new(spots[1].pos)
+			container.Parent = plot.hidden
+			plot.decor[item.id] = container
 		end
 	end
 

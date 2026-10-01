@@ -8,9 +8,9 @@ Date: 2026-10-01. Environment: Linux cloud container (no Roblox Studio, no Windo
 |---|---|---|---|
 | Catalog regeneration | Python 3.11 | `python3 tools/gen_catalog.py` | ok (123 values, 61 unresolved) |
 | Type check | luau-lsp 1.53.0 | in `tools/check.sh` | 0 diagnostics |
-| Unit tests (pure rules) | Luau CLI | `cd tests && luau run.luau` | **98 passed, 0 failed** (`evidence/unit_tests.txt`) |
+| Unit tests (pure rules) | Luau CLI | `cd tests && luau run.luau` | **103 passed, 0 failed** (`evidence/unit_tests.txt`) |
 | Place build | Rojo 7.7.0 | `rojo build default.project.json -o build/SellHotDogs.rbxlx` | ok |
-| Headless end-to-end smoke test of the built place | Lune 0.10.4 | `lune run tools/smoke/smoke.luau` | **83 passed, 0 failed, 0 script errors** (`evidence/smoke_report.md`, `evidence/smoke_log.txt`) |
+| Headless end-to-end smoke test of the built place | Lune 0.10.4 | `lune run tools/smoke/smoke.luau` | **91 passed, 0 failed, 0 script errors** (`evidence/smoke_report.md`, `evidence/smoke_log.txt`) |
 | Top-down render of the fully built plot | Lune dump + PIL | `python3 tools/smoke/render_map.py` | `evidence/plot_map_full.png` |
 | Blender assets | bpy 5.0.1 | `python3 tools/blender/build_assets.py` | 22/22 built and exported; sizes within ±15 %; `assets/renders/contact_sheet.png` |
 | Code review | separate reviewer pass | read-only review of server and logic | 8 findings, all fixed and covered by tests (see REVIEW.md) |
@@ -97,7 +97,7 @@ Each item below was asserted. The full table is in `evidence/smoke_report.md`.
 - Two players get separate plots and separate data.
 - The Studio dev hook works.
 
-### Unit tests (98)
+### Unit tests (103)
 
 - BigNum: arithmetic, 10^564 range, sanitising, cents.
 - Format: names to centillion, scientific beyond, rounding carry.
@@ -133,3 +133,24 @@ Each item below was asserted. The full table is in `evidence/smoke_report.md`.
 - Deferred signal behaviour in a live server.
 
 **Next step:** run `docs/STUDIO_TEST_PLAN.md` on desktop and in the Device emulator, and save screenshots to `docs/evidence/studio/`.
+
+## Pass 2 additions (headless)
+
+New checks in `tools/smoke/smoke.luau`:
+- The wallet is compact (200×42 design px).
+- The next-unlock bar names the next purchase.
+- Local sky objects, traffic and customers spawn.
+- The Decor tab lists items with picture views. Buying Flower Planters spends exactly $250 and places all 4 planters.
+- A milestone banner is sent when lifetime cash passes $1,000.
+- Reaching stand level 10 adds the level-milestone prop and sends a banner.
+- A loaded mesh replaces all 4 planter stand-ins in place. This used a simulated loaded asset; real InsertService loading is untested.
+
+New unit tests in `tests/Decor.spec.luau`:
+- Decor buying and affordability.
+- Decor survives every reset, saves and loads.
+- Milestones fire once and in order.
+- Level tiers.
+
+`docs/evidence/plot_map_full.png` now shows the plot with every decoration bought. It's a schematic: cylinders such as the plaza and fountain show as thin lines.
+
+Not tested: anything visual in Studio (animations, sky, decor looks), and real mesh/decal uploads, `rbxthumb` icon and skybox display and mesh orientation.

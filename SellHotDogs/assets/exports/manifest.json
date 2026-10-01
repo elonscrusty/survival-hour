@@ -913,5 +913,974 @@
       "obj": "assets/exports/LaunchSite.obj",
       "render": "assets/renders/LaunchSite.png"
     }
+  },
+  "RelishMixer": {
+    "size": [
+      5.8,
+      3.94,
+      8.19
+    ],
+    "target": [
+      5.6,
+      3.8,
+      8.2
+    ],
+    "triangles": 5206,
+    "materials": [
+      "navy",
+      "cream",
+      "relish",
+      "teal",
+      "chrome",
+      "teal_dark",
+      "bun",
+      "sausage",
+      "ketchup",
+      "mustard",
+      "relish_e1",
+      "leaf",
+      "ketchup_e0.8",
+      "glass_glass"
+    ],
+    "files": {
+      "blend": "assets/blender/RelishMixer.blend",
+      "fbx": "assets/exports/RelishMixer.fbx",
+      "obj": "assets/exports/RelishMixer.obj",
+      "render": "assets/renders/RelishMixer.png"
+    }
+  },
+  "FlyerStand": {
+    "size": [
+      6.24,
+      1.913,
+      6.152
+    ],
+    "target": [
+      6.2,
+      2.0,
+      6.2
+    ],
+    "triangles": 4744,
+    "materials": [
+      "wood_dark",
+      "wood",
+      "ketchup",
+      "mustard",
+      "cream",
+      "teal",
+      "pink",
+      "relish",
+      "sky",
+      "peach",
+      "lavender",
+      "bun",
+      "sausage",
+      "navy",
+      "chrome"
+    ],
+    "files": {
+      "blend": "assets/blender/FlyerStand.blend",
+      "fbx": "assets/exports/FlyerStand.fbx",
+      "obj": "assets/exports/FlyerStand.obj",
+      "render": "assets/renders/FlyerStand.png"
+    }
+  },
+  "FlameGrill": {
+    "size": [
+      7.8,
+      4.86,
+      6.497
+    ],
+    "target": [
+      8,
+      4.8,
+      6.5
+    ],
+    "triangles": 4444,
+    "materials": [
+      "ketchup",
+      "chrome",
+      "navy",
+      "black",
+      "sausage_dark",
+      "sausage",
+      "mustard_e1.6",
+      "peach_e2",
+      "ketchup_e1.6",
+      "cream_e2",
+      "peach_e1.6",
+      "wood_dark",
+      "kraft",
+      "tire",
+      "cream",
+      "wood",
+      "mustard"
+    ],
+    "files": {
+      "blend": "assets/blender/FlameGrill.blend",
+      "fbx": "assets/exports/FlameGrill.fbx",
+      "obj": "assets/exports/FlameGrill.obj",
+      "render": "assets/renders/FlameGrill.png"
+    }
+  },
+  "BogoSign": {
+    "size": [
+      6.2,
+      1.7,
+      8.9
+    ],
+    "target": [
+      6,
+      1.8,
+      8.9
+    ],
+    "triangles": 5800,
+    "materials": [
+      "ketchup",
+      "mustard",
+      "cream",
+      "bun",
+      "sausage",
+      "cream_e1.3",
+      "teal",
+      "teal_dark",
+      "chrome",
+      "concrete",
+      "relish",
+      "leaf",
+      "mustard_e0.6"
+    ],
+    "files": {
+      "blend": "assets/blender/BogoSign.blend",
+      "fbx": "assets/exports/BogoSign.fbx",
+      "obj": "assets/exports/BogoSign.obj",
+      "render": "assets/renders/BogoSign.png"
+    }
+  },
+  "DashFloor": {
+    "size": [
+      30.0,
+      26.0,
+      0.655
+    ],
+    "target": [
+      30,
+      26,
+      0.6
+    ],
+    "triangles": 4184,
+    "materials": [
+      "stone_dark",
+      "cream",
+      "ketchup",
+      "mustard",
+      "teal",
+      "bun",
+      "sausage",
+      "teal_dark"
+    ],
+    "files": {
+      "blend": "assets/blender/DashFloor.blend",
+      "fbx": "assets/exports/DashFloor.fbx",
+      "obj": "assets/exports/DashFloor.obj",
+      "render": "assets/renders/DashFloor.png"
+    }
+  },
+  "DashWalls": {
+    "size": [
+      30.7,
+      26.7,
+      3.17
+    ],
+    "target": [
+      30,
+      26,
+      3.1
+    ],
+    "triangles": 7728,
+    "materials": [
+      "brick",
+      "concrete_dark",
+      "cream",
+      "mustard",
+      "ketchup",
+      "cream_e1.2",
+      "wood_dark",
+      "relish",
+      "teal",
+      "leaf"
+    ],
+    "files": {
+      "blend": "assets/blender/DashWalls.blend",
+      "fbx": "assets/exports/DashWalls.fbx",
+      "obj": "assets/exports/DashWalls.obj",
+      "render": "assets/renders/DashWalls.png"
+    }
+  },
+  "FeeBoard": {
+    "size": [
+      3.4,
+      2.976,
+      6.63
+    ],
+    "target": [
+      3.4,
+      2.9,
+      6.6
+    ],
+    "triangles": 6348,
+    "materials": [
+      "wood_dark",
+      "navy",
+      "mustard",
+      "wood",
+      "ketchup",
+      "bun",
+      "cream",
+      "sausage",
+      "gold",
+      "pink",
+      "sky",
+      "teal"
+    ],
+    "files": {
+      "blend": "assets/blender/FeeBoard.blend",
+      "fbx": "assets/exports/FeeBoard.fbx",
+      "obj": "assets/exports/FeeBoard.obj",
+      "render": "assets/renders/FeeBoard.png"
+    }
+  },
+  "DispatchDesk": {
+    "size": [
+      7.0,
+      4.728,
+      6.3
+    ],
+    "target": [
+      7,
+      4.4,
+      6.3
+    ],
+    "triangles": 3164,
+    "materials": [
+      "wood",
+      "teal",
+      "cream",
+      "chrome",
+      "teal_dark",
+      "navy",
+      "screen",
+      "relish_e1.2",
+      "ketchup_e1",
+      "mustard_e1.2",
+      "ketchup",
+      "wood_dark",
+      "sky",
+      "mustard",
+      "leaf",
+      "ketchup_e0.6",
+      "mustard_e0.6",
+      "relish_e0.6",
+      "mustard_e1",
+      "tire"
+    ],
+    "files": {
+      "blend": "assets/blender/DispatchDesk.blend",
+      "fbx": "assets/exports/DispatchDesk.fbx",
+      "obj": "assets/exports/DispatchDesk.obj",
+      "render": "assets/renders/DispatchDesk.png"
+    }
+  },
+  "DashArcade": {
+    "size": [
+      3.46,
+      3.016,
+      7.005
+    ],
+    "target": [
+      3.4,
+      3.0,
+      7.0
+    ],
+    "triangles": 5844,
+    "materials": [
+      "navy",
+      "mustard",
+      "ketchup",
+      "mustard_e0.9",
+      "bun",
+      "cream",
+      "sausage",
+      "cream_e1.2",
+      "black",
+      "screen",
+      "teal_e0.8",
+      "cream_e1",
+      "chrome",
+      "mustard_e0.4",
+      "teal_e0.4",
+      "relish_e0.4",
+      "pink_e0.4",
+      "ketchup_e0.6"
+    ],
+    "files": {
+      "blend": "assets/blender/DashArcade.blend",
+      "fbx": "assets/exports/DashArcade.fbx",
+      "obj": "assets/exports/DashArcade.obj",
+      "render": "assets/renders/DashArcade.png"
+    }
+  },
+  "FridgeTruck": {
+    "size": [
+      12.075,
+      5.661,
+      7.375
+    ],
+    "target": [
+      12,
+      5.6,
+      7.6
+    ],
+    "triangles": 6616,
+    "materials": [
+      "tire",
+      "frost",
+      "sky",
+      "teal",
+      "cream",
+      "bun",
+      "sausage",
+      "ketchup",
+      "mustard",
+      "steel",
+      "navy",
+      "relish_e1.2",
+      "chrome",
+      "screen",
+      "cream_e0.6",
+      "ketchup_e0.3"
+    ],
+    "files": {
+      "blend": "assets/blender/FridgeTruck.blend",
+      "fbx": "assets/exports/FridgeTruck.fbx",
+      "obj": "assets/exports/FridgeTruck.obj",
+      "render": "assets/renders/FridgeTruck.png"
+    }
+  },
+  "LoadingConveyor": {
+    "size": [
+      8.15,
+      4.31,
+      4.19
+    ],
+    "target": [
+      8,
+      4.4,
+      4.2
+    ],
+    "triangles": 2178,
+    "materials": [
+      "navy",
+      "mustard",
+      "chrome",
+      "black",
+      "steel",
+      "tire",
+      "kraft",
+      "cream",
+      "ketchup",
+      "teal",
+      "relish_e0.8"
+    ],
+    "files": {
+      "blend": "assets/blender/LoadingConveyor.blend",
+      "fbx": "assets/exports/LoadingConveyor.fbx",
+      "obj": "assets/exports/LoadingConveyor.obj",
+      "render": "assets/renders/LoadingConveyor.png"
+    }
+  },
+  "DepotOffice": {
+    "size": [
+      6.285,
+      5.985,
+      6.95
+    ],
+    "target": [
+      6.4,
+      5.8,
+      7.0
+    ],
+    "triangles": 2164,
+    "materials": [
+      "concrete",
+      "cream",
+      "teal",
+      "window",
+      "wood",
+      "navy",
+      "wood_dark",
+      "relish",
+      "ketchup",
+      "chrome",
+      "gold",
+      "mustard",
+      "cream_e1"
+    ],
+    "files": {
+      "blend": "assets/blender/DepotOffice.blend",
+      "fbx": "assets/exports/DepotOffice.fbx",
+      "obj": "assets/exports/DepotOffice.obj",
+      "render": "assets/renders/DepotOffice.png"
+    }
+  },
+  "BoxingMachine": {
+    "size": [
+      8.15,
+      3.41,
+      6.322
+    ],
+    "target": [
+      8,
+      3.6,
+      6.3
+    ],
+    "triangles": 1898,
+    "materials": [
+      "teal",
+      "teal_dark",
+      "chrome",
+      "steel",
+      "cream",
+      "mustard",
+      "kraft",
+      "ketchup",
+      "black",
+      "navy",
+      "kraft_dark",
+      "tire",
+      "relish_e1.2",
+      "mustard_e1.2",
+      "ketchup_e1.2",
+      "relish_e1"
+    ],
+    "files": {
+      "blend": "assets/blender/BoxingMachine.blend",
+      "fbx": "assets/exports/BoxingMachine.fbx",
+      "obj": "assets/exports/BoxingMachine.obj",
+      "render": "assets/renders/BoxingMachine.png"
+    }
+  },
+  "GpsTower": {
+    "size": [
+      5.0,
+      5.0,
+      10.424
+    ],
+    "target": [
+      5,
+      5,
+      10
+    ],
+    "triangles": 2848,
+    "materials": [
+      "concrete",
+      "ketchup",
+      "concrete_dark",
+      "cream",
+      "navy",
+      "chrome",
+      "stone_dark",
+      "mustard",
+      "ketchup_e1.5",
+      "teal",
+      "relish_e1.2",
+      "mustard_e1.2"
+    ],
+    "files": {
+      "blend": "assets/blender/GpsTower.blend",
+      "fbx": "assets/exports/GpsTower.fbx",
+      "obj": "assets/exports/GpsTower.obj",
+      "render": "assets/renders/GpsTower.png"
+    }
+  },
+  "ExpressSign": {
+    "size": [
+      10.4,
+      3.096,
+      8.24
+    ],
+    "target": [
+      10.4,
+      3.2,
+      8.2
+    ],
+    "triangles": 2748,
+    "materials": [
+      "concrete",
+      "steel",
+      "teal",
+      "cream",
+      "teal_dark",
+      "mustard_e0.5",
+      "bun",
+      "sausage",
+      "ketchup",
+      "mustard",
+      "mustard_e1.2",
+      "navy",
+      "mustard_e1.4"
+    ],
+    "files": {
+      "blend": "assets/blender/ExpressSign.blend",
+      "fbx": "assets/exports/ExpressSign.fbx",
+      "obj": "assets/exports/ExpressSign.obj",
+      "render": "assets/renders/ExpressSign.png"
+    }
+  },
+  "InsuranceBooth": {
+    "size": [
+      5.602,
+      3.648,
+      8.34
+    ],
+    "target": [
+      5.6,
+      3.8,
+      8.4
+    ],
+    "triangles": 2516,
+    "materials": [
+      "cream",
+      "teal_dark",
+      "teal",
+      "mustard",
+      "wood",
+      "ketchup",
+      "sky",
+      "gold",
+      "navy",
+      "bun",
+      "sausage"
+    ],
+    "files": {
+      "blend": "assets/blender/InsuranceBooth.blend",
+      "fbx": "assets/exports/InsuranceBooth.fbx",
+      "obj": "assets/exports/InsuranceBooth.obj",
+      "render": "assets/renders/InsuranceBooth.png"
+    }
+  },
+  "BigVan": {
+    "size": [
+      14.05,
+      6.212,
+      8.992
+    ],
+    "target": [
+      14,
+      6.4,
+      9.2
+    ],
+    "triangles": 7892,
+    "materials": [
+      "ketchup",
+      "cream",
+      "mustard",
+      "screen",
+      "sausage_dark",
+      "chrome",
+      "bun",
+      "sausage",
+      "tire",
+      "cream_e0.6",
+      "ketchup_e0.4",
+      "navy",
+      "mustard_e1.2"
+    ],
+    "files": {
+      "blend": "assets/blender/BigVan.blend",
+      "fbx": "assets/exports/BigVan.fbx",
+      "obj": "assets/exports/BigVan.obj",
+      "render": "assets/renders/BigVan.png"
+    }
+  },
+  "PalletStack": {
+    "size": [
+      7.589,
+      5.736,
+      4.55
+    ],
+    "target": [
+      7.8,
+      6.0,
+      4.5
+    ],
+    "triangles": 7640,
+    "materials": [
+      "wood",
+      "wood_dark",
+      "kraft",
+      "mustard",
+      "cream",
+      "ketchup",
+      "frost_glass",
+      "teal",
+      "navy",
+      "tire",
+      "chrome",
+      "steel",
+      "mustard_e1.3"
+    ],
+    "files": {
+      "blend": "assets/blender/PalletStack.blend",
+      "fbx": "assets/exports/PalletStack.fbx",
+      "obj": "assets/exports/PalletStack.obj",
+      "render": "assets/renders/PalletStack.png"
+    }
+  },
+  "LedDisplay": {
+    "size": [
+      8.0,
+      1.65,
+      8.175
+    ],
+    "target": [
+      8,
+      1.6,
+      8
+    ],
+    "triangles": 3380,
+    "materials": [
+      "navy",
+      "mustard",
+      "black",
+      "teal_dark_e0.25",
+      "mustard_e1.6",
+      "bun_e1.6",
+      "ketchup_e1.6",
+      "teal_e1.6",
+      "cream_e1.3",
+      "chrome",
+      "tire"
+    ],
+    "files": {
+      "blend": "assets/blender/LedDisplay.blend",
+      "fbx": "assets/exports/LedDisplay.fbx",
+      "obj": "assets/exports/LedDisplay.obj",
+      "render": "assets/renders/LedDisplay.png"
+    }
+  },
+  "TurboEngine": {
+    "size": [
+      6.117,
+      3.379,
+      5.266
+    ],
+    "target": [
+      6.2,
+      3.4,
+      5.4
+    ],
+    "triangles": 5108,
+    "materials": [
+      "navy",
+      "chrome",
+      "tire",
+      "cream",
+      "steel",
+      "ketchup",
+      "mustard",
+      "black",
+      "bun",
+      "sausage"
+    ],
+    "files": {
+      "blend": "assets/blender/TurboEngine.blend",
+      "fbx": "assets/exports/TurboEngine.fbx",
+      "obj": "assets/exports/TurboEngine.obj",
+      "render": "assets/renders/TurboEngine.png"
+    }
+  },
+  "RobotTruck": {
+    "size": [
+      10.5,
+      5.222,
+      6.97
+    ],
+    "target": [
+      10.6,
+      5.4,
+      7
+    ],
+    "triangles": 7874,
+    "materials": [
+      "navy",
+      "cream",
+      "void_glow_e1.5",
+      "bun",
+      "sausage",
+      "ketchup",
+      "mustard",
+      "teal",
+      "screen",
+      "void_glow_e2",
+      "cream_e1",
+      "glass_glass",
+      "black",
+      "void_glow_e1.2",
+      "tire"
+    ],
+    "files": {
+      "blend": "assets/blender/RobotTruck.blend",
+      "fbx": "assets/exports/RobotTruck.fbx",
+      "obj": "assets/exports/RobotTruck.obj",
+      "render": "assets/renders/RobotTruck.png"
+    }
+  },
+  "FuelTank": {
+    "size": [
+      8.0,
+      4.11,
+      4.652
+    ],
+    "target": [
+      8,
+      4,
+      4.8
+    ],
+    "triangles": 4600,
+    "materials": [
+      "concrete",
+      "concrete_dark",
+      "mustard",
+      "ketchup",
+      "chrome",
+      "navy",
+      "steel",
+      "cream"
+    ],
+    "files": {
+      "blend": "assets/blender/FuelTank.blend",
+      "fbx": "assets/exports/FuelTank.fbx",
+      "obj": "assets/exports/FuelTank.obj",
+      "render": "assets/renders/FuelTank.png"
+    }
+  },
+  "BrokerDesk": {
+    "size": [
+      6.7,
+      4.278,
+      4.95
+    ],
+    "target": [
+      7,
+      4.4,
+      5.0
+    ],
+    "triangles": 2780,
+    "materials": [
+      "navy",
+      "gold",
+      "wood_dark",
+      "black",
+      "ketchup_e1.2",
+      "relish_e1.2",
+      "chrome",
+      "screen",
+      "mustard_e1.2",
+      "cream",
+      "mustard",
+      "relish",
+      "tire"
+    ],
+    "files": {
+      "blend": "assets/blender/BrokerDesk.blend",
+      "fbx": "assets/exports/BrokerDesk.fbx",
+      "obj": "assets/exports/BrokerDesk.obj",
+      "render": "assets/renders/BrokerDesk.png"
+    }
+  },
+  "SauceVault": {
+    "size": [
+      6.0,
+      3.72,
+      6.355
+    ],
+    "target": [
+      6,
+      3.6,
+      6.4
+    ],
+    "triangles": 3216,
+    "materials": [
+      "navy",
+      "steel",
+      "gold",
+      "concrete_dark",
+      "chrome",
+      "cream",
+      "ketchup",
+      "mustard",
+      "relish_e0.4",
+      "relish_e1.4"
+    ],
+    "files": {
+      "blend": "assets/blender/SauceVault.blend",
+      "fbx": "assets/exports/SauceVault.fbx",
+      "obj": "assets/exports/SauceVault.obj",
+      "render": "assets/renders/SauceVault.png"
+    }
+  },
+  "BullStatue": {
+    "size": [
+      6.83,
+      3.5,
+      5.252
+    ],
+    "target": [
+      6.8,
+      3.6,
+      5.4
+    ],
+    "triangles": 3588,
+    "materials": [
+      "stone",
+      "stone_dark",
+      "gold",
+      "wood_dark",
+      "black",
+      "cream",
+      "bun",
+      "sausage",
+      "ketchup",
+      "mustard"
+    ],
+    "files": {
+      "blend": "assets/blender/BullStatue.blend",
+      "fbx": "assets/exports/BullStatue.fbx",
+      "obj": "assets/exports/BullStatue.obj",
+      "render": "assets/renders/BullStatue.png"
+    }
+  },
+  "ClockBoard": {
+    "size": [
+      5.0,
+      3.0,
+      10.393
+    ],
+    "target": [
+      5,
+      3,
+      10.4
+    ],
+    "triangles": 3064,
+    "materials": [
+      "stone",
+      "teal",
+      "cream",
+      "mustard",
+      "window",
+      "chrome",
+      "ketchup",
+      "gold",
+      "navy",
+      "black",
+      "relish_e1.5",
+      "mustard_e1",
+      "bun",
+      "sausage"
+    ],
+    "files": {
+      "blend": "assets/blender/ClockBoard.blend",
+      "fbx": "assets/exports/ClockBoard.fbx",
+      "obj": "assets/exports/ClockBoard.obj",
+      "render": "assets/renders/ClockBoard.png"
+    }
+  },
+  "ScientistBot": {
+    "size": [
+      3.257,
+      2.698,
+      5.99
+    ],
+    "target": [
+      3.4,
+      2.7,
+      6.1
+    ],
+    "triangles": 3296,
+    "materials": [
+      "navy",
+      "tire",
+      "cream",
+      "stone_dark",
+      "stone",
+      "ketchup",
+      "teal",
+      "sky",
+      "chrome",
+      "screen",
+      "void_glow_e2",
+      "void_glow_e1.5",
+      "mustard",
+      "glass_glass",
+      "relish_e1.4",
+      "wood_dark",
+      "relish",
+      "relish_e1.2",
+      "mint_e0.9"
+    ],
+    "files": {
+      "blend": "assets/blender/ScientistBot.blend",
+      "fbx": "assets/exports/ScientistBot.fbx",
+      "obj": "assets/exports/ScientistBot.obj",
+      "render": "assets/renders/ScientistBot.png"
+    }
+  },
+  "MissionConsole": {
+    "size": [
+      8.606,
+      3.348,
+      5.73
+    ],
+    "target": [
+      8.4,
+      3.4,
+      5.8
+    ],
+    "triangles": 3844,
+    "materials": [
+      "navy",
+      "mustard",
+      "teal_dark",
+      "ketchup_e0.7",
+      "mustard_e0.7",
+      "relish_e0.7",
+      "teal_e0.7",
+      "pink_e0.7",
+      "cream_e0.7",
+      "chrome",
+      "screen",
+      "relish_e1.3",
+      "mustard_e1.3",
+      "sky_e1",
+      "relish_e1.4",
+      "mustard_e1.4",
+      "ketchup_e1.4",
+      "cream_e0.8",
+      "ketchup_e0.8",
+      "mustard_e1.5",
+      "black",
+      "ketchup_e0.6",
+      "glass_glass",
+      "cream",
+      "wood_dark",
+      "ketchup_e1.5"
+    ],
+    "files": {
+      "blend": "assets/blender/MissionConsole.blend",
+      "fbx": "assets/exports/MissionConsole.fbx",
+      "obj": "assets/exports/MissionConsole.obj",
+      "render": "assets/renders/MissionConsole.png"
+    }
   }
 }

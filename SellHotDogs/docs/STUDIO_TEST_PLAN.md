@@ -51,3 +51,22 @@ game.ServerStorage.SHDDev:Invoke("lifetime", 3.08, 25) -- 20 investors on offer
 31. With `game.ServerStorage.SHDDev:Invoke("evolutions", 12)` the stands show "MAX SPEED". There's no flood of pops or sounds and the frame rate is fine.
 
 Report: device list, pass/fail per number, screenshots, Output errors.
+
+## G. Pass 2 (look and feel)
+32. HUD: the wallet and name pill are small at the top centre. The "Next: …" bar in the top-left shows the next purchase, its picture and how close you are. It turns gold and says READY! when you can afford it. 📸
+33. Buttons grow slightly when you hover or press them. Panels and pop-ups pop in. Toasts fade out. New right-side buttons wiggle when they first appear.
+34. Buying things: the new building or prop grows out of the ground with confetti, a sound and a small camera bump. "x2 CASH!", "x3 SPEED!", "AUTOMATIC!" and "LEVEL UP!" float over the business.
+35. Banners: "$100 earned!" and "$1,000 earned!" appear on the way up, "DogDash is open!" on unlocking a business, and "Hot Dog Stand level 10!" at levels 10, 25, 50 and 100. At each of those levels a picnic table, umbrella, balloons or statue appears by that business and more customers walk up to it.
+36. Decor tab: buy each decoration (`SHDDev:Invoke("cash", 1, 13)` first). Check every placement looks deliberate and nothing blocks pads, paths or the stand. 📸 each:
+    - an entrance arch, 4 planters lining the walkway and string lights
+    - balloons on the stand corners and a diner sign beside it
+    - benches facing the path
+    - 10 lamp posts along the path
+    - a fountain in the middle of the round plaza, with a picnic table and an umbrella either side
+    - topiaries by HotDogX
+    - the statue at the far end
+
+    Decorations stay after a rebirth.
+37. Sky: soft 3D clouds, a hot-dog blimp circling, hot-air balloons, bird flocks and cloud puffs on the horizon. Delivery vans drive along the road. 📸
+38. Icons: every menu card and button shows a picture. Before upload these are live 3D previews or emoji; after upload they are the rendered pictures.
+39. After uploading the models (`tools/upload_assets.py`): stand-ins turn into the Blender models within a few seconds of starting. If they face backwards, set `MeshYaw = 180` in Config.

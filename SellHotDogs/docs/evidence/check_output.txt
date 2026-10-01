@@ -1,4 +1,4 @@
 typecheck: ok
-unit tests: 98 passed, 0 failed
+unit tests: 103 passed, 0 failed
 build: ok
-smoke (headless, Lune): 83 passed, 0 failed, 0 script errors
+smoke (headless, Lune): 91 passed, 0 failed, 0 script errors

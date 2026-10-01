@@ -1413,7 +1413,7 @@ Layout.lots = ({
 Layout.spawn = Vector3.new(0, 3, 6)
 Layout.portal = Vector3.new(0, 0, 220) -- Void Evolution portal on the path between rows
 Layout.staircase = Vector3.new(0, 0, 388) -- Ascension staircase behind HotDogX
-Layout.investorDesk = Vector3.new(10, 0, 140) -- Alien Investors kiosk (placed 10 studs left of this)
+Layout.investorDesk = Vector3.new(-4, 0, 204) -- Alien Investors kiosk (placed 10 studs left of this, beside the path)
 
 -- Ingredient racks (pickup spots) sit beside the path, never on a pad or doorway.
 Layout.racks = {
@@ -1471,21 +1471,35 @@ function Layout.tierPos(bizId: string, tier: number): Vector3
 	return lot.pos + Vector3.new(side * inset, 0, -lot.size.Y / 2 + 5)
 end
 
--- Where each looks-only decoration goes (clear of lots, pads, paths' centre and racks).
+-- Designed spots for each looks-only decoration (some items are sets). `face` is the direction
+-- the decoration's front looks at (models are built facing -Z, i.e. the road).
+export type Spot = { pos: Vector3, face: Vector3 }
+local ROAD = Vector3.new(0, 0, -1)
+local function spot(x: number, z: number, face: Vector3?): Spot
+	return { pos = Vector3.new(x, 0, z), face = face or ROAD }
+end
+local INWARD_L, INWARD_R = Vector3.new(1, 0, 0), Vector3.new(-1, 0, 0) -- left side faces +X (the path)
 Layout.decorSpots = {
-	planter = Vector3.new(-12, 0, 12),
-	bench = Vector3.new(12, 0, 12),
-	lamps = Vector3.new(-10, 0, 84),
-	picnic = Vector3.new(-22, 0, 136),
-	umbrella = Vector3.new(-40, 0, 134),
-	balloons = Vector3.new(-26, 0, 0),
-	lights = Vector3.new(0, 0, 58),
-	arch = Vector3.new(0, 0, 112),
-	neon = Vector3.new(-26, 0, 58),
-	topiary = Vector3.new(-45, 0, 300),
-	fountain = Vector3.new(22, 0, 136),
-	statue = Vector3.new(-20, 0, 302),
-} :: { [string]: Vector3 }
+	-- welcome arch over the entrance, planters lining the walkway, lights strung over it
+	arch = { spot(0, -1) },
+	planter = { spot(-10, 3, INWARD_L), spot(10, 3, INWARD_R), spot(-10, 11, INWARD_L), spot(10, 11, INWARD_R) },
+	lights = { spot(0, 15) },
+	-- balloons on the stand's front corners, a diner sign beside it
+	balloons = { spot(-18, 17), spot(18, 17) },
+	neon = { spot(-22, 54) },
+	-- benches facing the path just past the stand
+	bench = { spot(-11, 57, INWARD_L), spot(11, 57, INWARD_R) },
+	-- lamp posts lining both sides of the path
+	lamps = { spot(-9.5, 72), spot(9.5, 72), spot(-9.5, 112), spot(9.5, 112), spot(-9.5, 192), spot(9.5, 192), spot(-9.5, 232), spot(9.5, 232), spot(-9.5, 272), spot(9.5, 272) },
+	-- central plaza: fountain in the middle, picnic table and patio umbrella either side
+	fountain = { spot(0, 140) },
+	picnic = { spot(-21, 137, INWARD_L) },
+	umbrella = { spot(21, 137, INWARD_R) },
+	-- hot-dog topiaries flanking the way to HotDogX, mascot statue at the very end
+	topiary = { spot(-13, 300, INWARD_L), spot(13, 300, INWARD_R) },
+	statue = { spot(0, 372) },
+} :: { [string]: { Spot } }
+Layout.plaza = Vector3.new(0, 0, 140) -- paved circle around the fountain spot (diameter 26)
 
 function Layout.plotOrigin(index: number): CFrame
 	return CFrame.new((index - 1) * Layout.PLOT_SPACING, 0, 0)
@@ -5911,6 +5925,10 @@ function World.swap(name: string)
 		local old: Model?
 		if slot.kind == "racks" then
 			old = (plot.folder :: any).Decor:FindFirstChild(slot.key) :: Model?
+		elseif slot.kind == "decorChild" then
+			local id, i = slot.key:match("^(.-)|(%d+)$")
+			local container = plot.decor[id :: string]
+			old = container and container:FindFirstChild(tostring(id) .. "_" .. tostring(i)) :: Model?
 		else
 			old = (plot :: any)[slot.kind][slot.key]
 		end
@@ -5930,7 +5948,7 @@ function World.swap(name: string)
 		end
 		m.Parent = old.Parent
 		old:Destroy()
-		if slot.kind ~= "racks" then
+		if slot.kind ~= "racks" and slot.kind ~= "decorChild" then
 			(plot :: any)[slot.kind][slot.key] = m
 		end
 	end
@@ -5977,6 +5995,9 @@ local function buildPlot(index: number): Plot
 			part(decor, Vector3.new(inner - 7 + 1, 0.3, 8), origin * CFrame.new(sign * (7 + inner) / 2, 0.16, lot.pos.Z), Color3.fromRGB(235, 222, 196), { material = Enum.Material.Pebble })
 		end
 	end
+	-- round plaza on the path between the first and second rows (fountain spot)
+	local plaza = part(decor, Vector3.new(0.32, 26, 26), origin * CFrame.new(Layout.plaza + Vector3.new(0, 0.17, 0)) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(232, 214, 186), { shape = Enum.PartType.Cylinder, material = Enum.Material.Pebble, name = "Plaza" })
+	plaza.CastShadow = false
 	-- plot border hedges with a gap at the road
 	for _, x in { -Layout.PLOT_HALF_WIDTH, Layout.PLOT_HALF_WIDTH } do
 		part(decor, Vector3.new(3, 3, Layout.PLOT_DEPTH - 20), origin * CFrame.new(x, 1.5, Layout.PLOT_DEPTH / 2 + 4), Color3.fromRGB(80, 160, 70), { material = Enum.Material.Grass })
@@ -5986,7 +6007,7 @@ local function buildPlot(index: number): Plot
 		tree(decor, origin.Position + Vector3.new(-98, 0, z), 1.1)
 		tree(decor, origin.Position + Vector3.new(98, 0, z + 8), 1.2)
 	end
-	for _, z in { 64, 128, 212, 292 } do
+	for _, z in { 64, 160, 212, 288 } do
 		flowers(decor, origin.Position + Vector3.new(-12, 0, z), 6)
 		flowers(decor, origin.Position + Vector3.new(12, 0, z), 6)
 	end
@@ -6105,16 +6126,23 @@ local function buildPlot(index: number): Plot
 	extra("Portal", "CosmicPortal", Layout.portal, "evolve", "Void Evolution")
 	extra("Staircase", "Staircase", Layout.staircase, "ascend", "Ascension")
 
-	-- looks-only decorations (shown once bought)
+	-- looks-only decorations (shown once bought): one container per item holding every placement
 	for _, item in Economy.Catalog.decor.items do
-		local pos = Layout.decorSpots[item.id]
-		if pos then
-			local cf = origin * CFrame.new(pos) * CFrame.Angles(0, math.pi, 0)
-			local m = Models.build(item.model)
-			Models.place(m, cf, plot.hidden)
-			m.Name = "Decor_" .. item.id
-			plot.decor[item.id] = m
-			register(item.model, plot, "decor", item.id, cf, nil)
+		local spots = Layout.decorSpots[item.id]
+		if spots then
+			local container = Instance.new("Model")
+			container.Name = "Decor_" .. item.id
+			for i, sp in spots do
+				-- models face -Z; lookAt points -Z at the target, so the front faces `face`
+				local cf = origin * CFrame.lookAt(sp.pos, sp.pos + sp.face)
+				local m = Models.build(item.model)
+				Models.place(m, cf, container)
+				m.Name = item.id .. "_" .. i
+				register(item.model, plot, "decorChild", item.id .. "|" .. i, cf, nil)
+			end
+			container.WorldPivot = origin * CFrame.new(spots[1].pos)
+			container.Parent = plot.hidden
+			plot.decor[item.id] = container
 		end
 	end
 
@@ -7204,12 +7232,26 @@ function Effects.built(ids: { string })
 			if count > 6 then
 				break -- a big catch-up (rejoin/reset) only animates a few
 			end
-			growIn(m)
-			local okPivot, pivot = pcall(function()
-				return m:GetPivot()
-			end)
-			if okPivot then
-				confetti(pivot.Position + Vector3.new(0, 4, 0), 40)
+			local pieces = {}
+			for _, c in m:GetChildren() do
+				if c:IsA("Model") then
+					table.insert(pieces, c)
+				end
+			end
+			if #pieces == 0 then
+				pieces = { m }
+			end
+			for i, piece in pieces do
+				if i > 12 then
+					break
+				end
+				growIn(piece)
+				local okPivot, pivot = pcall(function()
+					return piece:GetPivot()
+				end)
+				if okPivot and i <= 4 then
+					confetti(pivot.Position + Vector3.new(0, 4, 0), 30)
+				end
 			end
 			local h = Instance.new("Highlight")
 			h.FillColor = Kit.C.mustard

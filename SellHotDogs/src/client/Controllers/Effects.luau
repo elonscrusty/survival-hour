@@ -142,12 +142,26 @@ function Effects.built(ids: { string })
 			if count > 6 then
 				break -- a big catch-up (rejoin/reset) only animates a few
 			end
-			growIn(m)
-			local okPivot, pivot = pcall(function()
-				return m:GetPivot()
-			end)
-			if okPivot then
-				confetti(pivot.Position + Vector3.new(0, 4, 0), 40)
+			local pieces = {}
+			for _, c in m:GetChildren() do
+				if c:IsA("Model") then
+					table.insert(pieces, c)
+				end
+			end
+			if #pieces == 0 then
+				pieces = { m }
+			end
+			for i, piece in pieces do
+				if i > 12 then
+					break
+				end
+				growIn(piece)
+				local okPivot, pivot = pcall(function()
+					return piece:GetPivot()
+				end)
+				if okPivot and i <= 4 then
+					confetti(pivot.Position + Vector3.new(0, 4, 0), 30)
+				end
 			end
 			local h = Instance.new("Highlight")
 			h.FillColor = Kit.C.mustard

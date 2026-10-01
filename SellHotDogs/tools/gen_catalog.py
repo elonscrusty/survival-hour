@@ -93,6 +93,12 @@ def main():
         add("Prestige", k, e["value"] if not isinstance(e["value"], list) else ", ".join(e["value"]), "", e)
     for p in data["powers"]:
         add("Powers", f"{p['name']} investor cost by tier", ", ".join(str(c) for c in p["investorCost"]), "investors", p)
+    for it in data.get("decor", {}).get("items", []):
+        add("Decor (looks only)", it["name"] + " (model " + it["model"] + ")", money(it["price"]), "$", {"status": "placeholder", "src": "OURS", "note": "Sell Hot Dogs addition; kept forever; no earnings effect."})
+    for k in ("cashMilestones", "levelMilestones"):
+        e = data.get("progress", {}).get(k)
+        if e:
+            add("Progress feedback", k, json.dumps(e["value"]), "", e)
     for area in ("pickups", "phone", "dash", "offline", "names"):
         for k, e in data[area].items():
             add(area.capitalize(), k, json.dumps(e["value"]), "", e)

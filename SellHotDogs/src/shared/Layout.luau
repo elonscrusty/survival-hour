@@ -23,7 +23,7 @@ Layout.lots = ({
 Layout.spawn = Vector3.new(0, 3, 6)
 Layout.portal = Vector3.new(0, 0, 220) -- Void Evolution portal on the path between rows
 Layout.staircase = Vector3.new(0, 0, 388) -- Ascension staircase behind HotDogX
-Layout.investorDesk = Vector3.new(10, 0, 140) -- Alien Investors kiosk (placed 10 studs left of this)
+Layout.investorDesk = Vector3.new(-4, 0, 204) -- Alien Investors kiosk (placed 10 studs left of this, beside the path)
 
 -- Ingredient racks (pickup spots) sit beside the path, never on a pad or doorway.
 Layout.racks = {
@@ -81,21 +81,35 @@ function Layout.tierPos(bizId: string, tier: number): Vector3
 	return lot.pos + Vector3.new(side * inset, 0, -lot.size.Y / 2 + 5)
 end
 
--- Where each looks-only decoration goes (clear of lots, pads, paths' centre and racks).
+-- Designed spots for each looks-only decoration (some items are sets). `face` is the direction
+-- the decoration's front looks at (models are built facing -Z, i.e. the road).
+export type Spot = { pos: Vector3, face: Vector3 }
+local ROAD = Vector3.new(0, 0, -1)
+local function spot(x: number, z: number, face: Vector3?): Spot
+	return { pos = Vector3.new(x, 0, z), face = face or ROAD }
+end
+local INWARD_L, INWARD_R = Vector3.new(1, 0, 0), Vector3.new(-1, 0, 0) -- left side faces +X (the path)
 Layout.decorSpots = {
-	planter = Vector3.new(-12, 0, 12),
-	bench = Vector3.new(12, 0, 12),
-	lamps = Vector3.new(-10, 0, 84),
-	picnic = Vector3.new(-22, 0, 136),
-	umbrella = Vector3.new(-40, 0, 134),
-	balloons = Vector3.new(-26, 0, 0),
-	lights = Vector3.new(0, 0, 58),
-	arch = Vector3.new(0, 0, 112),
-	neon = Vector3.new(-26, 0, 58),
-	topiary = Vector3.new(-45, 0, 300),
-	fountain = Vector3.new(22, 0, 136),
-	statue = Vector3.new(-20, 0, 302),
-} :: { [string]: Vector3 }
+	-- welcome arch over the entrance, planters lining the walkway, lights strung over it
+	arch = { spot(0, -1) },
+	planter = { spot(-10, 3, INWARD_L), spot(10, 3, INWARD_R), spot(-10, 11, INWARD_L), spot(10, 11, INWARD_R) },
+	lights = { spot(0, 15) },
+	-- balloons on the stand's front corners, a diner sign beside it
+	balloons = { spot(-18, 17), spot(18, 17) },
+	neon = { spot(-22, 54) },
+	-- benches facing the path just past the stand
+	bench = { spot(-11, 57, INWARD_L), spot(11, 57, INWARD_R) },
+	-- lamp posts lining both sides of the path
+	lamps = { spot(-9.5, 72), spot(9.5, 72), spot(-9.5, 112), spot(9.5, 112), spot(-9.5, 192), spot(9.5, 192), spot(-9.5, 232), spot(9.5, 232), spot(-9.5, 272), spot(9.5, 272) },
+	-- central plaza: fountain in the middle, picnic table and patio umbrella either side
+	fountain = { spot(0, 140) },
+	picnic = { spot(-21, 137, INWARD_L) },
+	umbrella = { spot(21, 137, INWARD_R) },
+	-- hot-dog topiaries flanking the way to HotDogX, mascot statue at the very end
+	topiary = { spot(-13, 300, INWARD_L), spot(13, 300, INWARD_R) },
+	statue = { spot(0, 372) },
+} :: { [string]: { Spot } }
+Layout.plaza = Vector3.new(0, 0, 140) -- paved circle around the fountain spot (diameter 26)
 
 function Layout.plotOrigin(index: number): CFrame
 	return CFrame.new((index - 1) * Layout.PLOT_SPACING, 0, 0)

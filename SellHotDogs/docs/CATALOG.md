@@ -132,6 +132,20 @@ Timestamps like `N 00:48.2` mean source N at video time 00:48.2.
 | Powers | Stack Upgrade investor cost by tier | 1000, 10000, 100000 | investors | secondary | W-powers | Tier 1 = 1000 investors, x5 at once (secondary). Tiers 2-3 and the Max button gate are UNRESOLVED placeholders. |
 | Powers | Remote Buy investor cost by tier | 2500 | investors | placeholder | W-powers (exists; cost unknown) | UNRESOLVED investor cost. |
 | Powers | Expert Collector investor cost by tier | 800, 8000, 80000 | investors | placeholder | W-powers; B 00:10 | Effect direction secondary; costs and multipliers UNRESOLVED. |
+| Decor (looks only) | Flower Planters (model Planter) | $250.00 | $ | placeholder | OURS | Sell Hot Dogs addition; kept forever; no earnings effect. |
+| Decor (looks only) | Park Bench (model Bench) | $1,000 | $ | placeholder | OURS | Sell Hot Dogs addition; kept forever; no earnings effect. |
+| Decor (looks only) | Lamp Posts (model LampPost) | $2,500 | $ | placeholder | OURS | Sell Hot Dogs addition; kept forever; no earnings effect. |
+| Decor (looks only) | Picnic Table (model PicnicTable) | $10,000 | $ | placeholder | OURS | Sell Hot Dogs addition; kept forever; no earnings effect. |
+| Decor (looks only) | Patio Umbrella (model PatioUmbrella) | $25,000 | $ | placeholder | OURS | Sell Hot Dogs addition; kept forever; no earnings effect. |
+| Decor (looks only) | Balloon Bunch (model BalloonBunch) | $50,000 | $ | placeholder | OURS | Sell Hot Dogs addition; kept forever; no earnings effect. |
+| Decor (looks only) | String Lights (model StringLights) | $250,000 | $ | placeholder | OURS | Sell Hot Dogs addition; kept forever; no earnings effect. |
+| Decor (looks only) | Flower Arch (model FlowerArch) | $1e+06 | $ | placeholder | OURS | Sell Hot Dogs addition; kept forever; no earnings effect. |
+| Decor (looks only) | Neon Diner Sign (model NeonSign) | $1e+07 | $ | placeholder | OURS | Sell Hot Dogs addition; kept forever; no earnings effect. |
+| Decor (looks only) | Hot Dog Topiary (model HotDogTopiary) | $1e+08 | $ | placeholder | OURS | Sell Hot Dogs addition; kept forever; no earnings effect. |
+| Decor (looks only) | Hot Dog Fountain (model Fountain) | $1e+09 | $ | placeholder | OURS | Sell Hot Dogs addition; kept forever; no earnings effect. |
+| Decor (looks only) | Mascot Statue (model HotDogStatue) | $1e+12 | $ | placeholder | OURS | Sell Hot Dogs addition; kept forever; no earnings effect. |
+| Progress feedback | cashMilestones | [100, 1000, 10000, 100000, 1000000.0, 1000000000.0, 1000000000000.0, 1000000000000000.0, 1e+18, 1e+21, 1e+24, 1e+30, 1e+40, 1e+50, 1e+60, 1e+80, 1e+100] |  | placeholder | OURS | Lifetime-earnings banners. |
+| Progress feedback | levelMilestones | [10, 25, 50, 100] |  | placeholder | OURS | Business levels that add extra props/customers around it. |
 | Pickups | rackCapacity | 5 |  | placeholder | OURS | UNRESOLVED. B 06:10 shows a pickup under a tree; quantities/capacity unknown. |
 | Pickups | spawnEvery | 6 |  | placeholder | OURS |  |
 | Pickups | valueSeconds | 10 |  | placeholder | OURS | A crate pays 10 s of current income (min $1). |
@@ -171,7 +185,7 @@ Timestamps like `N 00:48.2` mean source N at video time 00:48.2.
 
 Live prices must come from `MarketplaceService:GetProductInfo` for the new game's own IDs (regional pricing); these numbers are historical displays from one creator's session.
 
-## Unresolved (61 entries)
+## Unresolved (75 entries)
 
 Every row below is a guess or interpretation that the game currently runs on. Replace with evidence when available.
 
@@ -221,6 +235,20 @@ Every row below is a guess or interpretation that the game currently runs on. Re
 | Prestige | recipes | Classic, Chili, Cheese, Jalapeno, Cosmic, Void | placeholder | Hot-dog stand-ins for the fruit evolution chain (B 10:40 shows Purity+1 -> Lemon+2). Names after the 6th repeat with +n. |
 | Powers | Remote Buy investor cost by tier | 2500 | placeholder | UNRESOLVED investor cost. |
 | Powers | Expert Collector investor cost by tier | 800, 8000, 80000 | placeholder | Effect direction secondary; costs and multipliers UNRESOLVED. |
+| Decor (looks only) | Flower Planters (model Planter) | $250.00 | placeholder | Sell Hot Dogs addition; kept forever; no earnings effect. |
+| Decor (looks only) | Park Bench (model Bench) | $1,000 | placeholder | Sell Hot Dogs addition; kept forever; no earnings effect. |
+| Decor (looks only) | Lamp Posts (model LampPost) | $2,500 | placeholder | Sell Hot Dogs addition; kept forever; no earnings effect. |
+| Decor (looks only) | Picnic Table (model PicnicTable) | $10,000 | placeholder | Sell Hot Dogs addition; kept forever; no earnings effect. |
+| Decor (looks only) | Patio Umbrella (model PatioUmbrella) | $25,000 | placeholder | Sell Hot Dogs addition; kept forever; no earnings effect. |
+| Decor (looks only) | Balloon Bunch (model BalloonBunch) | $50,000 | placeholder | Sell Hot Dogs addition; kept forever; no earnings effect. |
+| Decor (looks only) | String Lights (model StringLights) | $250,000 | placeholder | Sell Hot Dogs addition; kept forever; no earnings effect. |
+| Decor (looks only) | Flower Arch (model FlowerArch) | $1e+06 | placeholder | Sell Hot Dogs addition; kept forever; no earnings effect. |
+| Decor (looks only) | Neon Diner Sign (model NeonSign) | $1e+07 | placeholder | Sell Hot Dogs addition; kept forever; no earnings effect. |
+| Decor (looks only) | Hot Dog Topiary (model HotDogTopiary) | $1e+08 | placeholder | Sell Hot Dogs addition; kept forever; no earnings effect. |
+| Decor (looks only) | Hot Dog Fountain (model Fountain) | $1e+09 | placeholder | Sell Hot Dogs addition; kept forever; no earnings effect. |
+| Decor (looks only) | Mascot Statue (model HotDogStatue) | $1e+12 | placeholder | Sell Hot Dogs addition; kept forever; no earnings effect. |
+| Progress feedback | cashMilestones | [100, 1000, 10000, 100000, 1000000.0, 1000000000.0, 1000000000000.0, 1000000000000000.0, 1e+18, 1e+21, 1e+24, 1e+30, 1e+40, 1e+50, 1e+60, 1e+80, 1e+100] | placeholder | Lifetime-earnings banners. |
+| Progress feedback | levelMilestones | [10, 25, 50, 100] | placeholder | Business levels that add extra props/customers around it. |
 | Pickups | rackCapacity | 5 | placeholder | UNRESOLVED. B 06:10 shows a pickup under a tree; quantities/capacity unknown. |
 | Pickups | spawnEvery | 6 | placeholder |  |
 | Pickups | valueSeconds | 10 | placeholder | A crate pays 10 s of current income (min $1). |
