@@ -4,8 +4,10 @@
 -- Every coroutine is tagged with the context that created it, so `Players.LocalPlayer`,
 -- `RunService:IsClient()`, instance visibility and require caches resolve per context.
 
+local realOs = os
 local realClock = os.clock
 M.realClock = realClock
+M.realOs = realOs
 
 M.clock = 0 -- simulated seconds since server start
 M.EPOCH = 1790035200 -- 2026-09-22 00:00:00 UTC at clock 0 (any fixed day works)
@@ -191,14 +193,14 @@ M.globals.os = {
 	end,
 	time = function(t)
 		if t then
-			return os.time(t)
+			return realOs.time(t)
 		end
 		return math.floor(M.serverNow())
 	end,
 	date = function(f, t)
-		return os.date(f, t or math.floor(M.serverNow()))
+		return realOs.date(f, t or math.floor(M.serverNow()))
 	end,
-	difftime = os.difftime,
+	difftime = realOs.difftime,
 }
 M.globals.print = function(...)
 	if M.quiet then
@@ -301,7 +303,14 @@ function Signal.FireFor(s, filter, ...)
 		for _, c in list do
 			if c.connected and not c.ctx.dead and (filter == nil or filter(c.ctx)) then
 				local co = newThread(c.ctx, c.fn)
-				resume(co, ...)
+				if M.profile then
+					local t0 = realClock()
+					resume(co, ...)
+					local key = M.profKey(c.fn, s.name)
+					M.prof[key] = (M.prof[key] or 0) + (realClock() - t0)
+				else
+					resume(co, ...)
+				end
 			end
 		end
 	end
@@ -331,6 +340,21 @@ function Signal.HasConnections(s, ctx)
 	return false
 end
 M.SignalApi = Signal
+
+-- optional profiler: inclusive real time per (script:line of the handler, signal name)
+M.profile = false
+M.prof = {}
+local profNames = setmetatable({}, { __mode = "k" })
+function M.profKey(fn, sig)
+	local k = profNames[fn]
+	if not k then
+		local src, line = debug.info(fn, "sl")
+		src = string.gsub(src or "?", "^Players%.[^%.]+%.PlayerScripts%.", "")
+		k = src .. ":" .. tostring(line)
+		profNames[fn] = k
+	end
+	return k .. " <" .. sig .. ">"
+end
 
 ------------------------------------------------------------------------------------------ frame loop
 M.frameHooks = {} -- harness hooks run every frame before Heartbeat (character walking etc.)

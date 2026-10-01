@@ -787,12 +787,12 @@ end }
 local EnumItemMt = {}
 TYPE[EnumItemMt] = "EnumItem"
 EnumItemMt.__tostring = function(e)
-	return "Enum." .. e.EnumType.Name .. "." .. e.Name
+	return "Enum." .. rawget(e.EnumType, "_name") .. "." .. e.Name
 end
 EnumItemMt.__index = function(e, k)
 	if k == "IsA" then
 		return function(self, n)
-			return self.EnumType.Name == n
+			return rawget(self.EnumType, "_name") == n
 		end
 	end
 	error(tostring(k) .. " is not a valid member of EnumItem", 2)
@@ -823,14 +823,14 @@ EnumTypeMt.__index = function(t, k)
 	return it
 end
 EnumTypeMt.__tostring = function(t)
-	return rawget(t, "Name")
+	return rawget(t, "_name")
 end
 local enumTypes = {}
 local Enum = setmetatable({}, {
 	__index = function(_, k)
 		local t = enumTypes[k]
 		if not t then
-			t = setmetatable({ Name = k, _items = {} }, EnumTypeMt)
+			t = setmetatable({ _name = k, _items = {} }, EnumTypeMt)
 			enumTypes[k] = t
 		end
 		return t

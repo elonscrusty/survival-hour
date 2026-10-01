@@ -46,20 +46,24 @@ end
 function Adapter:OnSessionEnd(handle, fn: () -> ()) end
 
 function Adapter:Release(handle): (boolean, string?)
-	-- retry an interrupted final save a few times before giving up the lock
+	-- Retry an interrupted final save a few times before giving up the lock. Retries go through
+	-- Save (which keeps the lock); MemoryStore.Release clears the lock even when its save fails,
+	-- so retrying Release itself could only ever answer "session lost".
+	if not handle.active then
+		return true, nil
+	end
 	for _ = 1, 3 do
-		if not handle.active then
-			return true, nil
-		end
-		local ok, err = self.store:Release(handle)
+		local ok, err = self.store:Save(handle)
 		if ok then
-			return true, nil
+			return self.store:Release(handle)
 		end
 		if err == "session lost" then
+			handle.active = false
 			return false, err
 		end
-		handle.active = true -- MemoryStore marks it inactive; retry
 	end
+	-- give up: unlock so the player can rejoin; the last good copy stays in the store
+	self.store:Release(handle)
 	return false, "save failed"
 end
 
