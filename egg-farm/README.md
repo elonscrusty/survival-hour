@@ -73,10 +73,11 @@ send intents; the server prices, validates and applies everything.
 - Codes: `src/server/Data/Codes.luau` (server only).
 - Shop: create your own game passes and developer products on the Creator Dashboard, then put
   their IDs in `robuxId` in `src/shared/Data/Products.luau`. Until then Robux items say "not for sale yet".
-- Audio: upload the WAVs in `assets/audio/` (or your own licensed audio) and put the IDs in
-  `src/client/Controllers/Sound.luau`. Sounds are silent until then.
-- Models: the game builds its world from native parts. The Blender models in `assets/export/`
-  can be imported with Studio's 3D Importer if you want mesh versions (not wired in yet).
+- Audio: the game's own sounds are uploaded and wired in (`src/client/Controllers/Sound.luau`,
+  IDs in `docs/ASSETS_UPLOADED.md`). Swap in other IDs you own or have licensed there.
+- Models: the game builds its world from native parts. The Blender models are uploaded to your
+  account (`docs/ASSETS_UPLOADED.md`, `src/shared/MeshIds.luau`) but not wired in yet: check one
+  in Studio first.
 - Server size: set Max Players to 8 in Game Settings (the map has 8 plots; a 9th player is told the server is full).
 
 ## Renaming
