@@ -8,10 +8,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
-local remote = ReplicatedStorage:WaitForChild("DevCommand", 30) :: RemoteFunction?
-if not remote then
-	return
-end
+-- The button always appears; the server's DevCommand remote is looked up in the background. If it
+-- never arrives, the server's test setup failed: the panel says so (check the Output window).
+local remote: RemoteFunction? = nil
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "DevPanel"
@@ -20,13 +19,13 @@ gui.DisplayOrder = 50
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local toggle = Instance.new("TextButton")
-toggle.Size = UDim2.fromOffset(56, 28)
-toggle.Position = UDim2.new(0.5, -28, 0, 100)
+toggle.Size = UDim2.fromOffset(84, 36)
+toggle.Position = UDim2.new(0.5, -42, 0, 100)
 toggle.Text = "DEV"
 toggle.Font = Enum.Font.GothamBlack
-toggle.TextSize = 14
-toggle.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-toggle.TextColor3 = Color3.fromRGB(255, 220, 80)
+toggle.TextSize = 18
+toggle.BackgroundColor3 = Color3.fromRGB(255, 200, 40)
+toggle.TextColor3 = Color3.fromRGB(30, 30, 40)
 toggle.Parent = gui
 Instance.new("UICorner", toggle).CornerRadius = UDim.new(0, 8)
 
@@ -66,6 +65,10 @@ local function button(label: string, cmd: string, arg: any?)
 	b.Parent = panel
 	Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
 	b.Activated:Connect(function()
+		if not remote then
+			status.Text = "Server dev tools not ready (see Output)"
+			return
+		end
 		local r = remote:InvokeServer(cmd, arg)
 		status.Text = if type(r) == "table" then tostring(r.message) else "?"
 	end)
@@ -94,6 +97,18 @@ button("Fail next load", "failload")
 button("Fail next save", "failsave")
 button("Reset my save", "reset")
 button("Kick (test rejoin)", "rejoin")
+
+task.spawn(function()
+	remote = ReplicatedStorage:WaitForChild("DevCommand", 120) :: RemoteFunction?
+	if remote then
+		status.Text = "TEST PLACE (memory saves)"
+	else
+		status.Text = "Server dev tools missing! Check Output for red errors."
+		status.TextColor3 = Color3.fromRGB(255, 120, 120)
+		toggle.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+	end
+end)
+status.Text = "Waiting for server..."
 
 local function flip()
 	panel.Visible = not panel.Visible
