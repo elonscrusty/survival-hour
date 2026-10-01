@@ -21,7 +21,7 @@ gui.Parent = player:WaitForChild("PlayerGui")
 
 local toggle = Instance.new("TextButton")
 toggle.Size = UDim2.fromOffset(56, 28)
-toggle.Position = UDim2.new(1, -64, 0, 6)
+toggle.Position = UDim2.new(0.5, -28, 0, 100)
 toggle.Text = "DEV"
 toggle.Font = Enum.Font.GothamBlack
 toggle.TextSize = 14
@@ -33,7 +33,7 @@ Instance.new("UICorner", toggle).CornerRadius = UDim.new(0, 8)
 local panel = Instance.new("ScrollingFrame")
 panel.Visible = false
 panel.Size = UDim2.fromOffset(220, 360)
-panel.Position = UDim2.new(1, -228, 0, 40)
+panel.Position = UDim2.new(0.5, -110, 0, 134)
 panel.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
 panel.BackgroundTransparency = 0.1
 panel.AutomaticCanvasSize = Enum.AutomaticSize.Y
@@ -71,6 +71,9 @@ local function button(label: string, cmd: string, arg: any?)
 	end)
 end
 
+button("MAX MONEY (cash + gold)", "maxmoney")
+button("Upgrade everything +1 level", "upgradeall")
+button("Max upgrade everything", "maxall")
 button("+ Cash", "cash")
 button("+1000 Gold Eggs", "gold")
 button("Finish tutorial", "tutorial")

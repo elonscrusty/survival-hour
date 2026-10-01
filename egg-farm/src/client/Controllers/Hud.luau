@@ -264,42 +264,58 @@ function Hud.Start(s: any, h: any)
 	local _, root = Layout.Layer("EggFarmHud", 5)
 	Hud.Root = root
 
-	-- top counters
+	-- top counters, split into two compact corner stacks at 75% size:
+	-- left = chickens + basket, right = cash + gold + production
+	local COUNTER_SCALE = 0.75
 	local top = Instance.new("Frame")
-	top.Name = "Counters"
+	top.Name = "CountersLeft"
 	top.BackgroundTransparency = 1
-	top.AnchorPoint = Vector2.new(0.5, 0)
-	top.Position = UDim2.new(0.5, 0, 0, 6)
-	top.Size = UDim2.fromOffset(470, 56)
+	top.AnchorPoint = Vector2.new(0, 0)
+	top.Position = UDim2.fromOffset(8, 6)
+	top.Size = UDim2.fromOffset(170, 110)
 	top.Parent = root
-	Util.List(top, 10, true, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center)
+	Util.List(top, 6, false, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Top)
+	local topScale = Instance.new("UIScale")
+	topScale.Scale = COUNTER_SCALE
+	topScale.Parent = top
+	local info = Instance.new("Frame")
+	info.Name = "CountersRight"
+	info.BackgroundTransparency = 1
+	info.AnchorPoint = Vector2.new(1, 0)
+	info.Position = UDim2.new(1, -8, 0, 6)
+	info.Size = UDim2.fromOffset(310, 120)
+	info.Parent = root
+	Util.List(info, 6, false, Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Top)
+	-- cash and gold side by side so the stack stays short and clear of the right nav column
+	local money = Instance.new("Frame")
+	money.Name = "Money"
+	money.BackgroundTransparency = 1
+	money.Size = UDim2.fromOffset(302, 52)
+	money.LayoutOrder = 1
+	money.Parent = info
+	Util.List(money, 10, true, Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Center)
+	local infoScale = Instance.new("UIScale")
+	infoScale.Scale = COUNTER_SCALE
+	infoScale.Parent = info
 	local chickens = counter(top, 1, "chick", Color3.fromRGB(255, 240, 160), function(v, cap)
 		return Num.Short(math.floor(v + 0.5)) .. "/" .. Num.Short(cap or 0)
 	end)
-	local cash = counter(top, 2, "cash", Theme.Color.Cash, function(v)
+	local cash = counter(money, 1, "cash", Theme.Color.Cash, function(v)
 		return Num.Cash(math.floor(v))
 	end)
-	local gold = counter(top, 3, "gold", Theme.Color.Gold, function(v)
+	local gold = counter(money, 2, "gold", Theme.Color.Gold, function(v)
 		return Num.Short(math.floor(v + 0.5))
 	end)
 	Hud.Targets.counters = top
 	Hud.Targets.cash = cash.frame
 
-	-- basket + production row
-	local info = Instance.new("Frame")
-	info.Name = "Info"
-	info.BackgroundTransparency = 1
-	info.AnchorPoint = Vector2.new(0.5, 0)
-	info.Position = UDim2.new(0.5, 0, 0, 64)
-	info.Size = UDim2.fromOffset(470, 40)
-	info.Parent = root
-	Util.List(info, 8, true, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center)
+	-- basket (left stack) + production readout (right stack)
 	local basket = Instance.new("Frame")
 	basket.Name = "Basket"
 	basket.Size = UDim2.fromOffset(150, 38)
 	basket.BackgroundColor3 = Color3.fromRGB(40, 32, 28)
 	basket.BackgroundTransparency = 0.2
-	basket.LayoutOrder = 1
+	basket.LayoutOrder = 2
 	Util.Corner(basket, nil, 0.5)
 	local basketStroke = Util.Stroke(basket, 3, Theme.Color.Ink, true)
 	local bic = Icon.new("basket", 34)
@@ -314,13 +330,13 @@ function Hud.Start(s: any, h: any)
 		outline = true,
 		parent = basket,
 	})
-	basket.Parent = info
+	basket.Parent = top
 	local prod = Instance.new("Frame")
 	prod.Name = "Production"
-	prod.Size = UDim2.fromOffset(300, 38)
+	prod.Size = UDim2.fromOffset(220, 50)
 	prod.BackgroundColor3 = Color3.fromRGB(40, 32, 28)
 	prod.BackgroundTransparency = 0.35
-	prod.LayoutOrder = 2
+	prod.LayoutOrder = 3
 	Util.Corner(prod, nil, 0.5)
 	local prodText = Util.Text({
 		text = "",
@@ -340,7 +356,8 @@ function Hud.Start(s: any, h: any)
 		f.Name = name
 		f.BackgroundTransparency = 1
 		f.AnchorPoint = Vector2.new(anchorX, 0.5)
-		f.Position = UDim2.new(x, if anchorX == 0 then 8 else -8, 0.44, 0)
+		-- the right column sits a little lower: the cash/gold stack is taller than the left one
+		f.Position = UDim2.new(x, if anchorX == 0 then 8 else -8, if anchorX == 0 then 0.44 else 0.48, 0)
 		f.Size = UDim2.fromOffset(Theme.Size.Nav + 8, 4 * (Theme.Size.Nav + 10))
 		Util.List(f, 10, false, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center)
 		f.Parent = root
@@ -509,10 +526,23 @@ function Hud.Start(s: any, h: any)
 	local function relayout(_, logical: Vector2)
 		-- short landscape phones: there's no vertical room for the quick column under the left
 		-- column, so it moves beside it (the left nav is vertically centred)
-		if logical.Y < 520 and logical.X > logical.Y then
+		local shortLandscape = logical.Y < 520 and logical.X > logical.Y
+		if shortLandscape then
 			quick.Position = UDim2.new(0, Theme.Size.Nav + 26, 1, -10)
+			-- no room above the side columns: both counter stacks meet at the top centre instead,
+			-- and the production line is dropped
+			top.AnchorPoint = Vector2.new(1, 0)
+			top.Position = UDim2.new(0.5, -4, 0, 4)
+			info.AnchorPoint = Vector2.new(0, 0)
+			info.Position = UDim2.new(0.5, 4, 0, 4)
+			prod.Visible = false
 		else
 			quick.Position = UDim2.new(0, 8, 1, -10)
+			top.AnchorPoint = Vector2.new(0, 0)
+			top.Position = UDim2.fromOffset(8, 6)
+			info.AnchorPoint = Vector2.new(1, 0)
+			info.Position = UDim2.new(1, -8, 0, 6)
+			prod.Visible = true
 		end
 		if logical.X < 500 then
 			autoBtn.Instance.AnchorPoint = Vector2.new(1, 1)
@@ -564,7 +594,7 @@ function Hud.Start(s: any, h: any)
 			basket.BackgroundColor3 = Color3.fromRGB(40, 32, 28)
 			basketStroke.Color = Theme.Color.Ink
 		end
-		prodText.Text = string.format("Laying %s  •  Shipping %s  •  %s", Num.Rate(snap.rates.lay), Num.Rate(snap.rates.ship), "$" .. Num.Rate(snap.rates.cash))
+		prodText.Text = string.format("Lay %s  •  Ship %s\n%s", Num.Rate(snap.rates.lay), Num.Rate(snap.rates.ship), "$" .. Num.Rate(snap.rates.cash))
 
 		local m = math.max(snap.comboMax, 1)
 		combo:Set((snap.combo - 1) / math.max(m - 1, 0.001), "Cash " .. string.format("x%.1f", snap.combo))

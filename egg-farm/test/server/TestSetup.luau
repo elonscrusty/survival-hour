@@ -54,6 +54,61 @@ end
 commands.gold = function(ctx, player, f)
 	f.state.gold += 1000
 end
+-- Plenty of money for any purchase on any egg (cash scales with the current egg's prices).
+commands.maxmoney = function(ctx, player, f)
+	f.state.cash = math.max(f.state.cash, 1e25 * cat.Eggs.List[f.state.egg].costScale)
+	f.state.gold = math.max(f.state.gold, 1e6)
+end
+
+-- One level of everything, through the REAL purchase actions (prices, unlock rules and slot
+-- order all apply). Returns how many purchases went through.
+local function upgradeOnce(ctx, f): number
+	local now = ctx.FarmService.Now()
+	local n = 0
+	local function try(action)
+		if f:Apply(action, now).ok then
+			n += 1
+		end
+	end
+	local s = f.state
+	for i, h in s.housing do
+		try(if h.tier == 0 then { type = "buyHouse", slot = i } else { type = "upgradeHouse", slot = i, expect = h.tier })
+	end
+	for i, v in s.vehicles do
+		try(if v.tier == 0 then { type = "buyVehicle", slot = i } else { type = "upgradeVehicle", slot = i, expect = v.tier })
+	end
+	for i, w in s.workers do
+		try(if w.tier == 0 then { type = "hireWorker", slot = i } else { type = "upgradeWorker", slot = i, expect = w.tier })
+	end
+	for _, u in cat.Upgrades.Common do
+		try({ type = "buyCommon", id = u.id, expect = s.common[u.id] or 0 })
+	end
+	for _, u in cat.Upgrades.Epic do
+		try({ type = "buyEpic", id = u.id, expect = s.epic[u.id] or 0 })
+	end
+	try({ type = "buildSilo", expect = s.silos })
+	return n
+end
+
+commands.upgradeall = function(ctx, player, f)
+	local n = upgradeOnce(ctx, f)
+	f:DrainEvents() -- no flood of purchase toasts/effects for a dev shortcut
+	return string.format("upgraded %d things one level", n)
+end
+
+-- Repeat one-level passes until nothing more can be bought (needs money: use maxmoney first).
+-- Tiers locked to later eggs stay locked; jump eggs to unlock them.
+commands.maxall = function(ctx, player, f)
+	local total, passes = 0, 0
+	repeat
+		local n = upgradeOnce(ctx, f)
+		total += n
+		passes += 1
+	until n == 0 or passes >= 300
+	f:DrainEvents()
+	return string.format("%d upgrades in %d passes (everything this egg allows)", total, passes)
+end
+
 commands.tutorial = function(ctx, player, f)
 	f.state.tutorial.step, f.state.tutorial.done = 8, true
 end
@@ -124,7 +179,8 @@ function TestSetup.AfterInit(ctx)
 			f.dirty = true
 			ctx.FarmService.Push(player, true)
 		end
-		return { ok = ok, message = if ok then name .. " done" else tostring(err) }
+		local msg = if ok then (if type(err) == "string" then err else name .. " done") else tostring(err)
+		return { ok = ok, message = msg }
 	end
 	remote.Parent = ReplicatedStorage
 	ReplicatedStorage:SetAttribute("TestPlace", true)

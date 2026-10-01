@@ -22,7 +22,7 @@ local function shown(name)
 	return g ~= nil and a:isShown(g)
 end
 local function reveals()
-	return { spawn = shown("Spawn"), counters = shown("Counters"), farm = shown("Farm"), leftNav = shown("LeftNav"), auto = shown("Auto") }
+	return { spawn = shown("Spawn"), counters = shown("CountersLeft") and shown("CountersRight"), farm = shown("Farm"), leftNav = shown("LeftNav"), auto = shown("Auto") }
 end
 local st = step()
 H.check("tutorial starts at step 1", st == 1, st)

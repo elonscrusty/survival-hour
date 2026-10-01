@@ -34,7 +34,8 @@ original (see `docs/DESIGN.md` and `docs/REFERENCE_COVERAGE.md`).
    playtesting: it never touches real DataStores and purchases are simulated.
 2. Press Play. You spawn on your own plot and the tutorial starts: tap SPAWN, walk into the
    glowing ring at your coop, then into the warehouse ring, and watch your pickup sell the eggs.
-3. In the test place, press F8 (or the DEV button) for shortcuts: cash, gold, jump to an egg,
+3. In the test place, press F8 (or the DEV button) for shortcuts: MAX MONEY, upgrade everything
+   +1 level, max upgrade everything (level by level through the real purchase rules), cash, gold, jump to an egg,
    max the farm, fast-forward, simulate offline time, next UTC day, checkout success/cancel/fail,
    fail the next load/save, reset, kick to test rejoin.
 4. For two-player tests: Studio → Test → Clients and Servers → 2 players.
