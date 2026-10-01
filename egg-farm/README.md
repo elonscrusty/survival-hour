@@ -42,10 +42,12 @@ original (see `docs/DESIGN.md` and `docs/REFERENCE_COVERAGE.md`).
 Controls: WASD/stick to walk, F or gamepad R2 to spawn (hold to repeat), E for prompts,
 Backspace/B to close menus. Touch: tap or hold the SPAWN button.
 
-`build/EggFarm.rbxlx` is the real game. Its saves use DataStores, which only work in Studio
-when the place is published and "Enable Studio Access to API Services" is on. That is your
-decision; nothing here changes it. Without access, the game will refuse to load a save
-(by design it never plays on a blank profile when loading fails).
+`build/EggFarm.rbxlx` is the real game. It saves through ProfileStore/DataStores. In Studio,
+DataStores only work when the place is published and "Enable Studio Access to API Services" is on.
+That is your decision; nothing here changes it. Without access, ProfileStore detects it and
+runs on its own temporary in-memory store: Output says "Roblox API services unavailable - data
+will not be saved", and you can still play. On a live server, a load that fails or conflicts kicks
+the player instead of giving them a blank farm.
 
 ## Build and test from source
 ```bash
