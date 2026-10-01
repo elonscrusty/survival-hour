@@ -164,6 +164,13 @@ local function buildCommons(root: Folder)
 			P(root, "SidePath", Vector3.new(10, 0.3, z1 - z0), CFrame.new(x, -0.05, sign * (z0 + z1) / 2), stone, { collide = true, shadow = false })
 		end
 	end
+	-- a short walk from the sidewalk to every plot gate
+	for i = 1, Layout.PlotCount do
+		local o = Layout.Origin(i)
+		local sign = if o.z > 0 then 1 else -1
+		local z0, z1 = 18, Layout.ROW_Z - Layout.HALF_D
+		P(root, "GatePath", Vector3.new(Layout.Gate.width, 0.3, z1 - z0), CFrame.new(o.x, -0.05, sign * (z0 + z1) / 2), stone, { collide = true, shadow = false })
+	end
 	-- hub plaza with the hub spawn and a giant egg statue
 	Kit.Column(root, CFrame.new(0, -0.2, 0), 0.6, 64, { name = "Plaza", color = stone, collide = true })
 	Kit.Column(root, CFrame.new(0, 0.1, 0), 0.4, 50, { name = "PlazaInner", color = Color3.fromRGB(230, 214, 170), collide = true })

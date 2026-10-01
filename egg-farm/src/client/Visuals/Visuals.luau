@@ -87,7 +87,7 @@ local function refreshPlot(c: Ctx, plot: Model)
 		end
 		return
 	end
-	local info = c.plots[plot]
+	local info: PlotInfo? = c.plots[plot]
 	local own = owner == c.player.UserId
 	if info and info.owner ~= owner then
 		clearPlot(c, plot) -- new owner: start from scratch

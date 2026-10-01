@@ -93,7 +93,13 @@ function Kit.Part(parent: Instance?, o: Opts): BasePart
 		p = Instance.new("CornerWedgePart")
 	else
 		local part = Instance.new("Part")
-		if shape == "Ball" then
+		local sz = o.size
+		if shape == "Ball" and (sz.X ~= sz.Y or sz.Y ~= sz.Z) then
+			-- Ball parts are forced uniform; a stretched sphere is a block with a Sphere mesh
+			local mesh = Instance.new("SpecialMesh")
+			mesh.MeshType = Enum.MeshType.Sphere
+			mesh.Parent = part
+		elseif shape == "Ball" then
 			part.Shape = Enum.PartType.Ball
 		elseif shape == "Cylinder" then
 			part.Shape = Enum.PartType.Cylinder

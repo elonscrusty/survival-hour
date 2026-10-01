@@ -26,19 +26,25 @@ local routes: { [number]: { [number]: { Layout.Vec } } } = {} -- [slot][house] -
 local clock = 0
 
 local function route(slot: number, house: number): ({ Layout.Vec }, number)
-	routes[slot] = routes[slot] or {}
-	local r = routes[slot][house]
-	if not r then
-		-- spread workers over small lane offsets so they don't walk inside each other
-		local shift = ((slot - 1) % 4 - 1.5) * 1.3
-		r = {}
-		for i, p in Layout.WorkerRoute(house) do
-			local last = i == #Layout.WorkerRoute(house)
-			r[i] = { x = p.x + (if last then 0 else shift), y = 0, z = p.z + (if last then shift else 0) }
-		end
-		routes[slot][house] = r
+	local bySlot = routes[slot]
+	if not bySlot then
+		bySlot = {}
+		routes[slot] = bySlot
 	end
-	assert(r)
+	assert(bySlot)
+	local cached = bySlot[house]
+	if cached then
+		return cached, Layout.PolyLength(cached)
+	end
+	-- spread workers over small lane offsets so they don't walk inside each other
+	local shift = ((slot - 1) % 4 - 1.5) * 1.3
+	local base = Layout.WorkerRoute(house)
+	local r: { Layout.Vec } = {}
+	for i, p in base do
+		local last = i == #base
+		r[i] = { x = p.x + (if last then 0 else shift), y = 0, z = p.z + (if last then shift else 0) }
+	end
+	bySlot[house] = r
 	return r, Layout.PolyLength(r)
 end
 

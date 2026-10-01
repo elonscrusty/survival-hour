@@ -178,9 +178,9 @@ builders[5] = function(b) -- Big Barn: wider barn, silo tower, lean-to and a cup
 	Kit.Column(b.m, CFrame.new(13, 12, 2), 0.6, 7.3, { role = "accent", name = "TowerBand" })
 	b:box("TowerCap", Vector3.new(7.2, 7.2, 7.2), Vector3.new(13, 18, 2), "roof", { shape = "Ball" })
 	-- lean-to on the left
-	b:box("LeanTo", Vector3.new(4, 5, 12), Vector3.new(-15, 3.3, 1), "wood", { shade = 0.1 })
-	b:at("LeanRoof", Vector3.new(12.6, 2, 5), CFrame.new(-15, 6.8, 1) * CFrame.Angles(0, math.pi / 2, 0), "roof", { shape = "Wedge", shade = 0.1 })
-	b:box("HayStack", Vector3.new(3, 2, 3), Vector3.new(-15.5, 1, -7.5), F.hay)
+	b:box("LeanTo", Vector3.new(4, 5, 12), Vector3.new(-14.6, 3.3, 1), "wood", { shade = 0.1 })
+	b:at("LeanRoof", Vector3.new(12.6, 2, 4.6), CFrame.new(-14.6, 6.8, 1) * CFrame.Angles(0, math.pi / 2, 0), "roof", { shape = "Wedge", shade = 0.1 })
+	b:box("HayStack", Vector3.new(3, 2, 3), Vector3.new(-15, 1, -7.5), F.hay)
 end
 
 builders[6] = function(b) -- Poultry Hall: a long hall with a ridge vent, window rows and fans
@@ -205,8 +205,8 @@ builders[6] = function(b) -- Poultry Hall: a long hall with a ridge vent, window
 		end
 	end
 	b:box("Ramp", Vector3.new(6, 1, 3), Vector3.new(0, 0.5, -d / 2 - 2), F.stone)
-	b:box("Silo", Vector3.new(4, 9, 4), Vector3.new(-w / 2 + 1, 4.5, d / 2 + 2.4), F.metal)
-	b:box("SiloCap", Vector3.new(4.4, 1.2, 4.4), Vector3.new(-w / 2 + 1, 9.6, d / 2 + 2.4), "roof")
+	b:box("Silo", Vector3.new(4, 9, 4), Vector3.new(-w / 2 + 2, 4.5, d / 2 + 2.4), F.metal)
+	b:box("SiloCap", Vector3.new(4.4, 1.2, 4.4), Vector3.new(-w / 2 + 2, 9.6, d / 2 + 2.4), "roof")
 end
 
 builders[7] = function(b) -- Egg Factory: industrial block, sawtooth roof, chimneys, conveyor
@@ -238,7 +238,7 @@ builders[7] = function(b) -- Egg Factory: industrial block, sawtooth roof, chimn
 	b:box("Conveyor", Vector3.new(3, 0.6, 4), Vector3.new(6, 2.4, -d / 2 - 2), F.darkMetal)
 	b:box("ConveyorLegs", Vector3.new(2.6, 2.1, 0.5), Vector3.new(6, 1.05, -d / 2 - 3.5), F.metal)
 	for i = 0, 2 do
-		Kit.Egg(b.m, CFrame.new(6, 3.15, -d / 2 - 0.9 - i * 1.35), Vector3.new(0.9, 1.2, 0.9), { color = F.cream, name = "Egg" })
+		Kit.Egg(b.m, CFrame.new(6, 3.15, -d / 2 - 0.9 - i * 1.25), Vector3.new(0.9, 1.2, 0.9), { color = F.cream, name = "Egg" })
 	end
 	-- big egg sign on the roof
 	b:box("SignPost", Vector3.new(0.6, 4, 0.6), Vector3.new(9, top + 4, -4), F.darkMetal)
@@ -306,7 +306,7 @@ builders[10] = function(b) -- Mega Dome: domed hall, ring of glowing pillars, gi
 	-- entrance
 	b:box("Entrance", Vector3.new(8, 7, 7), Vector3.new(0, 5.7, -10.3), "wood")
 	b:at("Arch", Vector3.new(7, 8.2, 8.2), CFrame.new(0, 9.2, -10.3) * CFrame.Angles(0, math.pi / 2, 0), "roof", { shape = "Cylinder" })
-	door(b, Vector3.new(0, 2.2, -13.9), 4.4, 5)
+	door(b, Vector3.new(0, 2.2, -13.75), 4.4, 5)
 	-- pillars with glowing tips around the dome
 	for i = 0, 7 do
 		local a = (i + 0.5) * math.pi / 4
@@ -315,6 +315,19 @@ builders[10] = function(b) -- Mega Dome: domed hall, ring of glowing pillars, gi
 			Kit.Column(b.m, CFrame.new(x, 2.2, z), 9, 1.4, { role = "wood", shade = 0.1, name = "Pillar" })
 			b:box("PillarTip", Vector3.new(1.8, 1.8, 1.8), Vector3.new(x, 12.2, z), "accent", { shape = "Ball", material = NEON })
 		end
+	end
+	-- portholes around the dome and two small side domes
+	for i = 0, 5 do
+		local a = math.rad(-150 + i * 60)
+		if math.abs(math.deg(a)) > 40 then
+			local x, z = math.sin(a) * 11.9, -math.cos(a) * 11.9
+			b:at("Porthole", Vector3.new(2, 2, 0.4), CFrame.lookAt(Vector3.new(x, 7.6, z), Vector3.new(x * 2, 7.6, z * 2)), Color3.fromRGB(255, 236, 170), { material = NEON })
+		end
+	end
+	for _, x in { -10.5, 10.5 } do
+		b:box("SideDome", Vector3.new(8, 8, 8), Vector3.new(x, 2.2, 7), "roof", { shape = "Ball", shade = 0.1 })
+		Kit.Column(b.m, CFrame.new(x, 2.2, 7), 0.8, 8.4, { role = "accent", name = "SideRing" })
+		b:box("SideTip", Vector3.new(1.4, 1.4, 1.4), Vector3.new(x, 6.6, 7), "accent", { shape = "Ball", material = NEON })
 	end
 	-- the giant egg
 	Kit.Column(b.m, CFrame.new(0, 14.6, 0), 1.6, 6, { color = F.metal, name = "EggStand" })
