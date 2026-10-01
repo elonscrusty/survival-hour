@@ -32,6 +32,11 @@ return {
 		t.eq(F.cash(B.fromParts(1.5, 564)), "$1.5e564")
 		t.eq(F.short(B.fromParts(1.5, 564)), "$1.5e564")
 	end,
+	rounding_carries_to_next_name = function(t)
+		t.eq(F.cash(999999999.9), "$1 billion")
+		t.eq(F.short(999999999.9), "$1B")
+		t.eq(F.cash(999.9996e6), "$1 billion")
+	end,
 	short = function(t)
 		t.eq(F.short(1.1e6), "$1.1M")
 		t.eq(F.short(296.102e12), "$296.1T")

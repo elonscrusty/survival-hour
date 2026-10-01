@@ -15,7 +15,7 @@ local Store = {}
 local mock: { [string]: string } = {} -- JSON per key, like a real store
 local store: GlobalDataStore? = nil
 local JOB = if game.JobId ~= "" then game.JobId else "studio-" .. HttpService:GenerateGUID(false)
-local LOCK_SECONDS = 1800
+local LOCK_SECONDS = Config.AutosaveSeconds * 3 -- autosave refreshes it; a crash frees it soon
 
 Store.mode = Config.Storage
 
@@ -123,6 +123,23 @@ function Store.save(userId: number, data: any, release: boolean): boolean
 		task.wait(attempt)
 	end
 	return false
+end
+
+-- Drop our session lock without writing data (load succeeded but the session won't be used).
+function Store.release(userId: number)
+	if Store.mode ~= "datastore" then
+		return
+	end
+	local ds = store :: GlobalDataStore
+	pcall(function()
+		ds:UpdateAsync(key(userId), function(old)
+			if type(old) == "table" and type(old.lock) == "table" and old.lock.job == JOB then
+				old.lock = nil
+				return old
+			end
+			return nil
+		end)
+	end)
 end
 
 -- Test helpers (mock mode only).

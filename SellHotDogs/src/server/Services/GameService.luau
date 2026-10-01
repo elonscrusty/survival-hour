@@ -286,7 +286,24 @@ GameService.register("buyPower", 0.2, function(s, id)
 	result(s, ok, msg)
 end)
 
+-- Prestige can't run while value from the current run is still in flight.
+local function prestigeBlocked(s: Data.Session): boolean
+	if s.rt.race then
+		GameService.toast(s.player, "Finish your DogDash race first", "error")
+		return true
+	end
+	if s.rt.offer then
+		s.rt.offer.state = "expired"
+		GameService.notify(s.player, "phone", { offer = s.rt.offer, outcome = "expired" })
+		s.rt.offer = nil
+	end
+	return false
+end
+
 GameService.register("rebirth", 1, function(s)
+	if prestigeBlocked(s) then
+		return
+	end
 	local ok, msg, award = Game.rebirth(s.profile)
 	if ok then
 		GameService.notify(s.player, "prestige", { kind = "rebirth", amount = award })
@@ -295,6 +312,9 @@ GameService.register("rebirth", 1, function(s)
 end)
 
 GameService.register("rebirthNoReset", 1, function(s)
+	if prestigeBlocked(s) then
+		return
+	end
 	local ok, msg, award = Game.rebirthNoReset(s.profile)
 	if ok then
 		GameService.notify(s.player, "prestige", { kind = "rebirthNoReset", amount = award })
@@ -303,6 +323,9 @@ GameService.register("rebirthNoReset", 1, function(s)
 end)
 
 GameService.register("evolve", 1, function(s)
+	if prestigeBlocked(s) then
+		return
+	end
 	local ok, msg = Game.evolve(s.profile)
 	if ok then
 		GameService.notify(s.player, "prestige", { kind = "evolve", recipe = Economy.recipeName(s.profile.evolutions) })
@@ -311,6 +334,9 @@ GameService.register("evolve", 1, function(s)
 end)
 
 GameService.register("ascend", 1, function(s)
+	if prestigeBlocked(s) then
+		return
+	end
 	local ok, msg = Game.ascend(s.profile)
 	if ok then
 		GameService.notify(s.player, "prestige", { kind = "ascend", n = s.profile.ascensions })
@@ -470,7 +496,7 @@ function GameService.init()
 			spawnAtPlot(player, ch)
 		end)
 	end
-	Data.Leaving:Connect(function(s: Data.Session)
+	Data.onLeaving(function(s: Data.Session)
 		World.release(s.player)
 		lastCall[s.player.UserId] = nil
 		burst[s.player.UserId] = nil

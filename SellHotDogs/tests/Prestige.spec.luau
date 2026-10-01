@@ -37,6 +37,14 @@ return {
 		t.eq(p.name, "Carter's Dogs")
 		t.eq(p.lifetime.m, 0)
 	end,
+	unclaimed_offline_is_settled_before_reset = function(t)
+		local p = rich()
+		p.pendingOffline = B.new(77e21 * 500) -- more lifetime -> more investors
+		local _, _, award = G.rebirth(p)
+		t.eq(p.pendingOffline.m, 0)
+		t.near(B.toNumber(award), 30, 1e-9, "sqrt(900) with the banked income counted")
+		t.near(B.toNumber(p.cash), 1, 1e-9, "old-run cash does not cross the reset")
+	end,
 	x2_investors_pass = function(t)
 		local p = rich()
 		p.robux.passes.x2investors = true

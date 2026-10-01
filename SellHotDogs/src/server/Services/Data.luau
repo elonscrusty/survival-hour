@@ -26,8 +26,12 @@ local Data = {}
 Data.sessions = {} :: { [number]: Session } -- keyed by UserId
 local loadedSignal = Instance.new("BindableEvent")
 Data.Loaded = loadedSignal.Event
-local leavingSignal = Instance.new("BindableEvent")
-Data.Leaving = leavingSignal.Event
+-- Leave callbacks run synchronously BEFORE the final save (so they can settle races etc.).
+local leavingFns: { (any) -> () } = {}
+function Data.onLeaving(fn: (any) -> ())
+	table.insert(leavingFns, fn)
+end
+local leavingUsers: { [number]: boolean } = {} -- UserIds whose leave save is still running
 
 local function now(): number
 	return os.time()
@@ -41,6 +45,9 @@ function Data.save(s: Session, release: boolean): boolean
 	if not s.canSave then
 		return false
 	end
+	if s.rt.closing and not release then
+		return false -- the leave save owns the final write (and releases the lock)
+	end
 	if s.saving then
 		-- one save at a time; wait for the running one
 		while s.saving do
@@ -49,8 +56,12 @@ function Data.save(s: Session, release: boolean): boolean
 	end
 	s.saving = true
 	s.profile.lastSeen = now()
-	local ok = Store.save(s.player.UserId, Profile.serialize(s.profile), release)
+	local okCall, ok = pcall(Store.save, s.player.UserId, Profile.serialize(s.profile), release)
 	s.saving = false
+	if not okCall then
+		warn("[Data] save errored:", ok)
+		ok = false
+	end
 	if ok then
 		s.dirty = false
 		s.lastSave = os.clock()
@@ -59,8 +70,16 @@ function Data.save(s: Session, release: boolean): boolean
 end
 
 local function onJoin(player: Player)
+	-- a rejoin to this server waits for the previous visit's leave save
+	local t0 = os.clock()
+	while leavingUsers[player.UserId] and os.clock() - t0 < 30 do
+		task.wait(0.1)
+	end
 	local ok, raw = Store.load(player.UserId)
 	if not player.Parent then
+		if ok then
+			Store.release(player.UserId)
+		end
 		return
 	end
 	local session: Session
@@ -71,6 +90,7 @@ local function onJoin(player: Player)
 		local profile, why = Profile.migrate(raw, now())
 		if not profile then
 			warn("[Data] save for", player.Name, "rejected:", why)
+			Store.release(player.UserId)
 			session = { player = player, profile = Profile.new(now()), canSave = false, dirty = false, saving = false, lastSave = 0, rt = { loadError = "Your save couldn't be read (" .. tostring(why) .. "). Progress this visit won't be saved." } }
 		else
 			session = { player = player, profile = profile, canSave = true, dirty = false, saving = false, lastSave = os.clock(), rt = {} }
@@ -89,9 +109,19 @@ local function onLeave(player: Player)
 	if not s then
 		return
 	end
-	leavingSignal:Fire(s)
+	s.rt.closing = true
+	leavingUsers[player.UserId] = true
+	for _, fn in leavingFns do
+		local okFn, err = pcall(fn :: any, s)
+		if not okFn then
+			warn("[Data] leave handler failed:", err)
+		end
+	end
 	Data.save(s, true)
-	Data.sessions[player.UserId] = nil
+	leavingUsers[player.UserId] = nil
+	if Data.sessions[player.UserId] == s then
+		Data.sessions[player.UserId] = nil
+	end
 end
 
 function Data.init()

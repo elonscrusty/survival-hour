@@ -67,11 +67,16 @@ function Format.amount(v: Big | number, decimalsUnder1000: number?): string
 		return commas(math.floor(a.m * 10 ^ a.e + 1e-6))
 	end
 	local group = a.e // 3 -- 2 = millions
+	local lead = a.m * 10 ^ (a.e - group * 3)
+	if (tonumber(string.format("%.3f", lead)) :: number) >= 1000 then
+		-- rounding carried into the next group (999.9996 million -> 1 billion)
+		group += 1
+		lead /= 1000
+	end
 	local name = Format.illion(group - 1)
 	if not name then
 		return trim(string.format("%.2f", a.m)) .. "e" .. tostring(a.e)
 	end
-	local lead = a.m * 10 ^ (a.e - group * 3)
 	return trim(string.format("%.3f", lead)) .. " " .. name
 end
 
@@ -91,6 +96,10 @@ function Format.short(v: Big | number): string
 	end
 	local group = a.e // 3
 	local lead = a.m * 10 ^ (a.e - group * 3)
+	if (tonumber(string.format("%.2f", lead)) :: number) >= 1000 then
+		group += 1
+		lead /= 1000
+	end
 	local suffix = SHORT[group]
 	if not suffix then
 		return "$" .. trim(string.format("%.2f", a.m)) .. "e" .. tostring(a.e)

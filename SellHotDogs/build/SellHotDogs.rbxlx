@@ -1024,10 +1024,10 @@ return {
 			src = "OURS",
 		},
 		winPays = {
-			value = 3.5,
+			value = 2.6,
 			status = "placeholder",
 			src = "OURS",
-			note = "UNRESOLVED payout.",
+			note = "UNRESOLVED payout; chosen so betting never makes money on average.",
 		},
 		raceSeconds = {
 			value = 8,
@@ -1035,10 +1035,10 @@ return {
 			src = "OURS",
 		},
 		cheerBoost = {
-			value = 0.012,
+			value = 0.003,
 			status = "placeholder",
 			src = "OURS",
-			note = "Each counted cheer adds this much to the chosen runner's speed; at most 6 cheers per second count.",
+			note = "Each cheer in the last second adds 0.3% speed to the chosen racer (max 6 cheers/s count). Tuned so constant cheering stays below break-even (about 36% wins x 2.6 = 0.92 expected return); measured in tests/Dash.spec.luau.",
 		},
 		cooldown = {
 			value = 30,
@@ -1211,32 +1211,32 @@ local Layout = {}
 
 Layout.PLOT_SPACING = 240 -- along the road (world X)
 Layout.PLOT_HALF_WIDTH = 105
-Layout.PLOT_DEPTH = 330
+Layout.PLOT_DEPTH = 410
 Layout.ROAD_Z = -26 -- road centre line, in front of every plot
 
 -- Lot centre and footprint per business (stand closest to the road, HotDogX at the back).
 Layout.lots = ({
 	stand = { pos = Vector3.new(0, 0, 34), size = Vector2.new(40, 30) },
-	dash = { pos = Vector3.new(-58, 0, 92), size = Vector2.new(46, 40) },
-	depot = { pos = Vector3.new(58, 0, 92), size = Vector2.new(46, 40) },
-	trading = { pos = Vector3.new(-58, 0, 160), size = Vector2.new(46, 40) },
-	labs = { pos = Vector3.new(58, 0, 160), size = Vector2.new(46, 40) },
-	robotics = { pos = Vector3.new(-58, 0, 228), size = Vector2.new(46, 40) },
-	republic = { pos = Vector3.new(58, 0, 228), size = Vector2.new(46, 40) },
-	hotdogx = { pos = Vector3.new(0, 0, 290), size = Vector2.new(56, 40) },
+	dash = { pos = Vector3.new(-62, 0, 100), size = Vector2.new(60, 56) },
+	depot = { pos = Vector3.new(62, 0, 100), size = Vector2.new(60, 56) },
+	trading = { pos = Vector3.new(-62, 0, 180), size = Vector2.new(60, 56) },
+	labs = { pos = Vector3.new(62, 0, 180), size = Vector2.new(60, 56) },
+	robotics = { pos = Vector3.new(-62, 0, 260), size = Vector2.new(60, 56) },
+	republic = { pos = Vector3.new(62, 0, 260), size = Vector2.new(60, 56) },
+	hotdogx = { pos = Vector3.new(0, 0, 340), size = Vector2.new(60, 50) },
 } :: { [string]: { pos: Vector3, size: Vector2 } })
 
 Layout.spawn = Vector3.new(0, 3, 6)
-Layout.portal = Vector3.new(0, 0, 196) -- Void Evolution portal in the central plaza
-Layout.staircase = Vector3.new(0, 0, 318) -- Ascension staircase behind HotDogX
-Layout.investorDesk = Vector3.new(0, 0, 140) -- Alien Investors kiosk
+Layout.portal = Vector3.new(0, 0, 220) -- Void Evolution portal on the path between rows
+Layout.staircase = Vector3.new(0, 0, 388) -- Ascension staircase behind HotDogX
+Layout.investorDesk = Vector3.new(10, 0, 140) -- Alien Investors kiosk (placed 10 studs left of this)
 
 -- Ingredient racks (pickup spots) sit beside the path, never on a pad or doorway.
 Layout.racks = {
 	Vector3.new(30, 0, 12),
 	Vector3.new(-30, 0, 12),
-	Vector3.new(-22, 0, 126),
-	Vector3.new(22, 0, 126),
+	Vector3.new(-22, 0, 150),
+	Vector3.new(22, 0, 150),
 }
 
 -- Pad k (1-based) of a business: rows of four in front of the lot, facing the road.
@@ -1260,21 +1260,20 @@ function Layout.unlockPos(bizId: string): Vector3
 	return lot.pos - Vector3.new(0, 0, lot.size.Y / 2 + 6)
 end
 
--- Where the prop of owned pad k stands (around the lot so it never blocks the front).
+Layout.PROP_SLOT = 8 -- studs; props larger than this are scaled down to fit
+
+-- Where the prop of owned pad k (of n props) stands: two tidy columns along the lot's side
+-- edges, front to back, clear of the building in the middle and the pads in front.
 function Layout.propPos(bizId: string, k: number, n: number): Vector3
 	local lot = Layout.lots[bizId]
-	local hw, hd = lot.size.X / 2 - 4, lot.size.Y / 2 - 4
-	-- walk the back and side edges
-	local t = if n <= 1 then 0.5 else (k - 1) / (n - 1)
-	local perim = hd * 2 + hw * 2
-	local d = t * perim
-	if d < hd then
-		return lot.pos + Vector3.new(-hw, 0, -hd * 0.2 + d)
-	elseif d < hd + hw * 2 then
-		return lot.pos + Vector3.new(-hw + (d - hd), 0, hd)
-	else
-		return lot.pos + Vector3.new(hw, 0, hd - (d - hd - hw * 2))
-	end
+	local perSide = math.max(1, math.ceil(n / 2))
+	local side = if k % 2 == 1 then -1 else 1
+	local idx = (k - 1) // 2
+	local x = side * (lot.size.X / 2 - Layout.PROP_SLOT / 2 - 1)
+	local depth = lot.size.Y - Layout.PROP_SLOT
+	local step = if perSide <= 1 then 0 else math.min(Layout.PROP_SLOT + 1, depth / (perSide - 1))
+	local z = -lot.size.Y / 2 + Layout.PROP_SLOT / 2 + idx * step
+	return lot.pos + Vector3.new(x, 0, z)
 end
 
 function Layout.plotOrigin(index: number): CFrame
@@ -1573,6 +1572,11 @@ function Dash.step(r: Race, dt: number, rng: () -> number): number?
 		return r.winner
 	end
 	r.t += dt
+	if r.t - r.windowStart >= 1 then
+		-- cheering only counts while it keeps going
+		r.windowStart = r.t
+		r.cheerWindow = 0
+	end
 	local best, bestPos = nil, -1
 	for i = 1, #r.pos do
 		local s = r.speed[i] * (0.75 + 0.5 * rng())
@@ -1942,11 +1946,16 @@ function Format.amount(v: Big | number, decimalsUnder1000: number?): string
 		return commas(math.floor(a.m * 10 ^ a.e + 1e-6))
 	end
 	local group = a.e // 3 -- 2 = millions
+	local lead = a.m * 10 ^ (a.e - group * 3)
+	if (tonumber(string.format("%.3f", lead)) :: number) >= 1000 then
+		-- rounding carried into the next group (999.9996 million -> 1 billion)
+		group += 1
+		lead /= 1000
+	end
 	local name = Format.illion(group - 1)
 	if not name then
 		return trim(string.format("%.2f", a.m)) .. "e" .. tostring(a.e)
 	end
-	local lead = a.m * 10 ^ (a.e - group * 3)
 	return trim(string.format("%.3f", lead)) .. " " .. name
 end
 
@@ -1966,6 +1975,10 @@ function Format.short(v: Big | number): string
 	end
 	local group = a.e // 3
 	local lead = a.m * 10 ^ (a.e - group * 3)
+	if (tonumber(string.format("%.2f", lead)) :: number) >= 1000 then
+		group += 1
+		lead /= 1000
+	end
 	local suffix = SHORT[group]
 	if not suffix then
 		return "$" .. trim(string.format("%.2f", a.m)) .. "e" .. tostring(a.e)
@@ -2405,7 +2418,17 @@ local function resetRun(p: Profile)
 end
 Game._resetRun = resetRun
 
+-- Unclaimed offline income belongs to the current run: bank it before any reset.
+local function settlePending(p: Profile)
+	if p.pendingOffline.m > 0 then
+		local a = p.pendingOffline
+		p.pendingOffline = BigNum.zero
+		earn(p, a)
+	end
+end
+
 function Game.rebirth(p: Profile): (boolean, string, Big?)
+	settlePending(p)
 	local award = Game.investorsOffered(p)
 	if BigNum.lt(award, BigNum.new(1)) then
 		return false, "No investors yet"
@@ -2440,6 +2463,7 @@ function Game.evolve(p: Profile): (boolean, string)
 	if BigNum.lt(p.investors, Economy.evolutionThreshold(p.evolutions)) then
 		return false, "Not enough investors"
 	end
+	settlePending(p)
 	resetRun(p)
 	p.investors = BigNum.zero
 	p.powers = {} -- investor-bought powers reset; Robux tiers are kept
@@ -2462,6 +2486,7 @@ function Game.ascend(p: Profile): (boolean, string)
 	if not (Game.canAscend(p)) then
 		return false, "Buy everything first"
 	end
+	settlePending(p)
 	resetRun(p)
 	p.investors = BigNum.zero
 	p.powers = {}
@@ -3095,8 +3120,12 @@ local Data = {}
 Data.sessions = {} :: { [number]: Session } -- keyed by UserId
 local loadedSignal = Instance.new("BindableEvent")
 Data.Loaded = loadedSignal.Event
-local leavingSignal = Instance.new("BindableEvent")
-Data.Leaving = leavingSignal.Event
+-- Leave callbacks run synchronously BEFORE the final save (so they can settle races etc.).
+local leavingFns: { (any) -> () } = {}
+function Data.onLeaving(fn: (any) -> ())
+	table.insert(leavingFns, fn)
+end
+local leavingUsers: { [number]: boolean } = {} -- UserIds whose leave save is still running
 
 local function now(): number
 	return os.time()
@@ -3110,6 +3139,9 @@ function Data.save(s: Session, release: boolean): boolean
 	if not s.canSave then
 		return false
 	end
+	if s.rt.closing and not release then
+		return false -- the leave save owns the final write (and releases the lock)
+	end
 	if s.saving then
 		-- one save at a time; wait for the running one
 		while s.saving do
@@ -3118,8 +3150,12 @@ function Data.save(s: Session, release: boolean): boolean
 	end
 	s.saving = true
 	s.profile.lastSeen = now()
-	local ok = Store.save(s.player.UserId, Profile.serialize(s.profile), release)
+	local okCall, ok = pcall(Store.save, s.player.UserId, Profile.serialize(s.profile), release)
 	s.saving = false
+	if not okCall then
+		warn("[Data] save errored:", ok)
+		ok = false
+	end
 	if ok then
 		s.dirty = false
 		s.lastSave = os.clock()
@@ -3128,8 +3164,16 @@ function Data.save(s: Session, release: boolean): boolean
 end
 
 local function onJoin(player: Player)
+	-- a rejoin to this server waits for the previous visit's leave save
+	local t0 = os.clock()
+	while leavingUsers[player.UserId] and os.clock() - t0 < 30 do
+		task.wait(0.1)
+	end
 	local ok, raw = Store.load(player.UserId)
 	if not player.Parent then
+		if ok then
+			Store.release(player.UserId)
+		end
 		return
 	end
 	local session: Session
@@ -3140,6 +3184,7 @@ local function onJoin(player: Player)
 		local profile, why = Profile.migrate(raw, now())
 		if not profile then
 			warn("[Data] save for", player.Name, "rejected:", why)
+			Store.release(player.UserId)
 			session = { player = player, profile = Profile.new(now()), canSave = false, dirty = false, saving = false, lastSave = 0, rt = { loadError = "Your save couldn't be read (" .. tostring(why) .. "). Progress this visit won't be saved." } }
 		else
 			session = { player = player, profile = profile, canSave = true, dirty = false, saving = false, lastSave = os.clock(), rt = {} }
@@ -3158,9 +3203,19 @@ local function onLeave(player: Player)
 	if not s then
 		return
 	end
-	leavingSignal:Fire(s)
+	s.rt.closing = true
+	leavingUsers[player.UserId] = true
+	for _, fn in leavingFns do
+		local okFn, err = pcall(fn :: any, s)
+		if not okFn then
+			warn("[Data] leave handler failed:", err)
+		end
+	end
 	Data.save(s, true)
-	Data.sessions[player.UserId] = nil
+	leavingUsers[player.UserId] = nil
+	if Data.sessions[player.UserId] == s then
+		Data.sessions[player.UserId] = nil
+	end
 end
 
 function Data.init()
@@ -3373,10 +3428,13 @@ GameService.register("dashStart", 1, function(s, pick, fraction)
 	GameService.afterChange(s)
 	GameService.sync(s)
 	task.spawn(function()
-		while s.rt.race == race and not race.winner and s.player.Parent do
+		while s.rt.race == race and not race.winner and not s.rt.closing do
 			task.wait(0.1)
 			Dash.step(race, 0.1, roll)
 			GameService.notify(s.player, "race", { pos = race.pos, pick = race.pick, winner = race.winner, cheers = race.cheers })
+		end
+		if s.rt.closing and not race.winner then
+			return -- settled by the leave handler
 		end
 		if race.winner then
 			local pay = Dash.payout(race)
@@ -3492,7 +3550,7 @@ local function checkPasses(s: Data.Session)
 		local ok, owns = pcall(function()
 			return MarketplaceService:UserOwnsGamePassAsync(s.player.UserId, passId)
 		end)
-		if ok and owns then
+		if ok and owns and not Game.hasReceipt(s.profile, "pass:" .. passId) then
 			deliver(s, key, "pass:" .. passId)
 		end
 	end
@@ -3551,7 +3609,66 @@ GameService.register("mockBuy", 0.3, function(s, key, replay, fail)
 	end
 end)
 
+-- Studio-only fast-forward hook for testers (never created in a live server):
+--   game.ServerStorage.SHDDev:Invoke("cash", 1, 120)        -- cash = 1e120 for every player
+--   game.ServerStorage.SHDDev:Invoke("lifetime", 3.08, 25)  -- lifetime cash (investors on offer)
+--   game.ServerStorage.SHDDev:Invoke("investors", 1.5, 3)
+--   game.ServerStorage.SHDDev:Invoke("evolutions", 12)
+--   game.ServerStorage.SHDDev:Invoke("phone")               -- next phone offer now
+--   game.ServerStorage.SHDDev:Invoke("offline", 3600)       -- run the returning-player flow as if away 1 hour
+local function devHook()
+	if not RunService:IsStudio() then
+		return
+	end
+	local bf = Instance.new("BindableFunction")
+	bf.Name = "SHDDev"
+	bf.OnInvoke = function(cmd: string, a: number?, b: number?)
+		for _, s in Data.sessions do
+			local p = s.profile
+			if cmd == "cash" then
+				p.cash = BigNum.fromParts(a or 1, b or 0)
+			elseif cmd == "lifetime" then
+				p.lifetime = BigNum.fromParts(a or 1, b or 0)
+			elseif cmd == "investors" then
+				p.investors = BigNum.fromParts(a or 1, b or 0)
+			elseif cmd == "evolutions" then
+				p.evolutions = math.max(0, math.floor(a or 0))
+			elseif cmd == "phone" then
+				s.rt.offer = nil
+				s.rt.phoneNext = os.time()
+			elseif cmd == "offline" then
+				p.lastSeen = os.time() - (a or 3600)
+				Game.applyReturn(p, os.time())
+				GameService.notify(s.player, "offline", { amount = p.pendingOffline })
+			end
+			GameService.afterChange(s)
+			GameService.sync(s)
+		end
+		return "ok"
+	end
+	bf.Parent = game:GetService("ServerStorage")
+end
+
 function Extras.init()
+	devHook()
+	-- leaving mid-race: run it to the finish instantly and settle before the final save
+	Data.onLeaving(function(s)
+		local race = s.rt.race
+		if race and not race.winner then
+			local guard = 0
+			while not race.winner and guard < 10000 do
+				Dash.step(race, 0.1, roll)
+				guard += 1
+			end
+			local pay = Dash.payout(race)
+			if pay.m > 0 then
+				Game.earn(s.profile, pay)
+			end
+			s.profile.stats.races = (s.profile.stats.races or 0) + 1
+		end
+		s.rt.race = nil
+		s.rt.offer = nil
+	end)
 	task.spawn(spawnPickups)
 	task.spawn(phoneLoop)
 	GameService.onSessionLoaded(function(s)
@@ -3856,7 +3973,24 @@ GameService.register("buyPower", 0.2, function(s, id)
 	result(s, ok, msg)
 end)
 
+-- Prestige can't run while value from the current run is still in flight.
+local function prestigeBlocked(s: Data.Session): boolean
+	if s.rt.race then
+		GameService.toast(s.player, "Finish your DogDash race first", "error")
+		return true
+	end
+	if s.rt.offer then
+		s.rt.offer.state = "expired"
+		GameService.notify(s.player, "phone", { offer = s.rt.offer, outcome = "expired" })
+		s.rt.offer = nil
+	end
+	return false
+end
+
 GameService.register("rebirth", 1, function(s)
+	if prestigeBlocked(s) then
+		return
+	end
 	local ok, msg, award = Game.rebirth(s.profile)
 	if ok then
 		GameService.notify(s.player, "prestige", { kind = "rebirth", amount = award })
@@ -3865,6 +3999,9 @@ GameService.register("rebirth", 1, function(s)
 end)
 
 GameService.register("rebirthNoReset", 1, function(s)
+	if prestigeBlocked(s) then
+		return
+	end
 	local ok, msg, award = Game.rebirthNoReset(s.profile)
 	if ok then
 		GameService.notify(s.player, "prestige", { kind = "rebirthNoReset", amount = award })
@@ -3873,6 +4010,9 @@ GameService.register("rebirthNoReset", 1, function(s)
 end)
 
 GameService.register("evolve", 1, function(s)
+	if prestigeBlocked(s) then
+		return
+	end
 	local ok, msg = Game.evolve(s.profile)
 	if ok then
 		GameService.notify(s.player, "prestige", { kind = "evolve", recipe = Economy.recipeName(s.profile.evolutions) })
@@ -3881,6 +4021,9 @@ GameService.register("evolve", 1, function(s)
 end)
 
 GameService.register("ascend", 1, function(s)
+	if prestigeBlocked(s) then
+		return
+	end
 	local ok, msg = Game.ascend(s.profile)
 	if ok then
 		GameService.notify(s.player, "prestige", { kind = "ascend", n = s.profile.ascensions })
@@ -4040,7 +4183,7 @@ function GameService.init()
 			spawnAtPlot(player, ch)
 		end)
 	end
-	Data.Leaving:Connect(function(s: Data.Session)
+	Data.onLeaving(function(s: Data.Session)
 		World.release(s.player)
 		lastCall[s.player.UserId] = nil
 		burst[s.player.UserId] = nil
@@ -4679,6 +4822,34 @@ function Models.build(name: string): Model
 	return m
 end
 
+-- Shrink a model (about its pivot) so its footprint fits a square of `maxSize` studs.
+-- Works on freshly built models (pivot at the origin); heights scale with it.
+function Models.fit(m: Model, maxSize: number)
+	local minX, maxX, minZ, maxZ = math.huge, -math.huge, math.huge, -math.huge
+	for _, d in m:GetDescendants() do
+		if d:IsA("BasePart") then
+			local p, s = d.CFrame.Position, d.Size
+			local r = math.max(s.X, s.Z) / 2
+			minX, maxX = math.min(minX, p.X - r), math.max(maxX, p.X + r)
+			minZ, maxZ = math.min(minZ, p.Z - r), math.max(maxZ, p.Z + r)
+		end
+	end
+	local extent = math.max(maxX - minX, maxZ - minZ)
+	if extent <= maxSize or extent == -math.huge then
+		return
+	end
+	local k = maxSize / extent
+	for _, d in m:GetDescendants() do
+		if d:IsA("BasePart") then
+			local cf = d.CFrame
+			d.Size = d.Size * k
+			d.CFrame = CFrame.new(cf.Position * k) * cf.Rotation
+		elseif d:IsA("Fire") then
+			d.Size = math.max(2, d.Size * k)
+		end
+	end
+end
+
 function Models.place(m: Model, cf: CFrame, parent: Instance): Model
 	m:PivotTo(cf)
 	m.Parent = parent
@@ -4709,7 +4880,7 @@ local Store = {}
 local mock: { [string]: string } = {} -- JSON per key, like a real store
 local store: GlobalDataStore? = nil
 local JOB = if game.JobId ~= "" then game.JobId else "studio-" .. HttpService:GenerateGUID(false)
-local LOCK_SECONDS = 1800
+local LOCK_SECONDS = Config.AutosaveSeconds * 3 -- autosave refreshes it; a crash frees it soon
 
 Store.mode = Config.Storage
 
@@ -4817,6 +4988,23 @@ function Store.save(userId: number, data: any, release: boolean): boolean
 		task.wait(attempt)
 	end
 	return false
+end
+
+-- Drop our session lock without writing data (load succeeded but the session won't be used).
+function Store.release(userId: number)
+	if Store.mode ~= "datastore" then
+		return
+	end
+	local ds = store :: GlobalDataStore
+	pcall(function()
+		ds:UpdateAsync(key(userId), function(old)
+			if type(old) == "table" and type(old.lock) == "table" and old.lock.job == JOB then
+				old.lock = nil
+				return old
+			end
+			return nil
+		end)
+	end)
 end
 
 -- Test helpers (mock mode only).
@@ -5068,13 +5256,15 @@ local function buildPlot(index: number): Plot
 	decor.Parent = folder
 
 	-- driveway, central path and lot bases
-	part(decor, Vector3.new(14, 0.3, 300), origin * CFrame.new(0, 0.15, 150), Color3.fromRGB(235, 222, 196), { material = Enum.Material.Pebble, name = "Path" })
+	part(decor, Vector3.new(14, 0.3, 370), origin * CFrame.new(0, 0.15, 185), Color3.fromRGB(235, 222, 196), { material = Enum.Material.Pebble, name = "Path" })
 	for id, lot in Layout.lots do
 		local base = part(decor, Vector3.new(lot.size.X, 0.4, lot.size.Y), origin * CFrame.new(lot.pos + Vector3.new(0, 0.2, 0)), if id == "stand" then Color3.fromRGB(240, 226, 196) else Color3.fromRGB(214, 222, 228), { material = Enum.Material.Concrete, name = id .. "Lot" })
 		base.CastShadow = false
 		if id ~= "stand" and id ~= "hotdogx" then
-			local toPath = Vector3.new(lot.pos.X / 2, 0.16, lot.pos.Z)
-			part(decor, Vector3.new(math.abs(lot.pos.X) - lot.size.X / 2 - 7, 0.3, 8), origin * CFrame.new(toPath + Vector3.new(if lot.pos.X > 0 then 3.5 else -3.5, 0, 0)), Color3.fromRGB(235, 222, 196), { material = Enum.Material.Pebble })
+			-- spur from the central path (half-width 7) to the lot's inner edge
+			local inner = math.abs(lot.pos.X) - lot.size.X / 2
+			local sign = if lot.pos.X > 0 then 1 else -1
+			part(decor, Vector3.new(inner - 7 + 1, 0.3, 8), origin * CFrame.new(sign * (7 + inner) / 2, 0.16, lot.pos.Z), Color3.fromRGB(235, 222, 196), { material = Enum.Material.Pebble })
 		end
 	end
 	-- plot border hedges with a gap at the road
@@ -5082,11 +5272,11 @@ local function buildPlot(index: number): Plot
 		part(decor, Vector3.new(3, 3, Layout.PLOT_DEPTH - 20), origin * CFrame.new(x, 1.5, Layout.PLOT_DEPTH / 2 + 4), Color3.fromRGB(80, 160, 70), { material = Enum.Material.Grass })
 	end
 	-- landscaping kept off lots, pads and the path
-	for _, z in { 70, 130, 200, 262 } do
-		tree(decor, origin.Position + Vector3.new(-96, 0, z), 1.1)
-		tree(decor, origin.Position + Vector3.new(96, 0, z + 8), 1.2)
+	for _, z in { 64, 140, 220, 300, 372 } do
+		tree(decor, origin.Position + Vector3.new(-98, 0, z), 1.1)
+		tree(decor, origin.Position + Vector3.new(98, 0, z + 8), 1.2)
 	end
-	for _, z in { 60, 124, 192, 258 } do
+	for _, z in { 64, 128, 212, 292 } do
 		flowers(decor, origin.Position + Vector3.new(-12, 0, z), 6)
 		flowers(decor, origin.Position + Vector3.new(12, 0, z), 6)
 	end
@@ -5123,13 +5313,24 @@ local function buildPlot(index: number): Plot
 		Models.place(b, origin * CFrame.new(lot.pos), plot.hidden)
 		b.Name = biz.id
 		plot.buildings[biz.id] = b
+		local nProps = 0
+		for _, pad in biz.pads do
+			if pad.kind ~= "structure" then
+				nProps += 1
+			end
+		end
+		local slot = 0
 		for k, pad in biz.pads do
 			makePad(plot, pad, Layout.padPos(biz.id, k))
 			local prop = Models.build(pad.model or "Sign")
-			local pp = Layout.propPos(biz.id, k, #biz.pads)
-			-- props face the path (toward lot centre X)
-			local look = CFrame.lookAt(pp, Vector3.new(lot.pos.X, 0, pp.Z - 20))
-			Models.place(prop, origin * look, plot.hidden)
+			if pad.kind == "structure" then
+				-- floors and walls belong to the whole lot
+				Models.place(prop, origin * CFrame.new(lot.pos), plot.hidden)
+			else
+				slot += 1
+				Models.fit(prop, Layout.PROP_SLOT)
+				Models.place(prop, origin * CFrame.new(Layout.propPos(biz.id, slot, nProps)), plot.hidden)
+			end
 			prop.Name = "Prop_" .. pad.id
 			plot.padModels[pad.id] = prop
 		end
@@ -5217,6 +5418,11 @@ function World.release(player: Player)
 	for _, plot in World.plots do
 		if plot.owner == player then
 			plot.owner = nil
+			player:SetAttribute("Plot", nil)
+			local pickups = plot.folder:FindFirstChild("Pickups")
+			if pickups then
+				pickups:Destroy()
+			end
 			World.reset(plot)
 		end
 	end
@@ -5224,7 +5430,8 @@ end
 
 function World.plotOf(player: Player): Plot?
 	local i = player:GetAttribute("Plot")
-	return if type(i) == "number" then World.plots[i] else nil
+	local plot = if type(i) == "number" then World.plots[i] else nil
+	return if plot and plot.owner == player then plot else nil
 end
 
 local function show(plot: Plot, key: string, inst: Instance, on: boolean, parent: Instance)

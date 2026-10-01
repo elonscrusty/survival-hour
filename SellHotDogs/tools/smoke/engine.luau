@@ -121,6 +121,15 @@ end
 R.implementMethod("Instance", "GetPropertyChangedSignal", function(self, prop)
 	return sig(self, "Changed:" .. prop)
 end)
+Engine.invokers = {}
+R.implementProperty("BindableFunction", "OnInvoke", function(self)
+	return Engine.invokers[idOf(self)]
+end, function(self, fn)
+	Engine.invokers[idOf(self)] = fn
+end)
+R.implementMethod("BindableFunction", "Invoke", function(self, ...)
+	return Engine.invokers[idOf(self)](...)
+end)
 R.implementMethod("BindableEvent", "Fire", function(self, ...)
 	sig(self, "Event"):Fire(...)
 end)

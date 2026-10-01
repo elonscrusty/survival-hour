@@ -68,6 +68,11 @@ function Dash.step(r: Race, dt: number, rng: () -> number): number?
 		return r.winner
 	end
 	r.t += dt
+	if r.t - r.windowStart >= 1 then
+		-- cheering only counts while it keeps going
+		r.windowStart = r.t
+		r.cheerWindow = 0
+	end
 	local best, bestPos = nil, -1
 	for i = 1, #r.pos do
 		local s = r.speed[i] * (0.75 + 0.5 * rng())

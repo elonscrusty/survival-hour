@@ -144,9 +144,9 @@ Timestamps like `N 00:48.2` mean source N at video time 00:48.2.
 | Phone | expires | 45 |  | placeholder | OURS |  |
 | Dash | runners | 4 |  | secondary | W-mini |  |
 | Dash | betFractions | [0.1, 0.25, 0.5] |  | placeholder | OURS |  |
-| Dash | winPays | 3.5 |  | placeholder | OURS | UNRESOLVED payout. |
+| Dash | winPays | 2.6 |  | placeholder | OURS | UNRESOLVED payout; chosen so betting never makes money on average. |
 | Dash | raceSeconds | 8 |  | placeholder | OURS |  |
-| Dash | cheerBoost | 0.012 |  | placeholder | OURS | Each counted cheer adds this much to the chosen runner's speed; at most 6 cheers per second count. |
+| Dash | cheerBoost | 0.003 |  | placeholder | OURS | Each cheer in the last second adds 0.3% speed to the chosen racer (max 6 cheers/s count). Tuned so constant cheering stays below break-even (about 36% wins x 2.6 = 0.92 expected return); measured in tests/Dash.spec.luau. |
 | Dash | cooldown | 30 |  | placeholder | OURS |  |
 | Offline | rate | 1.0 |  | secondary | D | Description claims 100% offline income. Only automated businesses earn. No cap is applied because none is evidenced. |
 | Names | maxLength | 24 |  | placeholder | N 10:00 (name editing exists; limit unknown) |  |
@@ -232,9 +232,9 @@ Every row below is a guess or interpretation that the game currently runs on. Re
 | Phone | raiseOdds | {"better": 0.5, "final": 0.3, "walk": 0.2} | placeholder |  |
 | Phone | expires | 45 | placeholder |  |
 | Dash | betFractions | [0.1, 0.25, 0.5] | placeholder |  |
-| Dash | winPays | 3.5 | placeholder | UNRESOLVED payout. |
+| Dash | winPays | 2.6 | placeholder | UNRESOLVED payout; chosen so betting never makes money on average. |
 | Dash | raceSeconds | 8 | placeholder |  |
-| Dash | cheerBoost | 0.012 | placeholder | Each counted cheer adds this much to the chosen runner's speed; at most 6 cheers per second count. |
+| Dash | cheerBoost | 0.003 | placeholder | Each cheer in the last second adds 0.3% speed to the chosen racer (max 6 cheers/s count). Tuned so constant cheering stays below break-even (about 36% wins x 2.6 = 0.92 expected return); measured in tests/Dash.spec.luau. |
 | Dash | cooldown | 30 | placeholder |  |
 | Names | maxLength | 24 | placeholder |  |
 | Names | minLength | 3 | placeholder |  |

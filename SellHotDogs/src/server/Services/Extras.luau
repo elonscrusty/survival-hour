@@ -168,10 +168,13 @@ GameService.register("dashStart", 1, function(s, pick, fraction)
 	GameService.afterChange(s)
 	GameService.sync(s)
 	task.spawn(function()
-		while s.rt.race == race and not race.winner and s.player.Parent do
+		while s.rt.race == race and not race.winner and not s.rt.closing do
 			task.wait(0.1)
 			Dash.step(race, 0.1, roll)
 			GameService.notify(s.player, "race", { pos = race.pos, pick = race.pick, winner = race.winner, cheers = race.cheers })
+		end
+		if s.rt.closing and not race.winner then
+			return -- settled by the leave handler
 		end
 		if race.winner then
 			local pay = Dash.payout(race)
@@ -287,7 +290,7 @@ local function checkPasses(s: Data.Session)
 		local ok, owns = pcall(function()
 			return MarketplaceService:UserOwnsGamePassAsync(s.player.UserId, passId)
 		end)
-		if ok and owns then
+		if ok and owns and not Game.hasReceipt(s.profile, "pass:" .. passId) then
 			deliver(s, key, "pass:" .. passId)
 		end
 	end
@@ -346,7 +349,66 @@ GameService.register("mockBuy", 0.3, function(s, key, replay, fail)
 	end
 end)
 
+-- Studio-only fast-forward hook for testers (never created in a live server):
+--   game.ServerStorage.SHDDev:Invoke("cash", 1, 120)        -- cash = 1e120 for every player
+--   game.ServerStorage.SHDDev:Invoke("lifetime", 3.08, 25)  -- lifetime cash (investors on offer)
+--   game.ServerStorage.SHDDev:Invoke("investors", 1.5, 3)
+--   game.ServerStorage.SHDDev:Invoke("evolutions", 12)
+--   game.ServerStorage.SHDDev:Invoke("phone")               -- next phone offer now
+--   game.ServerStorage.SHDDev:Invoke("offline", 3600)       -- run the returning-player flow as if away 1 hour
+local function devHook()
+	if not RunService:IsStudio() then
+		return
+	end
+	local bf = Instance.new("BindableFunction")
+	bf.Name = "SHDDev"
+	bf.OnInvoke = function(cmd: string, a: number?, b: number?)
+		for _, s in Data.sessions do
+			local p = s.profile
+			if cmd == "cash" then
+				p.cash = BigNum.fromParts(a or 1, b or 0)
+			elseif cmd == "lifetime" then
+				p.lifetime = BigNum.fromParts(a or 1, b or 0)
+			elseif cmd == "investors" then
+				p.investors = BigNum.fromParts(a or 1, b or 0)
+			elseif cmd == "evolutions" then
+				p.evolutions = math.max(0, math.floor(a or 0))
+			elseif cmd == "phone" then
+				s.rt.offer = nil
+				s.rt.phoneNext = os.time()
+			elseif cmd == "offline" then
+				p.lastSeen = os.time() - (a or 3600)
+				Game.applyReturn(p, os.time())
+				GameService.notify(s.player, "offline", { amount = p.pendingOffline })
+			end
+			GameService.afterChange(s)
+			GameService.sync(s)
+		end
+		return "ok"
+	end
+	bf.Parent = game:GetService("ServerStorage")
+end
+
 function Extras.init()
+	devHook()
+	-- leaving mid-race: run it to the finish instantly and settle before the final save
+	Data.onLeaving(function(s)
+		local race = s.rt.race
+		if race and not race.winner then
+			local guard = 0
+			while not race.winner and guard < 10000 do
+				Dash.step(race, 0.1, roll)
+				guard += 1
+			end
+			local pay = Dash.payout(race)
+			if pay.m > 0 then
+				Game.earn(s.profile, pay)
+			end
+			s.profile.stats.races = (s.profile.stats.races or 0) + 1
+		end
+		s.rt.race = nil
+		s.rt.offer = nil
+	end)
 	task.spawn(spawnPickups)
 	task.spawn(phoneLoop)
 	GameService.onSessionLoaded(function(s)

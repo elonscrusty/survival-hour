@@ -5,32 +5,32 @@ local Layout = {}
 
 Layout.PLOT_SPACING = 240 -- along the road (world X)
 Layout.PLOT_HALF_WIDTH = 105
-Layout.PLOT_DEPTH = 330
+Layout.PLOT_DEPTH = 410
 Layout.ROAD_Z = -26 -- road centre line, in front of every plot
 
 -- Lot centre and footprint per business (stand closest to the road, HotDogX at the back).
 Layout.lots = ({
 	stand = { pos = Vector3.new(0, 0, 34), size = Vector2.new(40, 30) },
-	dash = { pos = Vector3.new(-58, 0, 92), size = Vector2.new(46, 40) },
-	depot = { pos = Vector3.new(58, 0, 92), size = Vector2.new(46, 40) },
-	trading = { pos = Vector3.new(-58, 0, 160), size = Vector2.new(46, 40) },
-	labs = { pos = Vector3.new(58, 0, 160), size = Vector2.new(46, 40) },
-	robotics = { pos = Vector3.new(-58, 0, 228), size = Vector2.new(46, 40) },
-	republic = { pos = Vector3.new(58, 0, 228), size = Vector2.new(46, 40) },
-	hotdogx = { pos = Vector3.new(0, 0, 290), size = Vector2.new(56, 40) },
+	dash = { pos = Vector3.new(-62, 0, 100), size = Vector2.new(60, 56) },
+	depot = { pos = Vector3.new(62, 0, 100), size = Vector2.new(60, 56) },
+	trading = { pos = Vector3.new(-62, 0, 180), size = Vector2.new(60, 56) },
+	labs = { pos = Vector3.new(62, 0, 180), size = Vector2.new(60, 56) },
+	robotics = { pos = Vector3.new(-62, 0, 260), size = Vector2.new(60, 56) },
+	republic = { pos = Vector3.new(62, 0, 260), size = Vector2.new(60, 56) },
+	hotdogx = { pos = Vector3.new(0, 0, 340), size = Vector2.new(60, 50) },
 } :: { [string]: { pos: Vector3, size: Vector2 } })
 
 Layout.spawn = Vector3.new(0, 3, 6)
-Layout.portal = Vector3.new(0, 0, 196) -- Void Evolution portal in the central plaza
-Layout.staircase = Vector3.new(0, 0, 318) -- Ascension staircase behind HotDogX
-Layout.investorDesk = Vector3.new(0, 0, 140) -- Alien Investors kiosk
+Layout.portal = Vector3.new(0, 0, 220) -- Void Evolution portal on the path between rows
+Layout.staircase = Vector3.new(0, 0, 388) -- Ascension staircase behind HotDogX
+Layout.investorDesk = Vector3.new(10, 0, 140) -- Alien Investors kiosk (placed 10 studs left of this)
 
 -- Ingredient racks (pickup spots) sit beside the path, never on a pad or doorway.
 Layout.racks = {
 	Vector3.new(30, 0, 12),
 	Vector3.new(-30, 0, 12),
-	Vector3.new(-22, 0, 126),
-	Vector3.new(22, 0, 126),
+	Vector3.new(-22, 0, 150),
+	Vector3.new(22, 0, 150),
 }
 
 -- Pad k (1-based) of a business: rows of four in front of the lot, facing the road.
@@ -54,21 +54,20 @@ function Layout.unlockPos(bizId: string): Vector3
 	return lot.pos - Vector3.new(0, 0, lot.size.Y / 2 + 6)
 end
 
--- Where the prop of owned pad k stands (around the lot so it never blocks the front).
+Layout.PROP_SLOT = 8 -- studs; props larger than this are scaled down to fit
+
+-- Where the prop of owned pad k (of n props) stands: two tidy columns along the lot's side
+-- edges, front to back, clear of the building in the middle and the pads in front.
 function Layout.propPos(bizId: string, k: number, n: number): Vector3
 	local lot = Layout.lots[bizId]
-	local hw, hd = lot.size.X / 2 - 4, lot.size.Y / 2 - 4
-	-- walk the back and side edges
-	local t = if n <= 1 then 0.5 else (k - 1) / (n - 1)
-	local perim = hd * 2 + hw * 2
-	local d = t * perim
-	if d < hd then
-		return lot.pos + Vector3.new(-hw, 0, -hd * 0.2 + d)
-	elseif d < hd + hw * 2 then
-		return lot.pos + Vector3.new(-hw + (d - hd), 0, hd)
-	else
-		return lot.pos + Vector3.new(hw, 0, hd - (d - hd - hw * 2))
-	end
+	local perSide = math.max(1, math.ceil(n / 2))
+	local side = if k % 2 == 1 then -1 else 1
+	local idx = (k - 1) // 2
+	local x = side * (lot.size.X / 2 - Layout.PROP_SLOT / 2 - 1)
+	local depth = lot.size.Y - Layout.PROP_SLOT
+	local step = if perSide <= 1 then 0 else math.min(Layout.PROP_SLOT + 1, depth / (perSide - 1))
+	local z = -lot.size.Y / 2 + Layout.PROP_SLOT / 2 + idx * step
+	return lot.pos + Vector3.new(x, 0, z)
 end
 
 function Layout.plotOrigin(index: number): CFrame

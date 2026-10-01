@@ -232,13 +232,15 @@ local function buildPlot(index: number): Plot
 	decor.Parent = folder
 
 	-- driveway, central path and lot bases
-	part(decor, Vector3.new(14, 0.3, 300), origin * CFrame.new(0, 0.15, 150), Color3.fromRGB(235, 222, 196), { material = Enum.Material.Pebble, name = "Path" })
+	part(decor, Vector3.new(14, 0.3, 370), origin * CFrame.new(0, 0.15, 185), Color3.fromRGB(235, 222, 196), { material = Enum.Material.Pebble, name = "Path" })
 	for id, lot in Layout.lots do
 		local base = part(decor, Vector3.new(lot.size.X, 0.4, lot.size.Y), origin * CFrame.new(lot.pos + Vector3.new(0, 0.2, 0)), if id == "stand" then Color3.fromRGB(240, 226, 196) else Color3.fromRGB(214, 222, 228), { material = Enum.Material.Concrete, name = id .. "Lot" })
 		base.CastShadow = false
 		if id ~= "stand" and id ~= "hotdogx" then
-			local toPath = Vector3.new(lot.pos.X / 2, 0.16, lot.pos.Z)
-			part(decor, Vector3.new(math.abs(lot.pos.X) - lot.size.X / 2 - 7, 0.3, 8), origin * CFrame.new(toPath + Vector3.new(if lot.pos.X > 0 then 3.5 else -3.5, 0, 0)), Color3.fromRGB(235, 222, 196), { material = Enum.Material.Pebble })
+			-- spur from the central path (half-width 7) to the lot's inner edge
+			local inner = math.abs(lot.pos.X) - lot.size.X / 2
+			local sign = if lot.pos.X > 0 then 1 else -1
+			part(decor, Vector3.new(inner - 7 + 1, 0.3, 8), origin * CFrame.new(sign * (7 + inner) / 2, 0.16, lot.pos.Z), Color3.fromRGB(235, 222, 196), { material = Enum.Material.Pebble })
 		end
 	end
 	-- plot border hedges with a gap at the road
@@ -246,11 +248,11 @@ local function buildPlot(index: number): Plot
 		part(decor, Vector3.new(3, 3, Layout.PLOT_DEPTH - 20), origin * CFrame.new(x, 1.5, Layout.PLOT_DEPTH / 2 + 4), Color3.fromRGB(80, 160, 70), { material = Enum.Material.Grass })
 	end
 	-- landscaping kept off lots, pads and the path
-	for _, z in { 70, 130, 200, 262 } do
-		tree(decor, origin.Position + Vector3.new(-96, 0, z), 1.1)
-		tree(decor, origin.Position + Vector3.new(96, 0, z + 8), 1.2)
+	for _, z in { 64, 140, 220, 300, 372 } do
+		tree(decor, origin.Position + Vector3.new(-98, 0, z), 1.1)
+		tree(decor, origin.Position + Vector3.new(98, 0, z + 8), 1.2)
 	end
-	for _, z in { 60, 124, 192, 258 } do
+	for _, z in { 64, 128, 212, 292 } do
 		flowers(decor, origin.Position + Vector3.new(-12, 0, z), 6)
 		flowers(decor, origin.Position + Vector3.new(12, 0, z), 6)
 	end
@@ -287,13 +289,24 @@ local function buildPlot(index: number): Plot
 		Models.place(b, origin * CFrame.new(lot.pos), plot.hidden)
 		b.Name = biz.id
 		plot.buildings[biz.id] = b
+		local nProps = 0
+		for _, pad in biz.pads do
+			if pad.kind ~= "structure" then
+				nProps += 1
+			end
+		end
+		local slot = 0
 		for k, pad in biz.pads do
 			makePad(plot, pad, Layout.padPos(biz.id, k))
 			local prop = Models.build(pad.model or "Sign")
-			local pp = Layout.propPos(biz.id, k, #biz.pads)
-			-- props face the path (toward lot centre X)
-			local look = CFrame.lookAt(pp, Vector3.new(lot.pos.X, 0, pp.Z - 20))
-			Models.place(prop, origin * look, plot.hidden)
+			if pad.kind == "structure" then
+				-- floors and walls belong to the whole lot
+				Models.place(prop, origin * CFrame.new(lot.pos), plot.hidden)
+			else
+				slot += 1
+				Models.fit(prop, Layout.PROP_SLOT)
+				Models.place(prop, origin * CFrame.new(Layout.propPos(biz.id, slot, nProps)), plot.hidden)
+			end
 			prop.Name = "Prop_" .. pad.id
 			plot.padModels[pad.id] = prop
 		end
@@ -381,6 +394,11 @@ function World.release(player: Player)
 	for _, plot in World.plots do
 		if plot.owner == player then
 			plot.owner = nil
+			player:SetAttribute("Plot", nil)
+			local pickups = plot.folder:FindFirstChild("Pickups")
+			if pickups then
+				pickups:Destroy()
+			end
 			World.reset(plot)
 		end
 	end
@@ -388,7 +406,8 @@ end
 
 function World.plotOf(player: Player): Plot?
 	local i = player:GetAttribute("Plot")
-	return if type(i) == "number" then World.plots[i] else nil
+	local plot = if type(i) == "number" then World.plots[i] else nil
+	return if plot and plot.owner == player then plot else nil
 end
 
 local function show(plot: Plot, key: string, inst: Instance, on: boolean, parent: Instance)

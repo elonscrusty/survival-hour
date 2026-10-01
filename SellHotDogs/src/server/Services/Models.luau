@@ -574,6 +574,34 @@ function Models.build(name: string): Model
 	return m
 end
 
+-- Shrink a model (about its pivot) so its footprint fits a square of `maxSize` studs.
+-- Works on freshly built models (pivot at the origin); heights scale with it.
+function Models.fit(m: Model, maxSize: number)
+	local minX, maxX, minZ, maxZ = math.huge, -math.huge, math.huge, -math.huge
+	for _, d in m:GetDescendants() do
+		if d:IsA("BasePart") then
+			local p, s = d.CFrame.Position, d.Size
+			local r = math.max(s.X, s.Z) / 2
+			minX, maxX = math.min(minX, p.X - r), math.max(maxX, p.X + r)
+			minZ, maxZ = math.min(minZ, p.Z - r), math.max(maxZ, p.Z + r)
+		end
+	end
+	local extent = math.max(maxX - minX, maxZ - minZ)
+	if extent <= maxSize or extent == -math.huge then
+		return
+	end
+	local k = maxSize / extent
+	for _, d in m:GetDescendants() do
+		if d:IsA("BasePart") then
+			local cf = d.CFrame
+			d.Size = d.Size * k
+			d.CFrame = CFrame.new(cf.Position * k) * cf.Rotation
+		elseif d:IsA("Fire") then
+			d.Size = math.max(2, d.Size * k)
+		end
+	end
+end
+
 function Models.place(m: Model, cf: CFrame, parent: Instance): Model
 	m:PivotTo(cf)
 	m.Parent = parent

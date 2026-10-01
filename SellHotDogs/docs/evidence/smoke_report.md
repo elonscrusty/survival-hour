@@ -3,7 +3,7 @@
 Place: `build/SellHotDogs.rbxlx`. Runner: `lune run tools/smoke/smoke.luau` (Lune 0.10.4).
 This drives the real server and client scripts from the built place with a simulated engine (signals, remotes, players). It is not a Roblox Studio playtest: no physics, rendering, real touch or network.
 
-**77 passed, 0 failed, 0 script errors**
+**83 passed, 0 failed, 0 script errors**
 
 | # | check | result | detail |
 |---|---|---|---|
@@ -47,7 +47,7 @@ This drives the real server and client scripts from the built place with a simul
 | 38 | Remote Buy walks the whole ladder (all 8 businesses, every pad) | PASS | 46/46 after 43 requests |
 | 39 | every business building is in the world | PASS |  |
 | 40 | staircase appears once everything is owned | PASS |  |
-| 41 | fast production stays aggregated (client messages per second) | PASS | 4.5 msgs/s |
+| 41 | fast production stays aggregated (client messages per second) | PASS | 5.0 msgs/s |
 | 42 | wallet formats a 10^564 balance | PASS | $3e564 |
 | 43 | Investors dialog shows offer | PASS |  |
 | 44 | rebirth asks to confirm with resets listed | PASS |  |
@@ -70,17 +70,23 @@ This drives the real server and client scripts from the built place with a simul
 | 61 | good name saved and shown on plot sign | PASS |  |
 | 62 | phone offer arrives | PASS |  |
 | 63 | raise flow ends in a better/final offer or a walk-away without errors | PASS |  |
-| 64 | accepting pays the offered amount once | PASS | $3,504 |
+| 64 | accepting pays the offered amount once | PASS | $5,214 |
 | 65 | DogDash locked without the game pad | PASS |  |
 | 66 | race starts and takes a 10% bet | PASS | $99.978 million |
 | 67 | race finishes and settles | PASS |  |
-| 68 | profile saved on leave | PASS |  |
-| 69 | rejoin restores progress | PASS |  |
-| 70 | offline income banked for the claim popup (automated businesses only) | PASS | $83,916 |
-| 71 | offline amount = 100% of automated income x elapsed | PASS | $83,916 vs $83,916 |
-| 72 | offline claim pays once | PASS | gained $83,939, pending was $83,916 |
-| 73 | failed load gives temporary profile with saving off | PASS |  |
-| 74 | failed-load session never overwrites the stored save | PASS |  |
-| 75 | failed save on leave leaves previous save intact | PASS |  |
-| 76 | two players get different plots | PASS |  |
-| 77 | new player starts fresh while returning player keeps progress | PASS |  |
+| 68 | Studio dev hook exists | PASS |  |
+| 69 | dev hook sets cash | PASS | $300,000 |
+| 70 | second race running before leaving | PASS |  |
+| 71 | prestige refused while a race is running | PASS |  |
+| 72 | profile saved on leave | PASS |  |
+| 73 | race in progress at leave is settled and saved | PASS |  |
+| 74 | plot released and attribute cleared | PASS |  |
+| 75 | rejoin restores progress | PASS |  |
+| 76 | offline income banked for the claim popup (automated businesses only) | PASS | $83,916 |
+| 77 | offline amount = 100% of automated income x elapsed | PASS | $83,916 vs $83,916 |
+| 78 | offline claim pays once | PASS | gained $83,939, pending was $83,916 |
+| 79 | failed load gives temporary profile with saving off | PASS |  |
+| 80 | failed-load session never overwrites the stored save | PASS |  |
+| 81 | failed save on leave leaves previous save intact | PASS |  |
+| 82 | two players get different plots | PASS |  |
+| 83 | new player starts fresh while returning player keeps progress | PASS |  |

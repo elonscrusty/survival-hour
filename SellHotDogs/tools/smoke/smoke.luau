@@ -286,6 +286,25 @@ for _, id in { "stand", "dash", "depot", "trading", "labs", "robotics", "republi
 	end
 end
 check("every business building is in the world", allBuildings)
+-- dump top-down geometry of the finished plot for tools/smoke/render_map.py
+do
+	local origin = plot.SpawnPoint.CFrame.Position - R.Vector3.new(0, 3, 6)
+	local out = {}
+	for _, d in plot:GetDescendants() do
+		if d:IsA("BasePart") and d.Transparency < 0.9 then
+			local cf, sz = d.CFrame, d.Size
+			local pts = {}
+			for _, c in { { -1, -1 }, { 1, -1 }, { 1, 1 }, { -1, 1 } } do
+				local w = cf * R.Vector3.new(c[1] * sz.X / 2, 0, c[2] * sz.Z / 2)
+				table.insert(pts, { w.X - origin.X, w.Z - origin.Z })
+			end
+			local col = d.Color
+			table.insert(out, { p = pts, y = cf.Position.Y + sz.Y / 2, c = { col.R, col.G, col.B } })
+		end
+	end
+	local serde = require("@lune/serde")
+	fs.writeFile("docs/evidence/plot_geometry.json", serde.encode("json", out))
+end
 task.wait(0.5)
 check("staircase appears once everything is owned", plot:FindFirstChild("Staircase") ~= nil)
 
@@ -498,14 +517,34 @@ waitFor(function()
 end, 15)
 check("race finishes and settles", session.rt.race == nil and p.stats.races == 1)
 
+-- Studio dev hook (fast-forward used by docs/STUDIO_TEST_PLAN.md)
+local hook = dm:GetService("ServerStorage"):FindFirstChild("SHDDev")
+check("Studio dev hook exists", hook ~= nil)
+if hook then
+	hook:Invoke("cash", 3, 5)
+	check("dev hook sets cash", math.abs(cash() - 3e5) < 1e-6, Format.cash(p.cash))
+end
+
 -- Save, leave, offline income, rejoin --------------------------------------------------------
-local cashAtLeave = cash()
+-- leave in the middle of a race: it is settled before the final save
+task.wait(31) -- DogDash cooldown (placeholder 30 s)
+local races0 = p.stats.races or 0
+Action:FireServer("dashStart", 2, 3)
+task.wait(0.3)
+check("second race running before leaving", session.rt.race ~= nil)
+p.lifetime = BigNum.new(77e21 * 400) -- SETUP: investors on offer, so only the race blocks it
+Action:FireServer("rebirth")
+task.wait(0.3)
+check("prestige refused while a race is running", (p.stats.rebirths or 0) == 1 and p.pads["biz:stand"] == true)
 Engine.removePlayer(player)
 task.wait(0.5)
 local raw = Store._mockRaw(1001)
 check("profile saved on leave", raw ~= nil)
 local HttpService = server.game:GetService("HttpService")
 local stored = HttpService:JSONDecode(raw)
+check("race in progress at leave is settled and saved", stored.data.stats.races == races0 + 1)
+check("plot released and attribute cleared", player:GetAttribute("Plot") == nil and plot.Decor.PlotSign.Sign.SurfaceGui.Text.Text == "Open plot")
+local cashAtLeave = BigNum.toNumber(BigNum.sanitize(stored.data.cash))
 stored.data.lastSeen -= 3600 -- SETUP: pretend an hour passed
 Store._mockPut(1001, HttpService:JSONEncode(stored))
 player = Engine.addPlayer(dm, "Carter", 1001)

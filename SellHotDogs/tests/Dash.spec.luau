@@ -65,11 +65,40 @@ return {
 		t.ok(cheered > plain, string.format("cheer %d vs plain %d", cheered, plain))
 		t.ok(cheered < 300, "never a guaranteed win")
 	end,
+	cheer_boost_wears_off = function(t)
+		local r = Dash.new(1, B.new(1), rng(5))
+		for _ = 1, 6 do
+			Dash.cheer(r)
+		end
+		t.eq(r.cheerWindow, 6)
+		Dash.step(r, 0.6, rng(1))
+		Dash.step(r, 0.6, rng(2))
+		t.eq(r.cheerWindow, 0, "one burst of cheers must not last the race")
+	end,
+	betting_never_profitable_on_average = function(t)
+		local C = require("../src/shared/Catalog").dash
+		local w, N = 0, 3000
+		for seed = 1, N do
+			local g = rng(seed * 7919)
+			local r = Dash.new(1, B.new(1), g)
+			while not r.winner do
+				for _ = 1, 6 do
+					Dash.cheer(r)
+				end
+				Dash.step(r, 0.1, g)
+			end
+			if r.winner == 1 then
+				w += 1
+			end
+		end
+		local ev = w / N * C.winPays.value
+		t.ok(ev < 1, string.format("expected return with max cheering %.3f", ev))
+	end,
 	payout_only_on_win = function(t)
 		local r = Dash.new(1, B.new(10), rng(1))
 		r.winner = 2
 		t.eq(Dash.payout(r).m, 0)
 		r.winner = 1
-		t.near(B.toNumber(Dash.payout(r)), 35, 1e-9)
+		t.near(B.toNumber(Dash.payout(r)), 26, 1e-9)
 	end,
 }

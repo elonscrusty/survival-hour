@@ -1001,10 +1001,10 @@ return {
 			src = "OURS",
 		},
 		winPays = {
-			value = 3.5,
+			value = 2.6,
 			status = "placeholder",
 			src = "OURS",
-			note = "UNRESOLVED payout.",
+			note = "UNRESOLVED payout; chosen so betting never makes money on average.",
 		},
 		raceSeconds = {
 			value = 8,
@@ -1012,10 +1012,10 @@ return {
 			src = "OURS",
 		},
 		cheerBoost = {
-			value = 0.012,
+			value = 0.003,
 			status = "placeholder",
 			src = "OURS",
-			note = "Each counted cheer adds this much to the chosen runner's speed; at most 6 cheers per second count.",
+			note = "Each cheer in the last second adds 0.3% speed to the chosen racer (max 6 cheers/s count). Tuned so constant cheering stays below break-even (about 36% wins x 2.6 = 0.92 expected return); measured in tests/Dash.spec.luau.",
 		},
 		cooldown = {
 			value = 30,

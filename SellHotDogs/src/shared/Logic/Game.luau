@@ -381,7 +381,17 @@ local function resetRun(p: Profile)
 end
 Game._resetRun = resetRun
 
+-- Unclaimed offline income belongs to the current run: bank it before any reset.
+local function settlePending(p: Profile)
+	if p.pendingOffline.m > 0 then
+		local a = p.pendingOffline
+		p.pendingOffline = BigNum.zero
+		earn(p, a)
+	end
+end
+
 function Game.rebirth(p: Profile): (boolean, string, Big?)
+	settlePending(p)
 	local award = Game.investorsOffered(p)
 	if BigNum.lt(award, BigNum.new(1)) then
 		return false, "No investors yet"
@@ -416,6 +426,7 @@ function Game.evolve(p: Profile): (boolean, string)
 	if BigNum.lt(p.investors, Economy.evolutionThreshold(p.evolutions)) then
 		return false, "Not enough investors"
 	end
+	settlePending(p)
 	resetRun(p)
 	p.investors = BigNum.zero
 	p.powers = {} -- investor-bought powers reset; Robux tiers are kept
@@ -438,6 +449,7 @@ function Game.ascend(p: Profile): (boolean, string)
 	if not (Game.canAscend(p)) then
 		return false, "Buy everything first"
 	end
+	settlePending(p)
 	resetRun(p)
 	p.investors = BigNum.zero
 	p.powers = {}
