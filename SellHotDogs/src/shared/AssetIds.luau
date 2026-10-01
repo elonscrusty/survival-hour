@@ -3,6 +3,7 @@
 -- Models: size is Roblox (X width, Y height, Z depth) studs from the Blender manifest.
 return {
 	Models = {
+		HotDog = { id = 83378072580112, size = Vector3.new(2.000, 0.716, 0.803) },
 	},
 	Images = {
 	},
