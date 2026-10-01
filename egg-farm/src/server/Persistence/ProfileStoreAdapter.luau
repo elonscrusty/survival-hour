@@ -78,6 +78,11 @@ function Adapter:OnSessionEnd(handle, fn: () -> ())
 	handle.profile.OnSessionEnd:Connect(fn)
 end
 
+-- true once ProfileStore's own BindToClose has started ending sessions
+function Adapter:IsClosing(): boolean
+	return ProfileStore.IsClosing == true
+end
+
 function Adapter:Release(handle): (boolean, string?)
 	if handle.active then
 		handle.active = false

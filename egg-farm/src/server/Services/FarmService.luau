@@ -24,6 +24,8 @@ local lastSnap: { [Player]: number } = {}
 local ctx
 -- burst of 25 requests, refilling 14/s: enough for held Spawn (8/s) plus menu taps
 local limiter = RateLimiter.new(25, 14)
+-- codes get their own slow bucket (6 tries, then 1 every 10 s) so they can't be brute-forced
+local codeLimiter = RateLimiter.new(6, 0.1)
 local readyCallbacks = {}
 
 local timeOffset = 0 -- test place only (dev "next day"); always 0 in the real game
@@ -94,6 +96,9 @@ local function onAction(player: Player, action: any)
 	if not limiter:Allow(player, os.clock()) then
 		return { ok = false, code = "rate_limited", message = "Slow down a little!" }
 	end
+	if type(action) == "table" and action.type == "redeemCode" and not codeLimiter:Allow(player, os.clock()) then
+		return { ok = false, code = "rate_limited", message = "Too many code attempts. Wait a little and try again." }
+	end
 	local ok, res = pcall(farm.Apply, farm, action, FarmService.Now())
 	if not ok then
 		warn("[Farm] action error: " .. tostring(res))
@@ -144,6 +149,7 @@ function FarmService.Unload(player: Player)
 	farms[player] = nil
 	lastSnap[player] = nil
 	limiter:Forget(player)
+	codeLimiter:Forget(player)
 	ctx.DataService.Release(player)
 end
 

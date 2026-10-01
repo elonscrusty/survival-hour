@@ -23,11 +23,17 @@ local CommerceService = {}
 local ctx
 local testCheckout = nil
 local limiter = RateLimiter.new(4, 0.5)
-local byRobuxId: { [number]: any } = {}
+-- pass ids and developer product ids are separate Roblox id spaces: keep separate maps
+local passById: { [number]: any } = {}
+local productById: { [number]: any } = {}
 
 for _, p in Products.List do
 	if p.robuxId then
-		byRobuxId[p.robuxId] = p
+		if p.kind == "pass" then
+			passById[p.robuxId] = p
+		else
+			productById[p.robuxId] = p
+		end
 	end
 end
 
@@ -92,7 +98,7 @@ end
 -- purchase id is confirmed, so a crash can't lose a paid grant.
 local function processReceipt(receipt)
 	local player = Players:GetPlayerByUserId(receipt.PlayerId)
-	local p = byRobuxId[receipt.ProductId]
+	local p = productById[receipt.ProductId]
 	if not player or not p then
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
@@ -129,7 +135,7 @@ function CommerceService.Init(c)
 	if not testCheckout then
 		MarketplaceService.ProcessReceipt = processReceipt
 		MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passId, purchased)
-			local p = byRobuxId[passId]
+			local p = passById[passId]
 			if purchased and p and p.kind == "pass" then
 				grant(player, p.id, "PASS-" .. player.UserId .. "-" .. passId)
 			end
@@ -139,7 +145,19 @@ function CommerceService.Init(c)
 				status = if purchased then "ok" else "cancelled",
 			})
 		end)
+		-- UI feedback only: the grant itself happens in ProcessReceipt
+		MarketplaceService.PromptProductPurchaseFinished:Connect(function(userId, productId, purchased)
+			local player = Players:GetPlayerByUserId(userId)
+			local p = productById[productId]
+			if player and p then
+				local remote = Net.Get("FarmEvent") :: RemoteEvent
+				remote:FireClient(player, "Checkout", { productId = p.id, status = if purchased then "ok" else "cancelled" })
+			end
+		end)
 	end
+	Players.PlayerRemoving:Connect(function(player)
+		limiter:Forget(player)
+	end)
 	ctx.FarmService.OnReady(function(player)
 		CommerceService.SyncPasses(player)
 	end)

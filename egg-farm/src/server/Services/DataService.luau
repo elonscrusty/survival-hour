@@ -15,6 +15,7 @@ local Migrations = require(Shared.Logic.Migrations)
 local State = require(Shared.Logic.State)
 
 local DataService = {}
+DataService.Closing = false -- set by Main's BindToClose: sessions ending at shutdown aren't "stolen"
 
 local adapter
 local handles: { [Player]: any } = {}
@@ -80,7 +81,9 @@ function DataService.Load(player: Player, now: number): any?
 	handles[player] = handle
 	adapter:OnSessionEnd(handle, function()
 		-- another server took the session (ProfileStore): stop this one from playing on stale data
-		if handles[player] == handle and player.Parent == Players then
+		if handles[player] == handle and player.Parent == Players and not DataService.Closing
+			and not (adapter.IsClosing and adapter:IsClosing())
+		then
 			handles[player] = nil
 			player:Kick("Your farm was opened on another server.")
 		end

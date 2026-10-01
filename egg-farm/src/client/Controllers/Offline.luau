@@ -16,6 +16,13 @@ function Offline.Start(store: any, host: any)
 	local showing = false
 	local nextTry = 0
 
+	-- Back/Escape can close the modal without the button; forget "showing" when it's gone
+	host.Router:Subscribe(function()
+		if showing and host.Router:Modal() ~= "offline" then
+			showing = false
+		end
+	end)
+
 	store.OnChanged(function(snap: any)
 		if showing or snap.offline.pending <= 0 or os.clock() < nextTry then
 			return

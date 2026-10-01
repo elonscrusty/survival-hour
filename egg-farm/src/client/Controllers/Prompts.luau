@@ -50,6 +50,12 @@ function Prompts.Start(host: any)
 	local watched: { [ProximityPrompt]: boolean } = setmetatable({}, { __mode = "k" }) :: any
 
 	local function apply(prompt: ProximityPrompt)
+		if prompt:GetAttribute("Fox") then
+			-- the Lucky Fox model carries its owner's UserId; only the owner can catch it
+			local fox = prompt:FindFirstAncestorOfClass("Model")
+			prompt.Enabled = fox ~= nil and fox:GetAttribute("OwnerUserId") == me.UserId
+			return
+		end
 		if prompt:GetAttribute("Menu") == nil then
 			return
 		end
@@ -74,6 +80,16 @@ function Prompts.Start(host: any)
 			end
 		end
 	end
+
+	-- fox models are parented to plots after their prompt exists; re-check once they land
+	Workspace.DescendantAdded:Connect(function(d: Instance)
+		if d:IsA("ProximityPrompt") and d:GetAttribute("Fox") then
+			local prompt = d :: ProximityPrompt
+			task.defer(function()
+				apply(prompt)
+			end)
+		end
+	end)
 
 	local function hookPlots(plots: Instance)
 		plots.DescendantAdded:Connect(function(d)
@@ -110,6 +126,13 @@ function Prompts.Start(host: any)
 		end
 		local menu = prompt:GetAttribute("Menu")
 		if type(menu) ~= "string" or not Prompts.IsMine(prompt) then
+			return
+		end
+		-- boards for things the tutorial hasn't revealed yet stay quiet
+		local rev = host:Reveals()
+		local gate = ({ Housing = rev.housing, Shipping = rev.shipping, Workers = rev.workers, Silos = rev.nav, Upgrades = rev.nav, Eggs = rev.eggs })[menu]
+		if gate == false then
+			host:Toast("Finish the tutorial to unlock this!", "info")
 			return
 		end
 		local slot = prompt:GetAttribute("Slot")

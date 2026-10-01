@@ -89,7 +89,11 @@ local function onJoin(player: Player)
 	end
 	local ok = FarmService.Load(player)
 	if not ok then
-		PlotService.Release(player)
+		-- only release if this Player is still here: if they left during the load and already
+		-- rejoined, the registry (keyed by UserId) now belongs to the NEW session's plot
+		if player.Parent == Players then
+			PlotService.Release(player)
+		end
 		return
 	end
 	spawnCharacter(player)
@@ -109,6 +113,7 @@ for _, p in Players:GetPlayers() do
 end
 
 game:BindToClose(function()
+	DataService.Closing = true
 	-- ProfileStore also flushes on close; releasing here makes the memory adapter consistent too
 	for _, p in Players:GetPlayers() do
 		pcall(onLeave, p)

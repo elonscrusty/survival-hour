@@ -64,4 +64,21 @@ return {
 		t.eq(s.gold, 275, "no grant on cancel/fail")
 		t.eq(c:Buy("buy_earn3", grant).code, "invalid")
 	end,
+
+	receipts_are_trimmed_but_passes_kept = function(t)
+		local Economy = require("../src/shared/Logic/Economy")
+		local _, s = H.Farm()
+		s.receipts["PASS-1-2"] = 1
+		for i = 1, 250 do
+			s.receipts["P" .. i] = i
+		end
+		Economy.TrimReceipts(s, 200)
+		local n = 0
+		for _ in s.receipts do
+			n += 1
+		end
+		t.eq(n, 201)
+		t.ok(s.receipts["PASS-1-2"] ~= nil, "pass key kept")
+		t.ok(s.receipts.P250 ~= nil and s.receipts.P1 == nil, "oldest dropped")
+	end,
 }

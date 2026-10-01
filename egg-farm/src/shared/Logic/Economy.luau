@@ -925,6 +925,26 @@ function Economy.ComputeOffline(self: Farm, now: number)
 	end
 end
 
+-- Keeps the newest `keep` one-off receipt ids (Roblox stops re-delivering a receipt once it is
+-- acknowledged, so old ids are safe to drop). PASS- keys are fixed per pass and always kept.
+function Economy.TrimReceipts(s: any, keep: number)
+	local ids = {}
+	for id, t in s.receipts do
+		if string.sub(id, 1, 5) ~= "PASS-" then
+			table.insert(ids, { id = id, t = t })
+		end
+	end
+	if #ids <= keep then
+		return
+	end
+	table.sort(ids, function(a, b)
+		return a.t > b.t
+	end)
+	for i = keep + 1, #ids do
+		s.receipts[ids[i].id] = nil
+	end
+end
+
 -- Robux purchase fulfilment (called by the server's commerce layer after a confirmed receipt).
 -- Idempotent per purchase id: a replayed receipt grants nothing the second time.
 function Economy.GrantProduct(self: Farm, productId: string, purchaseId: string, now: number): (boolean, string)
@@ -940,6 +960,7 @@ function Economy.GrantProduct(self: Farm, productId: string, purchaseId: string,
 		return true, "already"
 	end
 	s.receipts[purchaseId] = now
+	Economy.TrimReceipts(s, 200)
 	if p.grant.pass then
 		s.passes[p.grant.pass] = true
 	end

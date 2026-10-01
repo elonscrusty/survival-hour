@@ -13,6 +13,10 @@ local EXTRA_RADIUS = 2 -- forgiveness around the ring's visible edge
 local MAX_HEIGHT = 9
 
 local ctx
+-- last checked position per player: a jump far beyond walking speed (teleport exploit, or a
+-- respawn) skips ring actions for that check, so rings need real presence across two checks
+local lastPos: { [Player]: { pos: Vector3, t: number } } = {}
+local SPEED_SLACK = 1.6
 
 -- Horizontal distance check against a flat ring part (radius = half its largest X/Z size).
 function ZoneService.Inside(part: BasePart, pos: Vector3): boolean
@@ -35,6 +39,15 @@ local function check(player: Player)
 	end
 	local now = ctx.FarmService.Now()
 	local pos = root.Position
+	local prev = lastPos[player]
+	lastPos[player] = { pos = pos, t = os.clock() }
+	if not prev then
+		return
+	end
+	local flat = Vector3.new(pos.X - prev.pos.X, 0, pos.Z - prev.pos.Z).Magnitude
+	if flat > hum.WalkSpeed * SPEED_SLACK * (os.clock() - prev.t) + 6 then
+		return
+	end
 	for slot, ring in zones.collect do
 		local h = farm.state.housing[slot]
 		if h and h.tier > 0 and h.eggs > 0 and ring.Parent and ZoneService.Inside(ring, pos) then
@@ -51,6 +64,9 @@ function ZoneService.Init(c)
 end
 
 function ZoneService.Start()
+	Players.PlayerRemoving:Connect(function(player)
+		lastPos[player] = nil
+	end)
 	local acc = 0
 	RunService.Heartbeat:Connect(function(dt)
 		acc += dt

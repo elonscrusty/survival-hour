@@ -201,6 +201,10 @@ function Host:_sync()
 	if want then
 		local b = self:_build(want)
 		if b then
+			local snapNow = self.Store.Get()
+			if snapNow then
+				self:_applyReveals(snapNow) -- hide tutorial-locked tabs before the first frame
+			end
 			local tab = r:GetTab(want)
 			if b.panel.Tabs and tab then
 				b.panel.Tabs:Select(tab)
