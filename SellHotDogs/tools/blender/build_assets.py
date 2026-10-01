@@ -252,7 +252,13 @@ def xform(objs, loc=(0, 0, 0), rot=(0, 0, 0), s=1.0):
     T = Matrix.Translation(loc) @ Euler(rot).to_matrix().to_4x4() @ Matrix.Diagonal((*s, 1))
     bpy.context.view_layer.update()
     for o in objs:
-        o.matrix_world = T @ o.matrix_world
+        if o.type == "MESH":
+            # bake into vertices so non-uniform group scales never lose shear
+            o.data.transform(o.matrix_world)
+            o.matrix_world = Matrix.Identity(4)
+            o.data.transform(T)
+        else:
+            o.matrix_world = T @ o.matrix_world
     return objs
 
 
@@ -305,7 +311,7 @@ def hotdog(lod=1.0, bun="bun", sausage="sausage", mustard="mustard", ketchup="ke
 
 
 def sausage_obj(loc, rot=(0, 0, 0), s=1.0, segs=12, mat="sausage"):
-    o = capsule(0.2 * s, 2.0 * s, (0, 0, 0), M(mat, rough=0.45), "X", segs=segs, steps=4, name="sausage")
+    o = capsule(0.2 * s, 2.0 * s, (0, 0, 0), M(mat, rough=0.45), "X", segs=segs, steps=3, name="sausage")
     xform([o], loc, rot)
     return o
 
@@ -390,8 +396,8 @@ def build_HotDogStand():
         for y in (-1.4, 1.4):
             cyl(0.09, 2.8, (x, y, 5.0), M("chrome", metal=0.4, rough=0.35), verts=10, name="post")
     # striped awning + scallops
-    stripes(-3.4, 3.4, 9, -0.15, 6.45, 4.0, 0.14, 10, [red, cream])
-    scallops(-3.4, 3.4, 9, -2.1, 6.06, 0.38, [red, cream])
+    stripes(-3.4, 3.4, 9, -0.15, 6.45, 4.6, 0.14, 10, [red, cream])
+    scallops(-3.4, 3.4, 9, -2.4, 6.02, 0.38, [red, cream])
     # roof sign (blank board for text)
     box((5.0, 0.25, 1.25), (0, 0, 7.45), M("cream"), bevel=0.06, name="sign")
     box((5.3, 0.2, 1.5), (0, 0.06, 7.45), M("teal"), bevel=0.08, name="sign_frame")
@@ -593,31 +599,37 @@ def build_IngredientCrate():
         for i in range(n):
             y = -0.52 + i * (1.04 / (n - 1))
             sausage_obj((0.0 + (0.06 if row else 0), y, z), (0, rad(4 * (i % 2)), rad((i * 7) % 11 - 5)), s=0.62,
-                        segs=10)
-    sausage_obj((0.05, 0.05, 1.03), (0, 0, rad(70)), s=0.62, segs=10)
+                        segs=9)
+    sausage_obj((0.05, 0.05, 1.03), (0, 0, rad(70)), s=0.62, segs=9)
 
 
 def build_DeliveryBike():
     body, trim = "teal", "cream"
-    for x in (-1.6, 1.7):
-        wheel(0.62, 0.32, (x, 0, 0.62))
+    for x in (-1.65, 1.75):
+        wheel(0.7, 0.36, (x, 0, 0.7))
     # floorboard & rear body
-    box((1.7, 0.75, 0.22), (0.1, 0, 0.75), M(body), bevel=0.08, segs=3, name="floor")
-    capsule(0.55, 2.0, (-1.1, 0, 1.25), M(body), "X", scale=(1, 0.75, 0.75), segs=16, name="rear_body")
-    capsule(0.3, 1.4, (-0.8, 0, 1.75), M("tire", rough=0.7), "X", scale=(1, 1.0, 0.45), segs=12, name="seat")
+    box((1.7, 0.85, 0.24), (0.1, 0, 0.85), M(body), bevel=0.08, segs=3, name="floor")
+    capsule(0.6, 2.1, (-1.1, 0, 1.4), M(body), "X", scale=(1, 0.8, 0.8), segs=16, name="rear_body")
+    capsule(0.32, 1.4, (-0.75, 0, 1.95), M("tire", rough=0.7), "X", scale=(1, 1.0, 0.45), segs=12, name="seat")
     # front shield
-    box((0.3, 0.85, 1.4), (1.15, 0, 1.45), M(body), rot=(0, rad(-18), 0), bevel=0.12, segs=3, name="shield")
-    capsule(0.3, 0.9, (1.6, 0, 0.95), M(body), "X", scale=(1, 0.75, 0.6), segs=12, name="mudguard")
+    box((0.3, 0.95, 1.7), (1.15, 0, 1.7), M(body), rot=(0, rad(-18), 0), bevel=0.12, segs=3, name="shield")
+    capsule(0.34, 1.0, (1.65, 0, 1.08), M(body), "X", scale=(1, 0.8, 0.6), segs=12, name="mudguard")
     # fork + handlebar
-    tube([(1.7, 0, 0.62), (1.45, 0, 1.6), (1.35, 0, 2.3)], 0.06, M("chrome", metal=0.5, rough=0.35), name="fork")
-    tube([(1.35, -0.6, 2.35), (1.35, 0.6, 2.35)], 0.06, M("chrome", metal=0.5, rough=0.35), name="bar")
-    for y in (-0.62, 0.62):
-        cyl(0.08, 0.25, (1.35, y, 2.35), M("tire"), rot=(rad(90), 0, 0), verts=10, name="grip")
-    sphere(0.22, (1.5, 0, 2.15), M(trim, emit=0.5), scale=(0.6, 1, 1), segs=14, rings=8, name="headlight")
-    capsule(0.2, 0.6, (1.42, 0, 2.18), M(body), "Y", segs=12, name="headset")
-    # rear rack + hot dog delivery box
-    box((1.3, 0.9, 0.08), (-1.55, 0, 1.75), M("chrome", metal=0.4, rough=0.4), bevel=0.02, name="rack")
-    xform(hotdog(lod=0.7), (-1.55, 0, 1.78), (0, 0, 0), 1.25)
+    chrome = M("chrome", metal=0.5, rough=0.35)
+    tube([(1.75, 0, 0.7), (1.5, 0, 1.9), (1.4, 0, 2.75)], 0.07, chrome, name="fork")
+    tube([(1.4, -0.75, 2.85), (1.4, 0.75, 2.85)], 0.07, chrome, name="bar")
+    for y in (-0.78, 0.78):
+        cyl(0.09, 0.28, (1.4, y, 2.85), M("tire"), rot=(rad(90), 0, 0), verts=10, name="grip")
+    for y in (-0.55, 0.55):
+        tube([(1.4, y, 2.85), (1.35, y * 1.25, 3.3)], 0.03, chrome, name="mirror_stem")
+        sphere(0.15, (1.35, y * 1.25, 3.38), chrome, scale=(0.4, 1, 0.8), segs=10, rings=6, name="mirror")
+    sphere(0.24, (1.58, 0, 2.6), M(trim, emit=0.5), scale=(0.6, 1, 1), segs=14, rings=8, name="headlight")
+    capsule(0.22, 0.7, (1.47, 0, 2.65), M(body), "Y", segs=12, name="headset")
+    # rear rack + delivery box topped by a hot dog
+    box((1.4, 1.0, 0.08), (-1.6, 0, 2.0), chrome, bevel=0.02, name="rack")
+    box((1.5, 1.45, 1.05), (-1.6, 0, 2.58), M("ketchup"), bevel=0.12, segs=3, name="delivery_box")
+    box((1.2, 0.04, 0.55), (-1.6, -0.74, 2.58), M("cream"), bevel=0.03, name="box_label")
+    xform(hotdog(lod=0.7), (-1.6, 0, 3.08), (0, 0, 0), (0.95, 1.6, 1.3))
 
 
 def build_DeliveryVan():
@@ -1148,6 +1160,7 @@ def build_one(name, fn, target, samples, render):
     export(ob, name)
     if render:
         setup_render(ob, size, samples)
+    bpy.context.preferences.filepaths.save_version = 0  # no .blend1 backups
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(DIRS["blender"], f"{name}.blend"), compress=True)
     t1 = time.time()
     if render:

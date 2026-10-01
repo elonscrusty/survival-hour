@@ -19,7 +19,7 @@ function Names.clean(raw: any): (string?, string?)
 	end
 	-- letters, digits, spaces and a little punctuation; collapse runs of spaces
 	local s = raw:gsub("[%c]", ""):gsub("%s+", " "):gsub("^ ", ""):gsub(" $", "")
-	if s:find("[^%w %'%&%-%.%!]") then
+	if s:find("[^%w '&%-%.!]") then
 		return nil, "Use letters, numbers and ' & - . ! only"
 	end
 	if utf8.len(s) == nil then
