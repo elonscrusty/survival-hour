@@ -70,7 +70,7 @@ local function loadOne(name: string, rec: { id: number, size: Vector3 }, folder:
 	mp.Size = localSize
 	mp.Anchored = true
 	mp.CanCollide = true
-	mp.CollisionFidelity = Enum.CollisionFidelity.Box
+	-- (CollisionFidelity can only be set by plugins/Open Cloud, not at runtime; keep the default)
 	mp.CFrame = yaw * CFrame.new(0, rec.size.Y / 2, 0) * best
 	mp.Name = "Mesh"
 	local model = Instance.new("Model")
@@ -145,7 +145,12 @@ function AssetLoader.init()
 			while #queue > 0 do
 				local job = table.remove(queue)
 				if job then
-					loadOne(job.name, job.rec, folder :: Folder)
+					-- one bad asset must not stop this worker
+					local res = table.pack(pcall(loadOne, job.name, job.rec, folder :: Folder))
+					if not res[1] then
+						table.insert(AssetLoader.failed, job.name)
+						warn("[AssetLoader] could not set up", job.name, res[2])
+					end
 				end
 			end
 		end)
