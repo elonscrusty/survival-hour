@@ -313,7 +313,7 @@ local function sendOffer(rp)
 		Choices = rp.Offer,
 		Rerolls = rp.Rerolls,
 		Skips = rp.Skips,
-		Seconds = Config.LevelUp.AutoPickSeconds,
+		Seconds = math.max(0, rp.OfferDeadline - os.clock()),
 		Level = rp.Level - rp.PendingLevels + 1,
 		Pending = rp.PendingLevels,
 	})
@@ -471,7 +471,7 @@ function LevelUpSystem.Start()
 		end
 		rp.Rerolls -= 1
 		rp.Offer = rollChoices(rp)
-		rp.OfferDeadline = os.clock() + Config.LevelUp.AutoPickSeconds
+		-- keep the original deadline: rerolling must not extend the protected pause
 		sendOffer(rp)
 		LevelUpSystem.SendInventory(rp)
 	end, 3)

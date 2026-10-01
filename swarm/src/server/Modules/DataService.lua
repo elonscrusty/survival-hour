@@ -181,9 +181,6 @@ local function loadProfile(player: Player): Profile?
 			old.Lock = { JobId = jobId, Time = os.time() }
 			return old
 		end)
-		if not player.Parent then
-			return nil -- left while loading
-		end
 		if ok and not lockedByOther then
 			local data = DataService.Migrate(type(record) == "table" and record.Data or nil)
 			return {
@@ -311,6 +308,7 @@ end
 local function onPlayerAdded(player: Player)
 	local profile = loadProfile(player)
 	if not player.Parent then
+		-- left while loading: give the lock back so another server can load at once
 		if profile then
 			DataService.SaveProfile(profile, true)
 		end

@@ -24,7 +24,7 @@ local CameraController = require(script.Parent.CameraController)
 local VFX = {}
 
 local player = Players.LocalPlayer
-local PARK = CFrame.new(0, -1000, 0)
+local PARK = CFrame.new(0, -150, 0) -- under the floor, above FallenPartsDestroyHeight
 local FLOOR_Y = Config.ArenaOrigin.Y
 
 local fxFolder: Folder

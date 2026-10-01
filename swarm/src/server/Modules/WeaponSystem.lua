@@ -62,6 +62,7 @@ local function allocProjectile(): Projectile?
 	p.Y = Config.ArenaOrigin.Y + Config.Projectiles.Height
 	p.VY = 0
 	p.Rehit = nil
+	p.Cancelled = false
 	table.insert(live, p)
 	p.LiveIndex = #live
 	return p
@@ -545,6 +546,9 @@ local function outOfArena(pos: Vector3): boolean
 end
 
 local function stepProjectile(p: Projectile, dt: number, now: number): boolean -- true = remove
+	if p.Cancelled then
+		return true
+	end
 	p.Age += dt
 	if p.Age >= p.Life then
 		if p.Kind == "Lob" then
@@ -723,12 +727,18 @@ function WeaponSystem.OnInventoryChanged(rp)
 	WeaponSystem.UpdateAura(rp)
 end
 
--- Removes everything a player owns (death / leaving) or everything (owner = nil).
+--[[
+	Removes a player's projectiles and pools (death / leaving). This can run from inside
+	the projectile loop (a boss orb downs a player), so projectiles are only flagged and
+	freed by the loop itself. ClearOwner(nil) frees everything immediately (run cleanup).
+]]
 function WeaponSystem.ClearOwner(rp)
 	for i = #live, 1, -1 do
 		local p = live[i]
-		if rp == nil or p.Owner == rp then
+		if rp == nil then
 			freeProjectile(p)
+		elseif p.Owner == rp then
+			p.Cancelled = true
 		end
 	end
 	for i = #zones, 1, -1 do

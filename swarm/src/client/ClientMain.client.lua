@@ -30,6 +30,21 @@ VFX.Init({
 })
 UIBuilder.Init({ Audio = Audio, MobileControls = MobileControls })
 
+-- Humanoid state switches don't replicate and the client owns its character, so the
+-- server's settings are repeated here: no tripping, ragdolling, jumping or dying.
+local function setupCharacter(char: Model)
+	local hum = char:WaitForChild("Humanoid", 10) :: Humanoid?
+	if hum then
+		for _, s in ipairs({ Enum.HumanoidStateType.FallingDown, Enum.HumanoidStateType.Ragdoll, Enum.HumanoidStateType.Jumping, Enum.HumanoidStateType.Dead }) do
+			hum:SetStateEnabled(s, false)
+		end
+	end
+end
+player.CharacterAdded:Connect(setupCharacter)
+if player.Character then
+	task.spawn(setupCharacter, player.Character)
+end
+
 -- Music follows the game phase.
 local state = Remotes.State()
 local function updateMusic()

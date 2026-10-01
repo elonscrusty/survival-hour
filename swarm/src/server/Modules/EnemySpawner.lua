@@ -188,7 +188,14 @@ function EnemySpawner.Spawn(typeId: string, position: Vector3, opts: { Elite: bo
 	e.Erratic = def.Erratic or 0
 	e.Phase = rng:NextNumber(0, math.pi * 2)
 	e.ThinkSlot = rng:NextInteger(0, Config.Enemies.ThinkChunks - 1)
+	-- clear everything a previous occupant of this pool slot (maybe the boss) left behind
 	e.BossState = nil
+	e.BossTimer = nil
+	e.BossCycle = nil
+	e.RingWave = nil
+	e.ChargeDir = nil
+	e.SpeedOverride = nil
+	e.Sep = Vector3.zero
 	e.Target = nil
 
 	ModelBuilder.ApplyEnemyLook(e.Part, def, elite, sizeMult)

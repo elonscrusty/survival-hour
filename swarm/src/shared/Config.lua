@@ -156,7 +156,9 @@ Config.Enemies = {
 	HitFlashSeconds = 0.08,
 	-- Enemies left far behind are moved to the screen edge again instead of walking back.
 	RecycleDistance = 150,
-	ParkPosition = Vector3.new(0, -500, 0), -- where pooled (inactive) enemies wait
+	-- Where pooled (inactive) enemies and gems wait: under the floor, but above
+	-- Workspace.FallenPartsDestroyHeight (-200).
+	ParkPosition = Vector3.new(0, -150, 0),
 }
 
 ------------------------------------------------------------------------------------------

@@ -142,7 +142,7 @@ end
 local function nearestCollector(pos: Vector3, runPlayers): any?
 	local best, bestD = nil, math.huge
 	for _, rp in ipairs(runPlayers) do
-		if rp.Alive and rp.Root then
+		if rp.Alive and rp.Root and not rp.Paused then
 			local d = (rp.Root.Position - pos) * Vector3.new(1, 0, 1)
 			local radius = rp.Stats.PickupRadius
 			if rp.AuraPullRadius and rp.AuraPullRadius > radius then

@@ -256,6 +256,13 @@ local function setDownedLook(rp, downed: boolean)
 	end
 	if rp.Root then
 		rp.Root.Anchored = downed
+		if not downed then
+			-- anchoring dropped the explicit owner; give physics back to the player
+			local root = rp.Root
+			pcall(function()
+				root:SetNetworkOwner(rp.Player)
+			end)
+		end
 	end
 end
 
@@ -385,7 +392,9 @@ end
 function RunManager.OnReviveTokenGranted(player: Player)
 	local rp = byPlayer[player]
 	local data = ctx.DataService.GetData(player)
-	if rp and rp.AwaitingRevive and phase == "Running" and data and data.ReviveTokens > 0 then
+	-- Also revive a player whose offer timed out while Roblox's purchase dialog was open.
+	local fallen = rp and not rp.Alive and (rp.AwaitingRevive or not rp.ProductReviveUsed)
+	if rp and fallen and not rp.Returned and phase == "Running" and not endPending and data and data.ReviveTokens > 0 then
 		data.ReviveTokens -= 1
 		rp.ProductReviveUsed = true
 		revive(rp, "Revived!")
@@ -526,8 +535,9 @@ function RunManager.EndRun(won: boolean)
 
 	for _, rp in ipairs(runPlayers) do
 		ctx.LevelUpSystem.Cancel(rp)
-		if rp.Alive then
+		if rp.Alive or rp.AwaitingRevive then
 			rp.TimeSurvived = runTime
+			rp.AwaitingRevive = false
 		end
 		RunManager.ApplyMovement(rp)
 		local player: Player = rp.Player
@@ -706,7 +716,8 @@ local function speedCheck(rp, dt: number)
 		return
 	end
 	local moved = ((pos - last) * FLAT).Magnitude
-	local maxSpeed = math.max(rp.Stats.Speed, Config.Player.BaseSpeed)
+	-- paused (level-up), frozen or downed players may not travel at all
+	local maxSpeed = (rp.Paused or frozen or not rp.Alive) and 0 or math.max(rp.Stats.Speed, Config.Player.BaseSpeed)
 	local allowed = maxSpeed * elapsed * Config.Player.SpeedCheckTolerance + Config.Player.SpeedCheckAllowance
 	if moved > allowed or pos.Y < Config.ArenaOrigin.Y - 20 then
 		root.CFrame = CFrame.new(last + Vector3.new(0, 0.5, 0)) * root.CFrame.Rotation
@@ -809,12 +820,16 @@ function RunManager.OnPlayerRemoving(player: Player)
 		local data = ctx.DataService.GetData(player)
 		if data then
 			data.Stats.TotalKills += rp.Kills
-			local t = rp.Alive and runTime or rp.TimeSurvived
+			local t = (rp.Alive or rp.AwaitingRevive) and runTime or rp.TimeSurvived
 			if t > data.Stats.BestTime then
 				data.Stats.BestTime = math.floor(t)
 			end
 		end
 	end
+	-- other systems may still hold this record (enemy targets, delayed whip slashes)
+	rp.Alive = false
+	rp.AwaitingRevive = false
+	rp.Root = nil
 	ctx.WeaponSystem.ClearOwner(rp)
 	local i = table.find(runPlayers, rp)
 	if i then

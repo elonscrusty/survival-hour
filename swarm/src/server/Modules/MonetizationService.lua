@@ -34,27 +34,53 @@ local passCache: { [Player]: { [number]: boolean } } = {}
 -- Gamepasses
 ------------------------------------------------------------------------------------------
 
+local inFlight: { [Player]: { [number]: boolean } } = {}
+
+-- Asks Roblox (yields). Only called from background threads, never from the game loop.
+local function queryPass(player: Player, passId: number)
+	local flights = inFlight[player]
+	if not flights then
+		flights = {}
+		inFlight[player] = flights
+	end
+	if flights[passId] then
+		return
+	end
+	flights[passId] = true
+	local ok, owns = pcall(function()
+		return MarketplaceService:UserOwnsGamePassAsync(player.UserId, passId)
+	end)
+	flights[passId] = nil
+	if ok and player.Parent then
+		local cache = passCache[player]
+		if not cache then
+			cache = {}
+			passCache[player] = cache
+		end
+		local before = cache[passId]
+		cache[passId] = owns == true
+		if before ~= cache[passId] then
+			MonetizationService.RefreshAttributes(player)
+		end
+	end
+end
+
+--[[
+	Never yields: answers from the cache. Unknown (not yet loaded, or the web call
+	failed) counts as "not owned" for now and a background lookup is started, so the
+	server loop can call this on every gold drop safely.
+]]
 function MonetizationService.OwnsPassId(player: Player, passId: number?): boolean
 	if not passId or passId == 0 then
 		return false
 	end
 	local cache = passCache[player]
-	if not cache then
-		cache = {}
-		passCache[player] = cache
+	local cached = cache and cache[passId]
+	if cached == nil then
+		task.spawn(queryPass, player, passId)
+		return false
 	end
-	local cached = cache[passId]
-	if cached ~= nil then
-		return cached
-	end
-	local ok, owns = pcall(function()
-		return MarketplaceService:UserOwnsGamePassAsync(player.UserId, passId)
-	end)
-	if ok then
-		cache[passId] = owns == true
-		return owns == true
-	end
-	return false -- don't cache failures; try again next time
+	return cached
 end
 
 -- key = "StarterPack" | "VIP" | "DoubleGold"
@@ -227,16 +253,35 @@ function MonetizationService.Start()
 	end)
 
 	local function warm(player: Player)
-		-- Query every configured pass once in the background so later checks are instant.
+		-- Look up every configured pass in the background so later checks are instant.
+		-- Failed lookups are retried a few times (RefreshAttributes runs when one changes).
 		task.spawn(function()
-			for key in pairs(Config.Monetization.GamePasses) do
-				MonetizationService.OwnsPass(player, key)
-			end
-			for skinId in pairs(Config.Monetization.SkinPasses) do
-				MonetizationService.OwnsSkin(player, skinId)
-			end
-			if player.Parent then
+			for _ = 1, 3 do
+				for _, id in pairs(Config.Monetization.GamePasses) do
+					if id ~= 0 then
+						queryPass(player, id)
+					end
+				end
+				for _, id in pairs(Config.Monetization.SkinPasses) do
+					if id ~= 0 then
+						queryPass(player, id)
+					end
+				end
+				if not player.Parent then
+					return
+				end
 				MonetizationService.RefreshAttributes(player)
+				local cache = passCache[player] or {}
+				local missing = false
+				for _, id in pairs(Config.Monetization.GamePasses) do
+					if id ~= 0 and cache[id] == nil then
+						missing = true
+					end
+				end
+				if not missing then
+					return
+				end
+				task.wait(10)
 			end
 		end)
 	end
@@ -246,6 +291,7 @@ function MonetizationService.Start()
 	end
 	Players.PlayerRemoving:Connect(function(player)
 		passCache[player] = nil
+		inFlight[player] = nil
 	end)
 end
 
