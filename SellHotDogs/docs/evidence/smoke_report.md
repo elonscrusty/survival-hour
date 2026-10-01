@@ -70,7 +70,7 @@ This drives the real server and client scripts from the built place with a simul
 | 61 | good name saved and shown on plot sign | PASS |  |
 | 62 | phone offer arrives | PASS |  |
 | 63 | raise flow ends in a better/final offer or a walk-away without errors | PASS |  |
-| 64 | accepting pays the offered amount once | PASS | $5,214 |
+| 64 | accepting pays the offered amount once | PASS | $1,943 |
 | 65 | DogDash locked without the game pad | PASS |  |
 | 66 | race starts and takes a 10% bet | PASS | $99.978 million |
 | 67 | race finishes and settles | PASS |  |
@@ -82,9 +82,9 @@ This drives the real server and client scripts from the built place with a simul
 | 73 | race in progress at leave is settled and saved | PASS |  |
 | 74 | plot released and attribute cleared | PASS |  |
 | 75 | rejoin restores progress | PASS |  |
-| 76 | offline income banked for the claim popup (automated businesses only) | PASS | $83,916 |
-| 77 | offline amount = 100% of automated income x elapsed | PASS | $83,916 vs $83,916 |
-| 78 | offline claim pays once | PASS | gained $83,939, pending was $83,916 |
+| 76 | offline income banked for the claim popup (automated businesses only) | PASS | $83,939 |
+| 77 | offline amount = 100% of automated income x elapsed | PASS | $83,939 vs $83,916 |
+| 78 | offline claim pays once | PASS | gained $83,954, pending was $83,939 |
 | 79 | failed load gives temporary profile with saving off | PASS |  |
 | 80 | failed-load session never overwrites the stored save | PASS |  |
 | 81 | failed save on leave leaves previous save intact | PASS |  |
