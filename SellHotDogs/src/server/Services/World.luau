@@ -31,7 +31,7 @@ export type Plot = {
 	prompts: { [string]: ProximityPrompt },
 	extras: { [string]: Model }, -- portal, staircase, investor kiosk
 	sign: BasePart,
-	shown: { [Instance]: boolean? },
+	shown: { [string]: boolean? }, -- keyed by "pad:"/"prop:"/"biz:"/"extra:" + id
 }
 
 World.plots = {} :: { Plot }
@@ -294,7 +294,7 @@ local function buildPlot(index: number): Plot
 			-- props face the path (toward lot centre X)
 			local look = CFrame.lookAt(pp, Vector3.new(lot.pos.X, 0, pp.Z - 20))
 			Models.place(prop, origin * look, plot.hidden)
-			prop.Name = pad.id
+			prop.Name = "Prop_" .. pad.id
 			plot.padModels[pad.id] = prop
 		end
 		local anchor = part(anchors, Vector3.new(1, 1, 1), origin * CFrame.new(lot.pos + Vector3.new(0, if biz.id == "stand" then 17 else 24, -lot.size.Y / 2 + 2)), C.white, { transparency = 1, collide = false, name = biz.id })
@@ -391,26 +391,26 @@ function World.plotOf(player: Player): Plot?
 	return if type(i) == "number" then World.plots[i] else nil
 end
 
-local function show(plot: Plot, inst: Instance, on: boolean, parent: Instance)
-	if (plot.shown[inst] == true) == on then
+local function show(plot: Plot, key: string, inst: Instance, on: boolean, parent: Instance)
+	if (plot.shown[key] == true) == on then
 		return
 	end
-	plot.shown[inst] = on or nil
+	plot.shown[key] = on or nil
 	inst.Parent = if on then parent else plot.hidden
 end
 
 function World.reset(plot: Plot)
-	for _, inst in plot.pads do
-		show(plot, inst, false, plot.folder)
+	for id, inst in plot.pads do
+		show(plot, "pad:" .. id, inst, false, plot.folder)
 	end
-	for _, inst in plot.padModels do
-		show(plot, inst, false, plot.folder)
+	for id, inst in plot.padModels do
+		show(plot, "prop:" .. id, inst, false, plot.folder)
 	end
-	for _, inst in plot.buildings do
-		show(plot, inst, false, plot.folder)
+	for id, inst in plot.buildings do
+		show(plot, "biz:" .. id, inst, false, plot.folder)
 	end
-	for _, inst in plot.extras do
-		show(plot, inst, false, plot.folder)
+	for id, inst in plot.extras do
+		show(plot, "extra:" .. id, inst, false, plot.folder)
 	end
 	for _, pr in plot.prompts do
 		pr.Enabled = false
@@ -429,27 +429,27 @@ function World.sync(plot: Plot, p: any, name: string): { string }
 		local owned = Game.owns(p, pad.id)
 		local visible = not owned and Game.padVisible(p, pad)
 		local padPart = plot.pads[pad.id]
-		if visible and not plot.shown[padPart] then
+		if visible and not plot.shown["pad:" .. pad.id] then
 			local price = padPart:FindFirstChild("PadLabel") and (padPart :: any).PadLabel.Price
 			if price then
 				price.Text = Format.cash(Game.padCost(p, pad))
 			end
 		end
-		show(plot, padPart, visible, plot.folder)
+		show(plot, "pad:" .. pad.id, padPart, visible, plot.folder)
 		if pad.kind == "unlock" then
 			local b = plot.buildings[pad.bizId]
 			local on = owned
-			if on and not plot.shown[b] then
+			if on and not plot.shown["biz:" .. pad.bizId] then
 				table.insert(appeared, pad.id)
 			end
-			show(plot, b, on, plot.folder)
+			show(plot, "biz:" .. pad.bizId, b, on, plot.folder)
 		else
 			local m = plot.padModels[pad.id]
 			local on = owned and Game.bizOwned(p, pad.bizId)
-			if on and not plot.shown[m] then
+			if on and not plot.shown["prop:" .. pad.id] then
 				table.insert(appeared, pad.id)
 			end
-			show(plot, m, on, plot.folder)
+			show(plot, "prop:" .. pad.id, m, on, plot.folder)
 		end
 	end
 	for _, biz in Economy.businesses do
@@ -459,9 +459,9 @@ function World.sync(plot: Plot, p: any, name: string): { string }
 	-- landmarks: kiosk once investors are on offer or held, portal once evolution progress shows,
 	-- staircase once every pad is owned
 	local offered = Game.investorsOffered(p)
-	show(plot, plot.extras.InvestorKiosk, offered.m > 0 or p.investors.m > 0 or (p.stats.rebirths or 0) > 0, plot.folder)
-	show(plot, plot.extras.Portal, p.investors.m > 0 or p.evolutions > 0, plot.folder)
-	show(plot, plot.extras.Staircase, (Game.canAscend(p)) or p.ascensions > 0, plot.folder)
+	show(plot, "extra:InvestorKiosk", plot.extras.InvestorKiosk, offered.m > 0 or p.investors.m > 0 or (p.stats.rebirths or 0) > 0, plot.folder)
+	show(plot, "extra:Portal", plot.extras.Portal, p.investors.m > 0 or p.evolutions > 0, plot.folder)
+	show(plot, "extra:Staircase", plot.extras.Staircase, (Game.canAscend(p)) or p.ascensions > 0, plot.folder)
 	local tl = plot.sign:FindFirstChild("Text", true) :: TextLabel?
 	if tl and tl.Text ~= name then
 		tl.Text = name

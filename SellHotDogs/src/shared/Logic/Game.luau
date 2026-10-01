@@ -324,8 +324,9 @@ function Game.pickupValue(p: Profile): Big
 	return BigNum.roundCents(BigNum.max(v, BigNum.new(1)))
 end
 
-function Game.collectPickup(p: Profile): Big
-	local v = Game.pickupValue(p)
+-- mult: 2 for money bags (placeholder), 1 for crates.
+function Game.collectPickup(p: Profile, mult: number?): Big
+	local v = BigNum.mulN(Game.pickupValue(p), mult or 1)
 	earn(p, v)
 	p.stats.pickups = (p.stats.pickups or 0) + 1
 	return v

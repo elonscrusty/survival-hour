@@ -23,7 +23,7 @@ export type Session = {
 }
 
 local Data = {}
-Data.sessions = {} :: { [Player]: Session }
+Data.sessions = {} :: { [number]: Session } -- keyed by UserId
 local loadedSignal = Instance.new("BindableEvent")
 Data.Loaded = loadedSignal.Event
 local leavingSignal = Instance.new("BindableEvent")
@@ -34,7 +34,7 @@ local function now(): number
 end
 
 function Data.get(player: Player): Session?
-	return Data.sessions[player]
+	return Data.sessions[player.UserId]
 end
 
 function Data.save(s: Session, release: boolean): boolean
@@ -80,18 +80,18 @@ local function onJoin(player: Player)
 			end
 		end
 	end
-	Data.sessions[player] = session
+	Data.sessions[player.UserId] = session
 	loadedSignal:Fire(session)
 end
 
 local function onLeave(player: Player)
-	local s = Data.sessions[player]
+	local s = Data.sessions[player.UserId]
 	if not s then
 		return
 	end
 	leavingSignal:Fire(s)
 	Data.save(s, true)
-	Data.sessions[player] = nil
+	Data.sessions[player.UserId] = nil
 end
 
 function Data.init()

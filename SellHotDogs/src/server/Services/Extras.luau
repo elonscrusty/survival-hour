@@ -74,10 +74,7 @@ local function spawnPickups()
 					return
 				end
 				taken = true
-				local v = Game.collectPickup(ss.profile)
-				if bag then
-					v = BigNum.add(v, Game.collectPickup(ss.profile)) -- bags count double
-				end
+				local v = Game.collectPickup(ss.profile, if bag then 2 else 1) -- bags pay double
 				GameService.notify(pl, "cash", { amount = v, source = "pickup", pos = hit.Position })
 				m:Destroy()
 				GameService.afterChange(ss)
@@ -322,7 +319,7 @@ GameService.register("buyProduct", 1, function(s, key)
 	end
 end)
 
-local lastMock: { [Player]: string } = {}
+local lastMock: { [number]: string } = {}
 -- Studio-only test purchases. replay=true re-sends the previous receipt id (duplicate delivery);
 -- fail=true simulates a failed grant (nothing changes, receipt not stored).
 GameService.register("mockBuy", 0.3, function(s, key, replay, fail)
@@ -340,8 +337,8 @@ GameService.register("mockBuy", 0.3, function(s, key, replay, fail)
 	if Game.productOwned(s.profile, prod.key) and replay ~= true then
 		return GameService.toast(s.player, "You already own this", "info")
 	end
-	local id = if replay == true and lastMock[s.player] then lastMock[s.player] else "mock-" .. HttpService:GenerateGUID(false)
-	lastMock[s.player] = id
+	local id = if replay == true and lastMock[s.player.UserId] then lastMock[s.player.UserId] else "mock-" .. HttpService:GenerateGUID(false)
+	lastMock[s.player.UserId] = id
 	local r = deliver(s, prod.key, id)
 	print(string.format("[Shop][mock] %s key=%s receipt=%s -> %s", s.player.Name, prod.key, id, r))
 	if replay == true then

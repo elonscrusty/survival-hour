@@ -178,7 +178,7 @@ function GameService.snapshot(s: Data.Session): any
 		bonusPer = Economy.Catalog.prestige.cashBonusPerInvestor.value,
 		rate = Game.incomeRate(p, false),
 		autoRate = Game.incomeRate(p, true),
-		evo = { n = p.evolutions, recipe = Economy.recipeName(p.evolutions), nextRecipe = Economy.recipeName(p.evolutions + 1), progress = Game.evolutionProgress(p), need = Economy.evolutionThreshold(p.evolutions), mult = Economy.Catalog.prestige.evolutionSpeedMult.value },
+		evo = { n = p.evolutions, recipe = Economy.recipeName(p.evolutions), nextRecipe = Economy.recipeName(p.evolutions + 1), can = not BigNum.lt(p.investors, Economy.evolutionThreshold(p.evolutions)), progress = Game.evolutionProgress(p), need = Economy.evolutionThreshold(p.evolutions), mult = Economy.Catalog.prestige.evolutionSpeedMult.value },
 		asc = { n = p.ascensions, can = canAsc, owned = padsOwned, total = padsTotal, cash = Economy.Catalog.prestige.ascensionCashMult.value, price = Economy.Catalog.prestige.ascensionPriceMult.value },
 		tokens = p.foreverTokens,
 		credits = p.robux.rebirthCredits,
@@ -343,8 +343,8 @@ end)
 
 -- incoming ------------------------------------------------------------------------
 
-local lastCall: { [Player]: { [string]: number } } = {}
-local burst: { [Player]: { n: number, t: number } } = {}
+local lastCall: { [number]: { [string]: number } } = {} -- keyed by UserId
+local burst: { [number]: { n: number, t: number } } = {}
 
 Action.OnServerEvent:Connect(function(player: Player, name: any, ...)
 	if type(name) ~= "string" then
@@ -357,19 +357,19 @@ Action.OnServerEvent:Connect(function(player: Player, name: any, ...)
 	end
 	local now = os.clock()
 	-- global burst cap: 40 requests per second per player
-	local b: { n: number, t: number } = burst[player] or { n = 0, t = now }
+	local b: { n: number, t: number } = burst[player.UserId] or { n = 0, t = now }
 	if now - b.t >= 1 then
 		b = { n = 0, t = now }
 	end
-	burst[player] = b
+	burst[player.UserId] = b
 	b.n += 1
 	if b.n > 40 then
 		return
 	end
-	local calls = lastCall[player]
+	local calls = lastCall[player.UserId]
 	if not calls then
 		calls = {}
-		lastCall[player] = calls
+		lastCall[player.UserId] = calls
 	end
 	if now - (calls[name] or 0) < h.gap then
 		return
@@ -383,17 +383,17 @@ end)
 
 -- world callbacks -------------------------------------------------------------------
 
-local touchGap: { [Player]: number } = {}
+local touchGap: { [number]: number } = {}
 World.onPadTouched = function(player, padId)
 	local s = Data.get(player)
 	if not s then
 		return
 	end
 	local now = os.clock()
-	if now - (touchGap[player] or 0) < 0.4 then
+	if now - (touchGap[player.UserId] or 0) < 0.4 then
 		return
 	end
-	touchGap[player] = now
+	touchGap[player.UserId] = now
 	local p = s.profile
 	local pad = Economy.padById[padId]
 	if not pad or Game.owns(p, padId) or not Game.padVisible(p, pad) then
@@ -472,9 +472,9 @@ function GameService.init()
 	end
 	Data.Leaving:Connect(function(s: Data.Session)
 		World.release(s.player)
-		lastCall[s.player] = nil
-		burst[s.player] = nil
-		touchGap[s.player] = nil
+		lastCall[s.player.UserId] = nil
+		burst[s.player.UserId] = nil
+		touchGap[s.player.UserId] = nil
 	end)
 
 	-- production loop: fixed steps, aggregated grants, snapshots at SyncSeconds
