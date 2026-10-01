@@ -4,6 +4,8 @@ with Open Cloud, then regenerate src/shared/AssetIds.luau.
 
     export ROBLOX_API_KEY=...            # Open Cloud key with asset read+write for the creator
     python3 tools/upload_assets.py --user 20194281 [--only Name,Name] [--images] [--models] [--dry-run]
+    # Claude Code cloud: store the key as an environment API credential for apis.roblox.com
+    # (header x-api-key, no prefix) and run with --proxy-auth; the key never enters the session.
 
 - Skips files whose SHA-256 matches the last upload (assets/uploaded_ids.json), so reruns are cheap.
 - Never prints or stores the key. Delete the key from the Creator Dashboard when finished.
@@ -38,7 +40,8 @@ def multipart(fields, file_field, path, ctype):
 
 def call(method, url, key, body=None, ctype=None):
     req = urllib.request.Request(url, data=body, method=method)
-    req.add_header("x-api-key", key)
+    if key:  # empty when the environment's API credential adds the header (key never visible here)
+        req.add_header("x-api-key", key)
     if ctype:
         req.add_header("Content-Type", ctype)
     with urllib.request.urlopen(req, timeout=120) as r:
@@ -72,11 +75,12 @@ def main():
     ap.add_argument("--models", action="store_true")
     ap.add_argument("--images", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--proxy-auth", action="store_true", help="the cloud environment's API credential adds the x-api-key header")
     a = ap.parse_args()
     both = not a.models and not a.images
     key = os.environ.get("ROBLOX_API_KEY", "")
-    if not key and not a.dry_run:
-        sys.exit("Set ROBLOX_API_KEY (Open Cloud key with Assets read/write).")
+    if not key and not a.dry_run and not a.proxy_auth:
+        sys.exit("Set ROBLOX_API_KEY, or add the key as an API credential for apis.roblox.com and pass --proxy-auth.")
     only = {x for x in a.only.split(",") if x}
     state = json.load(open(IDS)) if os.path.exists(IDS) else {"models": {}, "images": {}}
     jobs = []
