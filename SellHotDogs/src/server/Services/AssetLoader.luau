@@ -55,15 +55,21 @@ local function loadOne(name: string, rec: { id: number, size: Vector3 }, folder:
 		return
 	end
 	local mp = mesh :: MeshPart
+	-- The FBX files keep Blender's Z-up vertices plus a -90° X node rotation; the importer puts
+	-- that rotation on the part. Try it first so a tie (±90° give the same box) keeps it.
+	local imported = mp.CFrame.Rotation
 	mp.Parent = nil
 	;(container :: Instance):Destroy()
 	-- pick the orientation whose proportions match the manifest, then force the exact size
-	local best, bestErr = ROTS[1], math.huge
+	local best, bestErr = imported, boxError(rotatedSize(mp.Size, imported), rec.size) - 1e-3
 	for _, r in ROTS do
 		local e = boxError(rotatedSize(mp.Size, r), rec.size)
 		if e < bestErr then
 			best, bestErr = r, e
 		end
+	end
+	if name == "HotDogStand" then -- one line to check orientation in Studio's Output
+		print("[AssetLoader] HotDogStand size", mp.Size, "imported rot", imported:ToOrientation(), "using", best == imported)
 	end
 	local yaw = CFrame.Angles(0, math.rad(Config.MeshYaw or 0), 0)
 	local localSize = rotatedSize(rec.size, best:Inverse())

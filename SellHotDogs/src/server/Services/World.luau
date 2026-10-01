@@ -426,7 +426,7 @@ local function buildPlot(index: number): Plot
 			prop.Name = "Prop_" .. pad.id
 			plot.padModels[pad.id] = prop
 		end
-		local anchor = part(anchors, Vector3.new(1, 1, 1), origin * CFrame.new(lot.pos + Vector3.new(0, if biz.id == "stand" then 17 else 24, -lot.size.Y / 2 + 2)), C.white, { transparency = 1, collide = false, name = biz.id })
+		local anchor = part(anchors, Vector3.new(1, 1, 1), origin * CFrame.new(lot.pos + Vector3.new(0, if biz.id == "stand" then 11 else 24, -lot.size.Y / 2 + 2)), C.white, { transparency = 1, collide = false, name = biz.id })
 		anchor.CanQuery = false
 		anchor:SetAttribute("BizId", biz.id)
 		plot.anchors[biz.id] = anchor
