@@ -73,6 +73,21 @@ local HINTS: { [string]: Hint } = {
 	housing = { ui = "farm", world = board("Housing") },
 }
 
+-- True when the object and every GUI ancestor are visible (hidden HUD parts get no arrow).
+local function shown(obj: GuiObject): boolean
+	local cur: Instance? = obj
+	while cur and cur:IsA("GuiObject") do
+		if not cur.Visible then
+			return false
+		end
+		cur = cur.Parent
+	end
+	if cur and cur:IsA("LayerCollector") then
+		return cur.Enabled
+	end
+	return cur ~= nil
+end
+
 function Tutorial.Start(store: any, host: any, hud: any)
 	local gui, root = Layout.Layer("EggFarmTutorial", 8)
 
@@ -274,7 +289,7 @@ function Tutorial.Start(store: any, host: any, hud: any)
 		local hint = currentKey and HINTS[currentKey]
 		-- HUD arrow (hidden while a menu covers the screen)
 		local target: GuiObject? = if hint and hint.ui then hud.Targets[hint.ui] else nil
-		if target and target.Visible and target.AbsoluteSize.X > 0 and not host:IsBlocking() then
+		if target and shown(target) and not host:IsBlocking() then
 			local scale = Layout.Scale()
 			local rel = (target.AbsolutePosition - root.AbsolutePosition) / scale
 			local size = target.AbsoluteSize / scale

@@ -53,7 +53,6 @@ function Host.new(store: any, modules: { MenuModule })
 		defs[m.Name] = { tabs = tabs }
 		byName[m.Name] = m
 	end
-	defs.__modal_only = {}
 
 	local self: any = setmetatable({
 		Store = store,

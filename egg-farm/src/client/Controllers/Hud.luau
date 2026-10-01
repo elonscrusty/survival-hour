@@ -198,7 +198,6 @@ local function spawnOnce()
 	task.spawn(function()
 		local res = store.Request({ type = "spawn" })
 		if res.ok then
-			Sound.Play("click")
 			local cur = store.Get() or snap
 			if cur.settings.effects ~= false then
 				Toasts.Popup("+" .. Num.Short(cur.spawnPerTap), Theme.Color.Gold, UDim2.new(0.5, 0, 1, -170), "chick")

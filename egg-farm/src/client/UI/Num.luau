@@ -15,7 +15,8 @@ end
 
 function Num.Short(n: number): string
 	if notation == "scientific" and n == n and math.abs(n) >= 1000 and math.abs(n) ~= math.huge then
-		return (string.format("%.2e", n):gsub("e%+?", "e"))
+		-- 1.23e+06 -> 1.23e6
+		return (string.format("%.2e", n):gsub("e%+?(%-?)0*(%d)", "e%1%2"))
 	end
 	return Format.Short(n)
 end
