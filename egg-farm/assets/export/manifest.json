@@ -23,7 +23,7 @@
   "tris": 1464,
   "studs": [
    9.55,
-   10.8,
+   10.9,
    23.65
   ],
   "materials": [
@@ -36,6 +36,7 @@
    "EF_Accent",
    "EF_White",
    "EF_Grey",
+   "EF_Roof",
    "EF_Comb"
   ]
  },
@@ -109,9 +110,9 @@
  },
  "Egg": {
   "category": "Creatures",
-  "tris": 468,
+  "tris": 720,
   "studs": [
-   0.98,
+   1.0,
    1.3,
    1.0
   ],
@@ -159,7 +160,7 @@
   "tris": 3174,
   "studs": [
    10.31,
-   13.2,
+   13.3,
    47.85
   ],
   "materials": [
@@ -171,15 +172,16 @@
    "EF_Glass",
    "EF_Roof",
    "EF_White",
+   "EF_Blue",
    "EF_Green",
    "EF_Comb"
   ]
  },
  "Egg_cactus": {
   "category": "Creatures",
-  "tris": 468,
+  "tris": 720,
   "studs": [
-   0.98,
+   1.0,
    1.3,
    1.0
   ],
@@ -190,9 +192,9 @@
  },
  "Egg_clover": {
   "category": "Creatures",
-  "tris": 468,
+  "tris": 720,
   "studs": [
-   0.98,
+   1.0,
    1.3,
    1.0
   ],
@@ -203,9 +205,9 @@
  },
  "Egg_crystal": {
   "category": "Creatures",
-  "tris": 468,
+  "tris": 720,
   "studs": [
-   0.98,
+   1.0,
    1.3,
    1.0
   ],
@@ -216,9 +218,9 @@
  },
  "Egg_farm": {
   "category": "Creatures",
-  "tris": 468,
+  "tris": 720,
   "studs": [
-   0.98,
+   1.0,
    1.3,
    1.0
   ],
@@ -229,9 +231,9 @@
  },
  "Egg_frost": {
   "category": "Creatures",
-  "tris": 468,
+  "tris": 720,
   "studs": [
-   0.98,
+   1.0,
    1.3,
    1.0
   ],
@@ -242,9 +244,9 @@
  },
  "Egg_honey": {
   "category": "Creatures",
-  "tris": 468,
+  "tris": 720,
   "studs": [
-   0.98,
+   1.0,
    1.3,
    1.0
   ],
@@ -255,9 +257,9 @@
  },
  "Egg_magma": {
   "category": "Creatures",
-  "tris": 468,
+  "tris": 720,
   "studs": [
-   0.98,
+   1.0,
    1.3,
    1.0
   ],
@@ -268,9 +270,9 @@
  },
  "Egg_nebula": {
   "category": "Creatures",
-  "tris": 468,
+  "tris": 720,
   "studs": [
-   0.98,
+   1.0,
    1.3,
    1.0
   ],
@@ -281,9 +283,9 @@
  },
  "Egg_seashell": {
   "category": "Creatures",
-  "tris": 468,
+  "tris": 720,
   "studs": [
-   0.98,
+   1.0,
    1.3,
    1.0
   ],
@@ -294,9 +296,9 @@
  },
  "Egg_sunburst": {
   "category": "Creatures",
-  "tris": 468,
+  "tris": 720,
   "studs": [
-   0.98,
+   1.0,
    1.3,
    1.0
   ],
@@ -521,7 +523,7 @@
  },
  "Signboard": {
   "category": "Props",
-  "tris": 264,
+  "tris": 252,
   "studs": [
    8.4,
    6.8,
@@ -532,8 +534,7 @@
    "EF_Wood",
    "EF_Cream",
    "EF_Roof",
-   "EF_Accent",
-   "EF_Path"
+   "EF_Accent"
   ]
  },
  "Silo": {
@@ -612,7 +613,7 @@
   "tris": 968,
   "studs": [
    37.6,
-   20.54,
+   23.54,
    31.84
   ],
   "materials": [

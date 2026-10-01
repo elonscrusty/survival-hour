@@ -93,8 +93,9 @@ def xform(loc=(0, 0, 0), rot=(0, 0, 0), scale=(1, 1, 1)):
 class Builder:
     """Accumulates primitives into one bmesh. Coordinates are studs: X right, Y back, Z up.
 
-    The model's FRONT faces -Y (Blender's front view), which ends up facing -Z (Roblox front)
-    after export with axis_forward='-Z', axis_up='Y'.
+    Author with the model's FRONT facing -Y. `finish` turns it 180 degrees (front -> +Y in the
+    saved scene) so that after export with axis_forward='-Z', axis_up='Y' the front faces -Z,
+    which is Roblox's LookVector (verified by blender/verify.py).
     """
 
     def __init__(self, name):
@@ -215,6 +216,9 @@ class Builder:
         zs = [v.co.z for v in bm.verts]
         off = Vector(((min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2, min(zs)))
         bmesh.ops.translate(bm, verts=bm.verts, vec=-off)
+        # Authoring front is -Y. Turn the model 180 degrees so its front ends up on +Y in the saved
+        # scene, which the exporter (axis_forward='-Z', axis_up='Y') maps to -Z: Roblox's LookVector.
+        bmesh.ops.rotate(bm, verts=bm.verts, cent=(0, 0, 0), matrix=Matrix.Rotation(math.pi, 3, "Z"))
         bmesh.ops.scale(bm, verts=bm.verts, vec=(STUD, STUD, STUD))
         bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
         for f in bm.faces:

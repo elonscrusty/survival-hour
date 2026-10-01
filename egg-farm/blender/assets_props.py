@@ -88,7 +88,6 @@ def signboard(b):  # ~8 wide x 7 tall
     for i, x in enumerate((-0.6, 0.6, 1.8, 3.0)):  # abstract "lettering" blocks
         b.box((0.9, 0.12, 0.3), (x, -0.6, 4.7), "Roof")
         b.box((0.9 if i % 2 else 0.6, 0.12, 0.3), (x, -0.6, 3.9), "WoodDark")
-    b.boxb((1.2, 0.8, 0.2), (0, 0, 0), "Path")
 
 
 ASSETS = {

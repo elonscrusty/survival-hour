@@ -126,8 +126,8 @@ def setup_render_scene():
 
 
 def frame_camera(cam, ob):
-    """3/4 front view (front = -Y) from above; orthographic scale fitted to the projected mesh."""
-    direction = Vector((0.75, -1.0, 0.62)).normalized()
+    """3/4 front view from above (finished meshes face +Y); ortho scale fitted to the projected mesh."""
+    direction = Vector((-0.75, 1.0, 0.62)).normalized()
     quat = (-direction).to_track_quat("-Z", "Y")
     cam.rotation_euler = quat.to_euler()
     right = quat @ Vector((1, 0, 0))
@@ -220,6 +220,7 @@ def main():
             for o in bpy.context.scene.objects:
                 o.hide_render = False
             path = os.path.join(BLEND, cat + ".blend")
+            bpy.context.preferences.filepaths.save_version = 0  # no .blend1 backups
             bpy.ops.wm.save_as_mainfile(filepath=path, compress=True)
             print(f"[build] saved {os.path.relpath(path, ROOT)}")
 

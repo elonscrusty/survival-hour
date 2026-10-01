@@ -16,14 +16,14 @@ def lights(b, w, y, z, size=0.7):
         b.box((size * 1.3, 0.2, size), (sx * (w / 2 - size), y, z), "Light")
 
 
-def egg_logo(b, x, y, z, s=1.0, side=-1, axis="x", ring="Accent"):
+def egg_logo(b, x, y, z, s=1.0, side=-1, axis="x", ring="Roof", egg="Accent"):
     """Flat egg emblem on a vehicle side (axis='x' -> on a +-X face at x)."""
     if axis == "x":
         b.cyl(1.25 * s, 0.12, (x + side * 0.04, y, z), ring, segs=14, rot=(0, 90, 0), scale=(1.0, 0.85, 1))
-        b.sphere(0.95 * s, (x + side * 0.08, y, z), "White", scale=(0.12, 0.8, 1.0), u=12, v=8)
+        b.sphere(0.95 * s, (x + side * 0.08, y, z), egg, scale=(0.12, 0.8, 1.0), u=12, v=8)
     else:
         b.cyl(1.25 * s, 0.12, (x, y + side * 0.04, z), ring, segs=14, rot=(90, 0, 0), scale=(0.85, 1.0, 1))
-        b.sphere(0.95 * s, (x, y + side * 0.08, z), "White", scale=(0.8, 0.12, 1.0), u=12, v=8)
+        b.sphere(0.95 * s, (x, y + side * 0.08, z), egg, scale=(0.8, 0.12, 1.0), u=12, v=8)
 
 
 def crate(b, x, y, z, s=1.0):
@@ -122,8 +122,8 @@ def box_truck(b):  # ~9 x 11 x 24
     b.boxb((8.4, 1.2, 0.5), (0, -8.4, 8.2), "Accent")  # roof marker bar
     # cargo box
     b.boxb((9.0, 15.8, 8.6), (0, 3.6, 2.2), "White")
-    b.boxb((9.1, 15.9, 0.4), (0, 3.6, 2.2), "Grey")
-    b.boxb((9.1, 15.9, 0.4), (0, 3.6, 10.4), cab)
+    b.boxb((9.1, 15.9, 0.4), (0, 3.6, 2.15), "Grey")
+    b.boxb((9.1, 15.9, 0.5), (0, 3.6, 10.4), cab)
     for sx in (-1, 1):
         b.boxb((0.1, 15.0, 1.0), (sx * 4.52, 3.6, 3.2), "Accent")
         egg_logo(b, sx * 4.5, 3.6, 7.0, 1.7, side=sx)
@@ -163,12 +163,12 @@ def egg_hauler(b):  # semi: ~10 x 13 x 48
     # trailer
     tl, ty = 33.0, 7.4
     b.boxb((9.6, tl, 9.6), (0, ty, 3.6), "White")
-    b.boxb((9.7, tl + 0.1, 0.5), (0, ty, 3.6), "Roof")
-    b.boxb((9.7, tl + 0.1, 0.5), (0, ty, 12.7), "Roof")
+    b.boxb((9.7, tl + 0.1, 0.5), (0, ty, 3.55), "Roof")
+    b.boxb((9.7, tl + 0.1, 0.6), (0, ty, 12.7), "Roof")
     for sx in (-1, 1):
         b.boxb((0.1, tl - 2, 0.6), (sx * 4.83, ty, 4.4), "Accent")
         egg_logo(b, sx * 4.8, ty - 6.0, 8.4, 2.4, side=sx)
-        egg_logo(b, sx * 4.8, ty + 6.5, 8.4, 1.6, side=sx, ring="Roof")
+        egg_logo(b, sx * 4.8, ty + 6.5, 8.4, 1.6, side=sx, ring="Blue")
         egg_logo(b, sx * 4.8, ty + 14.0, 8.4, 1.6, side=sx, ring="Green")
     b.boxb((0.5, 0.5, 3.0), (-3.6, ty - 7.0, 0.6), "GreyDark")  # landing gear
     b.boxb((0.5, 0.5, 3.0), (3.6, ty - 7.0, 0.6), "GreyDark")

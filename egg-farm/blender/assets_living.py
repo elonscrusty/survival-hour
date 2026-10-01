@@ -1,7 +1,6 @@
 """Creatures (chickens, fox, eggs) and workers (farmhand, robo picker). Units: studs, front = -Y."""
 
 import math
-import random
 
 from mathutils import Vector
 
@@ -97,20 +96,17 @@ def egg_shape(co):
 
 
 def egg(b, shell="White", spots=None, seed=1):
-    faces = b.sphere(EGG_R, (0, 0, 0), shell, u=18, v=14)
+    """Low-poly egg. With `spots`, paints a decorated pattern onto shell faces (no extra geometry):
+    a wide belt, a checker row below it and a dotted row above it."""
+    faces = b.sphere(EGG_R, (0, 0, 0), shell, u=24, v=16)
     if spots:
-        # paint round patches of shell faces (flat "speckles", no extra geometry)
-        rnd = random.Random(seed)
-        centres = []
-        for i in range(9):
-            az = i * 2.4 + rnd.uniform(-0.3, 0.3)
-            el = rnd.uniform(-0.5, 0.8)
-            centres.append((Vector((math.cos(el) * math.cos(az), math.cos(el) * math.sin(az), math.sin(el))),
-                            rnd.uniform(0.2, 0.32)))
         idx = b.mi(spots)
+        step = 2 * math.pi / 24
         for f in faces:
-            n = f.calc_center_median().normalized()
-            if any(n.angle(c) < r for c, r in centres):
+            c = f.calc_center_median()
+            el = math.asin(max(-1.0, min(1.0, c.z / c.length)))
+            k = int((math.atan2(c.y, c.x) + math.pi) / step + 0.5) + seed
+            if 0.02 < el < 0.30 or (-0.35 < el < -0.2 and k % 2 == 0) or (0.55 < el < 0.75 and k % 3 == 0):
                 f.material_index = idx
     deform(faces, egg_shape)
 
@@ -127,7 +123,7 @@ def egg_variant(eid):
         pk = "Egg_" + eid + "_Spots"
         b.mi(sk, shell, rough=0.5)
         b.mi(pk, spot, emission=emit, rough=0.5)
-        egg(b, sk, pk, seed=sum(map(ord, eid)))
+        egg(b, sk, pk, seed=sum(map(ord, eid)) % 6)
 
     return fn
 

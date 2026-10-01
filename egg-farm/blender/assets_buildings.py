@@ -386,7 +386,7 @@ def mega_dome(b):  # ~50 x 30 x 50
 
 # ---------------------------------------------------------------- farm buildings
 def warehouse(b):  # ~40 x 24 x 30, loading dock on the front (-Y)
-    w, d, h = 36.0, 24.0, 16.0
+    w, d, h = 36.0, 24.0, 19.0
     b.boxb((w, d, h), (0, 0, 0), "Grey")
     # vertical cladding ribs
     x = -w / 2 + 1.5
