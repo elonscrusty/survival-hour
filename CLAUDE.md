@@ -4,6 +4,7 @@ Roblox survival game (Rojo + Luau). The owner (kcdrewcarter) plays on a phone wh
 
 ## How to work here
 - **Caveman mode is always on.** From the first reply of every session, write chat replies in the style of `.claude/skills/caveman/SKILL.md` at level **lite**, without waiting for `/caveman`. The owner can switch with `/caveman full|ultra` or turn it off with "normal mode". Code, commits and docs stay in normal prose.
+- **Explain like the owner is 5.** (Owner's request, 2026-10-01.) Use very simple words, short sentences and everyday comparisons; no jargon. Tell them exactly what to click or do, step by step. This also applies to Egg Farm (`egg-farm/`).
 - **Keep replies short.** Do the work, then give a 2-4 line plain-English summary. Don't narrate each step.
 - Work autonomously; don't ask for approval on routine steps. Ask only when a real decision belongs to the owner.
 - Read only the files a task needs. Start from `docs/STATUS.md` (short); open `docs/IMPLEMENTATION_LOG.md` only for history. Update STATUS.md when a pass finishes.
