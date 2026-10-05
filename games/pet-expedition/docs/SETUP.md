@@ -27,7 +27,7 @@ create.roblox.com → your experience → **Monetization**.
 | FastHatch | Fast Hatch | 99 |
 | MoreEquip | +3 Pets Equipped | 249 |
 | MoreExpeditions | +2 Expedition Slots | 199 |
-| AutoFarm | Auto Farm | 149 |
+| AutoFarm | Auto Farm | 249 |
 | BigBackpack | Big Backpack | 99 |
 
 **Developer Products** (Monetization → Developer Products → Create):
