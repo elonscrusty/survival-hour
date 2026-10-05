@@ -22,8 +22,8 @@ On create.roblox.com → your experience:
   > 🎁 Daily rewards, daily quests and codes!
   > Codes: LAUNCH, ZOOM, PETRACE
 - **Genre:** Obby & Platformer (or Simulation). **Devices:** Phone, Tablet, Computer, Console.
-- **Icon:** upload `models/marketing/Icon.png`.
-- **Thumbnails:** upload `models/marketing/Thumb1.png`, `Thumb2.png` and `Thumb3.png`.
+- **Icon:** upload `models/storeart/Icon.png`.
+- **Thumbnails:** upload `models/storeart/Thumb1.png`, `Thumb2.png` and `Thumb3.png`.
 - **Maturity & Compliance questionnaire:** answer honestly. The game has no violence or blood, no chat features of its own, and only cosmetic purchases plus Coins. It's normally rated **Minimal / All ages**.
 
 ## 3. Robux products (Phone OK)

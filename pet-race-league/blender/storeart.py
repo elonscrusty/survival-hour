@@ -2,7 +2,7 @@
 
     python3 blender/marketing.py [--samples 24]
 
-Writes models/marketing/Icon.png (512x512) and Thumb1..3.png (1920x1080), ready to
+Writes models/storeart/Icon.png (512x512) and Thumb1..3.png (1920x1080), ready to
 upload on the Creator Dashboard (Places → Thumbnails / Experience icon).
 """
 import argparse
@@ -18,7 +18,7 @@ from mathutils import Matrix, Vector  # noqa: E402
 
 import build as B  # noqa: E402
 
-OUT = os.path.join(B.OUT, "marketing")
+OUT = os.path.join(B.OUT, "storeart")
 
 
 def to_blender(x, y, z):
