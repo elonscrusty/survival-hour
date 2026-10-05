@@ -8,8 +8,12 @@ cd "$ROOT" || exit 1
 [ -x "$T/luau/luau" ] || bash ../../tools/setup_env.sh >/dev/null
 fail=0
 
-"$T/rojo/rojo" sourcemap default.project.json -o "$T/pe_sourcemap.json" >/dev/null 2>&1
-diag=$("$T/lsp/luau-lsp" analyze --definitions="$T/globalTypes.d.luau" --sourcemap="$T/pe_sourcemap.json" src 2>&1)
+# Per-checkout sourcemap so parallel worktrees don't overwrite each other; missing folders are created empty.
+mkdir -p src/client src/server src/shared
+SM="$(mktemp)"
+if ! "$T/rojo/rojo" sourcemap default.project.json -o "$SM" >/dev/null 2>&1; then echo "sourcemap: FAILED"; exit 1; fi
+diag=$("$T/lsp/luau-lsp" analyze --definitions="$T/globalTypes.d.luau" --sourcemap="$SM" src 2>&1)
+rm -f "$SM"
 if [ -z "$diag" ]; then echo "typecheck: ok"; else echo "typecheck: DIAGNOSTICS"; echo "$diag" | head -60; fail=1; fi
 
 out=$(cd tests && "$T/luau/luau" run.luau 2>&1)
