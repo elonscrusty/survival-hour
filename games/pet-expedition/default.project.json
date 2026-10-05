@@ -41,7 +41,7 @@
     },
     "Workspace": {
       "$className": "Workspace",
-      "$properties": { "Gravity": 196.2 }
+      "$properties": { "Gravity": 196.2, "StreamingEnabled": false }
     },
     "SoundService": { "$className": "SoundService" },
     "StarterGui": {

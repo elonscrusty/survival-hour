@@ -18665,6 +18665,7 @@ return Windows
       <string name="Name">Workspace</string>
       <float name="Gravity">196.2</float>
       <bool name="NeedsPivotMigration">false</bool>
+      <bool name="StreamingEnabled">false</bool>
     </Properties>
   </Item>
 </roblox>
