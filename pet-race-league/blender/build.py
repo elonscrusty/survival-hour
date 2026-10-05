@@ -120,14 +120,26 @@ class Mesh:
         self.category = category
         self.bm = bmesh.new()
         self.uv = self.bm.loops.layers.uv.new("UVMap")
+        self.bone_layer = self.bm.verts.layers.int.new("bone")
+        # Skeleton (pets only): (name, parent, pivot in Roblox space). New primitives
+        # are skinned 100% to self.bone (rigid parts, like the part-built rig).
+        self.bones = []
+        self.bone = None
+
+    def add_bone(self, name, parent, pivot):
+        self.bones.append((name, parent, Vector(pivot)))
 
     def _paint(self, before, color, smooth):
         u, v = cell_uv(pal(color))
+        bi = 0
+        if self.bone:
+            bi = [b[0] for b in self.bones].index(self.bone) + 1
         for f in self.bm.faces:
             if f not in before:
                 f.smooth = smooth
                 for loop in f.loops:
                     loop[self.uv].uv = (u, v)
+                    loop.vert[self.bone_layer] = bi
 
     def sphere(self, color, m, seg=18, rings=12, smooth=True):
         """Unit-diameter sphere transformed by m (use S() for an ellipsoid)."""
@@ -189,7 +201,40 @@ class Mesh:
         bm.to_mesh(me)
         bm.free()
         obj = bpy.data.objects.new(self.name, me)
+        if self.bones:
+            rec["bones"] = [b[0] for b in self.bones]
+            groups = [obj.vertex_groups.new(name=b[0]) for b in self.bones]
+            ids = me.attributes["bone"].data
+            per = {}
+            for i in range(len(me.vertices)):
+                per.setdefault(max(ids[i].value, 1) - 1, []).append(i)
+            for gi, verts in per.items():
+                groups[gi].add(verts, 1.0, "REPLACE")
         return obj, rec
+
+    def make_armature(self, obj, collection):
+        """Builds the skeleton and skins obj to it. Bones point up (Blender +Z) with
+        no roll, so pose axes map to Roblox axes as (-X, Y, -Z): see PetAnimator."""
+        arm = bpy.data.armatures.new(self.name + "_Rig")
+        rig = bpy.data.objects.new(self.name + "_Rig", arm)
+        collection.objects.link(rig)
+        bpy.context.view_layer.objects.active = rig
+        bpy.ops.object.mode_set(mode="EDIT")
+        made = {}
+        for name, parent, pivot in self.bones:
+            eb = arm.edit_bones.new(name)
+            head = (R2B @ pivot.to_4d()).to_3d()
+            eb.head = head
+            eb.tail = head + Vector((0, 0, 0.4))
+            eb.roll = 0
+            if parent:
+                eb.parent = made[parent]
+            made[name] = eb
+        bpy.ops.object.mode_set(mode="OBJECT")
+        obj.parent = rig
+        mod = obj.modifiers.new("Rig", "ARMATURE")
+        mod.object = rig
+        return rig
 
 
 # ------------------------------------------------------------------ data
@@ -271,6 +316,25 @@ def build_pet(sp):
     elif pid == "Cosmic Cat":
         foot_col = acc
 
+    # Skeleton: same joints and pivots as the part-built rig (PetModel.BuildParts).
+    hc = head_center(sp)
+    legTop = legH + by * 0.35
+    m.add_bone("Root", None, (0, 0, 0))
+    m.add_bone("Body", "Root", (0, bodyY, 0))
+    m.add_bone("Head", "Body", hc + Vector((0, -hs * 0.3, hs * 0.25)))
+    if sp["Ears"]:
+        ear_base = {"Long": (0.25, 0.45, 0.04), "Round": (0.34, 0.26, 0.03), "Point": (0.27, 0.33, 0.02)}[sp["Ears"]]
+        for name, side in (("EarL", 1), ("EarR", -1)):
+            m.add_bone(name, "Head", hc + Vector((side * hs * ear_base[0], hs * ear_base[1], hs * ear_base[2])))
+    for name, lx, lz in (("LegFL", 1, -1), ("LegFR", -1, -1), ("LegBL", 1, 1), ("LegBR", -1, 1)):
+        m.add_bone(name, "Body", (lx * bx * 0.27, legTop, lz * bz * 0.28))
+    if sp["Tail"]:
+        m.add_bone("Tail", "Body", (0, bodyY + by * 0.15, bz * 0.46))
+    if sp["Wings"] or pid == "Penguin":
+        for name, side in (("WingL", 1), ("WingR", -1)):
+            m.add_bone(name, "Body", (side * bx * 0.42, bodyY + by * 0.38, 0))
+    m.bone = "Body"
+
     # Body: a round bean, a little higher at the back.
     m.sphere(col, T(0, bodyY, 0) @ S(bx, by, bz), 28, 18)
     m.sphere(col, T(0, bodyY + by * 0.06, bz * 0.18) @ S(bx * 0.96, by * 0.96, bz * 0.6), 22, 14)
@@ -306,15 +370,17 @@ def build_pet(sp):
     top = legH + by * 0.35
     for lx in (-1, 1):
         for lz in (-1, 1):
+            m.bone = "Leg" + ("F" if lz < 0 else "B") + ("L" if lx > 0 else "R")
             x, z = lx * bx * 0.27, lz * bz * 0.28
             m.cyl(leg_col, T(x, (top + bx * 0.1) / 2, z) @ S(1, top - bx * 0.1, 1), bx * 0.15, bx * 0.15, 16)
             m.sphere(foot_col, T(x, bx * 0.11, z - bx * 0.05) @ S(bx * 0.36, bx * 0.24, bx * 0.42), 14, 10)
     if pid == "Bunny":
         for lx in (-1, 1):
+            m.bone = "LegBL" if lx > 0 else "LegBR"
             m.sphere(acc, T(lx * bx * 0.28, bx * 0.1, bz * 0.2) @ S(bx * 0.34, bx * 0.2, bx * 0.75), 14, 10)
 
     # Big head
-    hc = head_center(sp)
+    m.bone = "Head"
     head_col = WHITE if pid == "Griffin" else col
     m.sphere(head_col, T(hc) @ S(hs * 1.04, hs * 0.96, hs), 28, 18)
     if pid == "Panda":
@@ -356,6 +422,8 @@ def build_pet(sp):
     # Ears
     ears = sp["Ears"]
     for side in (-1, 1):
+        if ears:
+            m.bone = "EarL" if side > 0 else "EarR"
         if ears == "Point":
             base = hc + Vector((side * hs * 0.27, hs * 0.33, hs * 0.02))
             tip = base + Vector((side * hs * 0.1, hs * 0.38, 0.0))
@@ -373,6 +441,7 @@ def build_pet(sp):
             m.sphere(acc, T(p + Vector((0, 0, -hs * 0.055))) @ Rz(side * -12) @ S(hs * 0.13, hs * 0.6, hs * 0.06), 12, 10)
 
     # Horns, antlers, crests, manes
+    m.bone = "Head"
     if sp["Horn"]:
         if pid == "Deer":
             antler = (170, 115, 70)
@@ -408,6 +477,7 @@ def build_pet(sp):
             m.sphere(mane[i % 3], T(p) @ S(hs * 0.3, hs * 0.3, hs * 0.26), 12, 8)
 
     # Tail
+    m.bone = "Tail" if sp["Tail"] else "Body"
     tb = Vector((0, bodyY + by * 0.15, bz * 0.48))
     tail = sp["Tail"]
     if tail == "Short":
@@ -431,12 +501,14 @@ def build_pet(sp):
     # Wings: three layered feathers per side, swept up and back
     if sp["Wings"]:
         for side in (-1, 1):
+            m.bone = "WingL" if side > 0 else "WingR"
             base = Vector((side * bx * 0.5, bodyY + by * 0.38, bz * 0.02))
             for i, (sc, c2) in enumerate(((1.0, acc), (0.82, col), (0.62, WHITE if pid != "Dragon" else acc))):
                 ctr = base + Vector((side * bx * 0.35 * sc, by * 0.12 * i, bz * 0.05 * i))
                 m.sphere(c2, T(ctr) @ Ry(side * -12) @ Rz(side * 32) @ S(bx * 0.9 * sc, by * 0.1, bz * 0.42 * sc), 16, 8)
     if pid == "Penguin":
         for side in (-1, 1):
+            m.bone = "WingL" if side > 0 else "WingR"
             m.sphere(col, T(side * bx * 0.5, bodyY, 0) @ Rz(side * 22) @ S(bx * 0.18, by * 0.65, bz * 0.42), 14, 10)
     return m
 
@@ -629,13 +701,16 @@ def make_material(palette_path):
     return mat
 
 
-def export_fbx(obj, path):
+def export_fbx(obj, path, rig=None):
     for o in bpy.context.view_layer.objects:
         o.select_set(False)
     obj.select_set(True)
-    bpy.context.view_layer.objects.active = obj
+    if rig:
+        rig.select_set(True)
+    bpy.context.view_layer.objects.active = rig or obj
     bpy.ops.export_scene.fbx(
-        filepath=path, use_selection=True, object_types={"MESH"},
+        filepath=path, use_selection=True, object_types={"MESH", "ARMATURE"},
+        use_armature_deform_only=False, primary_bone_axis="Y", secondary_bone_axis="X",
         apply_unit_scale=True, apply_scale_options="FBX_SCALE_UNITS", global_scale=1.0,
         axis_forward="Z", axis_up="Y", mesh_smooth_type="FACE", use_mesh_modifiers=True,
         use_triangles=False, add_leaf_bones=False, bake_anim=False,
@@ -754,6 +829,7 @@ def main():
     meshes += build_props()
 
     built = []
+    mesh_of = {m.name: m for m in meshes}
     for m in meshes:
         obj, rec = m.finish()  # every model is built so the palette is identical each run
         built.append((obj, rec))
@@ -775,7 +851,8 @@ def main():
             continue
         obj.data.materials.append(mat)
         coll.objects.link(obj)
-        export_fbx(obj, os.path.join(FBX_DIR, rec["name"] + ".fbx"))
+        rig = mesh_of[rec["name"]].make_armature(obj, coll) if mesh_of[rec["name"]].bones else None
+        export_fbx(obj, os.path.join(FBX_DIR, rec["name"] + ".fbx"), rig)
         print(f"  {rec['name']:<16} {rec['tris']:>6} tris  size {rec['size']}")
         if cam:
             for o in coll.objects:

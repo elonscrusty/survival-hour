@@ -11,6 +11,7 @@ local specs = {
 	"./AssetFit.spec",
 	"./Models.spec",
 	"./Daily.spec",
+	"./PetAnim.spec",
 }
 
 local passed, failed = 0, 0

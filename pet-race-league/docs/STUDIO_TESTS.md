@@ -63,3 +63,14 @@ Open `build/PetRaceLeague.rbxlx`, set Avatar to R15, and turn on API access (Gam
 - [ ] Type LAUNCH and tap Redeem: +300 coins. Typing it again says "already used". You can type a code while riding the gates without it being wiped.
 - [ ] On a phone, the DAILY menu scrolls so the code box and the Sound button can be reached.
 - [ ] Buttons click, coins chime, the countdown beeps and a fall plays a sound. "Sound: OFF" silences everything and stays off after you rejoin.
+
+## 11. Look and animation
+- [ ] The lobby is bright and colourful (bloom on neon, sun rays), and pets have a dark cartoon outline.
+- [ ] Riding: your character sits on the pet's back behind its head (not standing, not floating).
+- [ ] Standing still: the pet breathes, blinks, looks around, wags its tail and twitches its ears.
+- [ ] Running: the legs trot in diagonal pairs, the body bounces and leans forward, ears sweep back, dust puffs at the feet.
+- [ ] Jumping: the legs tuck and wings spread. On landing the pet squashes down and puffs dust.
+- [ ] Levelling up a stat makes your pet hop happily. Winning a race does too.
+- [ ] Hatching: the new pet hops excitedly in the reveal window. The PETS menu previews idle and blink.
+- [ ] Legendary/Mythic pets sparkle.
+- [ ] After uploading models: if mesh pets bend the wrong way, flip the signs in `BONE_AXIS` (`src/client/Controllers/PetAnimator.luau`).

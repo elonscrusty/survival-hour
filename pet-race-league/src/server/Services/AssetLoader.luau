@@ -78,6 +78,9 @@ local function build(name: string, e: Models.Entry): (Model?, string?)
 	if f.Error > 0.25 then
 		warn(string.format("[AssetLoader] %s: uploaded proportions differ from the catalog by %d%%", name, math.floor(f.Error * 100)))
 	end
+	if e.Category == "Pets" and not mesh:FindFirstChildWhichIsA("Bone", true) then
+		warn("[AssetLoader] " .. name .. ": no skeleton found under the mesh; it will show but not animate")
+	end
 	local m = Instance.new("Model")
 	m.Name = name
 	mesh.Parent = m

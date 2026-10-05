@@ -198,11 +198,10 @@ local function spawnFollower(p: Player)
 	local built = PetModel.Build(pet.Species, ride.Size * 0.8, pet.Paint)
 	PetModel.SetTrail(built, pet.Trail)
 	outline(built)
-	for _, d in built.Model:GetDescendants() do
-		if d:IsA("BasePart") then
-			d.Anchored = true
-		end
-	end
+	-- Only the root is anchored (the server moves it); everything else hangs off it on
+	-- joints, so clients can animate the follower too.
+	built.Root.Anchored = true
+	built.Model:SetAttribute("Owner", p.UserId)
 	built.Model.Name = p.Name .. "Pet"
 	built.Model:PivotTo(root.CFrame * CFrame.new(4, -3, 3))
 	built.Model.Parent = folder

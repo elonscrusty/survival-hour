@@ -11,6 +11,7 @@ local PetModel = require(Shared.PetModel)
 local UI = require(script.Parent.Parent.UI)
 local Notify = require(script.Parent.Notify)
 local Sound = require(script.Parent.Sound)
+local PetAnimator = require(script.Parent.PetAnimator)
 
 local HatchView = {}
 
@@ -51,12 +52,9 @@ local function show(species: string, eggId: string, uid: string)
 	local rays = UI.Frame({ Size = UDim2.fromScale(1, 1), BackgroundColor3 = UI.Rgb(rar.Color), BackgroundTransparency = 0.6, ZIndex = 41 }, holder)
 	UI.Corner(rays, 160)
 	local built = PetModel.Build(species, 1)
-	for _, d in built.Model:GetDescendants() do
-		if d:IsA("BasePart") then
-			d.Anchored = true
-		end
-	end
+	built.Root.Anchored = true -- the rest hangs off it on joints so it can animate
 	UI.Viewport(holder, built.Model, { ZIndex = 42 })
+	PetAnimator.Register(built.Model, 2.5) -- excited hops when it pops out
 	local spin = 0
 	local conn = RunService.RenderStepped:Connect(function(dt)
 		spin += dt * 1.5

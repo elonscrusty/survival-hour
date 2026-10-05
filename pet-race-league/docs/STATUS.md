@@ -16,7 +16,9 @@
 - Review fixes: whole-race anti-cheat (no teleport wins), training teleport checks, pet collision box (hurdles must be jumped), pet pivot at feet, session-locked saves, Robux purchases confirmed only after saving, a race loop that recovers from errors.
 - Publish pass: daily login streak (7 tiers), 3 daily quests, promo codes (server-only list), 7 badges (ids to fill in), sound effects with a mute switch, tutorial step for DAILY, a game icon and 3 thumbnails (`models/storeart/`), and the publish guide `docs/PUBLISH.md`.
 - Second review fixes: DAILY menu scrolls on phones, speed gates face along the ring, arches and gates don't collide, save lock released if a player leaves while loading, a kick if another server takes the save, badges only marked once really awarded.
-- 62 unit tests, a clean type check and a Rojo build.
+- Look pass: bright toon style, chibi ride-sized pets (big heads, glossy eyes), the rider sits on the pet, outlines on world pets, sparkles on Legendary/Mythic, sunny lighting with bloom, candy UI.
+- Animation pass: every pet is rigged (Root, Body, Head, EarL/EarR, Tail, WingL/WingR, 4 legs). One animation module (`Logic/PetAnim`) drives breathing, look-around, blinking, ear twitches, tail wag, a trotting run cycle with bounce and lean, jump stretch, landing squash and dust, wing flaps and happy hops (hatch, level up, race win). It runs on ridden pets, followers and the hatch/menu previews. Blender models are skinned to the same skeleton, and `blender/animate.py` renders `models/storeart/PetAnimations.mp4` with the same maths.
+- 70 unit tests, a clean type check and a Rojo build.
 
 ## Owner steps left
 Follow `docs/PUBLISH.md`: publish from Studio, the store page, Robux products, badges (optional) and the model upload.
@@ -29,5 +31,5 @@ Follow `docs/PUBLISH.md`: publish from Studio, the store page, Robux products, b
 - Sounds and music.
 - More tracks (and a weekly featured track).
 - Trading pets between players.
-- Animated pet legs (they don't move yet).
+- Check mesh pet bone axes in Studio after uploading (PetAnimator `BONE_AXIS`).
 - Leagues matchmaking (separate portals per league).

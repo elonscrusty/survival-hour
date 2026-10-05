@@ -11,6 +11,7 @@ local Profile = require(Shared.Logic.Profile)
 local UI = require(script.Parent.Parent.UI)
 local State = require(script.Parent.Parent.State)
 local Hud = require(script.Parent.Hud)
+local PetAnimator = require(script.Parent.PetAnimator)
 
 local PetMenu = {}
 
@@ -30,12 +31,9 @@ end
 
 local function preview(parent: Instance, p: any)
 	local built = PetModel.Build(p.Species, 1, p.Paint)
-	for _, d in built.Model:GetDescendants() do
-		if d:IsA("BasePart") then
-			d.Anchored = true
-		end
-	end
+	built.Root.Anchored = true
 	UI.Viewport(parent, built.Model)
+	PetAnimator.Register(built.Model)
 end
 
 local function renderDetail()

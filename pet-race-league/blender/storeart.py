@@ -49,7 +49,7 @@ def build_rider(i, shirt, pants):
 
 def build_track_strip():
     m = B.Mesh("ArtTrack", "Art")
-    m.box((120, 230, 95), T(0, -0.5, 0) @ S(34, 1, 140))
+    m.box((255, 205, 130), T(0, -0.5, 0) @ S(34, 1, 140))
     for side in (-1, 1):
         for i in range(14):
             c = (255, 255, 255) if i % 2 == 0 else (255, 80, 110)
@@ -170,7 +170,6 @@ def main():
     ridden(meshes, "Dragon", "Rider0", 1.5, 0, -20, y=1.2)
     ridden(meshes, "Unicorn", "Rider1", -5, 9, 15)
     place(meshes, "Egg_Sky", 7, 12, -20, 1.0)
-    place(meshes, "ArtStars", 0, 2, 0, 0.8)
     place(meshes, "Tree_Round", -14, 26, 0, 1.3)
     place(meshes, "Tree_Blossom", 13, 28, 0, 1.3)
     camera(to_blender(4, 6, -16), to_blender(-1, 5.5, 4), 30)
@@ -179,7 +178,7 @@ def main():
     # Thumb 1: a race, four ridden pets charging down the track under the arch.
     clear_scene()
     ground()
-    place(meshes, "ArtTrack", 0, 30, 0)
+    place(meshes, "ArtTrack", 0, 30, 0, 1.0, y=0.06)
     place(meshes, "RaceArch", 0, 6, 0, 1.15)
     for i, (pet, z, x) in enumerate((("Tiger", 0, -9), ("Phoenix", -6, -1.5), ("Wolf", 3, 6), ("Fox", 8, 12))):
         ridden(meshes, pet, f"Rider{i}", x, z, (-8, 4, -4, 10)[i], y=0.6 if i == 1 else 0)
@@ -188,7 +187,7 @@ def main():
         place(meshes, "Tree_Round", x * 1.2, 45, 0, 1.6)
     place(meshes, "Cloud", -40, 120, 0, 1.6, y=45)
     place(meshes, "Cloud", 45, 140, 0, 1.4, y=55)
-    camera(to_blender(3, 4, -24), to_blender(1, 6, 10), 26)
+    camera(to_blender(4, 5, -34), to_blender(1, 5, 8), 30)
     shot(os.path.join(OUT, "Thumb1.png"), 1920, 1080, 2.4)
 
     # Thumb 2: egg stands with freshly hatched pets.
