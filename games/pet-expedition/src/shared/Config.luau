@@ -58,31 +58,33 @@ Config.PetDamagePerPower = 10 -- damage per tick = power * this
 Config.MaxTargetDistance = 90 -- studs from player to the breakable they target
 Config.BreakableRespawn = { 6, 14 } -- seconds (random in range)
 Config.XpPerBreak = 4
+Config.BreakGemsPerHour = 15 -- per-player cap on gems from breakables (rolling hour)
 
 -- Coins
 Config.VipCoinMult = 1.2
 Config.CoinBoostMult = 2
 Config.PremiumCoinMult = 1.1
-Config.RebirthCoinBonus = 0.25 -- +25% coins per rebirth (additive)
+Config.RebirthCoinBonus = 1 -- +100% coins per rebirth (additive)
 
 -- Rebirth: resets coins and opened gates; keeps pets, gems, passes.
-Config.RebirthBaseCost = 1e7
-Config.RebirthCostGrowth = 3
+Config.RebirthBaseCost = 6e9
+Config.RebirthCostGrowth = 2
 Config.RebirthGems = 150
-Config.MaxRebirths = 50
+Config.MaxRebirths = 16 -- cost passes the coin cap (1e15) after this
 
 -- Expeditions
 Config.BaseExpeditionSlots = 1
 Config.MaxPetsPerExpedition = 3
 Config.ExpeditionDurations = {
-	{ Key = "Short", Seconds = 5 * 60, Mult = 1, FindChance = 0.04, GemChance = 0.15 },
-	{ Key = "Medium", Seconds = 30 * 60, Mult = 5, FindChance = 0.12, GemChance = 0.4 },
-	{ Key = "Long", Seconds = 2 * 3600, Mult = 16, FindChance = 0.3, GemChance = 0.8 },
+	{ Key = "Short", Seconds = 5 * 60, Mult = 1, FindChance = 0.04, GemChance = 0.05 },
+	{ Key = "Medium", Seconds = 30 * 60, Mult = 5, FindChance = 0.12, GemChance = 0.25 },
+	{ Key = "Long", Seconds = 2 * 3600, Mult = 16, FindChance = 0.3, GemChance = 0.5 },
 	{ Key = "Epic", Seconds = 8 * 3600, Mult = 50, FindChance = 0.65, GemChance = 1 },
 }
-Config.ExpeditionCoinsPerPower = 40 -- coins = sum(power) * this * area coin mult * duration mult
+Config.ExpeditionCoinsPerPower = 75 -- coins = sum(min(power / area PowerMult, ExpeditionMaxRelPower)) * this * area coin mult * duration mult
+Config.ExpeditionMaxRelPower = 12 -- caps strong pets sent to cheap islands
 Config.ExpeditionEggChance = 0.35 -- chance (scaled by duration mult, capped at 1) to bring back a free egg
-Config.ExpeditionGems = { 5, 25 } -- gem range when GemChance hits (scaled by sqrt(duration mult))
+Config.ExpeditionGems = { 3, 15 } -- gem range when GemChance hits (scaled by sqrt(duration mult))
 Config.ExpeditionSkipGemsPerMinute = 2 -- gems to finish early (min 5)
 Config.FastExpeditionMult = 0.75 -- duration multiplier with the Swift Expeditions perk (not sold; reserved)
 
@@ -96,20 +98,20 @@ Config.DailyRewards = { -- streak day -> reward (loops after the last day)
 	{ Coins = 60000, Gems = 75 },
 	{ Coins = 150000, Gems = 150, Boost = "Luck2x" },
 } :: { RewardSpec }
-Config.PlaytimeGifts = { -- minutes in this session -> reward
+Config.PlaytimeGifts = { -- minutes played today (UTC day) -> reward, each once per day
 	{ Minutes = 3, Coins = 300 },
-	{ Minutes = 8, Gems = 10 },
+	{ Minutes = 8, Gems = 5 },
 	{ Minutes = 15, Coins = 2500 },
-	{ Minutes = 25, Gems = 20 },
+	{ Minutes = 25, Gems = 15 },
 	{ Minutes = 40, Boost = "Coins2x" },
-	{ Minutes = 60, Gems = 40 },
+	{ Minutes = 60, Gems = 25 },
 } :: { RewardSpec }
 Config.QuestsPerDay = 3
 Config.QuestPool = {
 	{ Kind = "Break", Goals = { 150, 300, 600 }, Gems = { 15, 25, 40 } },
 	{ Kind = "Hatch", Goals = { 20, 50, 100 }, Gems = { 15, 25, 40 } },
 	{ Kind = "Expedition", Goals = { 2, 4, 8 }, Gems = { 15, 25, 40 } },
-	{ Kind = "Coins", Goals = { 50000, 250000, 1000000 }, Gems = { 15, 25, 40 } },
+	{ Kind = "Coins", Goals = { 5000, 12000, 25000 } --[[ x CoinMult of highest opened area ]], Gems = { 15, 25, 40 } },
 	{ Kind = "Craft", Goals = { 1, 2, 4 }, Gems = { 20, 35, 55 } },
 }
 Config.IndexRewards = { -- fraction of species discovered -> reward
@@ -129,10 +131,10 @@ Config.MaxBoostSeconds = 24 * 3600
 
 -- Trading
 Config.TradeMaxPets = 8
-Config.TradeMaxGems = 100000
+Config.TradeMaxGems = 0 -- pets only (stops alt gem funnelling and real-money gem sales)
 Config.TradeConfirmSeconds = 4 -- countdown after both ready; any change cancels it
 Config.TradeRequestTimeout = 20
-Config.TradeMinAccountAgeDays = 3
+Config.TradeMinAccountAgeDays = 7
 Config.TradeCooldown = 10 -- seconds between trade requests from one player
 
 -- Saving

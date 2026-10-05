@@ -27,7 +27,7 @@ Products.Passes = {
 	{ Key = "FastHatch", Id = 0, Price = 99, Name = "Fast Hatch", Blurb = "Much faster egg opening animation." },
 	{ Key = "MoreEquip", Id = 0, Price = 249, Name = "+3 Pets Equipped", Blurb = "Take 3 more pets with you." },
 	{ Key = "MoreExpeditions", Id = 0, Price = 199, Name = "+2 Expedition Slots", Blurb = "Run 2 more expeditions at the same time." },
-	{ Key = "AutoFarm", Id = 0, Price = 149, Name = "Auto Farm", Blurb = "Your pets attack the nearest coins on their own." },
+	{ Key = "AutoFarm", Id = 0, Price = 249, Name = "Auto Farm", Blurb = "Your pets attack the nearest coins on their own." },
 	{ Key = "BigBackpack", Id = 0, Price = 99, Name = "Big Backpack", Blurb = "+150 pet storage." },
 } :: { Pass }
 

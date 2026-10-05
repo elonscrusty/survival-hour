@@ -21,23 +21,23 @@ Eggs.List = {
 		{ Pet = "Puppy", Weight = 55 }, { Pet = "Kitten", Weight = 30 }, { Pet = "Bunny", Weight = 12 },
 		{ Pet = "Fox", Weight = 2.7 }, { Pet = "HoneyBear", Weight = 0.3 },
 	} },
-	{ Id = "GroveEgg", Name = "Grove Egg", Area = "Grove", Currency = "Coins", Cost = 1500, Odds = {
+	{ Id = "GroveEgg", Name = "Grove Egg", Area = "Grove", Currency = "Coins", Cost = 3600, Odds = {
 		{ Pet = "Toadstool", Weight = 55 }, { Pet = "Snail", Weight = 30 }, { Pet = "Frog", Weight = 12 },
 		{ Pet = "Owl", Weight = 2.7 }, { Pet = "GlowcapDragon", Weight = 0.3 },
 	} },
-	{ Id = "FrostEgg", Name = "Frost Egg", Area = "Frost", Currency = "Coins", Cost = 22000, Odds = {
+	{ Id = "FrostEgg", Name = "Frost Egg", Area = "Frost", Currency = "Coins", Cost = 72000, Odds = {
 		{ Pet = "Penguin", Weight = 55 }, { Pet = "SnowBunny", Weight = 30 }, { Pet = "ArcticFox", Weight = 12 },
 		{ Pet = "Yeti", Weight = 2.7 }, { Pet = "AuroraWolf", Weight = 0.3 },
 	} },
-	{ Id = "CoralEgg", Name = "Coral Egg", Area = "Coral", Currency = "Coins", Cost = 330000, Odds = {
+	{ Id = "CoralEgg", Name = "Coral Egg", Area = "Coral", Currency = "Coins", Cost = 1.5e6, Odds = {
 		{ Pet = "Crab", Weight = 55 }, { Pet = "Turtle", Weight = 30 }, { Pet = "Pufferfish", Weight = 12 },
 		{ Pet = "Octopus", Weight = 2.7 }, { Pet = "Narwhal", Weight = 0.3 },
 	} },
-	{ Id = "VolcanoEgg", Name = "Volcano Egg", Area = "Volcano", Currency = "Coins", Cost = 5e6, Odds = {
+	{ Id = "VolcanoEgg", Name = "Volcano Egg", Area = "Volcano", Currency = "Coins", Cost = 3e7, Odds = {
 		{ Pet = "LavaSlime", Weight = 55 }, { Pet = "Salamander", Weight = 30 }, { Pet = "EmberBat", Weight = 12 },
 		{ Pet = "LavaGolem", Weight = 2.7 }, { Pet = "InfernoDragon", Weight = 0.3 },
 	} },
-	{ Id = "StarEgg", Name = "Star Egg", Area = "Starfall", Currency = "Coins", Cost = 7.5e7, Odds = {
+	{ Id = "StarEgg", Name = "Star Egg", Area = "Starfall", Currency = "Coins", Cost = 5.4e8, Odds = {
 		{ Pet = "CometCat", Weight = 55 }, { Pet = "MoonBunny", Weight = 30 }, { Pet = "NebulaFox", Weight = 12 },
 		{ Pet = "GalaxyAxolotl", Weight = 2.65 }, { Pet = "CelestialDragon", Weight = 0.3 }, { Pet = "CosmicUnicorn", Weight = 0.05 },
 	} },
