@@ -11,8 +11,8 @@ Everything here is done on a PC in Roblox Studio or on create.roblox.com.
 ## 2. Publish
 1. File → **Publish to Roblox As…** → new experience, name **Pet Expedition**.
 2. Game Settings → **Security** → turn on **Enable Studio Access to API Services** (this lets saving work in Studio).
-3. Game Settings → Basic Info: upload `renders/marketing/icon.png` as the icon, and the two
-   `renders/marketing/thumb*.png` files as thumbnails. Genre: Simulator. Set Maturity questionnaire (all "No").
+3. Game Settings → Basic Info: upload `renders/marketing/icon_512.png` as the icon, and
+   `renders/marketing/thumbnail_1.jpg` / `thumbnail_2.jpg` as thumbnails. Genre: Simulator. Set Maturity questionnaire (all "No").
 4. Permissions → **Public** when you're ready.
 
 ## 3. Create the Robux items
