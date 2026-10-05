@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local Tracks = require(Shared.Tracks)
 local TrackLayout = require(Shared.Logic.TrackLayout)
+local Assets = require(Shared.Assets)
 
 local TrackBuilder = {}
 
@@ -139,6 +140,9 @@ function TrackBuilder.Build(track: any): Built
 			for k = 1, n do
 				local x = p.X0 + L * k / (n + 1)
 				local side = if k % 2 == 0 then 1 else -1
+				if Assets.Place("Pillar", CFrame.new(at(x, p.Y0, side * W * 0.2)), folder) then
+					continue
+				end
 				Util.Part({
 					Size = Vector3.new(4, 12, W * 0.6),
 					CFrame = CFrame.new(at(x, p.Y0 + 6, side * W * 0.2)),
@@ -201,7 +205,12 @@ function TrackBuilder.Build(track: any): Built
 
 	-- Start and finish arches.
 	local function arch(x: number, y: number, label: string, color: Color3)
+		-- The arch model spans its X axis; turn it to span the lane (Z).
+		local archMesh = Assets.Place("RaceArch", CFrame.new(at(x, y)) * CFrame.Angles(0, math.rad(90), 0), folder)
 		for _, side in { -1, 1 } do
+			if archMesh then
+				break
+			end
 			Util.Part({
 				Size = Vector3.new(2, 16, 2),
 				CFrame = CFrame.new(at(x, y + 8, side * (W / 2 - 1))),
@@ -211,7 +220,7 @@ function TrackBuilder.Build(track: any): Built
 		end
 		local top = Util.Part({
 			Size = Vector3.new(2, 4, W),
-			CFrame = CFrame.new(at(x, y + 18)),
+			CFrame = CFrame.new(at(x, y + if archMesh then 22 else 18)),
 			Color = color,
 			Name = "ArchTop",
 		}, folder)
@@ -243,6 +252,10 @@ function TrackBuilder.Build(track: any): Built
 	-- Floating clouds/scenery far below so the sky track doesn't feel empty.
 	local rng = Random.new(#track.Id)
 	for _ = 1, 18 do
+		local cloudAt = at(rng:NextNumber(-60, layout.Length + 60), layout.MinY - rng:NextNumber(60, 140), rng:NextNumber(-150, 150))
+		if Assets.Place("Cloud", CFrame.new(cloudAt) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), folder, rng:NextNumber(0.8, 1.8)) then
+			continue
+		end
 		local c = Util.Part({
 			Size = Vector3.new(rng:NextNumber(30, 70), rng:NextNumber(8, 16), rng:NextNumber(30, 60)),
 			CFrame = CFrame.new(at(rng:NextNumber(-60, layout.Length + 60), layout.MinY - rng:NextNumber(60, 140), rng:NextNumber(-150, 150))),

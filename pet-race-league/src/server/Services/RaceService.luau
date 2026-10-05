@@ -25,7 +25,7 @@ type Racer = {
 	Finished: boolean,
 	Time: number?,
 	Char: Model?,
-	MaxSpeed: number,
+	Walk: number, -- ride speed at the start (anti-cheat)
 	FrozenUntil: number,
 	Left: boolean,
 }
@@ -41,6 +41,7 @@ local startAt = 0
 local endAt = 0
 local firstFinish: number? = nil
 local lastQueueSig = -1
+local abort: () -> ()
 
 local function send(p: Player, kind: string, data: any?)
 	Net.Event("Race"):FireClient(p, kind, data)
@@ -86,10 +87,10 @@ local function queued(): { Player }
 	return out
 end
 
-local function maxSpeedFor(p: Player): number
+local function walkFor(p: Player): number
 	local d = ctx.DataService.Get(p)
 	local pet = d and Profile.EquippedPet(d)
-	return PetStats.MaxSpeed(pet) * Config.Race.BoostMult
+	return if pet then PetStats.Ride(pet).WalkSpeed else Config.Ride.OnFootSpeed
 end
 
 local function startRace(players: { Player })
@@ -112,7 +113,7 @@ local function startRace(players: { Player })
 			Progress = 0,
 			Finished = false,
 			Char = p.Character,
-			MaxSpeed = maxSpeedFor(p),
+			Walk = walkFor(p),
 			FrozenUntil = 0,
 			Left = false,
 		}
@@ -252,6 +253,8 @@ local function racerTick(r: Racer, now: number)
 	-- Respawned after a reset: put them back at their checkpoint.
 	if p.Character ~= r.Char then
 		r.Char = p.Character
+		-- skip fall checks until the delayed respawn has put them back on the track
+		r.FrozenUntil = now + 0.8
 		task.delay(0.6, function()
 			if racerOf(p) == r and not r.Finished then
 				ctx.PetService.SetRiding(p, true, true)
@@ -291,7 +294,7 @@ local function racerTick(r: Racer, now: number)
 			nextCp = r.Cp + 1
 			targetX = layout.Checkpoints[nextCp].X
 		end
-		if not RaceRules.Plausible(targetX - r.CpX, now - r.CpAt, r.MaxSpeed) then
+		if not RaceRules.Plausible(targetX, now - startAt, r.Walk) or not RaceRules.BurstOk(targetX - r.CpX, now - r.CpAt, r.Walk) then
 			respawn(r)
 			warn("[Race] " .. p.Name .. " moved too fast; sent back")
 			return
@@ -369,6 +372,20 @@ local function standings()
 	end
 end
 
+-- Something broke: send everyone back to the lobby and get ready for the next race.
+abort = function()
+	for _, r in racers do
+		if not r.Left then
+			pcall(release, r)
+		end
+	end
+	racers = {}
+	ctx.TrackBuilder.Clear()
+	built = nil
+	phase = "Idle"
+	ctx.WorldService.SetPortalText("Stand here to race!")
+end
+
 function RaceService.Init(c)
 	ctx = c
 	Util = c.Util
@@ -419,18 +436,20 @@ function RaceService.Start()
 					local ok, err = pcall(startRace, q)
 					if not ok then
 						warn("[Race] start failed: " .. tostring(err))
-						for _, r in racers do
-							release(r)
-						end
-						racers = {}
-						phase = "Idle"
+						abort()
 					end
 				end
 			end
 		elseif phase == "Racing" then
-			raceTick()
-			if phase == "Racing" then
-				standings()
+			local ok, err = pcall(function()
+				raceTick()
+				if phase == "Racing" then
+					standings()
+				end
+			end)
+			if not ok then
+				warn("[Race] race loop error: " .. tostring(err))
+				abort()
 			end
 		end
 	end

@@ -9,6 +9,7 @@ Net.Init()
 local Services = script.Parent:WaitForChild("Services")
 local order = {
 	"Util",
+	"AssetLoader",
 	"DataService",
 	"WorldService",
 	"PetService",

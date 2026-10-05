@@ -53,7 +53,26 @@ return {
 	end,
 	plausible = function(t)
 		t.ok(RaceRules.Plausible(60, 2, 30))
-		t.ok(not RaceRules.Plausible(500, 1, 30))
+		t.ok(not RaceRules.Plausible(500, 3, 20), "teleporting 500 studs in 3s")
+		t.ok(RaceRules.BurstOk(40, 1, 20))
+		t.ok(not RaceRules.BurstOk(200, 1, 20))
+	end,
+	gold_reachable_legitimately = function(t)
+		-- the gold average speed must be allowed for a well-trained (not maxed) pet
+		local R = Config.Ride
+		local walk = R.BaseSpeed + 30 * R.SpeedPerLevel
+		t.ok(walk * Config.Race.SustainMult > Config.Race.MedalSpeeds.Gold)
+	end,
+	teleport_cheat_cannot_win_gold = function(t)
+		-- An untrained Pup (walk 20) can't be credited with the finish line faster
+		-- than the gold time on any track.
+		local Tracks = require("../src/shared/Tracks")
+		local TrackLayout = require("../src/shared/Logic/TrackLayout")
+		for _, tr in Tracks.List do
+			local l = TrackLayout.Build(tr.Segments)
+			local gold = RaceRules.MedalTimes(l.Length).Gold
+			t.ok(not RaceRules.Plausible(l.Length, gold, Config.Ride.BaseSpeed), tr.Id)
+		end
 	end,
 	leagues = function(t)
 		local i, l = RaceRules.League(0)

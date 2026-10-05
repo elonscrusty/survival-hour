@@ -75,9 +75,16 @@ function RaceRules.Rewards(place: number, count: number, finished: boolean, meda
 	return coins, trophies
 end
 
--- Anti-cheat: could someone move dx studs in dt seconds at this top speed?
-function RaceRules.Plausible(dx: number, dt: number, maxSpeed: number): boolean
-	return dx <= maxSpeed * Config.Race.SpeedSlack * dt + maxSpeed * Config.Race.TimeSlack
+-- Anti-cheat, whole race: could a rider with this walk speed have got `progress`
+-- studs along the track `elapsed` seconds after the start?
+function RaceRules.Plausible(progress: number, elapsed: number, walk: number): boolean
+	return progress <= walk * Config.Race.SustainMult * math.max(0, elapsed) + Config.Race.BurstSlack
+end
+
+-- Anti-cheat, one stretch: dx studs in dt seconds at most at full dash on a boost pad.
+function RaceRules.BurstOk(dx: number, dt: number, walk: number): boolean
+	local top = walk * Config.Ride.DashBoost * Config.Race.BoostMult
+	return dx <= top * math.max(0, dt) + Config.Race.BurstSlack
 end
 
 function RaceRules.League(trophies: number): (number, any)

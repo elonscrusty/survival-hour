@@ -58,13 +58,23 @@ local function tick(p: Player, dt: number)
 	local now = os.clock()
 	local W = ctx.WorldService
 	local T = Config.Training
+	local d = ctx.DataService.Get(p)
+	local pet = d and Profile.EquippedPet(d)
+	if not pet then
+		return
+	end
+	-- Fastest anyone on this pet can really move (a full dash, with some slack).
+	local top = PetStats.MaxSpeed(pet) * 1.2
 
 	-- Speed ring
 	local gates = W.SpeedGates
 	local n = #gates
+	-- Gates are this far apart, so they can't be passed faster than this.
+	local spacing = if n > 1 then (gates[1] - gates[2]).Magnitude else 30
+	local minGap = math.max(T.GateMinGap, (spacing - 16) / top)
 	for i, g in gates do
 		local flat = Vector3.new(pos.X - g.X, 0, pos.Z - g.Z)
-		if flat.Magnitude < 8 and i ~= t.Gate and now - t.GateAt >= T.GateMinGap then
+		if flat.Magnitude < 8 and i ~= t.Gate and now - t.GateAt >= minGap then
 			local ok = false
 			if t.Gate == nil then
 				ok = true
@@ -98,14 +108,17 @@ local function tick(p: Player, dt: number)
 		end
 	end
 
-	-- Hurdles: crossing a hurdle line inside the lane means you jumped it.
-	if t.LastZ then
+	-- Hurdles: crossing a hurdle line inside the lane means you jumped it (the pet's
+	-- collision box blocks walking through). A move faster than anyone can ride
+	-- (a teleport) counts nothing, and at most one hurdle counts per tick.
+	if t.LastZ and math.abs(pos.Z - t.LastZ) <= top * dt + 2 then
 		for i, h in W.Hurdles do
 			if pos.X >= h.X0 and pos.X <= h.X1 and (t.LastZ - h.Z) * (pos.Z - h.Z) < 0 then
 				if now - (t.HurdleAt[i] or 0) > 1.5 then
 					t.HurdleAt[i] = now
 					award(p, "Jump", math.max(2, math.floor(T.GateXp * h.H / 4 + 0.5)))
 				end
+				break
 			end
 		end
 	end
@@ -132,9 +145,8 @@ function TrainingService.Start()
 	Players.PlayerRemoving:Connect(function(p)
 		tracks[p] = nil
 	end)
-	local step = 0.1
 	while true do
-		task.wait(step)
+		local step = task.wait(0.1)
 		for _, p in Players:GetPlayers() do
 			local ok, err = pcall(tick, p, step)
 			if not ok then

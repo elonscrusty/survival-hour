@@ -47,3 +47,12 @@ Open `build/PetRaceLeague.rbxlx`, set Avatar to R15, and turn on API access (Gam
 ## 7. Saving
 - [ ] Stop and Play again: coins, pets, levels, trails and trophies are all still there.
 - [ ] The leaderboard board near the portal lists your name after about a minute.
+
+## 8. Pet collision (new)
+- [ ] Riding into a lobby hurdle stops you: you have to jump it. Walking along the lane gives no Jump XP.
+- [ ] On the track, hurdles and steps need jumps. Ramps and mud don't snag the pet.
+
+## 9. 3D models (after running tools/upload_models.py)
+- [ ] The output says "[AssetLoader] 33 models loaded, 0 failed".
+- [ ] Pets, eggs, trees, gates, the portal and the race arches show as smooth models, sitting on the ground (not floating or sunk).
+- [ ] The ridden pet sits under you correctly. Gold Paint makes it solid gold.

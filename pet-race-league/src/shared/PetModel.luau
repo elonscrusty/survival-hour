@@ -3,6 +3,7 @@
 -- The model faces -Z (Roblox forward). Its feet touch Y = 0 at the pivot.
 local Pets = require("./Pets")
 local Cosmetics = require("./Cosmetics")
+local Assets = require("./Assets")
 
 local PetModel = {}
 
@@ -45,11 +46,60 @@ export type Built = {
 	Root: BasePart,
 	Height: number, -- top of the back, from the feet
 	Legs: { BasePart },
+	Footprint: Vector2, -- body width (X) and length (Z), for the collision box
 }
+
+-- Model name for a species in Models.luau ("Cosmic Cat" -> "Pet_CosmicCat").
+function PetModel.AssetName(speciesId: string): string
+	return "Pet_" .. string.gsub(speciesId, " ", "")
+end
+
+-- The uploaded 3D mesh version, when it has loaded.
+local function fromMesh(s: any, scale: number, paint: string?): Built?
+	local model = Assets.Clone(PetModel.AssetName(s.Id))
+	local mesh = model and model.PrimaryPart
+	if not model or not mesh or not mesh:IsA("MeshPart") then
+		return nil
+	end
+	if scale ~= 1 then
+		model:ScaleTo(scale)
+	end
+	mesh.Anchored = false
+	mesh.CanCollide = false
+	mesh.CanQuery = false
+	mesh.CanTouch = false
+	mesh.Massless = true
+	local paintDef = paint and Cosmetics.ById[paint]
+	if paintDef and paintDef.Kind == "Paint" then
+		-- a painted pet is one solid colour, like a statue
+		mesh.TextureID = ""
+		mesh.Color = rgb(paintDef.Colors[1])
+		mesh.Material = Enum.Material.SmoothPlastic
+	end
+	if s.Neon then
+		local light = Instance.new("PointLight")
+		light.Color = rgb(s.Accent)
+		light.Range = 10 * scale
+		light.Brightness = 1.5
+		light.Parent = mesh
+	end
+	model.Name = s.Name
+	return {
+		Model = model,
+		Root = mesh,
+		Height = (s.Legs + s.Body[2]) * scale,
+		Legs = {},
+		Footprint = Vector2.new(s.Body[1] * scale, (s.Body[3] + s.Head) * scale),
+	}
+end
 
 -- scale: overall size (grows with level). paint: cosmetic id or nil.
 function PetModel.Build(speciesId: string, scale: number, paint: string?): Built
 	local s = Pets.ById[speciesId] or Pets.ById.Pup
+	local meshed = fromMesh(s, scale, paint)
+	if meshed then
+		return meshed
+	end
 	local model = Instance.new("Model")
 	model.Name = s.Name
 	local k = scale
@@ -159,9 +209,10 @@ function PetModel.Build(speciesId: string, scale: number, paint: string?): Built
 		end
 	end
 	local _ = head
-	-- Pivot at the feet so callers can place the pet on the ground.
-	model.WorldPivot = CFrame.new()
-	return { Model = model, Root = body, Height = legH + by, Legs = legs }
+	-- Pivot at the feet so callers can place the pet on the ground. A model with a
+	-- PrimaryPart pivots on that part, so the offset goes on the body.
+	body.PivotOffset = CFrame.new(0, -bodyY, 0)
+	return { Model = model, Root = body, Height = legH + by, Legs = legs, Footprint = Vector2.new(bx, bz + headS) }
 end
 
 -- Adds or replaces a trail behind the pet.

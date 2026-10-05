@@ -8,6 +8,7 @@ local Shared = ReplicatedStorage.Shared
 local Eggs = require(Shared.Eggs)
 local Pets = require(Shared.Pets)
 local Hatch = require(Shared.Logic.Hatch)
+local Assets = require(Shared.Assets)
 
 local WorldService = {}
 local Util
@@ -24,7 +25,12 @@ local lobby: Folder
 
 local GRASS = Color3.fromRGB(110, 200, 90)
 
-local function tree(pos: Vector3, scale: number)
+local TREES = { "Tree_Round", "Tree_Pine", "Tree_Blossom" }
+
+local function tree(pos: Vector3, scale: number, rng: Random)
+	if Assets.Place(TREES[rng:NextInteger(1, #TREES)], CFrame.new(pos) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), lobby, scale) then
+		return
+	end
 	Util.Part({
 		Size = Vector3.new(8, 1.6, 1.6) * scale,
 		CFrame = CFrame.new(pos + Vector3.new(0, 4 * scale, 0)),
@@ -118,9 +124,31 @@ local function buildGround()
 		local z = rng:NextNumber(-230, 230)
 		-- keep clear of the play areas
 		if math.abs(x) > 140 or math.abs(z) > 120 then
-			tree(Vector3.new(x, 0, z), rng:NextNumber(0.8, 1.4))
+			tree(Vector3.new(x, 0, z), rng:NextNumber(0.8, 1.4), rng)
 		end
 	end
+	-- Extra decoration that only exists as 3D models (skipped until they're uploaded).
+	for _ = 1, 60 do
+		local x = rng:NextNumber(-235, 235)
+		local z = rng:NextNumber(-235, 235)
+		if math.abs(x) > 130 or math.abs(z) > 110 or (math.abs(x) > 20 and math.abs(z) > 20 and math.abs(x) < 35) then
+			local kind = ({ "Bush", "Rock", "Flowers", "Flowers" })[rng:NextInteger(1, 4)]
+			Assets.Place(kind, CFrame.new(x, 0, z) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), lobby, rng:NextNumber(0.8, 1.3))
+		end
+	end
+	-- Fence around the edge, lamps along the paths, and a trophy by the spawn.
+	if Assets.Has("Fence") then
+		for i = -20, 20 do
+			for _, side in { -1, 1 } do
+				Assets.Place("Fence", CFrame.new(i * 12, 0, side * 244), lobby)
+				Assets.Place("Fence", CFrame.new(side * 244, 0, i * 12) * CFrame.Angles(0, math.rad(90), 0), lobby)
+			end
+		end
+	end
+	for _, p in { Vector3.new(7, 0, -20), Vector3.new(-7, 0, -20), Vector3.new(7, 0, 30), Vector3.new(-7, 0, 30), Vector3.new(30, 0, 7), Vector3.new(60, 0, -7), Vector3.new(-30, 0, 7), Vector3.new(-60, 0, -7) } do
+		Assets.Place("LampPost", CFrame.new(p), lobby)
+	end
+	Assets.Place("TrophyStatue", CFrame.new(22, 0, 18) * CFrame.Angles(0, math.rad(-135), 0), lobby)
 end
 
 local function buildEggs()
@@ -130,14 +158,20 @@ local function buildEggs()
 	for i, egg in Eggs.List do
 		local pos = Vector3.new(startX + (i - 1) * spacing, 0, -55)
 		WorldService.EggStands[egg.Id] = pos
-		Util.Part({
+		local meshPedestal = Assets.Place("Pedestal", CFrame.new(pos), lobby)
+		local pedestalPart = Util.Part({
 			Size = Vector3.new(3, 10, 10),
 			CFrame = CFrame.new(pos + Vector3.new(0, 1.5, 0)),
 			Color = Color3.fromRGB(240, 240, 240),
 			Material = Enum.Material.Marble,
 			Shape = Enum.PartType.Cylinder,
 			Name = "Pedestal",
-		}, lobby).CFrame = CFrame.new(pos + Vector3.new(0, 1.5, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		}, lobby)
+		pedestalPart.CFrame = CFrame.new(pos + Vector3.new(0, 1.5, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		if meshPedestal then
+			pedestalPart.Transparency = 1 -- keep it as the collider/stand height
+		end
+		local eggMesh = Assets.Place("Egg_" .. egg.Id, CFrame.new(pos + Vector3.new(0, 3, 0)), lobby)
 		local e = Util.Part({
 			Size = Vector3.new(5, 7, 5),
 			CFrame = CFrame.new(pos + Vector3.new(0, 6.5, 0)),
@@ -148,8 +182,12 @@ local function buildEggs()
 		local mesh = Instance.new("SpecialMesh")
 		mesh.MeshType = Enum.MeshType.Sphere
 		mesh.Parent = e
+		if eggMesh then
+			e.Transparency = 1 -- the mesh egg shows; this part still holds the prompt
+			e.CanCollide = false
+		end
 		-- Spots
-		for s = 1, 5 do
+		for s = 1, if eggMesh then 0 else 5 do
 			local a = s * 1.3
 			local spot = Util.Part({
 				Size = Vector3.new(1.2, 1.2, 0.3),
@@ -241,7 +279,11 @@ local function buildTraining()
 		local pos = center + Vector3.new(math.cos(a) * radius, 0, math.sin(a) * radius)
 		table.insert(WorldService.SpeedGates, pos)
 		local facing = CFrame.lookAt(pos, center)
+		local gateMesh = Assets.Place("SpeedGate", facing, lobby)
 		for _, side in { -1, 1 } do
+			if gateMesh then
+				break
+			end
 			Util.Part({
 				Size = Vector3.new(1.2, 14, 1.2),
 				CFrame = facing * CFrame.new(side * 7, 7, 0),
@@ -257,6 +299,10 @@ local function buildTraining()
 			Material = Enum.Material.Neon,
 			Name = "GateTop",
 		}, lobby)
+		if gateMesh then
+			top.Transparency = 1
+			top.CanCollide = false
+		end
 		Util.Label(top, tostring(i), 2)
 	end
 
@@ -325,7 +371,11 @@ local function buildPortal()
 		CanCollide = false,
 		Name = "PortalPad",
 	}, lobby)
+	local portalMesh = Assets.Place("PortalArch", CFrame.new(c + Vector3.new(0, 0, 10)), lobby)
 	for _, side in { -1, 1 } do
+		if portalMesh then
+			break
+		end
 		Util.Part({
 			Size = Vector3.new(3, 22, 3),
 			CFrame = CFrame.new(c + Vector3.new(side * 15, 11, 10)),
@@ -341,6 +391,10 @@ local function buildPortal()
 		Material = Enum.Material.Slate,
 		Name = "PortalTop",
 	}, lobby)
+	if portalMesh then
+		top.Transparency = 1 -- the arch mesh shows; the part keeps the status label
+		top.CanCollide = false
+	end
 	local status = Util.Label(top, "Stand here to race!", 6, Color3.fromRGB(255, 230, 255))
 	status.Name = "PortalStatus"
 	status.MaxDistance = 250

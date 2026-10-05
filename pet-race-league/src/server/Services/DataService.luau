@@ -59,13 +59,43 @@ local function syncLeaderstats(p: Player, d: Profile.Data)
 	p:SetAttribute("League", league.Name)
 end
 
+-- Saves are stored as { Data = profile, Lock = { Job, At } }. The lock stops two
+-- servers using the same save at once (e.g. a quick server hop): a new server waits
+-- for the old one to save and let go, and a server that lost its lock stops saving.
+local JOB = if game.JobId ~= "" then game.JobId else "studio"
+local LOCK_STALE = 600 -- seconds: a lock this old belongs to a crashed server
+
 local function load(p: Player)
 	local data: Profile.Data
 	if store then
-		local ok, raw = withRetry(function()
-			return (store :: DataStore):GetAsync(key(p))
-		end)
-		if not ok then
+		local raw = nil
+		local got = false
+		for attempt = 1, 6 do
+			local locked = false
+			local ok, err = pcall(function()
+				(store :: DataStore):UpdateAsync(key(p), function(old)
+					local lock = type(old) == "table" and old.Lock
+					if type(lock) == "table" and lock.Job ~= JOB and type(lock.At) == "number" and os.time() - lock.At < LOCK_STALE and attempt < 6 then
+						locked = true
+						return nil -- leave it alone; try again shortly
+					end
+					raw = if type(old) == "table" then old.Data else nil
+					return { Data = raw, Lock = { Job = JOB, At = os.time() } }
+				end)
+			end)
+			if ok and not locked then
+				got = true
+				break
+			end
+			if not ok then
+				warn("Load attempt failed for " .. p.Name .. ": " .. tostring(err))
+			end
+			task.wait(if locked then 5 else attempt)
+			if not p.Parent then
+				return
+			end
+		end
+		if not got then
 			-- Don't risk overwriting real data with a fresh profile.
 			p:Kick("Couldn't load your save. Please rejoin in a minute.")
 			return
@@ -86,21 +116,36 @@ local function load(p: Player)
 	end
 end
 
-local function save(p: Player)
+-- Writes the profile. release = true also lets go of the session lock (on leave).
+-- Returns true when the save is safely stored.
+local function save(p: Player, release: boolean?): boolean
 	local d = profiles[p]
 	if not d or not store or not loaded[p] then
-		return
+		return false
 	end
 	dirty[p] = nil
+	local lost = false
 	local ok, err = withRetry(function()
-		return (store :: DataStore):UpdateAsync(key(p), function()
-			return d
+		return (store :: DataStore):UpdateAsync(key(p), function(old)
+			local lock = type(old) == "table" and old.Lock
+			if type(lock) == "table" and lock.Job ~= JOB then
+				lost = true -- another server has this save now: don't overwrite it
+				return nil
+			end
+			return { Data = d, Lock = if release then nil else { Job = JOB, At = os.time() } }
 		end)
 	end)
+	if lost then
+		warn("Save skipped for " .. p.Name .. ": another server owns this save")
+		loaded[p] = nil
+		return false
+	end
 	if not ok then
 		warn("Save failed for " .. p.Name .. ": " .. tostring(err))
 		dirty[p] = true
+		return false
 	end
+	return true
 end
 
 function DataService.Init()
@@ -130,7 +175,7 @@ function DataService.Start()
 		task.spawn(load, p)
 	end
 	Players.PlayerRemoving:Connect(function(p)
-		save(p)
+		save(p, true)
 		profiles[p] = nil
 		loaded[p] = nil
 		dirty[p] = nil
@@ -138,7 +183,7 @@ function DataService.Start()
 	game:BindToClose(function()
 		local threads = {}
 		for p in profiles do
-			table.insert(threads, task.spawn(save, p))
+			table.insert(threads, task.spawn(save, p, true))
 		end
 		local deadline = os.clock() + 25
 		while os.clock() < deadline do
@@ -195,8 +240,12 @@ function DataService.AddCoins(p: Player, amount: number)
 	end
 end
 
-function DataService.SaveNow(p: Player)
-	task.spawn(save, p)
+-- Saves straight away and waits. Returns true if stored (or if saving is off).
+function DataService.SaveNow(p: Player): boolean
+	if not store then
+		return true
+	end
+	return save(p)
 end
 
 return DataService

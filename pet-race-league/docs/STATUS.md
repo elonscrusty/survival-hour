@@ -12,10 +12,13 @@
 - Shop: coin cosmetics (trails, paint), plus Robux coin packs, cosmetics and the Big Barn pass.
 - Saving with DataStore: retries, autosave, save on shutdown, duplicate-receipt guard.
 - First-time tutorial cards.
-- 42 unit tests, a clean type check and a Rojo build.
+- 33 Blender models (pets, eggs, trees, rocks, flowers, fence, lamps, pedestal, speed gate, portal arch, race arch, pillar, cloud, trophy statue), an upload script and a loader with part fallbacks.
+- Review fixes: whole-race anti-cheat (no teleport wins), training teleport checks, pet collision box (hurdles must be jumped), pet pivot at feet, session-locked saves, Robux purchases confirmed only after saving, a race loop that recovers from errors.
+- 54 unit tests, a clean type check and a Rojo build.
 
 ## Not tested yet
 - Nothing has run in Studio yet. Follow `docs/STUDIO_TESTS.md`.
+- Models aren't uploaded yet (`tools/upload_models.py`, needs the owner's Open Cloud key).
 
 ## Ideas for next passes
 - Sounds and music.

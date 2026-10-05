@@ -112,6 +112,7 @@ local function mount(p: Player)
 	if not pet or not char or not root or not hum or hum.Health <= 0 then
 		return
 	end
+	local wasRiding = s.Riding and s.Built ~= nil
 	destroyModel(s)
 	local ride = PetStats.Ride(pet)
 	local built = PetModel.Build(pet.Species, ride.Size, pet.Paint)
@@ -127,13 +128,35 @@ local function mount(p: Player)
 	weld.Part0 = root
 	weld.Part1 = built.Root
 	weld.Parent = built.Root
+	-- Invisible box around the pet's body that collides with the world, so hurdles,
+	-- steps and pillars block the pet (the visible parts don't collide). It starts
+	-- 1 stud up so it never drags on floors or ramps.
+	local fp = built.Footprint
+	local boxH = math.max(0.5, built.Height - 1)
+	local hitbox = Instance.new("Part")
+	hitbox.Name = "Hitbox"
+	hitbox.Size = Vector3.new(fp.X * 0.9, boxH, fp.Y * 0.9)
+	hitbox.CFrame = built.Model:GetPivot() * CFrame.new(0, 1 + boxH / 2, 0)
+	hitbox.Transparency = 1
+	hitbox.CanCollide = true
+	hitbox.CanQuery = false
+	hitbox.CanTouch = false
+	hitbox.Massless = true
+	hitbox.Parent = built.Model
+	local hw = Instance.new("WeldConstraint")
+	hw.Part0 = built.Root
+	hw.Part1 = hitbox
+	hw.Parent = hitbox
 	built.Model.Name = "RiddenPet"
 	built.Model.Parent = char
 	s.Built = built
 	s.Uid = pet.Uid
 	s.Riding = true
-	-- lift the character so the pet doesn't sink into the floor
-	root.CFrame += Vector3.new(0, built.Height, 0)
+	-- Lift the character so the pet doesn't sink into the floor (only when getting on,
+	-- so swapping pets or cosmetics can't be spammed as a lift).
+	if not wasRiding then
+		root.CFrame += Vector3.new(0, built.Height, 0)
+	end
 	PetService.Apply(p)
 end
 
@@ -400,7 +423,7 @@ function PetService.Start()
 	Util.Connect("SetCosmetic", 0.4, function(p, kind, id)
 		local d = Data.Get(p)
 		local pet = d and Profile.EquippedPet(d)
-		if not d or not pet or (kind ~= "Trail" and kind ~= "Paint") then
+		if not d or not pet or state(p).Locked or (kind ~= "Trail" and kind ~= "Paint") then
 			return
 		end
 		if id ~= nil then

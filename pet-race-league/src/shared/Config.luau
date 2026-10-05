@@ -71,9 +71,11 @@ Config.Race = {
 	PlaceTrophies = { 12, 9, 7, 5, 4, 3, 2, 2 },
 	MedalTrophies = { Gold = 3, Silver = 2, Bronze = 1 },
 	SoloTrophyCap = 3, -- solo races give medal trophies only
-	-- Anti-cheat: the fastest legal speed between checkpoints, with slack.
-	SpeedSlack = 1.35,
-	TimeSlack = 0.75,
+	-- Anti-cheat. Over the whole race nobody can average more than walk speed times
+	-- SustainMult (boost pads and dashes included); between two checkpoints nobody can
+	-- beat a full dash on a boost pad. Both allow BurstSlack studs of wiggle room.
+	SustainMult = 1.45,
+	BurstSlack = 8,
 	-- Medal targets: average speeds (studs/s) needed over the whole track.
 	MedalSpeeds = { Gold = 34, Silver = 27, Bronze = 20 },
 }

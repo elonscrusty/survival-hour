@@ -107,7 +107,8 @@ function ShopService.Start()
 			return Enum.ProductPurchaseDecision.NotProcessedYet
 		end
 		if not Profile.TakeReceipt(d, info.PurchaseId) then
-			return Enum.ProductPurchaseDecision.PurchaseGranted -- already given
+			-- already given; confirm once that is saved
+			return if ctx.DataService.SaveNow(p) then Enum.ProductPurchaseDecision.PurchaseGranted else Enum.ProductPurchaseDecision.NotProcessedYet
 		end
 		if product.Coins then
 			d.Coins += product.Coins
@@ -117,7 +118,11 @@ function ShopService.Start()
 			ctx.Util.Notify(p, "Unlocked " .. product.Name .. "!", "Level")
 		end
 		ctx.DataService.Changed(p)
-		ctx.DataService.SaveNow(p)
+		-- Only confirm once it's saved. If the save fails Roblox retries later; the
+		-- receipt id is already in the profile, so the retry won't give it twice.
+		if not ctx.DataService.SaveNow(p) then
+			return Enum.ProductPurchaseDecision.NotProcessedYet
+		end
 		return Enum.ProductPurchaseDecision.PurchaseGranted
 	end
 end

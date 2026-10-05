@@ -9,6 +9,54 @@
       </Properties>
       <Item class="ModuleScript" referent="2">
         <Properties>
+          <string name="Name">Assets</string>
+          <string name="Source"><![CDATA[-- Loaded 3D models (see server AssetLoader and Models.luau). The server puts each
+-- model in ReplicatedStorage.PetRaceModels as a Model whose pivot is the bottom
+-- centre, so both server and client can clone them. Everything that uses a model
+-- has a part-built fallback, so the game works before the models are uploaded.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Assets = {}
+
+local function folder(): Instance?
+	return ReplicatedStorage:FindFirstChild("PetRaceModels")
+end
+
+function Assets.Has(name: string): boolean
+	local f = folder()
+	return f ~= nil and f:FindFirstChild(name) ~= nil
+end
+
+-- A fresh copy (pivot at the origin, unparented), or nil if it isn't loaded.
+function Assets.Clone(name: string): Model?
+	local f = folder()
+	local src = f and f:FindFirstChild(name)
+	if not src or not src:IsA("Model") then
+		return nil
+	end
+	return src:Clone()
+end
+
+-- Clones, scales and places a model with its pivot at cf. Returns nil if not loaded.
+function Assets.Place(name: string, cf: CFrame, parent: Instance, scale: number?): Model?
+	local m = Assets.Clone(name)
+	if not m then
+		return nil
+	end
+	if scale and scale ~= 1 then
+		m:ScaleTo(scale)
+	end
+	m:PivotTo(cf)
+	m.Parent = parent
+	return m
+end
+
+return Assets
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="3">
+        <Properties>
           <string name="Name">Config</string>
           <string name="Source"><![CDATA[-- All tuning numbers for Pet Race League live here.
 local Config = {}
@@ -83,9 +131,11 @@ Config.Race = {
 	PlaceTrophies = { 12, 9, 7, 5, 4, 3, 2, 2 },
 	MedalTrophies = { Gold = 3, Silver = 2, Bronze = 1 },
 	SoloTrophyCap = 3, -- solo races give medal trophies only
-	-- Anti-cheat: the fastest legal speed between checkpoints, with slack.
-	SpeedSlack = 1.35,
-	TimeSlack = 0.75,
+	-- Anti-cheat. Over the whole race nobody can average more than walk speed times
+	-- SustainMult (boost pads and dashes included); between two checkpoints nobody can
+	-- beat a full dash on a boost pad. Both allow BurstSlack studs of wiggle room.
+	SustainMult = 1.45,
+	BurstSlack = 8,
 	-- Medal targets: average speeds (studs/s) needed over the whole track.
 	MedalSpeeds = { Gold = 34, Silver = 27, Bronze = 20 },
 }
@@ -104,7 +154,7 @@ return Config
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="3">
+      <Item class="ModuleScript" referent="4">
         <Properties>
           <string name="Name">Cosmetics</string>
           <string name="Source"><![CDATA[-- Cosmetics: trails and pet paint. Looks only, never stats.
@@ -140,7 +190,7 @@ return Cosmetics
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="4">
+      <Item class="ModuleScript" referent="5">
         <Properties>
           <string name="Name">Eggs</string>
           <string name="Source"><![CDATA[-- Eggs are bought with Coins (earned by racing and training). Weights are relative.
@@ -210,11 +260,93 @@ return Eggs
 ]]></string>
         </Properties>
       </Item>
-      <Item class="Folder" referent="5">
+      <Item class="Folder" referent="6">
         <Properties>
           <string name="Name">Logic</string>
         </Properties>
-        <Item class="ModuleScript" referent="6">
+        <Item class="ModuleScript" referent="7">
+          <Properties>
+            <string name="Name">AssetFit</string>
+            <string name="Source"><![CDATA[--!strict
+-- Fits an uploaded mesh to the size the pack catalog says it should have.
+-- FBX files uploaded through Open Cloud may come in with a different unit
+-- scale or with two axes swapped (up/forward conventions), so the loader
+-- compares the mesh's local size with the authored size and picks the axis
+-- mapping that matches best. Pure; tested by tests/AssetFit.spec.luau.
+
+local AssetFit = {}
+
+export type Fit = {
+	Perm: { number }, -- Perm[i] = catalog (world) axis that local axis i points along
+	Sign: { number }, -- +1 / -1 per local axis (keeps the rotation proper)
+	LocalSize: { number }, -- size to give the mesh, in its own axes
+	Scale: number, -- uniform scale the upload was off by (1 = correct)
+	Error: number, -- max relative mismatch after the uniform scale
+}
+
+local PERMS = { { 1, 2, 3 }, { 1, 3, 2 }, { 2, 1, 3 }, { 2, 3, 1 }, { 3, 1, 2 }, { 3, 2, 1 } }
+local ODD = { false, true, true, false, false, true }
+
+local function score(mesh: { number }, target: { number }, perm: { number }): (number, number)
+	local ratios = {}
+	local sum = 0
+	for i = 1, 3 do
+		local r = mesh[i] / math.max(target[perm[i]], 1e-4)
+		ratios[i] = r
+		sum += r
+	end
+	local k = sum / 3
+	local err = 0
+	for i = 1, 3 do
+		err = math.max(err, math.abs(ratios[i] / k - 1))
+	end
+	return err, k
+end
+
+-- mesh: the uploaded MeshPart's Size; target: the catalog size (Roblox axes).
+function AssetFit.Fit(mesh: { number }, target: { number }): Fit
+	local idErr, idK = score(mesh, target, PERMS[1])
+	local best, bestErr, bestK = 1, idErr, idK
+	-- only re-orient when the plain mapping is clearly wrong
+	if idErr > 0.15 then
+		for i = 2, #PERMS do
+			local e, k = score(mesh, target, PERMS[i])
+			if e < bestErr - 0.05 then
+				best, bestErr, bestK = i, e, k
+			end
+		end
+	end
+	local perm = PERMS[best]
+	-- An odd axis swap needs one flipped axis to stay a rotation: flip the one that
+	-- lands on world X (left/right) so up and forward keep their direction.
+	local sign = { 1, 1, 1 }
+	if ODD[best] then
+		for i = 1, 3 do
+			if perm[i] == 1 then
+				sign[i] = -1
+			end
+		end
+	end
+	local localSize = { target[perm[1]], target[perm[2]], target[perm[3]] }
+	return { Perm = perm, Sign = sign, LocalSize = localSize, Scale = bestK, Error = bestErr }
+end
+
+-- Rotation columns (world direction of the mesh's local X, Y, Z) for a Fit.
+function AssetFit.Axes(fit: Fit): { { number } }
+	local cols = {}
+	for i = 1, 3 do
+		local v = { 0, 0, 0 }
+		v[fit.Perm[i]] = fit.Sign[i]
+		cols[i] = v
+	end
+	return cols
+end
+
+return AssetFit
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="8">
           <Properties>
             <string name="Name">Hatch</string>
             <string name="Source"><![CDATA[-- Egg rolls with a pity counter: every Config.Hatch.PityEvery-th hatch of the same
@@ -270,7 +402,7 @@ return Hatch
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="7">
+        <Item class="ModuleScript" referent="9">
           <Properties>
             <string name="Name">PetStats</string>
             <string name="Source"><![CDATA[-- Pet levels, xp and the riding numbers they give.
@@ -382,7 +514,7 @@ return PetStats
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="8">
+        <Item class="ModuleScript" referent="10">
           <Properties>
             <string name="Name">Profile</string>
             <string name="Source"><![CDATA[-- Player save data: defaults, cleaning up loaded data, and pet inventory rules.
@@ -573,7 +705,7 @@ return Profile
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="9">
+        <Item class="ModuleScript" referent="11">
           <Properties>
             <string name="Name">RaceRules</string>
             <string name="Source"><![CDATA[-- Race results, rewards, medals and leagues.
@@ -653,9 +785,16 @@ function RaceRules.Rewards(place: number, count: number, finished: boolean, meda
 	return coins, trophies
 end
 
--- Anti-cheat: could someone move dx studs in dt seconds at this top speed?
-function RaceRules.Plausible(dx: number, dt: number, maxSpeed: number): boolean
-	return dx <= maxSpeed * Config.Race.SpeedSlack * dt + maxSpeed * Config.Race.TimeSlack
+-- Anti-cheat, whole race: could a rider with this walk speed have got `progress`
+-- studs along the track `elapsed` seconds after the start?
+function RaceRules.Plausible(progress: number, elapsed: number, walk: number): boolean
+	return progress <= walk * Config.Race.SustainMult * math.max(0, elapsed) + Config.Race.BurstSlack
+end
+
+-- Anti-cheat, one stretch: dx studs in dt seconds at most at full dash on a boost pad.
+function RaceRules.BurstOk(dx: number, dt: number, walk: number): boolean
+	local top = walk * Config.Ride.DashBoost * Config.Race.BoostMult
+	return dx <= top * math.max(0, dt) + Config.Race.BurstSlack
 end
 
 function RaceRules.League(trophies: number): (number, any)
@@ -688,7 +827,7 @@ return RaceRules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="10">
+        <Item class="ModuleScript" referent="12">
           <Properties>
             <string name="Name">TrackLayout</string>
             <string name="Source"><![CDATA[-- Pure track maths: turns a track's segment list into positioned pieces and
@@ -800,7 +939,58 @@ return TrackLayout
           </Properties>
         </Item>
       </Item>
-      <Item class="ModuleScript" referent="11">
+      <Item class="ModuleScript" referent="13">
+        <Properties>
+          <string name="Name">Models</string>
+          <string name="Source"><![CDATA[--!strict
+-- GENERATED by tools/gen_models.py from models/catalog.json + models/uploaded_ids.json.
+-- Every 3D model built by blender/build.py: its size and pivot offset (pivot minus
+-- bounding-box centre) in studs, Roblox axes. Id is the uploaded Roblox model asset
+-- (nil until uploaded: the game then draws that thing with parts instead).
+
+export type Entry = { Id: number?, Category: string, Size: { number }, Offset: { number } }
+
+local Models: { [string]: Entry } = {
+	["Bush"] = { Id = nil, Category = "Lobby", Size = { 5.15, 2.822, 3.603 }, Offset = { -0.025, -1.349, 0.202 } },
+	["Cloud"] = { Id = nil, Category = "Track", Size = { 36.574, 13, 19 }, Offset = { -0.487, -6.5, 0.5 } },
+	["Egg_Forest"] = { Id = nil, Category = "Eggs", Size = { 5.476, 7, 5.55 }, Offset = { 0, -3.5, 0 } },
+	["Egg_Meadow"] = { Id = nil, Category = "Eggs", Size = { 5.476, 7, 5.55 }, Offset = { 0, -3.5, 0 } },
+	["Egg_Sky"] = { Id = nil, Category = "Eggs", Size = { 5.476, 7, 5.55 }, Offset = { 0, -3.5, 0 } },
+	["Fence"] = { Id = nil, Category = "Lobby", Size = { 12, 3.8, 0.6 }, Offset = { 0, -1.9, 0 } },
+	["Flowers"] = { Id = nil, Category = "Lobby", Size = { 3.844, 1.537, 4.388 }, Offset = { -0.021, -0.768, 0.139 } },
+	["LampPost"] = { Id = nil, Category = "Lobby", Size = { 2, 11.1, 2 }, Offset = { 0, -5.55, 0 } },
+	["Pedestal"] = { Id = nil, Category = "Lobby", Size = { 10.8, 2.8, 10.8 }, Offset = { 0, -1.4, 0 } },
+	["Pet_Bunny"] = { Id = nil, Category = "Pets", Size = { 2.079, 4.509, 5.06 }, Offset = { 0, -2.235, -0.11 } },
+	["Pet_CosmicCat"] = { Id = nil, Category = "Pets", Size = { 2.494, 4.682, 7.252 }, Offset = { 0, -2.317, -0.546 } },
+	["Pet_Deer"] = { Id = nil, Category = "Pets", Size = { 2.079, 5.52, 5.08 }, Offset = { 0, -2.74, 0.3 } },
+	["Pet_Dragon"] = { Id = nil, Category = "Pets", Size = { 7.31, 5.594, 10.7 }, Offset = { 0, -2.767, -1.43 } },
+	["Pet_Fox"] = { Id = nil, Category = "Pets", Size = { 2.079, 3.842, 6.18 }, Offset = { 0, -1.901, -0.27 } },
+	["Pet_Griffin"] = { Id = nil, Category = "Pets", Size = { 6.337, 5.169, 8.818 }, Offset = { 0, -2.558, -0.785 } },
+	["Pet_Kitty"] = { Id = nil, Category = "Pets", Size = { 2.079, 3.642, 6.096 }, Offset = { 0, -1.801, -0.428 } },
+	["Pet_Panda"] = { Id = nil, Category = "Pets", Size = { 2.91, 4.28, 5.456 }, Offset = { 0, -2.112, 0.412 } },
+	["Pet_Penguin"] = { Id = nil, Category = "Pets", Size = { 3.104, 3.752, 4.113 }, Offset = { 0, -1.854, 0.472 } },
+	["Pet_Phoenix"] = { Id = nil, Category = "Pets", Size = { 6.339, 5.432, 8.179 }, Offset = { 0, -2.69, -0.666 } },
+	["Pet_Piggy"] = { Id = nil, Category = "Pets", Size = { 2.702, 3.675, 5.004 }, Offset = { 0, -1.811, 0.33 } },
+	["Pet_Pup"] = { Id = nil, Category = "Pets", Size = { 2.343, 3.627, 4.884 }, Offset = { -0.028, -1.791, 0.358 } },
+	["Pet_Tiger"] = { Id = nil, Category = "Pets", Size = { 2.746, 4.655, 8.299 }, Offset = { 0, -2.302, -0.69 } },
+	["Pet_Unicorn"] = { Id = nil, Category = "Pets", Size = { 2.494, 6.157, 8.191 }, Offset = { 0, -3.054, -0.716 } },
+	["Pet_Wolf"] = { Id = nil, Category = "Pets", Size = { 2.39, 4.508, 6.865 }, Offset = { 0, -2.231, -0.332 } },
+	["Pillar"] = { Id = nil, Category = "Track", Size = { 4, 12, 18 }, Offset = { 0, -6, 0 } },
+	["PortalArch"] = { Id = nil, Category = "Lobby", Size = { 34.4, 28.75, 4.4 }, Offset = { 0, -14.375, 0 } },
+	["RaceArch"] = { Id = nil, Category = "Track", Size = { 30.283, 20, 2.4 }, Offset = { 0, -10, 0 } },
+	["Rock"] = { Id = nil, Category = "Lobby", Size = { 4.686, 2.875, 3.357 }, Offset = { -0.268, -1.404, -0.086 } },
+	["SpeedGate"] = { Id = nil, Category = "Lobby", Size = { 15.6, 15.4, 1.6 }, Offset = { 0, -7.7, 0 } },
+	["Tree_Blossom"] = { Id = nil, Category = "Lobby", Size = { 8.836, 12.75, 6.5 }, Offset = { -0.176, -6.375, 0 } },
+	["Tree_Pine"] = { Id = nil, Category = "Lobby", Size = { 8.774, 12.8, 9 }, Offset = { 0, -6.4, 0 } },
+	["Tree_Round"] = { Id = nil, Category = "Lobby", Size = { 9.372, 15.063, 7.5 }, Offset = { 0.049, -7.368, 0 } },
+	["TrophyStatue"] = { Id = nil, Category = "Lobby", Size = { 7.347, 13.3, 7 }, Offset = { 0, -6.65, 0 } },
+}
+
+return Models
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="14">
         <Properties>
           <string name="Name">Net</string>
           <string name="Source"><![CDATA[-- Remote names in one place. The server creates them; clients wait for them.
@@ -863,7 +1053,7 @@ return Net
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="12">
+      <Item class="ModuleScript" referent="15">
         <Properties>
           <string name="Name">PetModel</string>
           <string name="Source"><![CDATA[-- Builds a pet out of simple parts. Shared so the server (riding, following) and the
@@ -871,6 +1061,7 @@ return Net
 -- The model faces -Z (Roblox forward). Its feet touch Y = 0 at the pivot.
 local Pets = require("./Pets")
 local Cosmetics = require("./Cosmetics")
+local Assets = require("./Assets")
 
 local PetModel = {}
 
@@ -913,11 +1104,60 @@ export type Built = {
 	Root: BasePart,
 	Height: number, -- top of the back, from the feet
 	Legs: { BasePart },
+	Footprint: Vector2, -- body width (X) and length (Z), for the collision box
 }
+
+-- Model name for a species in Models.luau ("Cosmic Cat" -> "Pet_CosmicCat").
+function PetModel.AssetName(speciesId: string): string
+	return "Pet_" .. string.gsub(speciesId, " ", "")
+end
+
+-- The uploaded 3D mesh version, when it has loaded.
+local function fromMesh(s: any, scale: number, paint: string?): Built?
+	local model = Assets.Clone(PetModel.AssetName(s.Id))
+	local mesh = model and model.PrimaryPart
+	if not model or not mesh or not mesh:IsA("MeshPart") then
+		return nil
+	end
+	if scale ~= 1 then
+		model:ScaleTo(scale)
+	end
+	mesh.Anchored = false
+	mesh.CanCollide = false
+	mesh.CanQuery = false
+	mesh.CanTouch = false
+	mesh.Massless = true
+	local paintDef = paint and Cosmetics.ById[paint]
+	if paintDef and paintDef.Kind == "Paint" then
+		-- a painted pet is one solid colour, like a statue
+		mesh.TextureID = ""
+		mesh.Color = rgb(paintDef.Colors[1])
+		mesh.Material = Enum.Material.SmoothPlastic
+	end
+	if s.Neon then
+		local light = Instance.new("PointLight")
+		light.Color = rgb(s.Accent)
+		light.Range = 10 * scale
+		light.Brightness = 1.5
+		light.Parent = mesh
+	end
+	model.Name = s.Name
+	return {
+		Model = model,
+		Root = mesh,
+		Height = (s.Legs + s.Body[2]) * scale,
+		Legs = {},
+		Footprint = Vector2.new(s.Body[1] * scale, (s.Body[3] + s.Head) * scale),
+	}
+end
 
 -- scale: overall size (grows with level). paint: cosmetic id or nil.
 function PetModel.Build(speciesId: string, scale: number, paint: string?): Built
 	local s = Pets.ById[speciesId] or Pets.ById.Pup
+	local meshed = fromMesh(s, scale, paint)
+	if meshed then
+		return meshed
+	end
 	local model = Instance.new("Model")
 	model.Name = s.Name
 	local k = scale
@@ -1027,9 +1267,10 @@ function PetModel.Build(speciesId: string, scale: number, paint: string?): Built
 		end
 	end
 	local _ = head
-	-- Pivot at the feet so callers can place the pet on the ground.
-	model.WorldPivot = CFrame.new()
-	return { Model = model, Root = body, Height = legH + by, Legs = legs }
+	-- Pivot at the feet so callers can place the pet on the ground. A model with a
+	-- PrimaryPart pivots on that part, so the offset goes on the body.
+	body.PivotOffset = CFrame.new(0, -bodyY, 0)
+	return { Model = model, Root = body, Height = legH + by, Legs = legs, Footprint = Vector2.new(bx, bz + headS) }
 end
 
 -- Adds or replaces a trail behind the pet.
@@ -1080,7 +1321,7 @@ return PetModel
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="13">
+      <Item class="ModuleScript" referent="16">
         <Properties>
           <string name="Name">Pets</string>
           <string name="Source"><![CDATA[-- Pet species. Models are built from simple parts (see server PetModel), so no
@@ -1149,7 +1390,7 @@ return Pets
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="14">
+      <Item class="ModuleScript" referent="17">
         <Properties>
           <string name="Name">Products</string>
           <string name="Source"><![CDATA[-- Robux products. Robux buys Coins, cosmetics and storage only, never race speed.
@@ -1175,7 +1416,7 @@ return Products
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="15">
+      <Item class="ModuleScript" referent="18">
         <Properties>
           <string name="Name">Tracks</string>
           <string name="Source"><![CDATA[-- Race tracks. Each track is a straight run along +X made of segments, laid out by
@@ -1283,15 +1524,15 @@ return Tracks
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="16">
+  <Item class="ServerScriptService" referent="19">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="17">
+    <Item class="Folder" referent="20">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="Script" referent="18">
+      <Item class="Script" referent="21">
         <Properties>
           <string name="Name">Main</string>
           <token name="RunContext">0</token>
@@ -1306,6 +1547,7 @@ Net.Init()
 local Services = script.Parent:WaitForChild("Services")
 local order = {
 	"Util",
+	"AssetLoader",
 	"DataService",
 	"WorldService",
 	"PetService",
@@ -1335,11 +1577,144 @@ end
 ]]></string>
         </Properties>
       </Item>
-      <Item class="Folder" referent="19">
+      <Item class="Folder" referent="22">
         <Properties>
           <string name="Name">Services</string>
         </Properties>
-        <Item class="ModuleScript" referent="20">
+        <Item class="ModuleScript" referent="23">
+          <Properties>
+            <string name="Name">AssetLoader</string>
+            <string name="Source"><![CDATA[-- Loads the uploaded 3D models (Shared/Models with an Id) with InsertService into
+-- ReplicatedStorage.PetRaceModels. Each mesh is fitted to its catalog size and
+-- pivot (Logic/AssetFit also fixes uploads with the wrong unit scale or a swapped
+-- up axis). InsertService only loads assets owned by the game's owner, so publish
+-- the place from the account (or group) that uploaded the models.
+-- Init waits up to BLOCK_FOR seconds so the lobby is usually built with meshes;
+-- anything slower keeps loading and is used by whatever is built afterwards.
+local InsertService = game:GetService("InsertService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage.Shared
+local Models = require(Shared.Models)
+local AssetFit = require(Shared.Logic.AssetFit)
+
+local AssetLoader = {}
+
+local WORKERS = 6
+local BLOCK_FOR = 15
+
+-- Props players can bump into. Everything else is decoration (no collisions).
+local SOLID = {
+	Tree_Round = true,
+	Tree_Pine = true,
+	Tree_Blossom = true,
+	Rock = true,
+	Fence = true,
+	Pedestal = true,
+	PortalArch = true,
+	RaceArch = true,
+	Pillar = true,
+	TrophyStatue = true,
+	LampPost = true,
+	SpeedGate = true,
+}
+
+AssetLoader.Loaded = 0
+AssetLoader.Failed = {} :: { string }
+
+local function loadMesh(id: number): (MeshPart?, string?)
+	local ok, container = pcall(InsertService.LoadAsset, InsertService, id)
+	if not ok or not container then
+		return nil, tostring(container)
+	end
+	local best: MeshPart? = nil
+	for _, d in container:GetDescendants() do
+		if d:IsA("MeshPart") and (not best or d.Size.Magnitude > best.Size.Magnitude) then
+			best = d
+		end
+	end
+	if best then
+		best.Parent = nil
+		for _, c in best:GetChildren() do
+			if c:IsA("PackageLink") or c:IsA("Weld") or c:IsA("WeldConstraint") then
+				c:Destroy()
+			end
+		end
+	end
+	container:Destroy()
+	return best, if best then nil else "no MeshPart in asset"
+end
+
+local function build(name: string, e: Models.Entry): (Model?, string?)
+	local mesh, err = loadMesh(e.Id :: number)
+	if not mesh then
+		return nil, err
+	end
+	local f = AssetFit.Fit({ mesh.Size.X, mesh.Size.Y, mesh.Size.Z }, e.Size)
+	local c = AssetFit.Axes(f)
+	local rot = CFrame.fromMatrix(Vector3.zero, Vector3.new(c[1][1], c[1][2], c[1][3]), Vector3.new(c[2][1], c[2][2], c[2][3]), Vector3.new(c[3][1], c[3][2], c[3][3]))
+	mesh.Size = Vector3.new(f.LocalSize[1], f.LocalSize[2], f.LocalSize[3])
+	-- Offset = pivot - centre, so the centre sits at -Offset from the pivot (origin).
+	mesh.CFrame = CFrame.new(-e.Offset[1], -e.Offset[2], -e.Offset[3]) * rot
+	mesh.PivotOffset = mesh.CFrame:ToObjectSpace(CFrame.new())
+	mesh.Anchored = true
+	mesh.CanCollide = SOLID[name] == true
+	mesh.CanQuery = SOLID[name] == true
+	mesh.CanTouch = false
+	mesh.Name = name
+	if f.Error > 0.25 then
+		warn(string.format("[AssetLoader] %s: uploaded proportions differ from the catalog by %d%%", name, math.floor(f.Error * 100)))
+	end
+	local m = Instance.new("Model")
+	m.Name = name
+	mesh.Parent = m
+	m.PrimaryPart = mesh
+	return m, nil
+end
+
+function AssetLoader.Init()
+	local lib = Instance.new("Folder")
+	lib.Name = "PetRaceModels"
+	lib.Parent = ReplicatedStorage
+	local queue = {}
+	for name, e in Models do
+		if e.Id then
+			table.insert(queue, name)
+		end
+	end
+	if #queue == 0 then
+		return -- nothing uploaded yet: the game uses its part-built looks
+	end
+	table.sort(queue)
+	local remaining = #queue
+	for _ = 1, math.min(WORKERS, #queue) do
+		task.spawn(function()
+			while #queue > 0 do
+				local name = table.remove(queue)
+				local ok, item, err = pcall(build, name, Models[name])
+				if ok and item then
+					item.Parent = lib
+					AssetLoader.Loaded += 1
+				else
+					table.insert(AssetLoader.Failed, name)
+					warn("[AssetLoader] " .. name .. ": " .. tostring(if ok then err else item))
+				end
+				remaining -= 1
+			end
+		end)
+	end
+	local deadline = os.clock() + BLOCK_FOR
+	while remaining > 0 and os.clock() < deadline do
+		task.wait(0.1)
+	end
+	print(string.format("[AssetLoader] %d models loaded, %d failed, %d still loading", AssetLoader.Loaded, #AssetLoader.Failed, remaining))
+end
+
+return AssetLoader
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="24">
           <Properties>
             <string name="Name">DataService</string>
             <string name="Source"><![CDATA[-- Loads and saves player profiles (DataStore), keeps leaderstats in sync and
@@ -1403,13 +1778,43 @@ local function syncLeaderstats(p: Player, d: Profile.Data)
 	p:SetAttribute("League", league.Name)
 end
 
+-- Saves are stored as { Data = profile, Lock = { Job, At } }. The lock stops two
+-- servers using the same save at once (e.g. a quick server hop): a new server waits
+-- for the old one to save and let go, and a server that lost its lock stops saving.
+local JOB = if game.JobId ~= "" then game.JobId else "studio"
+local LOCK_STALE = 600 -- seconds: a lock this old belongs to a crashed server
+
 local function load(p: Player)
 	local data: Profile.Data
 	if store then
-		local ok, raw = withRetry(function()
-			return (store :: DataStore):GetAsync(key(p))
-		end)
-		if not ok then
+		local raw = nil
+		local got = false
+		for attempt = 1, 6 do
+			local locked = false
+			local ok, err = pcall(function()
+				(store :: DataStore):UpdateAsync(key(p), function(old)
+					local lock = type(old) == "table" and old.Lock
+					if type(lock) == "table" and lock.Job ~= JOB and type(lock.At) == "number" and os.time() - lock.At < LOCK_STALE and attempt < 6 then
+						locked = true
+						return nil -- leave it alone; try again shortly
+					end
+					raw = if type(old) == "table" then old.Data else nil
+					return { Data = raw, Lock = { Job = JOB, At = os.time() } }
+				end)
+			end)
+			if ok and not locked then
+				got = true
+				break
+			end
+			if not ok then
+				warn("Load attempt failed for " .. p.Name .. ": " .. tostring(err))
+			end
+			task.wait(if locked then 5 else attempt)
+			if not p.Parent then
+				return
+			end
+		end
+		if not got then
 			-- Don't risk overwriting real data with a fresh profile.
 			p:Kick("Couldn't load your save. Please rejoin in a minute.")
 			return
@@ -1430,21 +1835,36 @@ local function load(p: Player)
 	end
 end
 
-local function save(p: Player)
+-- Writes the profile. release = true also lets go of the session lock (on leave).
+-- Returns true when the save is safely stored.
+local function save(p: Player, release: boolean?): boolean
 	local d = profiles[p]
 	if not d or not store or not loaded[p] then
-		return
+		return false
 	end
 	dirty[p] = nil
+	local lost = false
 	local ok, err = withRetry(function()
-		return (store :: DataStore):UpdateAsync(key(p), function()
-			return d
+		return (store :: DataStore):UpdateAsync(key(p), function(old)
+			local lock = type(old) == "table" and old.Lock
+			if type(lock) == "table" and lock.Job ~= JOB then
+				lost = true -- another server has this save now: don't overwrite it
+				return nil
+			end
+			return { Data = d, Lock = if release then nil else { Job = JOB, At = os.time() } }
 		end)
 	end)
+	if lost then
+		warn("Save skipped for " .. p.Name .. ": another server owns this save")
+		loaded[p] = nil
+		return false
+	end
 	if not ok then
 		warn("Save failed for " .. p.Name .. ": " .. tostring(err))
 		dirty[p] = true
+		return false
 	end
+	return true
 end
 
 function DataService.Init()
@@ -1474,7 +1894,7 @@ function DataService.Start()
 		task.spawn(load, p)
 	end
 	Players.PlayerRemoving:Connect(function(p)
-		save(p)
+		save(p, true)
 		profiles[p] = nil
 		loaded[p] = nil
 		dirty[p] = nil
@@ -1482,7 +1902,7 @@ function DataService.Start()
 	game:BindToClose(function()
 		local threads = {}
 		for p in profiles do
-			table.insert(threads, task.spawn(save, p))
+			table.insert(threads, task.spawn(save, p, true))
 		end
 		local deadline = os.clock() + 25
 		while os.clock() < deadline do
@@ -1539,15 +1959,19 @@ function DataService.AddCoins(p: Player, amount: number)
 	end
 end
 
-function DataService.SaveNow(p: Player)
-	task.spawn(save, p)
+-- Saves straight away and waits. Returns true if stored (or if saving is off).
+function DataService.SaveNow(p: Player): boolean
+	if not store then
+		return true
+	end
+	return save(p)
 end
 
 return DataService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="21">
+        <Item class="ModuleScript" referent="25">
           <Properties>
             <string name="Name">LeaderboardService</string>
             <string name="Source"><![CDATA[-- Global top-10 trophies board in the lobby (OrderedDataStore). Falls back to the
@@ -1675,7 +2099,7 @@ return LeaderboardService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="22">
+        <Item class="ModuleScript" referent="26">
           <Properties>
             <string name="Name">PetService</string>
             <string name="Source"><![CDATA[-- Pets in the world: hatching, equipping, riding, following, dashing and the
@@ -1792,6 +2216,7 @@ local function mount(p: Player)
 	if not pet or not char or not root or not hum or hum.Health <= 0 then
 		return
 	end
+	local wasRiding = s.Riding and s.Built ~= nil
 	destroyModel(s)
 	local ride = PetStats.Ride(pet)
 	local built = PetModel.Build(pet.Species, ride.Size, pet.Paint)
@@ -1807,13 +2232,35 @@ local function mount(p: Player)
 	weld.Part0 = root
 	weld.Part1 = built.Root
 	weld.Parent = built.Root
+	-- Invisible box around the pet's body that collides with the world, so hurdles,
+	-- steps and pillars block the pet (the visible parts don't collide). It starts
+	-- 1 stud up so it never drags on floors or ramps.
+	local fp = built.Footprint
+	local boxH = math.max(0.5, built.Height - 1)
+	local hitbox = Instance.new("Part")
+	hitbox.Name = "Hitbox"
+	hitbox.Size = Vector3.new(fp.X * 0.9, boxH, fp.Y * 0.9)
+	hitbox.CFrame = built.Model:GetPivot() * CFrame.new(0, 1 + boxH / 2, 0)
+	hitbox.Transparency = 1
+	hitbox.CanCollide = true
+	hitbox.CanQuery = false
+	hitbox.CanTouch = false
+	hitbox.Massless = true
+	hitbox.Parent = built.Model
+	local hw = Instance.new("WeldConstraint")
+	hw.Part0 = built.Root
+	hw.Part1 = hitbox
+	hw.Parent = hitbox
 	built.Model.Name = "RiddenPet"
 	built.Model.Parent = char
 	s.Built = built
 	s.Uid = pet.Uid
 	s.Riding = true
-	-- lift the character so the pet doesn't sink into the floor
-	root.CFrame += Vector3.new(0, built.Height, 0)
+	-- Lift the character so the pet doesn't sink into the floor (only when getting on,
+	-- so swapping pets or cosmetics can't be spammed as a lift).
+	if not wasRiding then
+		root.CFrame += Vector3.new(0, built.Height, 0)
+	end
 	PetService.Apply(p)
 end
 
@@ -2080,7 +2527,7 @@ function PetService.Start()
 	Util.Connect("SetCosmetic", 0.4, function(p, kind, id)
 		local d = Data.Get(p)
 		local pet = d and Profile.EquippedPet(d)
-		if not d or not pet or (kind ~= "Trail" and kind ~= "Paint") then
+		if not d or not pet or state(p).Locked or (kind ~= "Trail" and kind ~= "Paint") then
 			return
 		end
 		if id ~= nil then
@@ -2146,7 +2593,7 @@ return PetService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="23">
+        <Item class="ModuleScript" referent="27">
           <Properties>
             <string name="Name">RaceService</string>
             <string name="Source"><![CDATA[-- Races: players standing on the lobby portal are queued; after a short wait they're
@@ -2176,7 +2623,7 @@ type Racer = {
 	Finished: boolean,
 	Time: number?,
 	Char: Model?,
-	MaxSpeed: number,
+	Walk: number, -- ride speed at the start (anti-cheat)
 	FrozenUntil: number,
 	Left: boolean,
 }
@@ -2192,6 +2639,7 @@ local startAt = 0
 local endAt = 0
 local firstFinish: number? = nil
 local lastQueueSig = -1
+local abort: () -> ()
 
 local function send(p: Player, kind: string, data: any?)
 	Net.Event("Race"):FireClient(p, kind, data)
@@ -2237,10 +2685,10 @@ local function queued(): { Player }
 	return out
 end
 
-local function maxSpeedFor(p: Player): number
+local function walkFor(p: Player): number
 	local d = ctx.DataService.Get(p)
 	local pet = d and Profile.EquippedPet(d)
-	return PetStats.MaxSpeed(pet) * Config.Race.BoostMult
+	return if pet then PetStats.Ride(pet).WalkSpeed else Config.Ride.OnFootSpeed
 end
 
 local function startRace(players: { Player })
@@ -2263,7 +2711,7 @@ local function startRace(players: { Player })
 			Progress = 0,
 			Finished = false,
 			Char = p.Character,
-			MaxSpeed = maxSpeedFor(p),
+			Walk = walkFor(p),
 			FrozenUntil = 0,
 			Left = false,
 		}
@@ -2403,6 +2851,8 @@ local function racerTick(r: Racer, now: number)
 	-- Respawned after a reset: put them back at their checkpoint.
 	if p.Character ~= r.Char then
 		r.Char = p.Character
+		-- skip fall checks until the delayed respawn has put them back on the track
+		r.FrozenUntil = now + 0.8
 		task.delay(0.6, function()
 			if racerOf(p) == r and not r.Finished then
 				ctx.PetService.SetRiding(p, true, true)
@@ -2442,7 +2892,7 @@ local function racerTick(r: Racer, now: number)
 			nextCp = r.Cp + 1
 			targetX = layout.Checkpoints[nextCp].X
 		end
-		if not RaceRules.Plausible(targetX - r.CpX, now - r.CpAt, r.MaxSpeed) then
+		if not RaceRules.Plausible(targetX, now - startAt, r.Walk) or not RaceRules.BurstOk(targetX - r.CpX, now - r.CpAt, r.Walk) then
 			respawn(r)
 			warn("[Race] " .. p.Name .. " moved too fast; sent back")
 			return
@@ -2520,6 +2970,20 @@ local function standings()
 	end
 end
 
+-- Something broke: send everyone back to the lobby and get ready for the next race.
+abort = function()
+	for _, r in racers do
+		if not r.Left then
+			pcall(release, r)
+		end
+	end
+	racers = {}
+	ctx.TrackBuilder.Clear()
+	built = nil
+	phase = "Idle"
+	ctx.WorldService.SetPortalText("Stand here to race!")
+end
+
 function RaceService.Init(c)
 	ctx = c
 	Util = c.Util
@@ -2570,18 +3034,20 @@ function RaceService.Start()
 					local ok, err = pcall(startRace, q)
 					if not ok then
 						warn("[Race] start failed: " .. tostring(err))
-						for _, r in racers do
-							release(r)
-						end
-						racers = {}
-						phase = "Idle"
+						abort()
 					end
 				end
 			end
 		elseif phase == "Racing" then
-			raceTick()
-			if phase == "Racing" then
-				standings()
+			local ok, err = pcall(function()
+				raceTick()
+				if phase == "Racing" then
+					standings()
+				end
+			end)
+			if not ok then
+				warn("[Race] race loop error: " .. tostring(err))
+				abort()
 			end
 		end
 	end
@@ -2595,7 +3061,7 @@ return RaceService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="24">
+        <Item class="ModuleScript" referent="28">
           <Properties>
             <string name="Name">ShopService</string>
             <string name="Source"><![CDATA[-- Coin shop (cosmetics) and Robux purchases. Robux buys Coins, cosmetics and
@@ -2707,7 +3173,8 @@ function ShopService.Start()
 			return Enum.ProductPurchaseDecision.NotProcessedYet
 		end
 		if not Profile.TakeReceipt(d, info.PurchaseId) then
-			return Enum.ProductPurchaseDecision.PurchaseGranted -- already given
+			-- already given; confirm once that is saved
+			return if ctx.DataService.SaveNow(p) then Enum.ProductPurchaseDecision.PurchaseGranted else Enum.ProductPurchaseDecision.NotProcessedYet
 		end
 		if product.Coins then
 			d.Coins += product.Coins
@@ -2717,7 +3184,11 @@ function ShopService.Start()
 			ctx.Util.Notify(p, "Unlocked " .. product.Name .. "!", "Level")
 		end
 		ctx.DataService.Changed(p)
-		ctx.DataService.SaveNow(p)
+		-- Only confirm once it's saved. If the save fails Roblox retries later; the
+		-- receipt id is already in the profile, so the retry won't give it twice.
+		if not ctx.DataService.SaveNow(p) then
+			return Enum.ProductPurchaseDecision.NotProcessedYet
+		end
 		return Enum.ProductPurchaseDecision.PurchaseGranted
 	end
 end
@@ -2726,7 +3197,7 @@ return ShopService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="25">
+        <Item class="ModuleScript" referent="29">
           <Properties>
             <string name="Name">TrackBuilder</string>
             <string name="Source"><![CDATA[-- Builds a race track from parts using Logic/TrackLayout. The track sits high in the
@@ -2736,6 +3207,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local Tracks = require(Shared.Tracks)
 local TrackLayout = require(Shared.Logic.TrackLayout)
+local Assets = require(Shared.Assets)
 
 local TrackBuilder = {}
 
@@ -2870,6 +3342,9 @@ function TrackBuilder.Build(track: any): Built
 			for k = 1, n do
 				local x = p.X0 + L * k / (n + 1)
 				local side = if k % 2 == 0 then 1 else -1
+				if Assets.Place("Pillar", CFrame.new(at(x, p.Y0, side * W * 0.2)), folder) then
+					continue
+				end
 				Util.Part({
 					Size = Vector3.new(4, 12, W * 0.6),
 					CFrame = CFrame.new(at(x, p.Y0 + 6, side * W * 0.2)),
@@ -2932,7 +3407,12 @@ function TrackBuilder.Build(track: any): Built
 
 	-- Start and finish arches.
 	local function arch(x: number, y: number, label: string, color: Color3)
+		-- The arch model spans its X axis; turn it to span the lane (Z).
+		local archMesh = Assets.Place("RaceArch", CFrame.new(at(x, y)) * CFrame.Angles(0, math.rad(90), 0), folder)
 		for _, side in { -1, 1 } do
+			if archMesh then
+				break
+			end
 			Util.Part({
 				Size = Vector3.new(2, 16, 2),
 				CFrame = CFrame.new(at(x, y + 8, side * (W / 2 - 1))),
@@ -2942,7 +3422,7 @@ function TrackBuilder.Build(track: any): Built
 		end
 		local top = Util.Part({
 			Size = Vector3.new(2, 4, W),
-			CFrame = CFrame.new(at(x, y + 18)),
+			CFrame = CFrame.new(at(x, y + if archMesh then 22 else 18)),
 			Color = color,
 			Name = "ArchTop",
 		}, folder)
@@ -2974,6 +3454,10 @@ function TrackBuilder.Build(track: any): Built
 	-- Floating clouds/scenery far below so the sky track doesn't feel empty.
 	local rng = Random.new(#track.Id)
 	for _ = 1, 18 do
+		local cloudAt = at(rng:NextNumber(-60, layout.Length + 60), layout.MinY - rng:NextNumber(60, 140), rng:NextNumber(-150, 150))
+		if Assets.Place("Cloud", CFrame.new(cloudAt) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), folder, rng:NextNumber(0.8, 1.8)) then
+			continue
+		end
 		local c = Util.Part({
 			Size = Vector3.new(rng:NextNumber(30, 70), rng:NextNumber(8, 16), rng:NextNumber(30, 60)),
 			CFrame = CFrame.new(at(rng:NextNumber(-60, layout.Length + 60), layout.MinY - rng:NextNumber(60, 140), rng:NextNumber(-150, 150))),
@@ -3011,7 +3495,7 @@ return TrackBuilder
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="26">
+        <Item class="ModuleScript" referent="30">
           <Properties>
             <string name="Name">TrainingService</string>
             <string name="Source"><![CDATA[-- Lobby training: ride through the Speed Ring gates, jump the hurdles, run on the
@@ -3074,13 +3558,23 @@ local function tick(p: Player, dt: number)
 	local now = os.clock()
 	local W = ctx.WorldService
 	local T = Config.Training
+	local d = ctx.DataService.Get(p)
+	local pet = d and Profile.EquippedPet(d)
+	if not pet then
+		return
+	end
+	-- Fastest anyone on this pet can really move (a full dash, with some slack).
+	local top = PetStats.MaxSpeed(pet) * 1.2
 
 	-- Speed ring
 	local gates = W.SpeedGates
 	local n = #gates
+	-- Gates are this far apart, so they can't be passed faster than this.
+	local spacing = if n > 1 then (gates[1] - gates[2]).Magnitude else 30
+	local minGap = math.max(T.GateMinGap, (spacing - 16) / top)
 	for i, g in gates do
 		local flat = Vector3.new(pos.X - g.X, 0, pos.Z - g.Z)
-		if flat.Magnitude < 8 and i ~= t.Gate and now - t.GateAt >= T.GateMinGap then
+		if flat.Magnitude < 8 and i ~= t.Gate and now - t.GateAt >= minGap then
 			local ok = false
 			if t.Gate == nil then
 				ok = true
@@ -3114,14 +3608,17 @@ local function tick(p: Player, dt: number)
 		end
 	end
 
-	-- Hurdles: crossing a hurdle line inside the lane means you jumped it.
-	if t.LastZ then
+	-- Hurdles: crossing a hurdle line inside the lane means you jumped it (the pet's
+	-- collision box blocks walking through). A move faster than anyone can ride
+	-- (a teleport) counts nothing, and at most one hurdle counts per tick.
+	if t.LastZ and math.abs(pos.Z - t.LastZ) <= top * dt + 2 then
 		for i, h in W.Hurdles do
 			if pos.X >= h.X0 and pos.X <= h.X1 and (t.LastZ - h.Z) * (pos.Z - h.Z) < 0 then
 				if now - (t.HurdleAt[i] or 0) > 1.5 then
 					t.HurdleAt[i] = now
 					award(p, "Jump", math.max(2, math.floor(T.GateXp * h.H / 4 + 0.5)))
 				end
+				break
 			end
 		end
 	end
@@ -3148,9 +3645,8 @@ function TrainingService.Start()
 	Players.PlayerRemoving:Connect(function(p)
 		tracks[p] = nil
 	end)
-	local step = 0.1
 	while true do
-		task.wait(step)
+		local step = task.wait(0.1)
 		for _, p in Players:GetPlayers() do
 			local ok, err = pcall(tick, p, step)
 			if not ok then
@@ -3164,7 +3660,7 @@ return TrainingService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="27">
+        <Item class="ModuleScript" referent="31">
           <Properties>
             <string name="Name">Util</string>
             <string name="Source"><![CDATA[-- Small server helpers: rate-limited remote handlers, part building, notifications.
@@ -3300,7 +3796,7 @@ return Util
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="28">
+        <Item class="ModuleScript" referent="32">
           <Properties>
             <string name="Name">WorldService</string>
             <string name="Source"><![CDATA[-- Builds the lobby from parts at server start: spawn, egg stands, training area,
@@ -3313,6 +3809,7 @@ local Shared = ReplicatedStorage.Shared
 local Eggs = require(Shared.Eggs)
 local Pets = require(Shared.Pets)
 local Hatch = require(Shared.Logic.Hatch)
+local Assets = require(Shared.Assets)
 
 local WorldService = {}
 local Util
@@ -3329,7 +3826,12 @@ local lobby: Folder
 
 local GRASS = Color3.fromRGB(110, 200, 90)
 
-local function tree(pos: Vector3, scale: number)
+local TREES = { "Tree_Round", "Tree_Pine", "Tree_Blossom" }
+
+local function tree(pos: Vector3, scale: number, rng: Random)
+	if Assets.Place(TREES[rng:NextInteger(1, #TREES)], CFrame.new(pos) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), lobby, scale) then
+		return
+	end
 	Util.Part({
 		Size = Vector3.new(8, 1.6, 1.6) * scale,
 		CFrame = CFrame.new(pos + Vector3.new(0, 4 * scale, 0)),
@@ -3423,9 +3925,31 @@ local function buildGround()
 		local z = rng:NextNumber(-230, 230)
 		-- keep clear of the play areas
 		if math.abs(x) > 140 or math.abs(z) > 120 then
-			tree(Vector3.new(x, 0, z), rng:NextNumber(0.8, 1.4))
+			tree(Vector3.new(x, 0, z), rng:NextNumber(0.8, 1.4), rng)
 		end
 	end
+	-- Extra decoration that only exists as 3D models (skipped until they're uploaded).
+	for _ = 1, 60 do
+		local x = rng:NextNumber(-235, 235)
+		local z = rng:NextNumber(-235, 235)
+		if math.abs(x) > 130 or math.abs(z) > 110 or (math.abs(x) > 20 and math.abs(z) > 20 and math.abs(x) < 35) then
+			local kind = ({ "Bush", "Rock", "Flowers", "Flowers" })[rng:NextInteger(1, 4)]
+			Assets.Place(kind, CFrame.new(x, 0, z) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), lobby, rng:NextNumber(0.8, 1.3))
+		end
+	end
+	-- Fence around the edge, lamps along the paths, and a trophy by the spawn.
+	if Assets.Has("Fence") then
+		for i = -20, 20 do
+			for _, side in { -1, 1 } do
+				Assets.Place("Fence", CFrame.new(i * 12, 0, side * 244), lobby)
+				Assets.Place("Fence", CFrame.new(side * 244, 0, i * 12) * CFrame.Angles(0, math.rad(90), 0), lobby)
+			end
+		end
+	end
+	for _, p in { Vector3.new(7, 0, -20), Vector3.new(-7, 0, -20), Vector3.new(7, 0, 30), Vector3.new(-7, 0, 30), Vector3.new(30, 0, 7), Vector3.new(60, 0, -7), Vector3.new(-30, 0, 7), Vector3.new(-60, 0, -7) } do
+		Assets.Place("LampPost", CFrame.new(p), lobby)
+	end
+	Assets.Place("TrophyStatue", CFrame.new(22, 0, 18) * CFrame.Angles(0, math.rad(-135), 0), lobby)
 end
 
 local function buildEggs()
@@ -3435,14 +3959,20 @@ local function buildEggs()
 	for i, egg in Eggs.List do
 		local pos = Vector3.new(startX + (i - 1) * spacing, 0, -55)
 		WorldService.EggStands[egg.Id] = pos
-		Util.Part({
+		local meshPedestal = Assets.Place("Pedestal", CFrame.new(pos), lobby)
+		local pedestalPart = Util.Part({
 			Size = Vector3.new(3, 10, 10),
 			CFrame = CFrame.new(pos + Vector3.new(0, 1.5, 0)),
 			Color = Color3.fromRGB(240, 240, 240),
 			Material = Enum.Material.Marble,
 			Shape = Enum.PartType.Cylinder,
 			Name = "Pedestal",
-		}, lobby).CFrame = CFrame.new(pos + Vector3.new(0, 1.5, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		}, lobby)
+		pedestalPart.CFrame = CFrame.new(pos + Vector3.new(0, 1.5, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		if meshPedestal then
+			pedestalPart.Transparency = 1 -- keep it as the collider/stand height
+		end
+		local eggMesh = Assets.Place("Egg_" .. egg.Id, CFrame.new(pos + Vector3.new(0, 3, 0)), lobby)
 		local e = Util.Part({
 			Size = Vector3.new(5, 7, 5),
 			CFrame = CFrame.new(pos + Vector3.new(0, 6.5, 0)),
@@ -3453,8 +3983,12 @@ local function buildEggs()
 		local mesh = Instance.new("SpecialMesh")
 		mesh.MeshType = Enum.MeshType.Sphere
 		mesh.Parent = e
+		if eggMesh then
+			e.Transparency = 1 -- the mesh egg shows; this part still holds the prompt
+			e.CanCollide = false
+		end
 		-- Spots
-		for s = 1, 5 do
+		for s = 1, if eggMesh then 0 else 5 do
 			local a = s * 1.3
 			local spot = Util.Part({
 				Size = Vector3.new(1.2, 1.2, 0.3),
@@ -3546,7 +4080,11 @@ local function buildTraining()
 		local pos = center + Vector3.new(math.cos(a) * radius, 0, math.sin(a) * radius)
 		table.insert(WorldService.SpeedGates, pos)
 		local facing = CFrame.lookAt(pos, center)
+		local gateMesh = Assets.Place("SpeedGate", facing, lobby)
 		for _, side in { -1, 1 } do
+			if gateMesh then
+				break
+			end
 			Util.Part({
 				Size = Vector3.new(1.2, 14, 1.2),
 				CFrame = facing * CFrame.new(side * 7, 7, 0),
@@ -3562,6 +4100,10 @@ local function buildTraining()
 			Material = Enum.Material.Neon,
 			Name = "GateTop",
 		}, lobby)
+		if gateMesh then
+			top.Transparency = 1
+			top.CanCollide = false
+		end
 		Util.Label(top, tostring(i), 2)
 	end
 
@@ -3630,7 +4172,11 @@ local function buildPortal()
 		CanCollide = false,
 		Name = "PortalPad",
 	}, lobby)
+	local portalMesh = Assets.Place("PortalArch", CFrame.new(c + Vector3.new(0, 0, 10)), lobby)
 	for _, side in { -1, 1 } do
+		if portalMesh then
+			break
+		end
 		Util.Part({
 			Size = Vector3.new(3, 22, 3),
 			CFrame = CFrame.new(c + Vector3.new(side * 15, 11, 10)),
@@ -3646,6 +4192,10 @@ local function buildPortal()
 		Material = Enum.Material.Slate,
 		Name = "PortalTop",
 	}, lobby)
+	if portalMesh then
+		top.Transparency = 1 -- the arch mesh shows; the part keeps the status label
+		top.CanCollide = false
+	end
 	local status = Util.Label(top, "Stand here to race!", 6, Color3.fromRGB(255, 230, 255))
 	status.Name = "PortalStatus"
 	status.MaxDistance = 250
@@ -3727,7 +4277,7 @@ return WorldService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="29">
+  <Item class="StarterPlayer" referent="33">
     <Properties>
       <string name="Name">StarterPlayer</string>
       <float name="CameraMaxZoomDistance">60</float>
@@ -3736,19 +4286,19 @@ return WorldService
       <float name="CharacterWalkSpeed">16</float>
       <bool name="EnableMouseLockOption">false</bool>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="30">
+    <Item class="StarterPlayerScripts" referent="34">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="31">
+      <Item class="Folder" referent="35">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="Folder" referent="32">
+        <Item class="Folder" referent="36">
           <Properties>
             <string name="Name">Controllers</string>
           </Properties>
-          <Item class="ModuleScript" referent="33">
+          <Item class="ModuleScript" referent="37">
             <Properties>
               <string name="Name">HatchView</string>
               <string name="Source"><![CDATA[-- Hatch reveal: the egg wobbles, cracks with a flash, and the new pet spins in.
@@ -3858,7 +4408,7 @@ return HatchView
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="34">
+          <Item class="ModuleScript" referent="38">
             <Properties>
               <string name="Name">Hud</string>
               <string name="Source"><![CDATA[-- Always-on HUD: coins, trophies, league, and the main buttons (Pets, Shop,
@@ -3992,7 +4542,7 @@ return Hud
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="35">
+          <Item class="ModuleScript" referent="39">
             <Properties>
               <string name="Name">Notify</string>
               <string name="Source"><![CDATA[-- Toasts: short messages from the server. "Xp" pops small above the buttons,
@@ -4080,7 +4630,7 @@ return Notify
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="36">
+          <Item class="ModuleScript" referent="40">
             <Properties>
               <string name="Name">PetMenu</string>
               <string name="Source"><![CDATA[-- The Pets menu: every pet you own, its stats, and Ride / Rename / Release.
@@ -4290,7 +4840,7 @@ return PetMenu
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="37">
+          <Item class="ModuleScript" referent="41">
             <Properties>
               <string name="Name">RaceHud</string>
               <string name="Source"><![CDATA[-- Race screens: queue banner, countdown, live place/timer/progress, checkpoint
@@ -4467,7 +5017,7 @@ return RaceHud
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="38">
+          <Item class="ModuleScript" referent="42">
             <Properties>
               <string name="Name">ShopMenu</string>
               <string name="Source"><![CDATA[-- Shop: trails and paint for your ridden pet (coins), plus the Robux tab.
@@ -4641,7 +5191,7 @@ return ShopMenu
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="39">
+          <Item class="ModuleScript" referent="43">
             <Properties>
               <string name="Name">Tutorial</string>
               <string name="Source"><![CDATA[-- First-time tips: four short cards, shown once per player.
@@ -4700,7 +5250,7 @@ return Tutorial
             </Properties>
           </Item>
         </Item>
-        <Item class="LocalScript" referent="40">
+        <Item class="LocalScript" referent="44">
           <Properties>
             <string name="Name">Main</string>
             <string name="Source"><![CDATA[-- Client entry: connects remotes and starts each controller.
@@ -4727,7 +5277,7 @@ end
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="41">
+        <Item class="ModuleScript" referent="45">
           <Properties>
             <string name="Name">State</string>
             <string name="Source"><![CDATA[-- Holds the latest profile snapshot from the server and tells listeners when it changes.
@@ -4768,7 +5318,7 @@ return State
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="42">
+        <Item class="ModuleScript" referent="46">
           <Properties>
             <string name="Name">UI</string>
             <string name="Source"><![CDATA[-- Tiny UI kit: everything is built in code with big, phone-friendly buttons.

@@ -8,6 +8,8 @@ local specs = {
 	"./Profile.spec",
 	"./RaceRules.spec",
 	"./TrackLayout.spec",
+	"./AssetFit.spec",
+	"./Models.spec",
 }
 
 local passed, failed = 0, 0

@@ -1,0 +1,497 @@
+[
+ {
+  "name": "Egg_Forest",
+  "category": "Eggs",
+  "size": [
+   5.476,
+   7.0,
+   5.55
+  ],
+  "offset": [
+   -0.0,
+   -3.5,
+   -0.0
+  ],
+  "tris": 2528
+ },
+ {
+  "name": "Egg_Meadow",
+  "category": "Eggs",
+  "size": [
+   5.476,
+   7.0,
+   5.55
+  ],
+  "offset": [
+   -0.0,
+   -3.5,
+   -0.0
+  ],
+  "tris": 2528
+ },
+ {
+  "name": "Egg_Sky",
+  "category": "Eggs",
+  "size": [
+   5.476,
+   7.0,
+   5.55
+  ],
+  "offset": [
+   -0.0,
+   -3.5,
+   -0.0
+  ],
+  "tris": 2528
+ },
+ {
+  "name": "Bush",
+  "category": "Lobby",
+  "size": [
+   5.15,
+   2.822,
+   3.603
+  ],
+  "offset": [
+   -0.025,
+   -1.349,
+   0.202
+  ],
+  "tris": 756
+ },
+ {
+  "name": "Fence",
+  "category": "Lobby",
+  "size": [
+   12.0,
+   3.8,
+   0.6
+  ],
+  "offset": [
+   -0.0,
+   -1.9,
+   -0.0
+  ],
+  "tris": 540
+ },
+ {
+  "name": "Flowers",
+  "category": "Lobby",
+  "size": [
+   3.844,
+   1.537,
+   4.388
+  ],
+  "offset": [
+   -0.021,
+   -0.768,
+   0.139
+  ],
+  "tris": 2088
+ },
+ {
+  "name": "LampPost",
+  "category": "Lobby",
+  "size": [
+   2.0,
+   11.1,
+   2.0
+  ],
+  "offset": [
+   -0.0,
+   -5.55,
+   -0.0
+  ],
+  "tris": 292
+ },
+ {
+  "name": "Pedestal",
+  "category": "Lobby",
+  "size": [
+   10.8,
+   2.8,
+   10.8
+  ],
+  "offset": [
+   -0.0,
+   -1.4,
+   -0.0
+  ],
+  "tris": 324
+ },
+ {
+  "name": "PortalArch",
+  "category": "Lobby",
+  "size": [
+   34.4,
+   28.75,
+   4.4
+  ],
+  "offset": [
+   -0.0,
+   -14.375,
+   -0.0
+  ],
+  "tris": 1216
+ },
+ {
+  "name": "Rock",
+  "category": "Lobby",
+  "size": [
+   4.686,
+   2.875,
+   3.357
+  ],
+  "offset": [
+   -0.268,
+   -1.404,
+   -0.086
+  ],
+  "tris": 100
+ },
+ {
+  "name": "SpeedGate",
+  "category": "Lobby",
+  "size": [
+   15.6,
+   15.4,
+   1.6
+  ],
+  "offset": [
+   -0.0,
+   -7.7,
+   -0.0
+  ],
+  "tris": 1132
+ },
+ {
+  "name": "Tree_Blossom",
+  "category": "Lobby",
+  "size": [
+   8.836,
+   12.75,
+   6.5
+  ],
+  "offset": [
+   -0.176,
+   -6.375,
+   -0.0
+  ],
+  "tris": 820
+ },
+ {
+  "name": "Tree_Pine",
+  "category": "Lobby",
+  "size": [
+   8.774,
+   12.8,
+   9.0
+  ],
+  "offset": [
+   -0.0,
+   -6.4,
+   -0.0
+  ],
+  "tris": 192
+ },
+ {
+  "name": "Tree_Round",
+  "category": "Lobby",
+  "size": [
+   9.372,
+   15.063,
+   7.5
+  ],
+  "offset": [
+   0.049,
+   -7.368,
+   -0.0
+  ],
+  "tris": 1104
+ },
+ {
+  "name": "TrophyStatue",
+  "category": "Lobby",
+  "size": [
+   7.347,
+   13.3,
+   7.0
+  ],
+  "offset": [
+   -0.0,
+   -6.65,
+   -0.0
+  ],
+  "tris": 620
+ },
+ {
+  "name": "Pet_Bunny",
+  "category": "Pets",
+  "size": [
+   2.079,
+   4.509,
+   5.06
+  ],
+  "offset": [
+   -0.0,
+   -2.235,
+   -0.11
+  ],
+  "tris": 5392
+ },
+ {
+  "name": "Pet_CosmicCat",
+  "category": "Pets",
+  "size": [
+   2.494,
+   4.682,
+   7.252
+  ],
+  "offset": [
+   -0.0,
+   -2.317,
+   -0.546
+  ],
+  "tris": 4796
+ },
+ {
+  "name": "Pet_Deer",
+  "category": "Pets",
+  "size": [
+   2.079,
+   5.52,
+   5.08
+  ],
+  "offset": [
+   -0.0,
+   -2.74,
+   0.3
+  ],
+  "tris": 4860
+ },
+ {
+  "name": "Pet_Dragon",
+  "category": "Pets",
+  "size": [
+   7.31,
+   5.594,
+   10.7
+  ],
+  "offset": [
+   0.0,
+   -2.767,
+   -1.43
+  ],
+  "tris": 5336
+ },
+ {
+  "name": "Pet_Fox",
+  "category": "Pets",
+  "size": [
+   2.079,
+   3.842,
+   6.18
+  ],
+  "offset": [
+   -0.0,
+   -1.901,
+   -0.27
+  ],
+  "tris": 4388
+ },
+ {
+  "name": "Pet_Griffin",
+  "category": "Pets",
+  "size": [
+   6.337,
+   5.169,
+   8.818
+  ],
+  "offset": [
+   -0.0,
+   -2.558,
+   -0.785
+  ],
+  "tris": 4956
+ },
+ {
+  "name": "Pet_Kitty",
+  "category": "Pets",
+  "size": [
+   2.079,
+   3.642,
+   6.096
+  ],
+  "offset": [
+   -0.0,
+   -1.801,
+   -0.428
+  ],
+  "tris": 4220
+ },
+ {
+  "name": "Pet_Panda",
+  "category": "Pets",
+  "size": [
+   2.91,
+   4.28,
+   5.456
+  ],
+  "offset": [
+   -0.0,
+   -2.112,
+   0.412
+  ],
+  "tris": 4208
+ },
+ {
+  "name": "Pet_Penguin",
+  "category": "Pets",
+  "size": [
+   3.104,
+   3.752,
+   4.113
+  ],
+  "offset": [
+   -0.0,
+   -1.854,
+   0.472
+  ],
+  "tris": 3820
+ },
+ {
+  "name": "Pet_Phoenix",
+  "category": "Pets",
+  "size": [
+   6.339,
+   5.432,
+   8.179
+  ],
+  "offset": [
+   -0.0,
+   -2.69,
+   -0.666
+  ],
+  "tris": 5164
+ },
+ {
+  "name": "Pet_Piggy",
+  "category": "Pets",
+  "size": [
+   2.702,
+   3.675,
+   5.004
+  ],
+  "offset": [
+   -0.0,
+   -1.811,
+   0.33
+  ],
+  "tris": 4412
+ },
+ {
+  "name": "Pet_Pup",
+  "category": "Pets",
+  "size": [
+   2.343,
+   3.627,
+   4.884
+  ],
+  "offset": [
+   -0.028,
+   -1.791,
+   0.358
+  ],
+  "tris": 5024
+ },
+ {
+  "name": "Pet_Tiger",
+  "category": "Pets",
+  "size": [
+   2.746,
+   4.655,
+   8.299
+  ],
+  "offset": [
+   0.0,
+   -2.302,
+   -0.69
+  ],
+  "tris": 5800
+ },
+ {
+  "name": "Pet_Unicorn",
+  "category": "Pets",
+  "size": [
+   2.494,
+   6.157,
+   8.191
+  ],
+  "offset": [
+   -0.0,
+   -3.054,
+   -0.716
+  ],
+  "tris": 5228
+ },
+ {
+  "name": "Pet_Wolf",
+  "category": "Pets",
+  "size": [
+   2.39,
+   4.508,
+   6.865
+  ],
+  "offset": [
+   -0.0,
+   -2.231,
+   -0.332
+  ],
+  "tris": 4640
+ },
+ {
+  "name": "Cloud",
+  "category": "Track",
+  "size": [
+   36.574,
+   13.0,
+   19.0
+  ],
+  "offset": [
+   -0.487,
+   -6.5,
+   0.5
+  ],
+  "tris": 1260
+ },
+ {
+  "name": "Pillar",
+  "category": "Track",
+  "size": [
+   4.0,
+   12.0,
+   18.0
+  ],
+  "offset": [
+   -0.0,
+   -6.0,
+   -0.0
+  ],
+  "tris": 264
+ },
+ {
+  "name": "RaceArch",
+  "category": "Track",
+  "size": [
+   30.283,
+   20.0,
+   2.4
+  ],
+  "offset": [
+   -0.0,
+   -10.0,
+   -0.0
+  ],
+  "tris": 856
+ }
+]

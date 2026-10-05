@@ -2,7 +2,7 @@
 
 A Roblox game: hatch pets, ride them, train their Speed, Jump and Stamina, then race other players on obstacle tracks for coins, trophies and medals.
 
-Built with Rojo and Luau. Every model is made from parts in code, so there's nothing to upload before the first playtest.
+Built with Rojo and Luau. There are 33 3D models (15 pets, 3 eggs, 15 lobby and track props) made in Blender; see `models/renders/_sheet.png`. Until they're uploaded, the game draws everything with parts, so it's fully playable right away.
 
 ## Play it in Studio
 1. Download `build/PetRaceLeague.rbxlx` and open it in Roblox Studio.
@@ -29,12 +29,20 @@ The 3 tracks rotate (Meadow Dash, Canyon Leap, Sky Steps). They have gaps, hurdl
 - Rarity gives at most +10% stats. A fully trained Common beats an untrained Mythic easily (this is unit tested).
 - Trophies only go up. Solo races give at most 3 trophies, so the leaderboard is earned by racing people.
 
+## 3D models
+- `blender/build.py` builds every model: `python3 blender/build.py` (needs `pip install bpy==5.0.1`). It writes `models/fbx/*.fbx`, previews in `models/renders/` and `models/catalog.json`.
+- Pets are built from the same numbers as `src/shared/Pets.luau`, so the riding height matches the mesh.
+- **Uploading:** make an Open Cloud API key with Assets read+write, then run `ROBLOX_API_KEY=... ROBLOX_USER_ID=... python3 tools/upload_models.py`. It uploads every FBX and fills in the ids in `src/shared/Models.luau`. Rebuild the place after that. Or give Claude the key in a session as an environment secret and it can run this for you.
+- Publish the game from the same account that uploaded the models (Roblox only lets a game load its owner's models).
+- `src/server/Services/AssetLoader.luau` loads them at server start. Anything missing falls back to parts.
+
 ## Owner to-do before publishing
 - Create the products and game pass on the Creator Dashboard, then put the ids in `src/shared/Products.luau`. The Robux tab stays hidden until you do.
+- Upload the 3D models (see above).
 - Optional: add sounds and music (none are included yet).
 
 ## For developers
-- `bash tools/check.sh` runs the type check, unit tests (`tests/*.spec.luau`) and the Rojo build.
+- `bash tools/check.sh` runs the type check, unit tests (`tests/*.spec.luau`) and the Rojo build. After rebuilding models, run `python3 tools/gen_models.py`.
 - Tuning numbers: `src/shared/Config.luau`. Pets: `Pets.luau`. Eggs: `Eggs.luau`. Tracks: `Tracks.luau`. Cosmetics: `Cosmetics.luau`.
 - Pure rules, unit tested: `src/shared/Logic/` (Hatch, PetStats, Profile, RaceRules, TrackLayout).
 - Server services in `src/server/Services/`, started in the order listed in `Main.server.luau`.
