@@ -22,6 +22,20 @@ local Profile = require(Logic:WaitForChild("Profile"))
 
 local PurchaseService = {}
 
+-- Luck items are paid random-item boosts. Players whose policy restricts paid
+-- random items can't buy them; if a receipt still arrives (bought before the
+-- policy answered, or from another device) they get gems instead so nobody
+-- pays for nothing.
+PurchaseService.LuckPass = "Lucky"
+PurchaseService.LuckProductGems = {
+	BoostLuck = 400,
+	ServerLuck = 1000,
+} :: { [string]: number }
+
+function PurchaseService.IsLuckItem(key: string): boolean
+	return key == PurchaseService.LuckPass or PurchaseService.LuckProductGems[key] ~= nil
+end
+
 local ctx: any
 local granting: { [string]: boolean } = {} -- PurchaseIds being processed right now
 
@@ -60,6 +74,9 @@ function PurchaseService.Init(c)
 		end
 		if not ctx.Util.IsStr(key, 32) then
 			return ctx.Util.Fail("Unknown item")
+		end
+		if PurchaseService.IsLuckItem(key) and ctx.StateService.PaidRandomRestricted(s) then
+			return ctx.Util.Fail("Luck items aren't available for your account")
 		end
 		local pass = Products.PassByKey[key]
 		if pass then
@@ -116,6 +133,13 @@ end
 
 -- Gives a product's contents (no dedupe here; see _processReceipt).
 function PurchaseService.GrantProduct(player: Player, s, product: Products.Product)
+	local swapGems = PurchaseService.LuckProductGems[product.Key]
+	if swapGems and ctx.StateService.PaidRandomRestricted(s) then
+		Economy.AddGems(s.Profile, swapGems)
+		ctx.Util.Notify(player, "Purchased", { Name = tostring(swapGems) .. " Gems (luck items aren't available for your account)" })
+		ctx.StateService.Dirty(player)
+		return
+	end
 	if product.Kind == "Gems" then
 		Economy.AddGems(s.Profile, product.Amount or 0)
 	elseif product.Kind == "Boost" and product.Boost then
@@ -146,6 +170,17 @@ function PurchaseService._processReceipt(receipt)
 		return NotYet
 	end
 	local purchaseId = tostring(receipt.PurchaseId)
+	-- Luck products depend on the player's policy: don't decide (gems vs the
+	-- boost) before PolicyService has answered.
+	if PurchaseService.LuckProductGems[product.Key] then
+		local deadline = os.clock() + 20
+		while not s.PolicyKnown and os.clock() < deadline and player.Parent ~= nil do
+			task.wait(0.5)
+		end
+		if not s.PolicyKnown then
+			return NotYet
+		end
+	end
 	-- The same receipt can arrive again while we're still saving it.
 	if granting[purchaseId] then
 		return NotYet

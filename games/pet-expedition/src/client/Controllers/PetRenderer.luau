@@ -16,6 +16,10 @@ local Breakables = require("../Core/Breakables")
 
 local PetRenderer = {}
 
+-- A part that cycles through the rainbow: its authored colour, the hue offset
+-- from its RainbowHue attribute, and its saturation/brightness (kept).
+type RainbowPart = { Part: BasePart, Color: Color3, Hue: number, S: number, V: number }
+
 type Follower = {
 	Uid: string,
 	Key: string,
@@ -24,7 +28,7 @@ type Follower = {
 	Pos: Vector3,
 	Yaw: number,
 	Phase: number,
-	Rainbow: { { Part: BasePart, Color: Color3 } }?,
+	Rainbow: { RainbowPart }?,
 }
 
 type Owner = {
@@ -160,13 +164,16 @@ local function rebuild(o: Owner)
 				Rainbow = nil,
 			}
 			if e.Variant == "Rainbow" then
-				local parts = {}
+				-- only parts the model marked with RainbowHue (eyes etc. keep their colour)
+				local parts: { RainbowPart } = {}
 				for _, d in m:GetDescendants() do
-					if d:IsA("BasePart") and d.Transparency < 1 then
-						table.insert(parts, { Part = d, Color = d.Color })
+					local hue = d:GetAttribute("RainbowHue")
+					if d:IsA("BasePart") and type(hue) == "number" then
+						local _, sat, val = d.Color:ToHSV()
+						table.insert(parts, { Part = d, Color = d.Color, Hue = hue, S = sat, V = val })
 					end
 				end
-				nf.Rainbow = parts
+				nf.Rainbow = if #parts > 0 then parts else nil
 			end
 			m.Parent = folder
 			f = nf
@@ -296,9 +303,8 @@ local function step(dt: number)
 			end
 			f.Model:PivotTo(CFrame.new(f.Pos) * CFrame.Angles(0, f.Yaw, 0))
 			if doRainbow and f.Rainbow then
-				for k, entry in f.Rainbow do
-					local hue = (now * 0.25 + k * 0.07) % 1
-					entry.Part.Color = entry.Color:Lerp(Color3.fromHSV(hue, 0.65, 1), 0.45)
+				for _, entry in f.Rainbow do
+					entry.Part.Color = Color3.fromHSV((entry.Hue + now * 0.25) % 1, entry.S, entry.V)
 				end
 			end
 		end

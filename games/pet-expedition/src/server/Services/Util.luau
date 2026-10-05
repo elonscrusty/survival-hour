@@ -33,6 +33,7 @@ Util.Limits = {
 	TradeSetOffer = { Rate = 6, Burst = 12 },
 	TradeRequest = { Rate = 1, Burst = 3 },
 	DevPurchase = { Rate = 1, Burst = 3 },
+	DevAction = { Rate = 2, Burst = 5 },
 	SetSetting = { Rate = 5, Burst = 10 },
 } :: { [string]: { Rate: number, Burst: number } }
 

@@ -7,7 +7,7 @@ Entry: `src/server/Main.server.luau` calls `Net.Init()`, requires every service 
 | Service | Job |
 |---|---|
 | `Util` | join/leave hooks, remote wrapper (`Util.Function` / `Util.Event`: per-player per-remote token bucket from `Util.Limits`, refuses until the profile is loaded, pcall, `{ ok = false, err }` on failure), validation, `Notify` / `Toast` |
-| `DataService` | DataStore `Config.DataStoreName`, key `p_<UserId>`, session lock via UpdateAsync, autosave, release on leave + BindToClose, change counter (`Touch`; `SaveSession` is true only if a finished write includes the caller's changes), trade journals (`t_<TradeId>`) and their replay on load. Memory profiles only in Studio; a live server without DataStore gives read-only "Failed" sessions |
+| `DataService` | DataStore `Config.DataStoreName` (`.. "_Studio"` in Studio, so tests never touch live data), key `p_<UserId>`, session lock via UpdateAsync, autosave, release on leave + BindToClose, change counter (`Touch`; `SaveSession` is true only if a finished write includes the caller's changes), trade journals (`t_<TradeId>`) and their replay on load. Memory profiles only in Studio; a live server without DataStore gives read-only "Failed" sessions |
 | `StateService` | coalesced `State` pushes (0.2 s), `Pets` / `Vip` / `Target` attributes, leaderstats, Premium / group / PolicyService flags, `SetSetting`, `ClientReady`, coin and luck multipliers |
 | `WorldService` | `World.Build()`, area tracking (sends players found deep inside a locked island back), `OpenGate`, `Teleport` |
 | `HatchService` | `HatchEgg` (cooldown, Triple Hatch pass, gem-egg policy, distance to the egg stand, storage, price, luck) |
@@ -17,7 +17,8 @@ Entry: `src/server/Main.server.luau` calls `Net.Init()`, requires every service 
 | `RewardService` | daily, playtime (per server session), quests, Index, `Discovered` |
 | `RebirthService` | rebirth |
 | `BoostService` | personal boosts, server luck (this server only) |
-| `PurchaseService` | ProcessReceipt (dedupe by PurchaseId, granted only after a save that includes it), passes (purchase event confirmed with UserOwnsGamePassAsync), Studio `DevPurchase` |
+| `PurchaseService` | ProcessReceipt (dedupe by PurchaseId, granted only after a save that includes it), passes (purchase event confirmed with UserOwnsGamePassAsync), Studio `DevPurchase`. Players with paid random items restricted can't buy luck items; a receipt that still arrives grants gems instead (BoostLuck 400, ServerLuck 1000), and paid luck (Lucky, Luck2x, server luck) doesn't apply to their hatches |
+| `DevService` | Studio-only `DevAction(action)`: Coins1M, CoinsX1000, Gems1000, FinishExpeditions, OpenGates, ResetData (refused on live servers) |
 | `TradeService` | requests (timeout, cooldown, account age, policy), offers, ready + countdown, journaled swap (below), cancel on leave before the swap starts |
 
 ## Pure rules (`src/shared/Logic/`, unit tested in `tests/`)

@@ -35,6 +35,7 @@ Net.Functions = {
 	"TradeReady", -- (ready: boolean) -> { ok }
 	"TradeCancel", -- () -> { ok }
 	"DevPurchase", -- (key) Studio only: simulate buying a pass/product whose Id is 0
+	"DevAction", -- (action) Studio only: test shortcuts (DevService)
 }
 
 -- RemoteEvents.

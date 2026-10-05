@@ -4,15 +4,18 @@ Open `build/PetExpedition.rbxlx` in Roblox Studio. Keep the **Output** window op
 Red lines in Output are errors; yellow lines are warnings. Tick each box when it works. If a check fails, take a
 screenshot of the screen and copy the red lines from Output (see the last section).
 
-**Getting coins and gems fast:** there is no dev cheat button or command in the code. Gems: Shop → Gems → "Test buy"
-(free in Studio). Coins: only by farming, plus the 2x Coins test boost. Expeditions: no timer shortcut, so use the gem Skip.
+**Getting coins and gems fast:** in Studio a pink **DEV** button sits on the right side of the screen. It opens a
+panel with: +1M coins, Coins x1000, +1000 gems, Finish expeditions, Open all gates and Reset my data. It only
+exists in Studio (live servers refuse it). Shop items are also free "Test buy"s in Studio.
 
-**Important:** once "Studio Access to API Services" is on, everything you test-buy in Studio (passes, gems) is saved
-to your real account and stays in the live game. Do sections 1-10 with it OFF, then turn it on for section 11.
+**Safe to test with API access on:** Studio saves go to a separate DataStore (`PetExpedition_v1_Studio`), so test
+buys, dev panel coins and "Reset my data" never touch the live game's data. You can leave "Studio Access to API
+Services" on for every section.
 
 ## 1. First boot
 - [ ] 1. Press **Play**. Within ~10 seconds six islands appear in a row with bridges, gates and water around them.
 - [ ] 2. Output shows no red lines. (With API access off, one yellow line "Studio has no DataStore access" is normal.)
+- [ ] 2b. A pink **DEV** button shows on the right. Press it: the DEV panel opens with 6 buttons. Press **+1M coins**: coins go up by 1M.
 - [ ] 3. Top of screen: coins show **150**, gems show **0** with a green **+** button.
 - [ ] 4. Left side: 8 buttons: Pets, Shop, Trips, Quests, Index, Islands, Trade, Settings.
 - [ ] 5. A yellow hint at the bottom says "Walk to the egg stand and hatch your first pet!" with a glowing beam and bouncing arrow.
@@ -74,6 +77,7 @@ to your real account and stays in the live game. Do sections 1-10 with it OFF, t
 - [ ] 7. Locked islands in step 2 show "Locked" and say "Open (island) first!".
 - [ ] 8. Test-buy **+2 Expedition Slots**: 3 slots now. Run 3 trips at once.
 - [ ] 9. Optional: let one 5-minute trip finish without skipping; it turns to Claim! on its own.
+- [ ] 10. Start a long (8 h) trip, then DEV → **Finish expeditions**: the slot turns to **Claim!** right away.
 
 ## 7. Quests, daily, playtime, Index
 - [ ] 1. Quests (J) → Daily tab: "Claim Day 1" gives **500 coins and 10 gems**. Pressing again is refused.
@@ -86,7 +90,10 @@ to your real account and stays in the live game. Do sections 1-10 with it OFF, t
 ## 8. Rebirth
 - [ ] 1. Open the Rebirth Statue. It lists what you get, what resets and what you keep, and a bar "coins / 6B".
 - [ ] 2. The Rebirth button is greyed out below 6 billion coins.
-- Note: there is no dev command to give coins, so a real rebirth can't be tested in Studio yet. Ask Claude for a Studio-only "give coins" button if you want to test it.
+- [ ] 3. DEV → **+1M coins**, then **Coins x1000** until the bar is full (6B). Rebirth → confirm: a "Rebirth!" banner,
+  coins reset, gates closed again (barriers back), gems +150, the coin bonus shows +25%.
+- [ ] 4. DEV → **Open all gates**: every island's barrier disappears and Islands (N) shows Teleport everywhere.
+- [ ] 5. DEV → **Reset my data** → confirm: you're back to a fresh start (150 coins, no pets, tutorial hint again).
 
 ## 9. Shop and every Robux item (all "Test buy" in Studio)
 - [ ] 1. The green **+** next to gems opens Shop → Gems. Tabs: Passes, Gems, Boosts.
@@ -117,6 +124,7 @@ Setup: Test tab → Clients and Servers → 2 players → Start. Three windows o
 
 ## 11. Saving (needs API access)
 Setup: File → Publish, then Game Settings → Security → **Enable Studio Access to API Services** → Save.
+(Studio uses its own test DataStore, so this is safe: nothing here reaches the live game.)
 - [ ] 1. Play. No yellow "no DataStore access" line in Output.
 - [ ] 2. Note your coins, gems, pet count and one expedition timer. Press Stop, wait 5 seconds, Play again.
 - [ ] 3. Everything is the same; the expedition timer kept running while you were away.

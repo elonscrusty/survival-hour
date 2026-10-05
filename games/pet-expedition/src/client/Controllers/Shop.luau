@@ -79,6 +79,19 @@ local function priceText(kind: string, id: number, fallback: number): string
 	return "R$ " .. tostring(p or fallback)
 end
 
+-- Luck items (Lucky pass, luck boost, server luck) are hidden for players
+-- whose policy restricts paid random items (State.CanBuyGemEggs = false).
+local LUCK_ITEMS: { [string]: boolean } = { Lucky = true, BoostLuck = true, ServerLuck = true }
+
+local function luckAllowed(): boolean
+	local d = State.Data
+	return d ~= nil and d.CanBuyGemEggs == true
+end
+
+local function hidden(key: string): boolean
+	return LUCK_ITEMS[key] == true and not luckAllowed()
+end
+
 local function devPurchase(key: string)
 	local res = Remote.CallOnce("DevPurchase", key)
 	if res then
@@ -88,7 +101,7 @@ end
 
 function Shop.BuyPass(key: string)
 	local pass = Products.PassByKey[key]
-	if not pass then
+	if not pass or hidden(key) then
 		return
 	end
 	if State.HasPass(key) then
@@ -112,7 +125,7 @@ end
 
 function Shop.BuyProduct(key: string)
 	local product = Products.ByKey[key]
-	if not product then
+	if not product or hidden(key) then
 		return
 	end
 	if product.Id ~= 0 then
@@ -133,7 +146,7 @@ end
 -- Popup offering a pass (used when a locked feature is tapped).
 function Shop.Upsell(key: string, reason: string?)
 	local pass = Products.PassByKey[key]
-	if not pass then
+	if not pass or hidden(key) then
 		return
 	end
 	Windows.Confirm(
@@ -196,7 +209,7 @@ local function renderImpl(force: boolean?)
 	end
 	-- rebuild only when owned passes, known prices, the tab or which boosts
 	-- are active change; boost timers tick in place
-	local sig = tab
+	local sig = tab .. tostring(luckAllowed())
 	for _, pass in Products.Passes do
 		sig ..= if State.HasPass(pass.Key) then "1" else "0"
 	end
@@ -219,6 +232,9 @@ local function renderImpl(force: boolean?)
 	Kit.clear(content)
 	if tab == "Passes" then
 		for i, pass in Products.Passes do
+			if hidden(pass.Key) then
+				continue
+			end
 			local owned = State.HasPass(pass.Key)
 			local c = card(i, PASS_ICONS[pass.Key] or Theme.Icons.Star, pass.Name, pass.Blurb, Theme.Rarity.Legendary)
 			if owned then
@@ -243,7 +259,7 @@ local function renderImpl(force: boolean?)
 	else
 		local i = 0
 		for _, product in Products.Products do
-			if product.Kind ~= "Gems" then
+			if product.Kind ~= "Gems" and not hidden(product.Key) then
 				i += 1
 				local blurb: string
 				if product.Kind == "ServerLuck" then

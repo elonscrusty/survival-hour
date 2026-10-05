@@ -25,6 +25,7 @@ local Settings = require("./Controllers/Settings")
 local Trade = require("./Controllers/Trade")
 local Notifications = require("./Controllers/Notifications")
 local Tutorial = require("./Controllers/Tutorial")
+local DevPanel = require("./Controllers/DevPanel")
 
 -- the game has no tools, so hide the empty backpack bar
 pcall(function()
@@ -58,6 +59,7 @@ start("Settings", Settings.Init)
 start("Trade", Trade.Init)
 start("Notifications", Notifications.Init)
 start("Tutorial", Tutorial.Init)
+start("DevPanel", DevPanel.Init)
 
 Remote.Fire("ClientReady")
 

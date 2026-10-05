@@ -31,7 +31,22 @@ local breakables: { [string]: any } = {}
 local countByArea: { [string]: number } = {}
 local targets: { [Player]: string } = {}
 
-local SPACING = 7 -- min studs between breakables
+-- Footprint radius per kind (studs, from the model's width). Two breakables
+-- spawn at least radiusA + radiusB + GAP apart so they never overlap.
+local RADIUS: { [string]: number } = {
+	CoinPile = 2,
+	Crate = 2.5,
+	Chest = 3,
+	GemRock = 2.5,
+	BigChest = 4.5,
+}
+local DEFAULT_RADIUS = 3
+local GAP = 1
+local PICK_TRIES = 10 -- retry cap per spawn
+
+local function radiusOf(kind: string): number
+	return RADIUS[kind] or DEFAULT_RADIUS
+end
 local EDGE = 4 -- keep this far inside a zone's edge
 local BROKEN_RADIUS = 250 -- players this close see the break effect
 local LEASH = 25 -- extra studs past MaxTargetDistance before pets are recalled
@@ -127,7 +142,7 @@ local function pickKind(area: Areas.Area): Areas.Breakable
 	return area.Breakables[1]
 end
 
-local function pickPosition(areaId: string): Vector3?
+local function pickPosition(areaId: string, kind: string): Vector3?
 	local zones = ctx.WorldService.Info.Zones[areaId]
 	if not zones or #zones == 0 then
 		return nil
@@ -136,7 +151,8 @@ local function pickPosition(areaId: string): Vector3?
 	for _, z in zones do
 		totalArea += math.max(1, z.Size.X * z.Size.Z)
 	end
-	for _ = 1, 10 do
+	local radius = radiusOf(kind)
+	for _ = 1, PICK_TRIES do
 		local roll = random:NextNumber() * totalArea
 		local zone = zones[1]
 		for _, z in zones do
@@ -146,12 +162,13 @@ local function pickPosition(areaId: string): Vector3?
 				break
 			end
 		end
-		local hx = math.max(0, zone.Size.X / 2 - EDGE)
-		local hz = math.max(0, zone.Size.Z / 2 - EDGE)
+		local inset = math.max(EDGE, radius + GAP)
+		local hx = math.max(0, zone.Size.X / 2 - inset)
+		local hz = math.max(0, zone.Size.Z / 2 - inset)
 		local pos = zone.Center + Vector3.new(random:NextNumber(-hx, hx), 0, random:NextNumber(-hz, hz))
 		local clear = true
 		for _, b in breakables do
-			if b.Area == areaId and (b.Position - pos).Magnitude < SPACING then
+			if b.Area == areaId and (b.Position - pos).Magnitude < radius + radiusOf(b.Kind) + GAP then
 				clear = false
 				break
 			end
@@ -168,7 +185,8 @@ function BreakableService._spawn(areaId: string)
 	if not area or (countByArea[areaId] or 0) >= area.MaxBreakables then
 		return
 	end
-	local pos = pickPosition(areaId)
+	local kind = pickKind(area)
+	local pos = pickPosition(areaId, kind.Kind)
 	if not pos then
 		-- Zone crowded right now: try again later (only if the island has zones).
 		local zones = ctx.WorldService.Info.Zones[areaId]
@@ -177,7 +195,6 @@ function BreakableService._spawn(areaId: string)
 		end
 		return
 	end
-	local kind = pickKind(area)
 	local ok, model = pcall(Models.Breakable, kind.Kind, areaId)
 	if not ok or typeof(model) ~= "Instance" or not model:IsA("Model") then
 		warn("[BreakableService] Models.Breakable failed:", model)
