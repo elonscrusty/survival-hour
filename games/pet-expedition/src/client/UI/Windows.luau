@@ -26,6 +26,8 @@ export type Window = {
 
 -- (name?) whenever the open window changes
 Windows.Changed = Signal.new()
+-- (name) when a Show was refused because a locked window is open
+Windows.Refused = Signal.new()
 
 local player = Players.LocalPlayer
 local guis: { [string]: ScreenGui } = {}
@@ -33,6 +35,7 @@ local windows: { [string]: Window } = {}
 local routes: { [string]: (...any) -> () } = {}
 local current: Window? = nil
 local backdrop: TextButton? = nil
+local locked: string? = nil
 
 local LAYERS = {
 	Hud = 1,
@@ -196,10 +199,26 @@ function Windows.IsOpen(name: string): boolean
 end
 
 -- Shows a created window (closing any other).
-function Windows.Show(name: string, ...: any)
+-- Locks the named window open (e.g. an active trade): backdrop taps, Esc and
+-- Windows.Close() no longer close it, and other windows are refused until
+-- Windows.Lock(nil). Only Windows.Close(true) closes it.
+function Windows.Lock(name: string?)
+	locked = name
+end
+
+function Windows.LockedName(): string?
+	return locked
+end
+
+-- Shows a created window (closing any other). Returns false when refused.
+function Windows.Show(name: string, ...: any): boolean
 	local w = windows[name]
 	if not w then
-		return
+		return false
+	end
+	if locked and locked ~= name then
+		Windows.Refused:Fire(name)
+		return false
 	end
 	local c = current
 	if c and c ~= w then
@@ -216,11 +235,16 @@ function Windows.Show(name: string, ...: any)
 	end
 	w.Opened:Fire(...)
 	Windows.Changed:Fire(name)
+	return true
 end
 
-function Windows.Close()
+-- Closes the open window. A locked window only closes with force = true.
+function Windows.Close(force: boolean?)
 	local c = current
 	if not c then
+		return
+	end
+	if locked == c.Name and not force then
 		return
 	end
 	current = nil

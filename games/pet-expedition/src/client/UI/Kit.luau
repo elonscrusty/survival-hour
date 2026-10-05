@@ -386,15 +386,21 @@ function Kit.tabs(parent: Instance, names: { string }, labels: { [string]: strin
 	return row, select
 end
 
--- Pop-in animation for a newly shown element.
+-- Pop-in animation for a newly shown element. Reuses the element's own
+-- UIScale when it has one (a GuiObject must never get two UIScales).
 function Kit.pop(inst: GuiObject, from: number?)
-	local scale = inst:FindFirstChild("Pop") :: UIScale?
-	if not scale then
-		scale = Kit.new("UIScale", { Name = "Pop", Parent = inst })
+	local s = inst:FindFirstChildOfClass("UIScale")
+	if not s then
+		s = Kit.new("UIScale", { Name = "Pop", Parent = inst })
 	end
-	local s = scale :: UIScale
-	s.Scale = from or 0.6
-	Kit.tween(s, 0.25, { Scale = 1 }, Enum.EasingStyle.Back)
+	local scale = s :: UIScale
+	local base = 1
+	if scale.Name == "AutoScale" then
+		local mult = scale:GetAttribute("Mult")
+		base = Kit.screenScale() * (if type(mult) == "number" then mult else 1)
+	end
+	scale.Scale = base * (from or 0.6)
+	Kit.tween(scale, 0.25, { Scale = base }, Enum.EasingStyle.Back)
 end
 
 -- Removes children except layout helpers.
@@ -408,7 +414,7 @@ end
 
 -- Auto scale ---------------------------------------------------------------
 
-local scales: { { scale: UIScale, mult: number } } = {}
+local scales: { [UIScale]: number } = {} -- UIScale -> multiplier
 
 function Kit.screenScale(): number
 	local cam = Workspace.CurrentCamera
@@ -433,21 +439,21 @@ end
 
 local function refreshScales()
 	local s = Kit.screenScale()
-	for i = #scales, 1, -1 do
-		local entry = scales[i]
-		if entry.scale.Parent == nil then
-			table.remove(scales, i)
-		else
-			entry.scale.Scale = s * entry.mult
-		end
+	for sc, mult in scales do
+		sc.Scale = s * mult
 	end
 end
 
 -- Adds a UIScale that follows the screen size. `mult` tweaks it per element.
 function Kit.autoScale(gui: Instance, mult: number?): UIScale
+	local m = mult or 1
 	local sc: UIScale = Kit.new("UIScale", { Name = "AutoScale", Parent = gui })
-	table.insert(scales, { scale = sc, mult = mult or 1 })
-	sc.Scale = Kit.screenScale() * (mult or 1)
+	sc:SetAttribute("Mult", m)
+	scales[sc] = m
+	sc.Destroying:Connect(function()
+		scales[sc] = nil
+	end)
+	sc.Scale = Kit.screenScale() * m
 	return sc
 end
 
