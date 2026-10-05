@@ -1,0 +1,52 @@
+PET EXPEDITION - ChatGPT reference picture prompts
+==================================================
+
+HOW TO USE
+1. Paste the STYLE prompt first.
+2. Then paste ONE picture prompt at a time.
+3. Send Claude the pictures you like.
+
+
+STYLE (paste first)
+-------------------
+You're making concept art for a Roblox game called "Pet Expedition". Keep one consistent style in every image: cute, chunky 3D toy style like a popular Roblox pet simulator. Simple rounded shapes (spheres, cylinders, blocks), smooth plastic surfaces, soft studio lighting, bright saturated pastel colours, big glossy cartoon eyes with white highlights and pink blush cheeks, tiny bodies with oversized heads. No realistic textures, no text unless I ask, no copyrighted characters. Clean backgrounds. Kid-friendly.
+
+
+1. PET LINEUP
+-------------
+A lineup of 6 cute pets standing side by side on a white background: tan puppy with red collar, orange tabby kitten, white bunny, red fox, golden bear cub holding a honey pot, purple baby dragon with glowing mushroom spines. Front view, same scale, character reference sheet.
+
+
+2. RARITIES
+-----------
+The same puppy shown in 4 versions side by side: normal, golden (shiny gold metal), rainbow (rainbow-coloured fur stripes), and a sparkly "shiny" version with glitter particles. Character sheet.
+
+
+3. PET RING
+-----------
+A round outdoor fighting ring on a grassy island: sand floor, red posts with glowing gold balls on top, white ropes, one open entrance, a "PET RING" sign. Three players' cute pets brawling inside with impact stars. Players with Roblox-style blocky avatars cheering outside. Bird's-eye 3/4 view.
+
+
+4. HUB
+------
+A cheerful round stone plaza on a green meadow island: an egg on a golden pedestal, a wooden quest board with a map, a golden crafting machine with gears, a white pet statue, a giant open book on a stand. Flowers, hay bales, a windmill, blue ocean around. 3/4 view.
+
+
+5. ISLANDS MAP
+--------------
+Six floating round islands in a line joined by wooden bridges with gates: green meadow, glowing mushroom forest, snowy peaks, tropical coral beach, black volcano with lava, purple space island with planets. Bright ocean, top-down 3/4 view, game map.
+
+
+6. EGGS
+-------
+Seven decorated pet eggs on pedestals: spotted meadow egg, glowing mushroom egg, frosty ice egg, coral seashell egg, cracked lava egg, starry galaxy egg, rainbow prism crystal egg. Product shot, white background.
+
+
+7. GAME ICON
+------------
+Square game icon: a cute puppy and baby dragon bursting out of a cracked egg with sparkles and gold coins, bright gradient background, bold and readable at small size. No text.
+
+
+8. THUMBNAIL
+------------
+Wide 16:9 game thumbnail: excited cute pets fighting in a ring with a golden crown floating above the winner, coins flying, colourful island in the background, dynamic action. Leave the top third empty for a title.
