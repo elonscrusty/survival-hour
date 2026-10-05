@@ -5,6 +5,7 @@
 
 local specs = {
 	"./Data.spec",
+	"./Models.spec",
 }
 
 local passed, failed = 0, 0
