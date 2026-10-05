@@ -156,4 +156,29 @@ return {
 		t.eq(#r.Pets, 0, "pets")
 		t.eq(Economy.ExpeditionSlots(p), 1, "slots")
 	end,
+	["coin multiplier is snapshotted at start"] = function(t)
+		local p, uids = setup(1)
+		local slot, exp = Expedition.Start(p, "Meadow", "Short", uids, NOW, 3, nil, 2)
+		local base = Expedition.RollReward(p, exp).Coins
+		p.Coins = 0
+		local r = Expedition.Claim(p, slot, exp.EndAt, 50)
+		t.eq(r.Coins, math.floor(base * 2), "start-time multiplier, not claim-time")
+		t.eq(p.ExpeditionMult[slot], nil, "snapshot cleared")
+		local slot2, exp2 = Expedition.Start(p, "Meadow", "Short", uids, NOW, 3, nil, 0 / 0)
+		t.eq(p.ExpeditionMult[slot2], 1, "bad multiplier stored as 1")
+		p.ExpeditionMult[slot2] = nil -- an old save without a snapshot
+		p.Coins = 0
+		local base2 = Expedition.RollReward(p, exp2).Coins
+		local r2 = Expedition.Claim(p, slot2, exp2.EndAt, 3)
+		t.eq(r2.Coins, math.floor(base2 * 3), "fallback for old saves")
+	end,
+	["gem pets on expeditions use the highest opened island"] = function(t)
+		local p = Profile.Default()
+		local pup = Inventory.Add(p, { Id = "CrystalPup" })
+		local exp = { Area = "Meadow", Duration = "Short", Pets = { pup.Uid }, StartAt = 0, EndAt = 0, Seed = 9 }
+		local low = Expedition.RollReward(p, exp).Coins
+		p.Areas.Grove = true
+		local high = Expedition.RollReward(p, exp).Coins
+		t.ok(high > low, "scales with progress")
+	end,
 }

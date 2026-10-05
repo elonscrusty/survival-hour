@@ -106,6 +106,10 @@ function Util.Function(name: string, handler: (Player, any, ...any) -> any)
 		if not session then
 			return Util.Fail("Still loading your data")
 		end
+		if session.TradeBusy then
+			-- A trade swap is saving; nothing may change this profile meanwhile.
+			return Util.Fail("Finishing your trade, one moment")
+		end
 		local ok, result = pcall(handler, player, session, ...)
 		if not ok then
 			warn(string.format("[%s] error from %s: %s", name, player.Name, tostring(result)))

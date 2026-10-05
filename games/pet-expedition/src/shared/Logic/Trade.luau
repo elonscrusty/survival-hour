@@ -266,24 +266,112 @@ function Trade.Plan(t: TradeState, pa: Profile, pb: Profile): (Plan?, string?)
 	}, nil
 end
 
-local function commitSide(p: Profile, s: SidePlan)
-	p.Pets = s.Pets
-	p.Equipped = s.Equipped
-	p.NextUid = s.NextUid
-	p.Gems = s.Gems
-	for _, pet in s.Received do
-		p.Index[pet.Id] = true
+-- Journal ------------------------------------------------------------------------
+-- A trade touches two profiles that are saved separately, so a crash between
+-- the two saves could duplicate items. TradeService prevents that with a
+-- journal record written before either profile changes:
+--   1. both profiles get PendingTrade = id and are saved;
+--   2. the journal (both sides' changes) is written under its own key;
+--   3. each side is applied with ApplySide and saved.
+-- A profile that loads with PendingTrade set replays its side from the journal
+-- (or just clears the flag if no journal was written). ApplySide is idempotent
+-- through AppliedTrades, so replaying twice changes nothing.
+
+export type JournalSide = { Give: { string }, GiveGems: number, Get: { PetInstance }, GetGems: number }
+export type Journal = { Id: string, Sides: { [string]: JournalSide } }
+
+-- Builds the journal for a planned trade (keys are tostring(UserId)).
+function Trade.Journal(t: TradeState, plan: Plan): Journal
+	local a, b = t.Sides[1], t.Sides[2]
+	local function copyList(list: { PetInstance }): { PetInstance }
+		local out: { PetInstance } = {}
+		for _, pet in list do
+			table.insert(out, Profile.CopyPet(pet))
+		end
+		return out
 	end
+	return {
+		Id = t.Id,
+		Sides = {
+			[tostring(a.UserId)] = { Give = table.clone(a.Pets), GiveGems = a.Gems, Get = copyList(plan.A.Received), GetGems = b.Gems },
+			[tostring(b.UserId)] = { Give = table.clone(b.Pets), GiveGems = b.Gems, Get = copyList(plan.B.Received), GetGems = a.Gems },
+		},
+	}
 end
 
--- Plans and commits the swap. Both profiles change, or neither does.
+-- Validates one side of a journal loaded from storage. Returns nil if unusable.
+function Trade.SanitizeSide(raw: any): JournalSide?
+	if type(raw) ~= "table" or type(raw.Give) ~= "table" or type(raw.Get) ~= "table" then
+		return nil
+	end
+	local give: { string } = {}
+	for _, uid in raw.Give do
+		if type(uid) == "string" and #uid > 0 and #uid <= Schema.MaxUidLength then
+			table.insert(give, uid)
+		end
+	end
+	-- Reuse the profile sanitiser for the pets (validates ids, variants, levels).
+	local tmp = Profile.Sanitize({ Pets = raw.Get })
+	return {
+		Give = give,
+		GiveGems = Schema.ClampInt(raw.GiveGems, 0, Config.TradeMaxGems),
+		Get = tmp.Pets,
+		GetGems = Schema.ClampInt(raw.GetGems, 0, Config.TradeMaxGems),
+	}
+end
+
+-- Applies one side of a trade to a profile. Returns false (and changes
+-- nothing) if this trade was already applied. Received pets keep their uid
+-- unless it is taken, arrive unlocked, and may exceed storage (the trade was
+-- agreed when they fit).
+function Trade.ApplySide(p: Profile, side: JournalSide, tradeId: string): boolean
+	if table.find(p.AppliedTrades, tradeId) then
+		if p.PendingTrade == tradeId then
+			p.PendingTrade = nil
+		end
+		return false
+	end
+	Inventory.RemoveUnchecked(p, side.Give)
+	local used: { [string]: boolean } = {}
+	for _, pet in p.Pets do
+		used[pet.Uid] = true
+	end
+	for _, src in side.Get do
+		local pet = Profile.CopyPet(src)
+		pet.Locked = false
+		if used[pet.Uid] or #pet.Uid == 0 or #pet.Uid > Schema.MaxUidLength then
+			pet.Uid = Inventory.NewUid(p)
+		else
+			local n = tonumber(pet.Uid)
+			if n and Schema.IsFinite(n) and n > p.NextUid then
+				p.NextUid = math.min(math.floor(n), 1e15)
+			end
+		end
+		used[pet.Uid] = true
+		table.insert(p.Pets, pet)
+		p.Index[pet.Id] = true
+	end
+	p.Gems = math.clamp(p.Gems - side.GiveGems + side.GetGems, 0, Schema.MaxGems)
+	table.insert(p.AppliedTrades, tradeId)
+	while #p.AppliedTrades > Schema.MaxAppliedTrades do
+		table.remove(p.AppliedTrades, 1)
+	end
+	if p.PendingTrade == tradeId then
+		p.PendingTrade = nil
+	end
+	return true
+end
+
+-- Plans and applies the swap in memory (tests and the final step of the
+-- journaled flow). Both profiles change, or neither does.
 function Trade.Execute(t: TradeState, pa: Profile, pb: Profile): (Plan?, string?)
 	local plan, err = Trade.Plan(t, pa, pb)
 	if not plan then
 		return nil, err
 	end
-	commitSide(pa, plan.A)
-	commitSide(pb, plan.B)
+	local j = Trade.Journal(t, plan)
+	Trade.ApplySide(pa, j.Sides[tostring(t.Sides[1].UserId)], t.Id)
+	Trade.ApplySide(pb, j.Sides[tostring(t.Sides[2].UserId)], t.Id)
 	t.Status = "Done"
 	t.ConfirmAt = nil
 	return plan, nil

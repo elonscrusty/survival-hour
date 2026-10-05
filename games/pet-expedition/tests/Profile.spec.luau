@@ -190,4 +190,20 @@ return {
 		t.ok(s.Daily.CanClaim, "daily ready")
 		t.eq(s.Settings.AutoFarm, false, "settings")
 	end,
+	["trade journal fields and expedition snapshots are sanitised"] = function(t)
+		local p = Profile.Sanitize({
+			Pets = { pet("1") },
+			Expeditions = { ["1"] = { Area = "Meadow", Duration = "Short", Pets = { "1" }, StartAt = 1, EndAt = 2, Seed = 5 } },
+			ExpeditionMult = { ["1"] = 2.5, ["2"] = 3, ["x"] = 1 },
+			PendingTrade = "abc",
+			AppliedTrades = { "a", 5, "b" },
+		})
+		t.eq(p.ExpeditionMult["1"], 2.5, "kept for a live expedition")
+		t.eq(p.ExpeditionMult["2"], nil, "dropped for an empty slot")
+		t.eq(p.PendingTrade, "abc", "pending trade kept")
+		t.eq(#p.AppliedTrades, 2, "only string ids")
+		local q = Profile.Sanitize({ ExpeditionMult = { ["1"] = 0 / 0 }, PendingTrade = 5 })
+		t.eq(q.PendingTrade, nil, "bad pending id")
+		t.eq(next(q.ExpeditionMult), nil, "no expeditions, no snapshots")
+	end,
 }

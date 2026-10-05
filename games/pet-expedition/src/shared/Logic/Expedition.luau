@@ -52,7 +52,8 @@ function Expedition.Start(
 	uids: { string },
 	now: number,
 	seed: number,
-	blocked: { [string]: boolean }?
+	blocked: { [string]: boolean }?,
+	coinMult: number?
 ): (string?, Expedition?, string?)
 	local area = Areas.ById[areaId]
 	if not area then
@@ -108,6 +109,10 @@ function Expedition.Start(
 		Seed = Rng.New(seed).State,
 	}
 	p.Expeditions[slot] = exp
+	-- The coin multiplier is fixed at start, so buying a boost or VIP just
+	-- before claiming doesn't multiply hours of expedition income.
+	local mult = coinMult or 1
+	p.ExpeditionMult[slot] = if Schema.IsFinite(mult) and mult > 0 then math.min(mult, Schema.MaxCoinMult) else 1
 	return slot, exp, nil
 end
 
@@ -120,10 +125,11 @@ function Expedition.RollReward(p: Profile, exp: Expedition): RewardRoll
 		return roll
 	end
 	local power = 0
+	local scale = Economy.HighestArea(p)
 	for _, uid in exp.Pets do
 		local pet = Inventory.Find(p, uid)
 		if pet then
-			power += PetMath.Power(pet)
+			power += PetMath.Power(pet, scale)
 		end
 	end
 	local rng = Rng.New(exp.Seed)
@@ -161,8 +167,10 @@ export type Claimed = {
 }
 
 -- Claims a finished expedition: frees its pets and grants the reward.
--- Refuses (and changes nothing) if the found pets would not fit.
-function Expedition.Claim(p: Profile, slot: string, now: number, coinMult: number): (Claimed?, string?)
+-- Refuses (and changes nothing) if the found pets would not fit. Coins use the
+-- multiplier snapshotted at Start; `fallbackMult` is only for expeditions
+-- saved before snapshots existed.
+function Expedition.Claim(p: Profile, slot: string, now: number, fallbackMult: number?): (Claimed?, string?)
 	local exp = p.Expeditions[slot]
 	if not exp then
 		return nil, "No expedition in that slot"
@@ -175,7 +183,10 @@ function Expedition.Claim(p: Profile, slot: string, now: number, coinMult: numbe
 		return nil, string.format("Make room for %d pet(s) first", #roll.Pets)
 	end
 	p.Expeditions[slot] = nil
-	local mult = if Schema.IsFinite(coinMult) and coinMult > 0 then coinMult else 1
+	local snap = p.ExpeditionMult[slot]
+	p.ExpeditionMult[slot] = nil
+	local m = snap or fallbackMult or 1
+	local mult = if Schema.IsFinite(m) and m > 0 then math.min(m, Schema.MaxCoinMult) else 1
 	local out: Claimed = { Coins = 0, Gems = 0, Pets = {}, Discovered = {} }
 	out.Coins = Economy.AddCoins(p, roll.Coins * mult, true)
 	out.Gems = Economy.AddGems(p, roll.Gems)
