@@ -22,8 +22,6 @@ export type StateContext = {
 	Premium: boolean?,
 	InGroup: boolean?,
 	ServerLuckUntil: number?,
-	SessionMinutes: number?,
-	PlaytimeClaimed: { [string]: boolean }?,
 	CanBuyGemEggs: boolean?,
 	CanTrade: boolean?,
 }
@@ -59,6 +57,7 @@ function Profile.Default(): Profile
 		ExtraEquip = 0,
 		ExtraStorage = 0,
 		Receipts = {},
+		Playtime = { Day = -1, Minutes = 0, Claimed = {} },
 		ExpeditionMult = {},
 		PendingTrade = nil,
 		AppliedTrades = {},
@@ -262,6 +261,18 @@ function Profile.Sanitize(raw: any): Profile
 	end
 	Profile.TrimReceipts(p)
 
+	local play = tbl(raw.Playtime)
+	if Schema.IsInt(play.Day) then
+		p.Playtime.Day = play.Day
+		p.Playtime.Minutes = if Schema.IsFinite(play.Minutes) then math.clamp(play.Minutes, 0, 24 * 60) else 0
+		for key, v in tbl(play.Claimed) do
+			local n = tonumber(key)
+			if v == true and n and Schema.IsInt(n, 1, #Config.PlaytimeGifts) then
+				p.Playtime.Claimed[tostring(n)] = true
+			end
+		end
+	end
+
 	for slot, mult in tbl(raw.ExpeditionMult) do
 		if type(slot) == "string" and p.Expeditions[slot] and Schema.IsFinite(mult) and mult > 0 then
 			p.ExpeditionMult[slot] = math.min(mult, Schema.MaxCoinMult)
@@ -369,7 +380,7 @@ function Profile.BuildState(p: Profile, c: StateContext): Types.PlayerState
 		end
 	end
 	local quests: { Schema.Quest } = {}
-	local questList: { Schema.Quest } = if p.Quests.Day == day then p.Quests.List else Rewards.GenerateQuests(day)
+	local questList: { Schema.Quest } = Rewards.QuestsFor(p, day)
 	for _, q in questList do
 		table.insert(quests, { Kind = q.Kind, Goal = q.Goal, Progress = q.Progress, Gems = q.Gems, Claimed = q.Claimed })
 	end
@@ -398,9 +409,10 @@ function Profile.BuildState(p: Profile, c: StateContext): Types.PlayerState
 		IndexClaimed = copySet(p.IndexClaimed),
 		Daily = Rewards.DailyStatus(p, day),
 		Quests = quests,
+		-- SessionMinutes keeps its name for the client; it is minutes played today.
 		Playtime = {
-			SessionMinutes = math.floor(c.SessionMinutes or 0),
-			Claimed = copySet(c.PlaytimeClaimed or {}),
+			SessionMinutes = math.floor(Rewards.PlaytimeMinutes(p, now)),
+			Claimed = if p.Playtime.Day == day then copySet(p.Playtime.Claimed) else {},
 		},
 		Stats = {
 			Hatched = p.Stats.Hatched,

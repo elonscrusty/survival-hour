@@ -1,7 +1,8 @@
 --!strict
--- Egg rolls. Luck multiplies the weight of Rare-and-better pets; the weights
--- are then renormalised (the roll picks against their new total). Luck is
--- clamped to [1, Config.MaxLuckMult].
+-- Egg rolls. Luck multiplies the weight of every pet rarer than the egg's
+-- lowest rarity (so it also works on the Prism Egg, whose lowest is Rare);
+-- the weights are then renormalised (the roll picks against their new
+-- total). Luck is clamped to [1, Config.MaxLuckMult].
 
 local Config = require("../Config")
 local Pets = require("../Pets")
@@ -12,7 +13,6 @@ local Rng = require("./Rng")
 
 local Hatch = {}
 
-local RARE_INDEX = PetMath.RarityIndex("Rare")
 
 function Hatch.ClampLuck(luck: number): number
 	if not Schema.IsFinite(luck) then
@@ -24,11 +24,18 @@ end
 -- Effective weights for an egg at a luck level: { { Pet, Weight } }.
 function Hatch.Weights(egg: Eggs.Egg, luck: number): { Eggs.Odds }
 	luck = Hatch.ClampLuck(luck)
+	local lowest = math.huge
+	for _, o in egg.Odds do
+		local def = Pets.ById[o.Pet]
+		if def then
+			lowest = math.min(lowest, PetMath.RarityIndex(def.Rarity))
+		end
+	end
 	local out: { Eggs.Odds } = {}
 	for _, o in egg.Odds do
 		local def = Pets.ById[o.Pet]
 		local w = o.Weight
-		if def and PetMath.RarityIndex(def.Rarity) >= RARE_INDEX then
+		if def and PetMath.RarityIndex(def.Rarity) > lowest then
 			w *= luck
 		end
 		table.insert(out, { Pet = o.Pet, Weight = w })

@@ -1,5 +1,6 @@
 -- Profile defaults, sanitising of loaded data and the client snapshot.
 local Profile = require("../src/shared/Logic/Profile")
+local Rewards = require("../src/shared/Logic/Rewards")
 local Inventory = require("../src/shared/Logic/Inventory")
 local Schema = require("../src/shared/Logic/Schema")
 local Config = require("../src/shared/Config")
@@ -171,7 +172,9 @@ return {
 		p.Expeditions["1"] = { Area = "Meadow", Duration = "Short", Pets = { a.Uid }, StartAt = NOW, EndAt = NOW + 300, Seed = 12345 }
 		p.Boosts.Coins2x = NOW - 1
 		p.Boosts.Luck2x = NOW + 100
-		local s = Profile.BuildState(p, { Now = NOW, ServerLuckUntil = NOW + 10, SessionMinutes = 3.7, PlaytimeClaimed = { ["1"] = true }, CanTrade = false })
+		Rewards.AddPlaytime(p, 3.7 * 60, NOW)
+		p.Playtime.Claimed["1"] = true
+		local s = Profile.BuildState(p, { Now = NOW, ServerLuckUntil = NOW + 10, CanTrade = false })
 		t.eq(s.Coins, p.Coins, "coins")
 		t.eq(#s.Pets, 1, "pets")
 		t.ok(s.Pets[1] ~= p.Pets[1], "pets copied")

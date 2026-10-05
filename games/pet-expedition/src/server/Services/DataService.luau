@@ -272,7 +272,8 @@ function DataService._onJoin(player: Player)
 		ChangeSeq = 0,
 		SavedSeq = -1,
 		JoinClock = os.clock(),
-		PlaytimeClaimed = {},
+		LastPlayClock = nil,
+		BreakGemLog = {}, -- recent breakable gem grants (Config.BreakGemsPerHour)
 		Premium = false,
 		InGroup = false,
 		-- Off until PolicyService answers (StateService), so nothing restricted

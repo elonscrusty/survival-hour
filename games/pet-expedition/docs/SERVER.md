@@ -49,4 +49,16 @@ rebirth), `Inventory`, `Expedition`, `Rewards`, `Profile` (defaults, sanitising,
 - Expedition coins use the coin multiplier snapshotted at start (`ExpeditionMult[slot]`).
 - Expedition claims are refused (nothing paid) if the found pets wouldn't fit in storage.
 - Gem eggs and trading stay off until PolicyService answers (allowed in Studio if it can't answer).
-- Playtime gifts are per server session (rejoining restarts them), as `Config.PlaytimeGifts` describes.
+- Playtime gifts: once per UTC day, based on minutes played that day (`Profile.Playtime`, accumulated
+  while online across sessions and servers; rejoining doesn't reset anything). PlayerState keeps
+  `Playtime.SessionMinutes`, which now means minutes played today.
+- Expedition coins: sum over pets of `min(power / destination PowerMult, Config.ExpeditionMaxRelPower)`
+  x `ExpeditionCoinsPerPower` x destination CoinMult x duration Mult x the coin multiplier snapshotted
+  at start.
+- Breakable gems are capped per player at `Config.BreakGemsPerHour` (rolling hour, server memory).
+- Coins quest goals are the listed goal x CoinMult of the player's highest opened island, fixed when the
+  day's quests are generated.
+- Luck multiplies every pet rarer than the egg's lowest rarity (works on the Prism Egg too), then the
+  weights are renormalised.
+- Trading is pets-only while `Config.TradeMaxGems = 0` (any gem offer is refused).
+- Rebirth: up to `Config.MaxRebirths`; every reachable cost stays under the 1e15 coin cap (tested).

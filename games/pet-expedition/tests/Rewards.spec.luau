@@ -53,20 +53,94 @@ return {
 		Rewards.ClaimDaily(p, NOW + 5 * DAY)
 		t.no(Rewards.ClaimDaily(p, NOW), "earlier day refused")
 	end,
-	["playtime gifts need minutes and claim once"] = function(t)
+	["playtime gifts need minutes played today and claim once per day"] = function(t)
 		local p = Profile.Default()
 		p.Gems = 0
-		local claimed = {}
-		t.no(Rewards.ClaimPlaytime(p, 7, claimed, 2, NOW), "8 minutes needed")
-		local r = Rewards.ClaimPlaytime(p, 8, claimed, 2, NOW)
+		Rewards.AddPlaytime(p, 7 * 60, NOW)
+		t.no(Rewards.ClaimPlaytime(p, 2, NOW), "8 minutes needed")
+		Rewards.AddPlaytime(p, 60, NOW + 60)
+		t.eq(Rewards.PlaytimeMinutes(p, NOW), 8, "8 minutes")
+		local r = Rewards.ClaimPlaytime(p, 2, NOW)
 		t.ok(r, "ok")
 		t.eq(p.Gems, Config.PlaytimeGifts[2].Gems, "gems")
-		t.no(Rewards.ClaimPlaytime(p, 100, claimed, 2, NOW), "double claim")
-		t.no(Rewards.ClaimPlaytime(p, 100, claimed, 0, NOW), "index 0")
-		t.no(Rewards.ClaimPlaytime(p, 100, claimed, #Config.PlaytimeGifts + 1, NOW), "too high")
-		t.no(Rewards.ClaimPlaytime(p, 100, claimed, 1.5, NOW), "fraction")
-		t.no(Rewards.ClaimPlaytime(p, 0 / 0, claimed, 1, NOW), "nan minutes")
+		t.no(Rewards.ClaimPlaytime(p, 2, NOW), "double claim")
+		t.no(Rewards.ClaimPlaytime(p, 0, NOW), "index 0")
+		t.no(Rewards.ClaimPlaytime(p, #Config.PlaytimeGifts + 1, NOW), "too high")
+		t.no(Rewards.ClaimPlaytime(p, 1.5, NOW), "fraction")
 	end,
+	["playtime survives rejoining and resets the next UTC day"] = function(t)
+		local p = Profile.Default()
+		Rewards.AddPlaytime(p, 5 * 60, NOW)
+		Rewards.ClaimPlaytime(p, 1, NOW)
+		-- Rejoin (profile saved and loaded): minutes and claims are kept.
+		local q = Profile.Sanitize(p)
+		t.eq(Rewards.PlaytimeMinutes(q, NOW + 10), 5, "minutes kept")
+		t.no(Rewards.ClaimPlaytime(q, 1, NOW + 10), "claim kept: no re-claim by rejoining")
+		Rewards.AddPlaytime(q, 4 * 60, NOW + 20)
+		t.ok(Rewards.ClaimPlaytime(q, 2, NOW + 20), "minutes add up across sessions")
+		-- Next day: fresh minutes and claims.
+		t.eq(Rewards.PlaytimeMinutes(q, NOW + DAY), 0, "new day starts at 0")
+		Rewards.AddPlaytime(q, 3 * 60, NOW + DAY)
+		t.ok(Rewards.ClaimPlaytime(q, 1, NOW + DAY), "claimable again tomorrow")
+	end,
+	["playtime ignores bad or huge time steps"] = function(t)
+		local p = Profile.Default()
+		for _, bad in { -60, 0 / 0, math.huge, -math.huge } do
+			Rewards.AddPlaytime(p, bad, NOW)
+		end
+		t.eq(Rewards.PlaytimeMinutes(p, NOW), 0, "nothing added")
+		Rewards.AddPlaytime(p, 10 * 3600, NOW)
+		t.eq(Rewards.PlaytimeMinutes(p, NOW), 60, "one call adds at most an hour")
+		for _ = 1, 40 do
+			Rewards.AddPlaytime(p, 3600, NOW)
+		end
+		t.eq(Rewards.PlaytimeMinutes(p, NOW), 24 * 60, "capped at a day")
+		local q = Profile.Sanitize({ Playtime = { Day = 5, Minutes = 1e9, Claimed = { ["1"] = true, ["99"] = true } } })
+		t.eq(q.Playtime.Minutes, 24 * 60, "sanitised minutes")
+		t.eq(q.Playtime.Claimed["99"], nil, "unknown gift dropped")
+	end,
+	["coins quest goals scale with the highest opened island"] = function(t)
+		local p = Profile.Default()
+		local function coinsGoal(q)
+			for _, quest in q.Quests.List do
+				if quest.Kind == "Coins" then
+					return quest.Goal
+				end
+			end
+			return nil
+		end
+		-- Find a day with a Coins quest.
+		local day
+		for d = 20000, 20200 do
+			for _, q in Rewards.GenerateQuests(d) do
+				if q.Kind == "Coins" then
+					day = d
+				end
+			end
+			if day then
+				break
+			end
+		end
+		t.ok(day, "some day has a coins quest")
+		local base = nil
+		for _, q in Rewards.GenerateQuests(day) do
+			if q.Kind == "Coins" then
+				base = q.Goal
+			end
+		end
+		Rewards.EnsureQuests(p, day)
+		t.eq(coinsGoal(p), base, "meadow: listed goal")
+		local p2 = Profile.Default()
+		p2.Areas.Grove = true
+		p2.Areas.Frost = true
+		Rewards.EnsureQuests(p2, day)
+		t.eq(coinsGoal(p2), base * 64, "frost: x64")
+		-- Fixed once generated, even if the player opens more islands.
+		p2.Areas.Coral = true
+		Rewards.EnsureQuests(p2, day)
+		t.eq(coinsGoal(p2), base * 64, "goal fixed for the day")
+	end,
+
 	["quests are the same for everyone on a day"] = function(t)
 		local a = Rewards.GenerateQuests(20000)
 		local b = Rewards.GenerateQuests(20000)

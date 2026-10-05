@@ -18,6 +18,19 @@ function RewardService.Init(c)
 	ctx = c
 	local U = ctx.Util
 
+	ctx.DataService.OnLoaded(function(_, s)
+		s.LastPlayClock = os.clock()
+		Rewards.EnsurePlaytimeDay(s.Profile, os.time())
+	end)
+	-- Count the last partial minute before the leave save.
+	U.OnPlayerRemoving(function(p)
+		local s = ctx.DataService.Get(p)
+		if s then
+			RewardService.AccruePlaytime(s)
+			ctx.DataService.Touch(s)
+		end
+	end, true)
+
 	U.Function("ClaimDaily", function(player, s)
 		local reward, streak, err = Rewards.ClaimDaily(s.Profile, os.time())
 		if not reward then
@@ -31,7 +44,8 @@ function RewardService.Init(c)
 		if not U.IsInt(index, 1, #Config.PlaytimeGifts) then
 			return U.Fail("Unknown gift")
 		end
-		local reward, err = Rewards.ClaimPlaytime(s.Profile, RewardService.SessionMinutes(s), s.PlaytimeClaimed, index, os.time())
+		RewardService.AccruePlaytime(s)
+		local reward, err = Rewards.ClaimPlaytime(s.Profile, index, os.time())
 		if not reward then
 			return U.Fail(err or "Not ready")
 		end
@@ -64,8 +78,25 @@ function RewardService.Init(c)
 	end)
 end
 
-function RewardService.SessionMinutes(s): number
-	return (os.clock() - s.JoinClock) / 60
+-- Adds the time since the last accrual to today's minutes (profile field,
+-- so it carries over between sessions and servers within a UTC day).
+function RewardService.AccruePlaytime(s)
+	local now = os.clock()
+	local last = s.LastPlayClock or now
+	s.LastPlayClock = now
+	Rewards.AddPlaytime(s.Profile, now - last, os.time())
+end
+
+function RewardService.Start()
+	while true do
+		task.wait(30)
+		for p, s in ctx.DataService.All() do
+			if s.Ready and not s.Released and not s.Leaving then
+				RewardService.AccruePlaytime(s)
+				ctx.StateService.Dirty(p)
+			end
+		end
+	end
 end
 
 -- Tells the player a species just entered their Index.

@@ -294,7 +294,10 @@ function BreakableService._break(b)
 		local share = shares[i]
 		local p = s.Profile
 		local coins = Economy.AddCoins(p, share.Coins * ctx.StateService.CoinMult(s), true)
-		local gems = Economy.AddGems(p, share.Gems)
+		-- Breakable gems are capped per player per rolling hour (Auto Farm
+		-- must not turn into a gem printer).
+		local gemsAllowed = Economy.CapRolling(s.BreakGemLog, os.clock(), share.Gems, Config.BreakGemsPerHour, 3600)
+		local gems = Economy.AddGems(p, gemsAllowed)
 		if share.Credit then
 			p.Stats.Broken = math.min(Schema.MaxStat, p.Stats.Broken + 1)
 			Rewards.AddQuestProgress(p, "Break", 1, now)

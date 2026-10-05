@@ -226,6 +226,34 @@ function Economy.SplitBreak(damage: { number }, coins: number, gems: number): { 
 	return out
 end
 
+export type CapEntry = { At: number, N: number }
+
+-- Rolling-window cap (e.g. Config.BreakGemsPerHour). `log` holds what was
+-- granted recently and is updated in place. Returns how much of `amount` may
+-- be granted now (0..amount).
+function Economy.CapRolling(log: { CapEntry }, now: number, amount: number, cap: number, window: number): number
+	local i = 1
+	while i <= #log do
+		if now - log[i].At >= window then
+			table.remove(log, i)
+		else
+			i += 1
+		end
+	end
+	if not Schema.IsFinite(amount) or amount <= 0 then
+		return 0
+	end
+	local used = 0
+	for _, e in log do
+		used += e.N
+	end
+	local allowed = math.max(0, math.min(math.floor(amount), math.floor(cap) - used))
+	if allowed > 0 then
+		table.insert(log, { At = now, N = allowed })
+	end
+	return allowed
+end
+
 -- Opens the next island's gate. Islands open in order.
 function Economy.OpenGate(p: Profile, areaId: string): (boolean, string?)
 	local area = Areas.ById[areaId]

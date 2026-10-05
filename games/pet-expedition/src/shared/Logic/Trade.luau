@@ -80,6 +80,9 @@ function Trade.ValidateOffer(p: Profile, uids: any, gems: any): (boolean, string
 	if n > Config.TradeMaxPets then
 		return false, string.format("At most %d pets per trade", Config.TradeMaxPets)
 	end
+	if Config.TradeMaxGems <= 0 and gems ~= 0 then
+		return false, "Gems can't be traded"
+	end
 	if not Schema.IsInt(gems, 0, Config.TradeMaxGems) then
 		return false, "Bad gem amount"
 	end
