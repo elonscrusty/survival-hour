@@ -260,6 +260,8 @@ def props():
         "LandmarkGrove": (V.landmark_grove, True), "LandmarkFrost": (V.landmark_frost, True), "LandmarkCoral": (V.landmark_coral, True),
         "LandmarkVolcano": (V.landmark_volcano, True), "LandmarkStarfall": (V.landmark_starfall, True),
         # hub and interactables
+        "TreeCluster": (V.tree_cluster, True), "ShroomCluster": (V.shroom_cluster, True), "PineCluster": (V.pine_cluster, True),
+        "PalmCluster": (V.palm_cluster, True), "CrystalField": (V.crystal_field, True), "FlowerBed": (V.flower_bed, False),
         "PawPlaza": (V.paw_plaza, True), "ExpeditionBoard": (V.map_board, True), "CraftMachine": (V.gear_machine, True),
         "RebirthStatue": (lambda: V.dog_statue(normalize(PETS.BUILDERS["Puppy"](), 6.5)), True), "IndexBook": (V.giant_book, True),
         "PrismStand": (stand_prism, True), "RingArch": (V.ring_arch, True), "SteppingStone": (V.stepping_stone, False),

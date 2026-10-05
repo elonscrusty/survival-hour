@@ -44,7 +44,7 @@ DECOR = {
     "Starfall": [("FloatCrystal", 3, (0.9, 1.3), 4), ("FloatCrystalCyan", 2, (0.9, 1.3), 4), ("Planet", 2, (0.9, 1.2), 5),
                  ("PlanetBlue", 1, (0.9, 1.1), 5), ("MoonRock", 2, (0.8, 1.2), 4), ("StarProp", 3, (0.9, 1.2), 3)],
 }
-DECOR_COUNT = {"Meadow": 75, "Grove": 70, "Frost": 70, "Coral": 70, "Volcano": 60, "Starfall": 60}
+DECOR_COUNT = {"Meadow": 95, "Grove": 85, "Frost": 85, "Coral": 85, "Volcano": 75, "Starfall": 75}
 DECOR_SCALE = 1.7  # decorations read better a bit oversized next to 5-stud avatars
 LAMP = {"Meadow": "LanternPost", "Grove": "LanternPost", "Frost": "LanternPost", "Coral": "LanternPost", "Volcano": "StoneLantern",
         "Starfall": "StoneLantern"}
@@ -52,9 +52,9 @@ LANDMARK = {
     # prop, offset from island centre (x, z), footprint radius; all north of the breakable zones
     # prop, offset, footprint radius, yaw, scale
     "Grove": ("LandmarkGrove", (0, -100), 28, 0, 1.5),
-    "Frost": ("LandmarkFrost", (0, -102), 26, 0, 1.6),
+    "Frost": ("LandmarkFrost", (0, -104), 27, 0, 1.6),
     "Coral": ("LandmarkCoral", (0, -100), 26, 0, 1.2),
-    "Volcano": ("LandmarkVolcano", (0, -106), 32, 90, 1.4),
+    "Volcano": ("LandmarkVolcano", (0, -100), 29, 90, 1.0),
     "Starfall": ("LandmarkStarfall", (0, -100), 22, 0, 1.6),
 }
 CLIFF = {
@@ -66,7 +66,15 @@ CLIFF = {
     "Volcano": (0x4A3E3E, 0x3A3034, 0x2A2226, "B"),
     "Starfall": (0xA08CF0, 0x5B4B9E, 0x3B2E6E, "T"),
 }
-WATERFALLS = {"Meadow": (60, 120)}
+WATERFALLS = {"Meadow": (55, 120, 250), "Volcano": (50, 130, 310)}  # lava falls on the volcano
+DEFAULT_FALLS = (50, 130, 230, 310)
+CLUSTER = {
+    # prop placed on terraces / as big clusters, per theme
+    "Meadow": ["TreeCluster", "TreeCluster", "FlowerBed"], "Grove": ["ShroomCluster", "ShroomCluster", "PurpleCrystal"],
+    "Frost": ["PineCluster", "PineCluster", "IceCrystal"], "Coral": ["PalmCluster", "PalmCluster", "FlowerBed"],
+    "Volcano": ["FireCrystal", "LavaRock", "DeadTree"], "Starfall": ["CrystalField", "CrystalField", "StarProp"],
+}
+TERRACES = {"Meadow": 14, "Grove": 15, "Frost": 15, "Coral": 14, "Volcano": 14, "Starfall": 14}
 HUB = (-88.0, 0.0, 0.0)
 ARENA = (-60.0, 0.0, -86.0)  # Pet Ring: walk in and your equipped pets fight everyone else inside
 ARENA_R = 26.0
@@ -140,10 +148,11 @@ def build(areas, props):
         if a == "Meadow":
             spawns[a] = (HUB[0], 3, HUB[2])
             P.append(cyl(58, 0.3, (HUB[0], 0.14, HUB[2]), 0xCFCAC0, "U"))
-            for ang in (0, 90, 180, 270, 35, -35, 145, -145):
+            # stone spokes to the interactables (top 0.22: below the main path 0.27 and plaza 0.29, so no z-fighting)
+            for ang in (90, 270, 35, -35, 145, -145):
                 ar = math.radians(ang)
                 L_ = 16
-                P.append(box((L_, 0.28, 7), (HUB[0] + math.cos(ar) * (29 + L_ / 2 - 3), 0.13, HUB[2] + math.sin(ar) * (29 + L_ / 2 - 3)), 0xC2BDB2, "U",
+                P.append(box((L_, 0.24, 7), (HUB[0] + math.cos(ar) * (29 + L_ / 2 - 3), 0.1, HUB[2] + math.sin(ar) * (29 + L_ / 2 - 3)), 0xC2BDB2, "U",
                              r=(0, -ang, 0)))
             hub_items = [
                 ("SpawnLocation", "PawPlaza", (HUB[0], 0, HUB[2]), 0, {}),
@@ -185,9 +194,12 @@ def build(areas, props):
             name, (ox, oz), lr, lyaw, ls = LANDMARK[a]
             place.append((name, x + ox, 0, oz, lyaw, ls, a))
             blocked.append((x + ox, oz, lr))
-        for ang in WATERFALLS.get(a, (60, 240)):
+        for ang in WATERFALLS.get(a, DEFAULT_FALLS):
             ar = math.radians(ang)
-            blocked.append((x + math.cos(ar) * (R - 8), math.sin(ar) * (R - 8), 9))
+            blocked.append((x + math.cos(ar) * (R - 9), math.sin(ar) * (R - 9), 12))
+
+        # raised terraces / plateaus around the rim (grass-topped stone, two steps)
+        terraces(P, place, rnd, a, x, R, zones[a], blocked)
 
         # lamps along the path
         for k in range(-3, 4):
@@ -197,8 +209,8 @@ def build(areas, props):
             for sz in (-1, 1):
                 place.append((LAMP[a], lx + (8 if sz > 0 else 0), 0, sz * 10.5, 0, 1.0, a))
 
-        # scattered decorations
-        opts = DECOR[a]
+        # scattered decorations (themed clusters first so they get the room)
+        opts = DECOR[a] + [(CLUSTER[a][0], 6, (0.8, 1.0), 8), (CLUSTER[a][2], 3, (0.9, 1.1), 4)]
         total_w = sum(o[1] for o in opts)
         placed = []
         tries = 0
@@ -224,7 +236,7 @@ def build(areas, props):
                 continue
             if any(math.hypot(px - bx, pz - bz) < br + r for bx, bz, br in blocked):
                 continue
-            if any(math.hypot(px - qx, pz - qz) < qr + r + 1.5 for qx, qz, qr in placed):
+            if any(math.hypot(px - qx, pz - qz) < 0.75 * (qr + r) for qx, qz, qr in placed):
                 continue
             if abs(px - x) > R - 30 and abs(pz) < 24:
                 continue  # keep bridge mouths open
@@ -308,17 +320,23 @@ def island_edge(P, rnd, a, x, R, east, west):
             h = rnd.uniform(0.5, 1.4)
             P.append(box((chord * 2.05, h + 2, 4), (x + math.cos(ang) * (R - 0.5), h / 2 - 1, math.sin(ang) * (R - 0.5)), lip, lip_mat,
                          r=(0, yaw, 0)))
-    # waterfalls pouring off the rim into the sea
-    water_c = 0xBFEAFF if a == "Frost" else 0x7FD8FF
-    for ang_d in WATERFALLS.get(a, (60, 240)):
+    # waterfalls: a raised rock on the rim with a pool on top that spills over the cliff
+    lava = a == "Volcano"
+    water_c = 0xFF7A1A if lava else (0xBFEAFF if a == "Frost" else 0x7FD8FF)
+    wmat = "N" if lava else "G"
+    wt = 0.0 if lava else 0.15
+    for ang_d in WATERFALLS.get(a, DEFAULT_FALLS):
         ang = math.radians(ang_d)
         yaw = -ang_d + 90
-        ex, ez = x + math.cos(ang) * (R + 0.5), math.sin(ang) * (R + 0.5)
-        P.append(box((7, 0.3, 14), (x + math.cos(ang) * (R - 7), 0.16, math.sin(ang) * (R - 7)), water_c, "G", r=(0, yaw + 90, 0), t=0.2))
-        P.append(box((7, 1.0, 11), (x + math.cos(ang) * (R + 4.5), 0.0, math.sin(ang) * (R + 4.5)), water_c, "G", r=(0, yaw + 90, 0), t=0.2))
-        P.append(box((9, -WATER_LEVEL + 1.0, 1.6), (ex + math.cos(ang) * 9.5, (WATER_LEVEL + 1.0) / 2, ez + math.sin(ang) * 9.5), water_c,
-                     "G", r=(0, yaw, 0), t=0.15))
-        P.append(box((13, 1.6, 7), (ex + math.cos(ang) * 11.5, WATER_LEVEL + 0.4, ez + math.sin(ang) * 11.5), WHITE_FOAM, "P",
+        c, sn = math.cos(ang), math.sin(ang)
+        rc = R - 9
+        H = 11.0
+        P.append(box((16, H, 14), (x + c * rc, H / 2, sn * rc), stone, mat, r=(0, yaw, 0)))
+        P.append(box((16.6, 1.0, 14.6), (x + c * rc, H + 0.5, sn * rc), lip, lip_mat, r=(0, yaw, 0)))
+        P.append(box((8, 0.4, 10), (x + c * (rc + 1.5), H + 1.05, sn * (rc + 1.5)), water_c, wmat, r=(0, yaw, 0), t=wt, tag="Glow" if lava else None))
+        P.append(box((9, H + 1.0 - WATER_LEVEL, 1.8), (x + c * (rc + 7.8), (H + 1.0 + WATER_LEVEL) / 2, sn * (rc + 7.8)), water_c, wmat,
+                     r=(0, yaw, 0), t=wt, tag="Glow" if lava else None))
+        P.append(box((13, 1.6, 7), (x + c * (R + 11), WATER_LEVEL + 0.4, sn * (R + 11)), 0xFFB050 if lava else WHITE_FOAM, "P",
                      r=(0, yaw, 0), t=0.2))
     # stair carved down the cliff
     ang = math.radians(150)
@@ -335,6 +353,43 @@ def island_edge(P, rnd, a, x, R, east, west):
         sz = rnd.uniform(4, 9)
         P.append(box((sz, sz * 1.1, sz * 0.9), (x + math.cos(ang) * rr, WATER_LEVEL + sz * 0.25, math.sin(ang) * rr), dark, mat,
                      r=(0, rnd.uniform(0, 90), rnd.uniform(-8, 8))))
+
+
+def terraces(P, place, rnd, a, x, R, zones, blocked):
+    """Raised two-step plateaus near the rim. Heights 2.4 and 4.8 studs, so
+    players can hop up but never get trapped; kept clear of zones, paths,
+    bridge mouths and anything already blocked. Each gets props on top."""
+    lip, stone, dark, mat = CLIFF[a]
+    lip_mat = "E" if a in ("Meadow", "Grove", "Starfall") else ("S" if a == "Frost" else mat)
+    done = []
+    tries = 0
+    while len(done) < TERRACES[a] and tries < 800:
+        tries += 1
+        w, d = rnd.uniform(16, 26), rnd.uniform(12, 18)
+        r = math.hypot(w, d) / 2
+        ang = rnd.random() * 2 * math.pi
+        dist = rnd.uniform(R - 30, R - 8 - r)
+        px, pz = x + math.cos(ang) * dist, math.sin(ang) * dist
+        if abs(pz) < 12 + r or (abs(px - x) > R - 34 and abs(pz) < 30):
+            continue
+        if any(abs(px - z["center"][0]) < z["size"][0] / 2 + 6 + r and abs(pz - z["center"][2]) < z["size"][2] / 2 + 6 + r for z in zones):
+            continue
+        if any(math.hypot(px - bx, pz - bz) < br + r + 2 for bx, bz, br in blocked):
+            continue
+        yaw = -math.degrees(ang) + 90 + rnd.uniform(-15, 15)
+        P.append(box((w, 2.0, d), (px, 1.0, pz), stone, mat, r=(0, yaw, 0)))
+        P.append(box((w + 0.6, 0.45, d + 0.6), (px, 2.18, pz), lip, lip_mat, r=(0, yaw, 0)))
+        # upper step towards the outside edge
+        ox, oz = math.cos(ang) * d * 0.15, math.sin(ang) * d * 0.15
+        P.append(box((w * 0.55, 2.2, d * 0.5), (px + ox, 2.4 + 1.1, pz + oz), shade(stone, 1.08), mat, r=(0, yaw, 0)))
+        P.append(box((w * 0.55 + 0.6, 0.45, d * 0.5 + 0.6), (px + ox, 4.6, pz + oz), lip, lip_mat, r=(0, yaw, 0)))
+        pick = CLUSTER[a]
+        place.append((pick[len(done) % len(pick)], round(px + ox, 2), 4.8, round(pz + oz, 2), round(rnd.uniform(0, 360), 1),
+                      round(rnd.uniform(1.1, 1.35), 2), a))
+        # a smaller accent on the lower step, on the inner side
+        place.append((DECOR[a][1][0], round(px - ox * 2.2, 2), 2.4, round(pz - oz * 2.2, 2), round(rnd.uniform(0, 360), 1), 1.2, a))
+        blocked.append((px, pz, r))
+        done.append((px, pz, r))
 
 
 def hub_dressing(place, area):
@@ -395,7 +450,7 @@ def build_arena(P, interact, place, area):
     hx, hz = HUB[0] + math.cos(gap + math.pi) * 40, HUB[2] + math.sin(gap + math.pi) * 40
     L = math.hypot(ex - hx, ez - hz)
     ang = math.degrees(math.atan2(ez - hz, ex - hx))
-    P.append(box((L, 0.3, 10), ((ex + hx) / 2, 0.13, (ez + hz) / 2), 0xE8DCC0, "U", r=(0, -ang, 0)))
+    P.append(box((L, 0.36, 10), ((ex + hx) / 2, 0.18, (ez + hz) / 2), 0xE8DCC0, "U", r=(0, -ang, 0)))
     # "PET RING" arch sign at the back, facing the entrance
     sx, sz = cx - math.cos(gap) * (R + 4), cz - math.sin(gap) * (R + 4)
     interact.append({"kind": "Sign", "prop": "RingArch", "area": area, "pos": (sx, 0, sz),

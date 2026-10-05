@@ -234,57 +234,12 @@ def moon_rock():
 
 
 # ---------------------------------------------------------------- island landmarks (north edge)
-def landmark_grove():
-    return T(glow_shroom(0xD86AFF, 1.0, 0xFFFFFF), s=3.6) + T(glow_shroom(0x6AE8FF), (14, 0, 6), s=1.6) + T(glow_shroom(0xFF6AD5), (-13, 0, 5), s=1.8)
-
-
-def landmark_frost():
-    p = []
-    for x, z, w, h in ((0, 0, 30, 34), (-14, 6, 20, 24), (14, 4, 22, 26)):
-        steps = 4
-        for k in range(steps):
-            f = 1 - k / steps
-            col = 0x8FA3B8 if k < steps - 1 else WHITE
-            p.append(cube((w * f, h / steps, w * f * 0.9), (x, h / steps * (k + 0.5), z), col, "T" if k < steps - 1 else "S", r=(0, 10 * k, 0)))
-        p.append(cube((w * 0.32, 1.2, w * 0.3), (x, h + 0.6, z), WHITE, "S"))
-    # frozen waterfall down the front of the big peak
-    p += [cube((5, 26, 1.2), (2, 13, -13.6), 0xBFEAFF, "G", t=0.2), cube((9, 1.2, 6), (2, 0.6, -16), 0xDDF4FF, "I")]
-    return p
-
-
 def landmark_coral():
     p = [cyl(40, 0.6, (0, 0.3, 0), 0xF2DCA2, "A"), cyl(34, 0.66, (0, 0.33, 0), 0x3FD0E0, "G", t=0.15)]
     p += T(vox_palm(), (-18, 0, 4)) + T(vox_palm(), (19, 0, 2), r=(0, 140, 0)) + T(vox_coral(), (10, 0, -16)) + T(vox_coral(0xC77CFF), (-12, 0, -15))
     return p
 
 
-def landmark_volcano():
-    p = []
-    for k, (w, h) in enumerate(((44, 8), (36, 8), (28, 8), (21, 8), (15, 7))):
-        p.append(cube((w, h, w * 0.92), (0, sum(hh for _, hh in ((44, 8), (36, 8), (28, 8), (21, 8), (15, 7))[:k]) + h / 2, 0), shade(0x3A3034, 1 - k * 0.04),
-                      "B", r=(0, 8 * k, 0)))
-    p += [cube((10, 0.8, 9), (0, 39.2, 0), 0xFF6A1A, "N", tag="Glow"), cube((6, 3, 6), (0, 41, 0), 0xFFB02E, "N", t=0.3, tag="Glow")]
-    # lava river spilling down the front and out across the ground
-    for k, (y, z) in enumerate(((35, -7.6), (27, -11.2), (19, -14.8), (11, -18.4), (3, -22.0))):
-        p.append(cube((3.2, 8.2, 0.8), (1.5 - k * 0.6, y, z), 0xFF6A1A, "N", tag="Glow"))
-    p.append(cube((3.2, 0.3, 10), (-1.5, 0.15, -27), 0xFF6A1A, "N", tag="Glow"))
-    p += T(fire_crystal(), (16, 0, -10)) + T(fire_crystal(), (-17, 0, -8), r=(0, 60, 0))
-    return p
-
-
-def landmark_starfall():
-    p = [cyl(26, 1.0, (0, 0.5, 0), 0x5B4B9E, "T"), cyl(22, 1.2, (0, 0.6, 0), 0x3B2E6E, "T")]
-    cols = [0xFF6AD5, 0xB06CFF, 0x6AE8FF, 0xFF9AD5, 0x8E7CE0]
-    for i, d in enumerate((18, 14.5, 11, 7.5, 4)):
-        p.append(cyl(d, 1.25 + 0.06 * i, (0, 0.6, 0), cols[i], "N", tag="Glow"))
-    for i in range(8):
-        a = 2 * math.pi * i / 8
-        p.append(cube((2.2, 3.0 + (i % 2) * 2, 2.2), (math.sin(a) * 12.5, 1.5 + (i % 2), -math.cos(a) * 12.5), 0x4A3C8A, "T", r=(0, math.degrees(a), 0)))
-    p += [ball(9, (8, 26, 6), 0xC9A8F0), cyl(16, 0.4, (8, 26, 6), 0xFFE66B, "N", r=(20, 0, 15), tag="Glow"), ball(4, (-10, 22, 2), 0xFF6AD5)]
-    return p
-
-
-# ---------------------------------------------------------------- hub set pieces (interactable bodies)
 def paw_plaza():
     """The spawn: a big grey paw print in the middle of the plaza."""
     p = [cyl(24, 0.5, (0, 0.25, 0), 0xD6D2CA, "U"), cyl(18, 0.56, (0, 0.28, 0), 0xC2BEB6, "U")]
@@ -401,3 +356,108 @@ def ring_arch():
 
 def stepping_stone(c=0xD9B98A):
     return [cyl(3.2, 0.2, (0, 0.1, 0), c, "A")]
+
+
+# ---------------------------------------------------------------- clusters (richer islands)
+def tree_cluster():
+    return (T(vox_tree(), (0, 0, 0), s=1.25) + T(vox_tree(0x4FA83A, 0x6CC24A), (7, 0, 4), r=(0, 40, 0), s=0.9)
+            + T(vox_tree(), (-6, 0, 5), r=(0, 75, 0), s=0.75) + T(vox_bush(), (3, 0, -6)) + T(vox_bush(), (-5, 0, -4), r=(0, 30, 0), s=0.8))
+
+
+def shroom_cluster():
+    return (T(glow_shroom(0xD86AFF), s=1.3) + T(glow_shroom(0x6AE8FF), (7, 0, 3), s=0.75) + T(glow_shroom(0xFF6AD5), (-6, 0, 4), s=0.6)
+            + T(glow_cluster(), (2, 0, -6)))
+
+
+def pine_cluster():
+    return T(vox_pine(), s=1.3) + T(vox_pine(), (6.5, 0, 3), s=0.95) + T(vox_pine(), (-5.5, 0, 4), s=0.8) + T(snow_rock(), (2, 0, -6), s=0.6)
+
+
+def palm_cluster():
+    return T(vox_palm(), s=1.15) + T(vox_palm(), (5, 0, 4), r=(0, 130, 0), s=0.85) + T(vox_bush(0x3E9A57, 0x4FB06A), (-4, 0, -2), s=0.8)
+
+
+def crystal_field():
+    return (float_crystal() + T(purple_crystal(0x6AF2FF, 0x4A9ACF), (6, 0, 3), s=0.9) + T(purple_crystal(), (-5, 0, 4), s=0.8)
+            + T(moon_rock(), (1, 0, -6), s=0.6))
+
+
+def flower_bed():
+    p = [cube((9, 0.4, 7), (0, 0.2, 0), 0x5DBB46, "E")]
+    cols = [0xFF6F9A, 0xFFD23A, 0xB07CFF, WHITE, 0xFF8A3C]
+    for i in range(10):
+        x, z = -3.5 + (i % 5) * 1.75, -2.2 + (i // 5) * 3.6 + (i % 2) * 0.6
+        h = 1.0 + (i % 3) * 0.35
+        c = cols[i % len(cols)]
+        p += [cube((0.16, h, 0.16), (x, h / 2, z), 0x3E8F35), cube((0.8, 0.2, 0.8), (x, h, z), c, r=(0, 45, 0)),
+              cube((0.3, 0.26, 0.3), (x, h + 0.05, z), 0xFFD23A if c != 0xFFD23A else 0xC0662A)]
+    return p
+
+
+# ---------------------------------------------------------------- taller landmarks (replace the earlier versions)
+def _frustum(B, Tt, H, y0, col, mat):
+    """Octagonal truncated pyramid: two cores 45 deg apart, each with four wedge slopes."""
+    p = []
+    run = B - Tt
+    for rot45 in (0, 45):
+        p.append(cube((2 * Tt, H, 2 * Tt), (0, y0 + H / 2, 0), col, mat, r=(0, rot45, 0)))
+        for k in range(4):
+            p += T([wedge((2 * Tt, H, run), (0, y0 + H / 2, -(Tt + run / 2)), col, mat)], r=(0, rot45 + 90 * k, 0))
+    return p
+
+
+def volcano():
+    rock, dk = 0x4A3A36, 0x3A2E2C
+    tiers = ((30, 20, 13), (20, 11, 15), (11, 6.5, 13))
+    p = []
+    y = 0.0
+    for i, (B, Tt, H) in enumerate(tiers):
+        p += _frustum(B, Tt, H, y, rock if i % 2 == 0 else dk, "B")
+        # lava streams down two slopes
+        for side in (0, 90):
+            run = B - Tt
+            p += T([wedge((3.6, H + 0.25, run + 0.25), (0, y + H / 2, -(Tt + run / 2) - 0.12), 0xFF6A1A, "N", tag="Glow")],
+                   r=(0, side + (8 if i % 2 else -8), 0))
+        y += H
+    p += [cyl(12, 0.8, (0, y + 0.1, 0), 0xFF7A1A, "N", tag="Glow"), cyl(14.5, 1.6, (0, y + 0.3, 0), dk, "B"),
+          cube((5, 4, 5), (0, y + 3.5, 0), 0xFFB02E, "N", t=0.35, tag="Glow")]
+    for k, (dx, dz, s) in enumerate(((0, 0, 6), (2, 1, 5), (-1, -2, 4))):
+        p.append(cube(s, (dx, y + 9 + k * 5, dz), 0x8A8480, "P", r=(0, 20 * k, 10), t=0.35))
+    return p
+
+
+def landmark_volcano():
+    p = volcano()
+    p += T(fire_crystal(), (26, 0, -6)) + T(fire_crystal(), (-26, 0, -4), r=(0, 60, 0)) + T(lava_rock(), (18, 0, 22), s=1.2)
+    return p
+
+
+def landmark_grove():
+    return (T(glow_shroom(0xD86AFF, 1.0, 0xFFFFFF), s=3.6) + T(glow_shroom(0x6AE8FF), (14, 0, 6), s=2.2)
+            + T(glow_shroom(0xFF6AD5), (-13, 0, 5), s=2.5) + T(glow_cluster(), (6, 0, -12), s=1.5))
+
+
+def landmark_frost():
+    p = []
+    for x, z, w, h in ((0, 0, 30, 50), (-15, 6, 20, 32), (15, 4, 22, 36)):
+        steps = 5
+        for k in range(steps):
+            f = 1 - k / steps
+            col = 0x8FA3B8 if k < steps - 2 else WHITE
+            p.append(cube((w * f, h / steps, w * f * 0.9), (x, h / steps * (k + 0.5), z), col, "T" if k < steps - 2 else "S", r=(0, 10 * k, 0)))
+        p.append(cube((w * 0.22, 1.2, w * 0.2), (x, h + 0.6, z), WHITE, "S"))
+    p += [cube((5, 30, 1.2), (2, 15, -13.6), 0xBFEAFF, "G", t=0.2), cube((9, 1.2, 6), (2, 0.6, -16), 0xDDF4FF, "I")]
+    return p
+
+
+def landmark_starfall():
+    p = [cyl(26, 1.0, (0, 0.5, 0), 0x5B4B9E, "T"), cyl(22, 1.2, (0, 0.6, 0), 0x3B2E6E, "T")]
+    cols = [0xFF6AD5, 0xB06CFF, 0x6AE8FF, 0xFF9AD5, 0x8E7CE0]
+    for i, d in enumerate((18, 14.5, 11, 7.5, 4)):
+        p.append(cyl(d, 1.25 + 0.06 * i, (0, 0.6, 0), cols[i], "N", tag="Glow"))
+    for i in range(8):
+        a = 2 * math.pi * i / 8
+        p.append(cube((2.2, 3.0 + (i % 2) * 2, 2.2), (math.sin(a) * 12.5, 1.5 + (i % 2), -math.cos(a) * 12.5), 0x4A3C8A, "T", r=(0, math.degrees(a), 0)))
+    p += crystal((-9, 0, 9), 3.2, 26, 0xB06CFF, "G", t=0.1) + crystal((10, 0, 9), 2.4, 18, 0x6AE8FF, "G", t=0.1)
+    p += [ball(9, (8, 30, 6), 0xC9A8F0), cyl(16, 0.4, (8, 30, 6), 0xFFE66B, "N", r=(20, 0, 15), tag="Glow"), ball(4, (-10, 26, 2), 0xFF6AD5)]
+    return p
