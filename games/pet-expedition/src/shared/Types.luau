@@ -59,7 +59,7 @@ export type PlayerState = {
 	Daily: { Streak: number, LastDay: number, CanClaim: boolean },
 	Quests: { Quest },
 	Playtime: { SessionMinutes: number, Claimed: { [string]: boolean } }, -- tostring(index)
-	Stats: { Hatched: number, Broken: number, Expeditions: number, CoinsEarned: number, Crafted: number },
+	Stats: { Hatched: number, Broken: number, Expeditions: number, CoinsEarned: number, Crafted: number, Trophies: number, RingKOs: number, BestStreak: number },
 	Settings: { [string]: any },
 	RebirthCost: number,
 	CanBuyGemEggs: boolean, -- false when PolicyService restricts paid random items

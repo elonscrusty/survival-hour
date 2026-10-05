@@ -101,3 +101,35 @@ autosave every `Config.AutosaveSeconds`, saved on leave and `BindToClose`. Recei
   (`CanTrade = false`).
 - Trades: both sides must be ready, then a `Config.TradeConfirmSeconds` countdown; any change resets
   readiness. Items move atomically on the server. Locked pets and pets on expeditions can't be offered.
+
+## Pet Ring (walk-in PvP)
+A roped sand ring north of the Meadow hub (`WorldInfo.Arena = { Center, Radius }`; an invisible `ArenaZone`
+part tagged `Arena` with attribute `Radius`). Walking inside means fighting; walking out is safe.
+- **Who fights:** while a player's character is inside (horizontal distance ≤ Radius from Center, |dy| < 12), their
+  strongest equipped pets by ring strength fight: `Config.Ring.Fighters` (+`PassFighters` with the `RingChampion`
+  pass), capped by how many are equipped. Breakable targeting is cleared on entry and refused while inside.
+- **Strength:** `Logic/Ring.Strength(pet, passes...)` per the formula in `Config.Ring`. HP = BaseHp × strength,
+  hit = BaseDamage × strength (crits per Config). Paid help (rarer pets, Xp2x boost, the extra fighter) stays
+  around 2x at most; levels matter most.
+- **Simulation (server):** fighters move on the ring floor (X/Z, server-side positions), pick the nearest enemy
+  fighter (or one of the focused player's fighters via `RingFocus`), close to AttackRange and hit every
+  AttackInterval. New arrivals have `EnterGraceSeconds` of immunity. A fighter at 0 HP faints and stays fainted until
+  its owner leaves. When all of a player's fighters have fainted, the player is pushed just outside the entrance
+  and gets Notify `RingOut`. Leaving or dying resets fighters (full HP next time) and the streak.
+- **Rewards:** the owner of the fighter landing the KO gets `KoTrophies` and `KoCoins × CoinMult(highest island)`
+  (counted only `SameVictimLimit` times per victim per `SameVictimWindow`); every hit gives pet XP `XpPerHit`, a KO
+  `XpPerKo` (Xp2x boost doubles all pet XP everywhere). `Stats.Trophies`, `Stats.RingKOs`, `Stats.BestStreak`
+  persist; leaderstats shows Trophies.
+- **King of the Ring:** the player in the ring with the highest current streak (≥ `KingMinStreak` KOs without
+  being bounced out) gets player attribute `RingKing = true` (only one at a time); clients show a crown.
+- **Wild challengers:** when exactly one player is inside for `WildDelay` s, a wild pet (random species from that
+  player's opened islands, strength `WildStrength` × their average fighter, Owner 0) joins; beating it gives XP and
+  `WildCoins` × KoCoins, no trophies. Wild fighters leave when another player enters or the player leaves.
+- **Replication:** `ReplicatedStorage.Arena` (Folder) holds one `Configuration` per fighter, named by fighter id,
+  with attributes `Owner` (UserId, 0 = wild), `Uid`, `PetId`, `Variant`, `Shiny`, `Level`, `X`, `Z`, `Hp`, `MaxHp`,
+  `Target` (fighter id or ""), `Fainted`, `Attack` (increments on every hit, for animation), `Crit` (bool, last hit).
+  Updated every `ReplicateSeconds`. Clients render ring fighters at these positions (lerped) instead of the
+  normal follow formation; wild fighters are rendered from the same data.
+- **Player attributes:** `InRing` (bool), `RingStreak` (number), `RingKing` (bool).
+- **Notify:** `RingKO` `{ Killer, Victim, PetId, Position }` (to players within ~120 studs of the ring),
+  `RingOut` `{}` (to the bounced player), `RingKing` `{ Name }` (broadcast when the crown changes hands).

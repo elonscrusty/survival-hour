@@ -215,6 +215,8 @@ def write_world(data):
     for a in AREAS:
         out.append(f"\t\t{a} = {v3(w['spawns'][a])},\n")
     out.append("\t},\n\tSpawnLocation = " + v3(w["spawn_location"]) + ",\n")
+    ar = w["arena"]
+    out.append("\tArena = { C = " + v3(ar["center"]) + ", R = " + num(ar["radius"]) + " },\n")
     out.append("\tZones = {\n")
     for a in AREAS:
         zs = ", ".join("{ C = " + v3(z["center"]) + ", S = " + v3(z["size"]) + " }" for z in w["zones"][a])

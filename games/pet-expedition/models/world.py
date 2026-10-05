@@ -53,6 +53,8 @@ BACKDROP = {
     "Starfall": ("BigPlanet", (60, 110, -230), 0, 1.0),
 }
 HUB = (-88.0, 0.0, 0.0)
+ARENA = (-60.0, 0.0, -86.0)  # Pet Ring: walk in and your equipped pets fight everyone else inside
+ARENA_R = 26.0
 
 
 def yaw_towards(pos, target):
@@ -145,9 +147,12 @@ def build(areas, props):
                     yaw = yaw_towards(pos, HUB)
                 interact.append({"kind": kind, "prop": prop, "area": a, "pos": pos, "yaw": yaw, "attrs": attrs})
             blocked.append((HUB[0], HUB[2], 50))
-            place.append(("Windmill", -40, 0, -112, 20, 1.0, a))
-            blocked.append((-40, -112, 12))
-            for bx, bz in ((HUB[0] + 12, -40), (HUB[0] - 16, 40)):
+            place.append(("Windmill", -10, 0, -118, 20, 1.0, a))
+            blocked.append((-10, -118, 12))
+            build_arena(P, interact, a)
+            blocked.append((ARENA[0], ARENA[2], ARENA_R + 10))
+            blocked.append(((HUB[0] + ARENA[0]) / 2, (HUB[2] + ARENA[2]) / 2, 9))  # the path to the ring
+            for bx, bz in ((HUB[0] + 12, 40), (HUB[0] - 16, 40)):
                 place.append(("Bench", bx, 0, bz, yaw_towards((bx, 0, bz), HUB), 1.0, a))
         else:
             spawns[a] = (x - R + 18, 3, 0)
@@ -237,9 +242,57 @@ def build(areas, props):
     water = {"level": WATER_LEVEL, "minx": -radius(areas[0]) - 260, "maxx": centers[last] + radius(last) + 260,
              "minz": -480, "maxz": 480}
     spawn_location = (HUB[0], 0, HUB[2])
-    return {"spacing": SPACING, "centers": centers, "radius": {a: radius(a) for a in areas}, "parts": parts, "place": place,
+    arena = {"center": ARENA, "radius": ARENA_R}
+    return {"arena": arena, "spacing": SPACING, "centers": centers, "radius": {a: radius(a) for a in areas}, "parts": parts, "place": place,
             "interact": interact, "zones": zones, "spawns": spawns, "bounds": bounds, "water": water,
             "spawn_location": spawn_location}
+
+
+def build_arena(P, interact, area):
+    """The Pet Ring: a raised sand floor with a glowing edge, corner posts and ropes,
+    an opening facing the hub, and a sign. Walking inside starts fights (RingService)."""
+    cx, _, cz = ARENA
+    R = ARENA_R
+    P.append(cyl(2 * R + 6, 0.5, (cx, 0.25, cz), 0x8A5A3C, "K"))
+    P.append(cyl(2 * R, 0.8, (cx, 0.4, cz), 0xE9C98B, "A"))
+    P.append(cyl(10, 0.82, (cx, 0.41, cz), 0xD9534F, "P"))
+    # gap in the ropes facing the hub
+    gx, gz = HUB[0] - cx, HUB[2] - cz
+    gap = math.atan2(gz, gx)
+    n = 32
+    for k in range(n):
+        t0, t1 = 2 * math.pi * k / n, 2 * math.pi * (k + 1) / n
+        p0 = (cx + math.cos(t0) * R, cz + math.sin(t0) * R)
+        p1 = (cx + math.cos(t1) * R, cz + math.sin(t1) * R)
+        L = math.hypot(p1[0] - p0[0], p1[1] - p0[1]) + 0.3
+        ang = math.degrees(math.atan2(p1[1] - p0[1], p1[0] - p0[0]))
+        mid = ((p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2)
+        P.append(box((L, 0.15, 1.0), (mid[0], 0.86, mid[1]), 0xFF4D4D, "N", r=(0, -ang, 0)))
+    posts = 12
+    for k in range(posts):
+        t = 2 * math.pi * k / posts + math.pi / posts
+        px, pz = cx + math.cos(t) * (R + 1.5), cz + math.sin(t) * (R + 1.5)
+        P.append(cyl(1.6, 6, (px, 3, pz), 0xC0392B, "P"))
+        P.append(ball(2.0, (px, 6.2, pz), 0xFFD54A, "N"))
+        t2 = t + 2 * math.pi / posts
+        mid_t = (t + t2) / 2
+        d = abs((mid_t - gap + math.pi) % (2 * math.pi) - math.pi)
+        if d < math.pi / posts * 1.6:
+            continue  # entrance: no ropes here
+        qx, qz = cx + math.cos(t2) * (R + 1.5), cz + math.sin(t2) * (R + 1.5)
+        L = math.hypot(qx - px, qz - pz)
+        ang = math.degrees(math.atan2(qz - pz, qx - px))
+        for y in (2.6, 4.4):
+            P.append(box((L, 0.35, 0.35), ((px + qx) / 2, y, (pz + qz) / 2), 0xF5F5F5, "P", r=(0, -ang, 0)))
+    # path from the hub plaza to the entrance
+    ex, ez = cx + math.cos(gap) * (R + 2), cz + math.sin(gap) * (R + 2)
+    hx, hz = HUB[0] + math.cos(gap + math.pi) * 40, HUB[2] + math.sin(gap + math.pi) * 40
+    L = math.hypot(ex - hx, ez - hz)
+    ang = math.degrees(math.atan2(ez - hz, ex - hx))
+    P.append(box((L, 0.3, 10), ((ex + hx) / 2, 0.13, (ez + hz) / 2), 0xE8DCC0, "U", r=(0, -ang, 0)))
+    sx, sz = ex + math.cos(gap + math.pi / 2) * 9, ez + math.sin(gap + math.pi / 2) * 9
+    interact.append({"kind": "Sign", "prop": "IslandSign", "area": area, "pos": (sx, 0, sz),
+                     "yaw": yaw_towards((sx, 0, sz), HUB), "attrs": {"Text": "PET RING"}})
 
 
 EGG_FOR = {"Meadow": "MeadowEgg", "Grove": "GroveEgg", "Frost": "FrostEgg", "Coral": "CoralEgg", "Volcano": "VolcanoEgg",

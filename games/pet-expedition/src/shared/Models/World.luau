@@ -21,6 +21,7 @@ export type WorldInfo = {
 	Spawns: { [string]: CFrame },
 	Zones: { [string]: { Zone } },
 	Bounds: { [string]: { Min: Vector3, Max: Vector3 } },
+	Arena: { Center: Vector3, Radius: number }, -- Pet Ring (floor top at Center.Y)
 }
 
 local World = {}
@@ -191,7 +192,7 @@ function World.Build(): WorldInfo
 	end
 	local root = Instance.new("Folder")
 	root.Name = "World"
-	local info: WorldInfo = { Spawns = {}, Zones = {}, Bounds = {} }
+	local info: WorldInfo = { Spawns = {}, Zones = {}, Bounds = {}, Arena = { Center = Vector3.zero, Radius = 0 } }
 
 	-- Static geometry (ground, cliffs, paths, walls, bridges).
 	local groups: { [string]: Folder } = {}
@@ -359,6 +360,27 @@ function World.Build(): WorldInfo
 			table.insert(zones, { Center = v3(z.C), Size = v3(z.S) })
 		end
 		info.Zones[a.Id] = zones
+	end
+
+	-- Pet Ring zone: an invisible cylinder clients use for the "you're in the ring" UI.
+	do
+		local c = v3(Data.Arena.C) + Vector3.new(0, 0.8, 0)
+		local r: number = Data.Arena.R
+		local zone = Instance.new("Part")
+		zone.Name = "ArenaZone"
+		zone.Shape = Enum.PartType.Cylinder
+		zone.Size = Vector3.new(14, r * 2, r * 2)
+		zone.CFrame = CFrame.new(c + Vector3.new(0, 7, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		zone.Anchored = true
+		zone.CanCollide = false
+		zone.CanQuery = false
+		zone.CanTouch = false
+		zone.CastShadow = false
+		zone.Transparency = 1
+		zone:SetAttribute("Radius", r)
+		CollectionService:AddTag(zone, "Arena")
+		zone.Parent = group("Meadow")
+		info.Arena = { Center = c, Radius = r }
 	end
 
 	setupLighting()

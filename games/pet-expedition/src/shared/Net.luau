@@ -47,6 +47,7 @@ Net.Events = {
 	-- client -> server
 	"SetTarget", -- (breakableId: string?) send equipped pets at a breakable (nil = recall)
 	"ClientReady", -- () UI loaded; server replies with State
+	"RingFocus", -- (targetUserId: number?) in the Pet Ring, focus your pets on that player's pets (nil = nearest)
 }
 
 local folder: Folder? = nil

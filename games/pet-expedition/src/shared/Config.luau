@@ -125,6 +125,7 @@ Config.IndexRewards = { -- fraction of species discovered -> reward
 Config.Boosts = {
 	Coins2x = { Seconds = 30 * 60, Name = "2x Coins" },
 	Luck2x = { Seconds = 30 * 60, Name = "2x Luck" },
+	Xp2x = { Seconds = 30 * 60, Name = "2x Pet XP" },
 } :: { [string]: { Seconds: number, Name: string } }
 Config.ServerLuckSeconds = 15 * 60
 Config.MaxBoostSeconds = 24 * 3600
@@ -136,6 +137,43 @@ Config.TradeConfirmSeconds = 4 -- countdown after both ready; any change cancels
 Config.TradeRequestTimeout = 20
 Config.TradeMinAccountAgeDays = 7
 Config.TradeCooldown = 10 -- seconds between trade requests from one player
+
+-- Pet Ring (walk-in free-for-all in the Meadow hub; see docs/CONTRACTS.md "Pet Ring").
+-- Ring strength = RarityFactor * VariantFactor * ShinyFactor (capped at MaxGearFactor)
+--                 * (1 + LevelBonus * (level - 1)).
+-- Island power multipliers are ignored here, so levels (time spent) matter most and paid
+-- advantages (rarer pets, XP boosts, an extra fighter) help but never exceed ~2x.
+Config.Ring = {
+	TickSeconds = 0.2, -- server simulation step
+	ReplicateSeconds = 0.1, -- fighter attribute updates
+	Fighters = 3, -- pets that fight for you (your strongest equipped)
+	PassFighters = 1, -- extra fighter with the RingChampion pass
+	MoveSpeed = 18, -- studs per second
+	AttackRange = 4.5,
+	AttackInterval = 0.9,
+	BaseHp = 100,
+	BaseDamage = 11,
+	CritChance = 0.1,
+	CritMult = 1.75,
+	LevelBonus = 0.06, -- +6% strength per level above 1 (level 25 = 2.44x)
+	RarityFactor = { Common = 1, Uncommon = 1.12, Rare = 1.25, Epic = 1.4, Legendary = 1.6, Mythic = 1.8 } :: { [string]: number },
+	VariantFactor = { Normal = 1, Golden = 1.1, Rainbow = 1.2 } :: { [string]: number },
+	ShinyFactor = 1.05,
+	MaxGearFactor = 2, -- cap on rarity * variant * shiny
+	EnterGraceSeconds = 2, -- new arrivals can't be hit for this long
+	KoTrophies = 1,
+	KoCoins = 40, -- x CoinMult of the winner's highest opened island
+	XpPerHit = 2,
+	XpPerKo = 30,
+	SameVictimLimit = 3, -- KO rewards per victim player per window (stops alt farming)
+	SameVictimWindow = 600,
+	KingMinStreak = 3, -- KOs in a row needed before you can wear the crown
+	-- Wild challengers keep the ring fun when you're alone in it.
+	WildWhenAlone = true,
+	WildDelay = 3, -- seconds alone before a wild pet jumps in
+	WildStrength = 0.9, -- relative to the player's average fighter
+	WildCoins = 0.25, -- fraction of KoCoins for beating a wild pet; no trophies
+}
 
 -- Saving
 Config.AutosaveSeconds = 90
