@@ -1,0 +1,52 @@
+{
+  "name": "PetExpedition",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "Shared": { "$path": "src/shared" }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "Server": { "$path": "src/server" }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "$properties": {
+        "CameraMaxZoomDistance": 60,
+        "CameraMinZoomDistance": 8,
+        "CharacterWalkSpeed": 22,
+        "CharacterJumpPower": 50,
+        "CharacterUseJumpPower": true
+      },
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "Client": { "$path": "src/client" }
+      }
+    },
+    "Players": {
+      "$className": "Players",
+      "$properties": { "CharacterAutoLoads": true, "RespawnTime": 2 }
+    },
+    "Lighting": {
+      "$className": "Lighting",
+      "$properties": {
+        "Ambient": [0.45, 0.45, 0.5],
+        "OutdoorAmbient": [0.55, 0.55, 0.6],
+        "Brightness": 2.5,
+        "ClockTime": 14.5,
+        "GlobalShadows": true,
+        "Technology": "Future"
+      }
+    },
+    "Workspace": {
+      "$className": "Workspace",
+      "$properties": { "Gravity": 196.2 }
+    },
+    "SoundService": { "$className": "SoundService" },
+    "StarterGui": {
+      "$className": "StarterGui",
+      "$properties": { "ResetPlayerGuiOnSpawn": false }
+    }
+  }
+}
