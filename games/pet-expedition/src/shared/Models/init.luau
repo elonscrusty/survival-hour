@@ -154,8 +154,10 @@ local function newModel(name: string, entry: any, scale: number, profile: Profil
 	root.BottomSurface = Enum.SurfaceType.Smooth
 	root.Parent = m
 	Models.BuildRows(entry.P, m, CFrame.identity, scale, profile)
+	-- With a PrimaryPart the model pivot is PrimaryPart.CFrame * PivotOffset
+	-- (WorldPivot is ignored), so offset it down to the bottom centre.
+	root.PivotOffset = CFrame.new(0, -b[2] * scale / 2, 0)
 	m.PrimaryPart = root
-	m.WorldPivot = CFrame.identity
 	return m
 end
 

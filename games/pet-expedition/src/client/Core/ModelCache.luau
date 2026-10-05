@@ -26,8 +26,8 @@ local function fallback(name: string): Model
 	p.CanTouch = false
 	p.CFrame = CFrame.new(0, 1.25, 0)
 	p.Parent = m
+	p.PivotOffset = CFrame.new(0, -1.25, 0) -- pivot at the bottom centre, like Models
 	m.PrimaryPart = p
-	m.WorldPivot = CFrame.new()
 	return m
 end
 

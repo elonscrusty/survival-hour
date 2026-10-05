@@ -15,10 +15,10 @@ local Services = script.Parent:WaitForChild("Services")
 
 local ORDER = {
 	"Util",
+	"WorldService", -- first: DataService.Init yields on a DataStore probe and the map must exist before characters spawn
 	"DataService",
 	"StateService",
 	"BoostService",
-	"WorldService",
 	"PetService",
 	"HatchService",
 	"BreakableService",
