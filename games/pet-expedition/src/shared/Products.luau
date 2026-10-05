@@ -22,7 +22,7 @@ local Products = {}
 
 Products.Passes = {
 	{ Key = "VIP", Id = 0, Price = 199, Name = "VIP", Blurb = "+20% coins, VIP chat tag and a golden name." },
-	{ Key = "Lucky", Id = 0, Price = 349, Name = "Lucky", Blurb = "1.5x chance for Rare and better pets from every egg." },
+	{ Key = "Lucky", Id = 0, Price = 349, Name = "Lucky", Blurb = "1.5x chance for rarer pets from every egg." },
 	{ Key = "TripleHatch", Id = 0, Price = 299, Name = "Triple Hatch", Blurb = "Open 3 eggs at once." },
 	{ Key = "FastHatch", Id = 0, Price = 99, Name = "Fast Hatch", Blurb = "Much faster egg opening animation." },
 	{ Key = "MoreEquip", Id = 0, Price = 249, Name = "+3 Pets Equipped", Blurb = "Take 3 more pets with you." },

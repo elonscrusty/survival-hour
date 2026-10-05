@@ -383,7 +383,7 @@ local function buildTradeWindow()
 	local _, tt, tb, tg = side(0.5, 6, "Their offer")
 	theirTitle, theirReady, theirGrid = tt, tb, tg
 	-- gems
-	Kit.fitLabel(Theme.Icons.Gems, 30, { Size = UDim2.fromOffset(40, 46), Position = UDim2.new(0, 12, 1, -54), Parent = mine })
+	local gemsIcon = Kit.fitLabel(Theme.Icons.Gems, 30, { Size = UDim2.fromOffset(40, 46), Position = UDim2.new(0, 12, 1, -54), Parent = mine })
 	gemsBox = Kit.new("TextBox", {
 		Size = UDim2.new(1, -70, 0, 44),
 		Position = UDim2.new(0, 56, 1, -54),
@@ -412,6 +412,11 @@ local function buildTradeWindow()
 		Align = "Left",
 		Parent = body,
 	})
+	-- Gem trading is switched off when Config.TradeMaxGems is 0 (pets only).
+	local gemsAllowed = Config.TradeMaxGems > 0
+	gemsIcon.Visible = gemsAllowed
+	gemsBox.Visible = gemsAllowed
+	theirGems.Visible = gemsAllowed
 	-- bottom bar
 	local bar = Kit.box({
 		Size = UDim2.new(1, 0, 0, 70),
