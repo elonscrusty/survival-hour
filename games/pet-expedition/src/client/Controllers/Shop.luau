@@ -41,7 +41,7 @@ local PASS_ICONS: { [string]: string } = {
 	BigBackpack = "🎒",
 }
 
-local function render() end -- forward declared below
+local function render(_force: boolean?) end -- forward declared below
 
 local function fetchPrice(kind: string, id: number)
 	local key = kind .. ":" .. tostring(id)
@@ -164,6 +164,7 @@ local function card(order: number, icon: string, title: string, blurb: string, c
 		Parent = c,
 	})
 	Kit.fitLabel(blurb, 16, {
+		Name = "Blurb",
 		Size = UDim2.new(1, -20, 0, 46),
 		Position = UDim2.fromOffset(10, 90),
 		Font = Theme.FontBody,
@@ -186,10 +187,35 @@ local function buyButton(parent: Instance, text: string, tone: string, enabled: 
 	return b
 end
 
-local function renderImpl()
+local renderedSig = ""
+local tickers: { () -> () } = {}
+
+local function renderImpl(force: boolean?)
 	if not win or not win.IsOpen then
 		return
 	end
+	-- rebuild only when owned passes, known prices, the tab or which boosts
+	-- are active change; boost timers tick in place
+	local sig = tab
+	for _, pass in Products.Passes do
+		sig ..= if State.HasPass(pass.Key) then "1" else "0"
+	end
+	for k in prices do
+		sig ..= k
+	end
+	if tab == "Boosts" then
+		sig ..= tostring(State.ServerLuckLeft() > 0)
+		for _, product in Products.Products do
+			if product.Boost then
+				sig ..= tostring(State.BoostLeft(product.Boost) > 0)
+			end
+		end
+	end
+	if sig == renderedSig and not force then
+		return
+	end
+	renderedSig = sig
+	table.clear(tickers)
 	Kit.clear(content)
 	if tab == "Passes" then
 		for i, pass in Products.Passes do
@@ -220,20 +246,24 @@ local function renderImpl()
 			if product.Kind ~= "Gems" then
 				i += 1
 				local blurb: string
-				local left = 0
 				if product.Kind == "ServerLuck" then
 					blurb = "x" .. tostring(Config.ServerLuckMult) .. " luck for EVERYONE in this server for " .. Format.duration(Config.ServerLuckSeconds) .. "!"
-					left = State.ServerLuckLeft()
 				else
 					local def = Config.Boosts[product.Boost or ""]
 					blurb = (if def then def.Name else "Boost") .. " for " .. Format.duration(if def then def.Seconds else 0) .. ". Stacks by adding time."
-					left = State.BoostLeft(product.Boost or "")
-				end
-				if left > 0 then
-					blurb ..= "\nActive: " .. Format.time(left)
 				end
 				local icon = if product.Kind == "ServerLuck" then Theme.Icons.Luck .. "🌍" elseif product.Boost == "Luck2x" then Theme.Icons.Luck else Theme.Icons.Coins .. Theme.Icons.Boost
 				local c = card(i, icon, product.Name, blurb, if product.Kind == "ServerLuck" or product.Boost == "Luck2x" then Theme.Colors.Luck else Theme.Colors.Coins)
+				local blurbLabel = c:FindFirstChild("Blurb") :: TextLabel?
+				local kind, boost = product.Kind, product.Boost or ""
+				local function tick()
+					local l = if kind == "ServerLuck" then State.ServerLuckLeft() else State.BoostLeft(boost)
+					if blurbLabel then
+						blurbLabel.Text = blurb .. (if l > 0 then "\nActive: " .. Format.time(l) else "")
+					end
+				end
+				tick()
+				table.insert(tickers, tick)
 				buyButton(c, priceText("product", product.Id, product.Price), "Green", true, function()
 					Shop.BuyProduct(product.Key)
 				end)
@@ -251,7 +281,7 @@ function Shop.Init()
 		Boosts = Theme.Icons.Boost .. " Boosts",
 	}, function(name: string)
 		tab = name
-		render()
+		render(true)
 	end)
 	selectTab = sel
 	content = Kit.scroll({
@@ -265,6 +295,16 @@ function Shop.Init()
 	end)
 	State.Changed:Connect(function()
 		render()
+	end)
+	task.spawn(function()
+		while true do
+			if win.IsOpen then
+				for _, t in tickers do
+					t()
+				end
+			end
+			task.wait(0.5)
+		end
 	end)
 	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(who: Player, _id: number, bought: boolean)
 		if who == player and bought then

@@ -8,14 +8,18 @@ Everything the player sees is built in code under `src/client/` (no Studio GUIs,
 |---|---|
 | `Core/State` | `State` snapshots, server clock (`State.Now()`), `Changed` / `TradeChanged` / `Notify` signals, helpers (busy pets, trade pets, boosts, settings). |
 | `Core/Remote` | `Call` (pcall + error toast), `CallOnce` (ignores double taps), `Try` (returns the error), `Quiet`, `Fire`. |
-| `Core/PetInfo` | Display power (mirrors Logic/PetMath), sorting, odds with luck (Rare and above x LuckMult, renormalised), craft keys. |
+| `Core/PetInfo` | Power, odds and variants straight from the shared `Logic` modules (PetMath, Hatch, Economy.HighestArea for gem pets), sorting, craft keys. |
 | `Core/Breakables` | Index of `Breakable`-tagged models by `Id`, with cached bounds. |
 | `Core/ModelCache` | Builds each `Models.Pet` / `Models.Egg` once, hands out clones. |
 | `Core/Sounds` | Sound table (built-in `rbxasset://sounds/...`; swap `Id`s for licensed ones). `Sounds.MusicId` is nil until music is chosen. |
 | `UI/Theme`, `UI/Kit` | Colours (rarities, tones), fonts, icons; helpers for labels, candy buttons, panels, bars, pills, tabs, auto UIScale. |
-| `UI/Windows` | Screen layers, modal windows (one at a time), router (`Windows.Open("Shop", "Gems")`), confirm popup. |
+| `UI/Windows` | Screen layers, modal windows (one at a time), router (`Windows.Open("Shop", "Gems")`), confirm popup. `Windows.Lock` keeps the trade window open while a trade runs (backdrop/Esc ignored, other windows refused). |
 | `UI/Toasts`, `UI/Viewport`, `UI/PetCard`, `UI/RewardText` | Toasts/banners, pet & egg pictures, pet tiles, reward one-liners. |
 | `Controllers/*` | Hud, World (prompts, gates, Islands window), Farming (tap to target, HP bars, break/reward effects), PetRenderer, Hatch + HatchAnim, Inventory, Craft, Expeditions, Quests, IndexMenu, Rebirth, Shop, Trade, Settings, Notifications (Notify toasts + VIP chat tag), Tutorial. |
+
+## Performance
+State arrives up to ~5 times a second while farming. Every window compares a signature of what it shows and
+rebuilds only when that changes; timers and progress bars update in place.
 
 ## Scaling
 The UI is designed on a 900 x 560 reference canvas. `Kit.autoScale` adds a `UIScale` that fits it to the

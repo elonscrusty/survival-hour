@@ -223,7 +223,7 @@ function Hud.SetAutoHatch(text: string?, onStop: (() -> ())?)
 	end
 end
 
--- Screen position (HUD space) of a currency icon.
+-- Absolute screen position of a currency icon's centre.
 function Hud.Target(kind: string): Vector2
 	local icon = if kind == "Gems" then gemIcon else coinIcon
 	return icon.AbsolutePosition + icon.AbsoluteSize / 2
@@ -241,12 +241,16 @@ function Hud.FlyFrom(worldPos: Vector3, kind: string, count: number?)
 	if not cam then
 		return
 	end
-	local pt, onScreen = cam:WorldToScreenPoint(worldPos)
+	local screenPt, onScreen = cam:WorldToScreenPoint(worldPos)
 	if not onScreen then
 		Hud.Bump(kind)
 		return
 	end
-	local goal = Hud.Target(kind)
+	-- children are positioned relative to the ScreenGui, whose origin is moved
+	-- by the safe-area insets (notches, top bar)
+	local origin = gui.AbsolutePosition
+	local pt = Vector2.new(screenPt.X, screenPt.Y) - origin
+	local goal = Hud.Target(kind) - origin
 	local n = math.clamp(count or 5, 1, 8)
 	for i = 1, n do
 		local icon = Kit.fitLabel(if kind == "Gems" then Theme.Icons.Gems else Theme.Icons.Coins, 30, {

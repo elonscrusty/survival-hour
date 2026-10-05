@@ -53,7 +53,10 @@ type CardEntry = { Card: TextButton, Sig: string }
 local cards: { [string]: CardEntry } = {}
 
 local function sigOf(p: PetInstance): string
-	return p.Id .. p.Variant .. tostring(p.Shiny) .. tostring(p.Level)
+	-- the power on a gem pet's card depends on the player's highest island
+	local species = PetInfo.Species(p.Id)
+	local scale = if species and species.Source == "Gem" then tostring(PetInfo.ScaleArea()) else ""
+	return p.Id .. p.Variant .. tostring(p.Shiny) .. tostring(p.Level) .. scale
 end
 
 local function passes(p: PetInstance, equipped: boolean): boolean

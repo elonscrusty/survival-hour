@@ -25,6 +25,7 @@ local tab = "Daily"
 local selectTab: (string) -> ()
 local tickers: { () -> () } = {}
 local renderedSig = ""
+local questBars: { [number]: (number, string?) -> () } = {}
 
 local QUEST_TEXT: { [string]: string } = {
 	Break = "Break %s things",
@@ -147,6 +148,7 @@ local function renderQuests()
 		local bar, set = Kit.bar({ Size = UDim2.new(1, -360, 0, 28), Position = UDim2.fromOffset(86, 56) }, if done then Theme.Colors.Good else Theme.Colors.Info)
 		bar.Parent = row
 		set(q.Progress / math.max(1, q.Goal), Format.num(math.min(q.Progress, q.Goal)) .. " / " .. Format.num(q.Goal))
+		questBars[i] = set
 		local b = Kit.button(
 			if q.Claimed then Theme.Icons.Equipped .. " Done" else "Claim " .. Theme.Icons.Gems .. q.Gems,
 			if q.Claimed then "Grey" elseif done then "Green" else "White",
@@ -220,17 +222,25 @@ local function render(force: boolean?)
 		return
 	end
 	local sig = tab .. tostring(d.Daily.CanClaim) .. d.Daily.Streak
+	-- progress alone doesn't rebuild the list: bars are updated in place
 	for _, q in d.Quests do
-		sig ..= q.Kind .. q.Progress .. tostring(q.Claimed)
+		sig ..= q.Kind .. q.Goal .. tostring(q.Progress >= q.Goal) .. tostring(q.Claimed)
 	end
 	for k in d.Playtime.Claimed do
 		sig ..= k
 	end
 	if sig == renderedSig and not force then
+		for i, set in questBars do
+			local q = d.Quests[i]
+			if q then
+				set(q.Progress / math.max(1, q.Goal), Format.num(math.min(q.Progress, q.Goal)) .. " / " .. Format.num(q.Goal))
+			end
+		end
 		return
 	end
 	renderedSig = sig
 	table.clear(tickers)
+	table.clear(questBars)
 	Kit.clear(content)
 	if tab == "Daily" then
 		renderDaily()

@@ -147,13 +147,31 @@ function State.TradeUids(): { [string]: boolean }
 	return set
 end
 
--- Minutes played this session, extrapolated between snapshots.
+-- os.clock() when this session started, estimated from the snapshots. The
+-- server floors SessionMinutes, so each snapshot gives a start that is up to a
+-- minute too late; we only ever move the estimate earlier so countdowns never
+-- jump back up.
+local sessionStart: number? = nil
+
+local function noteSession(d: PlayerState)
+	local minutes = d.Playtime and d.Playtime.SessionMinutes
+	if type(minutes) ~= "number" then
+		return
+	end
+	local candidate = os.clock() - minutes * 60
+	local cur = sessionStart
+	if cur == nil or candidate < cur then
+		sessionStart = candidate
+	end
+end
+
+-- Minutes played this session (smooth between snapshots).
 function State.SessionMinutes(): number
-	local d = State.Data
-	if not d then
+	local start = sessionStart
+	if not start then
 		return 0
 	end
-	return d.Playtime.SessionMinutes + (os.clock() - State.ReceivedAt) / 60
+	return (os.clock() - start) / 60
 end
 
 function State.TradeCountdown(): number?
@@ -180,6 +198,7 @@ function State.Init()
 		State.Previous = old
 		State.Data = data
 		State.ReceivedAt = os.clock()
+		noteSession(data)
 		State.Changed:Fire(data, old)
 		if not gotFirst then
 			gotFirst = true

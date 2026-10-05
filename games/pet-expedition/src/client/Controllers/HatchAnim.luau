@@ -7,7 +7,6 @@
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
@@ -88,8 +87,14 @@ function HatchAnim.Play(eggId: string, pets: { PetInstance }, indexBefore: { [st
 	local holdT = if auto then 0.9 else 1.6
 
 	local gui = Windows.Gui("Overlay")
-	local root: Frame = Kit.new("Frame", {
+	-- a full-screen Active button: it swallows taps (so they never reach the
+	-- world and retarget pets) and a tap skips the hold
+	local root: TextButton = Kit.new("TextButton", {
 		Name = "Hatch",
+		Text = "",
+		AutoButtonColor = false,
+		Active = true,
+		Selectable = false,
 		Size = UDim2.fromScale(1, 1),
 		BackgroundColor3 = Theme.Colors.Backdrop,
 		BackgroundTransparency = 1,
@@ -137,10 +142,8 @@ function HatchAnim.Play(eggId: string, pets: { PetInstance }, indexBefore: { [st
 	end
 
 	local skip = false
-	local tapConn = UserInputService.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			skip = true
-		end
+	local tapConn = root.Activated:Connect(function()
+		skip = true
 	end)
 
 	-- shake, faster and faster

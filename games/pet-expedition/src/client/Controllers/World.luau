@@ -144,7 +144,9 @@ local function buildIslands()
 	})
 end
 
-local function renderIslands()
+local islandsSig = ""
+
+local function renderIslands(force: boolean?)
 	if not islandsWin.IsOpen then
 		return
 	end
@@ -152,6 +154,15 @@ local function renderIslands()
 	if not d then
 		return
 	end
+	-- rebuild only when an island opens or a gate becomes affordable
+	local sig = ""
+	for _, a in Areas.List do
+		sig ..= (if d.Areas[a.Id] then "1" else "0") .. (if d.Coins >= a.GateCost then "1" else "0")
+	end
+	if sig == islandsSig and not force then
+		return
+	end
+	islandsSig = sig
 	Kit.clear(islandList)
 	for i, a in Areas.List do
 		local open = d.Areas[a.Id] == true
@@ -213,9 +224,20 @@ end
 
 function World.Init()
 	buildIslands()
-	islandsWin.Opened:Connect(renderIslands)
-	State.Changed:Connect(function()
-		refreshAll()
+	islandsWin.Opened:Connect(function()
+		renderIslands(true)
+	end)
+	local gatesSig: string? = nil
+	State.Changed:Connect(function(d: any)
+		-- gates only change when the opened islands do (open, rebirth)
+		local sig = ""
+		for _, a in Areas.List do
+			sig ..= if d and d.Areas[a.Id] then "1" else "0"
+		end
+		if sig ~= gatesSig then
+			gatesSig = sig
+			refreshAll()
+		end
 		renderIslands()
 	end)
 

@@ -43,6 +43,7 @@ local SPACING = 4.6
 local PER_ROW = 4
 local CULL_DISTANCE = 320
 local HOVER = 0.7
+local POOL_PER_KEY = 4 -- spare models kept per pet look; extras are destroyed
 
 local function hideOthers(): boolean
 	return State.Setting("HideOthersPets", false) == true
@@ -81,7 +82,12 @@ local function release(f: Follower)
 		list = {}
 		pool[f.Key] = list
 	end
-	table.insert(list :: { Model }, f.Model)
+	local l = list :: { Model }
+	if #l >= POOL_PER_KEY then
+		f.Model:Destroy()
+		return
+	end
+	table.insert(l, f.Model)
 end
 
 type Entry = { Uid: string, Id: string, Variant: string, Shiny: boolean }

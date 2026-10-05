@@ -47,6 +47,7 @@ local currentEgg: string? = nil
 local standPos: Vector3? = nil
 local hatching = false
 local auto = false
+local autoGen = 0 -- bumped on every start/stop so an old auto loop never touches a new run
 
 -- Fired after each successful hatch (tutorial).
 Hatch.OnHatched = nil :: (() -> ())?
@@ -69,6 +70,7 @@ end
 
 local function stopAuto()
 	auto = false
+	autoGen += 1
 	Hud.SetAutoHatch(nil)
 	if btnAuto then
 		Kit.setButton(btnAuto, { Text = "Auto: OFF", Tone = "White" })
@@ -86,7 +88,7 @@ local function renderOdds(force: boolean?)
 	local luck = d.LuckMult or 1
 	local rows = PetInfo.Odds(eggId, luck)
 	-- skip rebuilding the list when nothing it shows has changed
-	local sig = eggId .. "|" .. tostring(luck)
+	local sig = eggId .. "|" .. tostring(luck) .. "|" .. tostring(PetInfo.ScaleArea())
 	for _, row in rows do
 		sig ..= if d.Index[row.Pet] then "1" else "0"
 	end
@@ -227,13 +229,25 @@ local function startAuto()
 	if auto or not currentEgg then
 		return
 	end
+	autoGen += 1
+	local gen = autoGen
 	auto = true
 	renderButtons()
 	Windows.Close()
 	local eggId = currentEgg
 	Hud.SetAutoHatch(Theme.Icons.Egg .. " Auto hatching " .. (if eggId and Eggs.ById[eggId] then Eggs.ById[eggId].Name else ""), stopAuto)
 	task.spawn(function()
-		while auto and currentEgg == eggId do
+		local function alive(): boolean
+			return auto and autoGen == gen and currentEgg == eggId
+		end
+		while alive() do
+			-- a manual hatch may still be animating; wait instead of giving up
+			while hatching and alive() do
+				task.wait(0.1)
+			end
+			if not alive() then
+				break
+			end
 			local pos = charPos()
 			if standPos and pos and (pos - standPos).Magnitude > AUTO_RANGE then
 				Toasts.Show("Auto hatch stopped: you walked away.", "info")
@@ -245,7 +259,9 @@ local function startAuto()
 			end
 			task.wait(math.max(0.1, Config.HatchCooldown - 0.6))
 		end
-		stopAuto()
+		if autoGen == gen then
+			stopAuto()
+		end
 	end)
 end
 

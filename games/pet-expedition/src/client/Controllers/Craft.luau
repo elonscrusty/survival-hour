@@ -51,7 +51,7 @@ local function render()
 		end
 	end
 	local arr: { Group } = {}
-	local sig = ""
+	local sig = tostring(PetInfo.ScaleArea()) .. "|"
 	for _, g in groups do
 		table.insert(arr, g)
 	end

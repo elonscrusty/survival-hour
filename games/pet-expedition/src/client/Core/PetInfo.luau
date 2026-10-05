@@ -1,28 +1,37 @@
 --!strict
 -- Read-only pet helpers for the UI: display power, sorting, odds with luck.
--- The server is the authority (Logic/PetMath and Logic/Hatch); these mirror
--- the documented formulas only so the UI can sort and preview.
+-- Formulas come from the shared Logic modules (PetMath, Hatch, Economy) so
+-- the UI always shows exactly what the server uses.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
-local Config = require(Shared:WaitForChild("Config"))
 local Pets = require(Shared:WaitForChild("Pets"))
-local Areas = require(Shared:WaitForChild("Areas"))
 local Eggs = require(Shared:WaitForChild("Eggs"))
 local Types = require(Shared:WaitForChild("Types"))
+local Logic = Shared:WaitForChild("Logic")
+local PetMath = require(Logic:WaitForChild("PetMath"))
+local HatchLogic = require(Logic:WaitForChild("Hatch"))
+local Economy = require(Logic:WaitForChild("Economy"))
+
+local State = require("./State")
 
 type PetInstance = Types.PetInstance
 
 local PetInfo = {}
 
-local rarityIndex: { [string]: number } = {}
-for i, r in Config.Rarities do
-	rarityIndex[r] = i
+function PetInfo.RarityIndex(rarity: string): number
+	return math.max(1, PetMath.RarityIndex(rarity))
 end
 
-function PetInfo.RarityIndex(rarity: string): number
-	return rarityIndex[rarity] or 1
+-- Island whose power multiplier gem pets use right now (the player's highest
+-- opened island, as on the server).
+function PetInfo.ScaleArea(): string?
+	local d = State.Data
+	if not d then
+		return nil
+	end
+	return Economy.HighestArea(d :: any)
 end
 
 function PetInfo.Species(petId: string): Pets.Pet?
@@ -39,25 +48,14 @@ function PetInfo.Rarity(petId: string): string
 	return if s then s.Rarity else "Common"
 end
 
--- Base power of a species (rarity x island).
+-- Base power of a species (rarity x island; gem pets use the scale island).
 function PetInfo.BasePower(petId: string): number
-	local s = Pets.ById[petId]
-	if not s then
-		return 1
-	end
-	local area = Areas.ById[s.Area]
-	return (Config.RarityPower[s.Rarity] or 1) * (if area then area.PowerMult else 1)
+	return PetMath.BasePower(petId, PetInfo.ScaleArea())
 end
 
 -- Power of a pet instance including variant, shiny and level.
 function PetInfo.Power(p: PetInstance): number
-	local power = PetInfo.BasePower(p.Id)
-	power *= Config.VariantPower[p.Variant] or 1
-	if p.Shiny then
-		power *= Config.ShinyPower
-	end
-	power *= 1 + Config.PetLevelPower * math.max(0, (p.Level or 1) - 1)
-	return power
+	return PetMath.Power(p :: any, PetInfo.ScaleArea())
 end
 
 -- Key that groups pets that can be crafted together.
@@ -66,11 +64,7 @@ function PetInfo.CraftKey(p: PetInstance): string
 end
 
 function PetInfo.NextVariant(variant: string): string?
-	local i = table.find(Config.Variants, variant)
-	if not i then
-		return nil
-	end
-	return Config.Variants[i + 1]
+	return PetMath.NextVariant(variant)
 end
 
 -- Display name like "Golden Fox" or "Shiny Rainbow Puppy".
@@ -87,32 +81,17 @@ end
 
 export type OddsRow = { Pet: string, Base: number, Boosted: number }
 
--- Odds for an egg in percent. Luck multiplies the weight of Rare and above,
--- then everything is renormalised to 100.
+-- Odds for an egg in percent: base (no luck) and boosted by the player's luck.
 function PetInfo.Odds(eggId: string, luckMult: number): { OddsRow }
 	local egg = Eggs.ById[eggId]
 	local rows: { OddsRow } = {}
 	if not egg then
 		return rows
 	end
-	local rareIdx = PetInfo.RarityIndex("Rare")
-	local baseTotal, boostTotal = 0, 0
-	local weights: { number } = {}
-	for i, o in egg.Odds do
-		baseTotal += o.Weight
-		local w = o.Weight
-		if PetInfo.RarityIndex(PetInfo.Rarity(o.Pet)) >= rareIdx then
-			w *= math.max(1, luckMult)
-		end
-		weights[i] = w
-		boostTotal += w
-	end
-	for i, o in egg.Odds do
-		table.insert(rows, {
-			Pet = o.Pet,
-			Base = if baseTotal > 0 then o.Weight / baseTotal * 100 else 0,
-			Boosted = if boostTotal > 0 then weights[i] / boostTotal * 100 else 0,
-		})
+	local base = HatchLogic.Odds(egg, 1)
+	local boosted = HatchLogic.Odds(egg, luckMult)
+	for _, o in egg.Odds do
+		table.insert(rows, { Pet = o.Pet, Base = base[o.Pet] or 0, Boosted = boosted[o.Pet] or 0 })
 	end
 	return rows
 end

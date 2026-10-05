@@ -9,6 +9,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Areas = require(Shared:WaitForChild("Areas"))
 local Types = require(Shared:WaitForChild("Types"))
+local ExpeditionLogic = require(Shared:WaitForChild("Logic"):WaitForChild("Expedition"))
 
 local State = require("../Core/State")
 local Remote = require("../Core/Remote")
@@ -53,8 +54,9 @@ local function durationDef(key: string)
 	return Config.ExpeditionDurations[1]
 end
 
-local function skipCost(secondsLeft: number): number
-	return math.max(5, math.ceil(secondsLeft / 60) * Config.ExpeditionSkipGemsPerMinute)
+-- Same price the server charges (Logic/Expedition).
+local function skipCost(exp: Expedition): number
+	return ExpeditionLogic.SkipCost(exp :: any, State.Now())
 end
 
 local function estimateCoins(areaId: string, durationKey: string, uids: { string }): number
@@ -171,7 +173,7 @@ end
 
 local function skip(slot: number, e: Expedition)
 	local left = e.EndAt - State.Now()
-	local cost = skipCost(left)
+	local cost = skipCost(e)
 	Windows.Confirm(
 		"Finish now?",
 		"Skip the remaining " .. Format.time(left) .. " for " .. Theme.Icons.Gems .. " <b>" .. cost .. "</b> gems.",
@@ -259,7 +261,7 @@ local function slotRow(slot: number, e: Expedition?, order: number)
 			end
 		end
 		if not done then
-			Kit.setButton(btn, { Text = "Skip " .. Theme.Icons.Gems .. skipCost(left), Tone = "Cyan" })
+			Kit.setButton(btn, { Text = "Skip " .. Theme.Icons.Gems .. skipCost(exp), Tone = "Cyan" })
 		end
 	end
 	tick()

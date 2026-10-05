@@ -50,7 +50,7 @@ local addBtn: TextButton
 local countdownLabel: TextLabel
 local picker: Frame
 local pickerGrid: ScrollingFrame
-local closingByCode = false
+local pickerSig = ""
 local lastViewId: string? = nil
 local renderedSig = ""
 
@@ -240,9 +240,18 @@ local function renderPicker()
 	if not d then
 		return
 	end
-	Kit.clear(pickerGrid)
 	local busy = State.BusyUids()
 	local offered, gems = myOffer()
+	-- rebuild only when something the picker shows has changed
+	local sig = table.concat(offered, ",") .. "#" .. table.concat(d.Equipped, ",") .. "#" .. tostring(PetInfo.ScaleArea())
+	for _, p in d.Pets do
+		sig ..= p.Uid .. p.Variant .. tostring(p.Level) .. tostring(p.Locked) .. tostring(busy[p.Uid] == true) .. ";"
+	end
+	if sig == pickerSig then
+		return
+	end
+	pickerSig = sig
+	Kit.clear(pickerGrid)
 	local offeredSet: { [string]: boolean } = {}
 	for _, uid in offered do
 		offeredSet[uid] = true
@@ -307,26 +316,24 @@ local function renderTrade()
 			Text = if v.Me.Ready then "Not ready" else Theme.Icons.Equipped .. " Ready",
 			Tone = if v.Me.Ready then "Yellow" else "Green",
 		})
-		renderPicker()
 	end
+	renderPicker()
 end
 
 local function closeTradeWindow()
+	Windows.Lock(nil)
 	if tradeWin.IsOpen then
-		closingByCode = true
-		Windows.Close()
-		closingByCode = false
+		Windows.Close(true)
 	end
 	picker.Visible = false
+	pickerSig = ""
 end
 
 local function onTrade(v: TradeView?)
 	if not v or v.Status == "Done" or v.Status == "Cancelled" then
+		-- the server sends its own toast for how the trade ended
 		if v and v.Status == "Done" then
 			Sounds.Play("Reward")
-			Toasts.Show(Theme.Icons.Trade .. " Trade complete!", "good")
-		elseif lastViewId ~= nil then
-			Toasts.Show("Trade closed.", "info")
 		end
 		lastViewId = nil
 		renderedSig = ""
@@ -337,7 +344,10 @@ local function onTrade(v: TradeView?)
 		lastViewId = v.Id
 		renderedSig = ""
 		picker.Visible = false
+		pickerSig = ""
 	end
+	-- an active trade keeps its window open: only Cancel or the server ends it
+	Windows.Lock("TradeSession")
 	if not tradeWin.IsOpen then
 		Windows.Show("TradeSession")
 	end
@@ -411,6 +421,7 @@ local function buildTradeWindow()
 	})
 	addBtn = Kit.button(Theme.Icons.Pets .. " Add pets", "Blue", { Size = UDim2.fromOffset(200, 64), Position = UDim2.fromOffset(0, 3), Parent = bar }, function()
 		picker.Visible = not picker.Visible
+		pickerSig = ""
 		Kit.setButton(addBtn, { Text = if picker.Visible then "Done" else Theme.Icons.Pets .. " Add pets" })
 		renderPicker()
 	end)
@@ -433,6 +444,7 @@ local function buildTradeWindow()
 		Parent = bar,
 	}, function()
 		Remote.Quiet("TradeCancel")
+		State.Trade = nil
 		closeTradeWindow()
 	end)
 	-- pet picker overlay (covers the left side)
@@ -450,12 +462,14 @@ local function buildTradeWindow()
 		ZIndex = 11,
 		Parent = picker,
 	}, { Kit.grid(Vector2.new(92, 108), 8), Kit.pad(6, 4, 6, 4) })
-	-- closing the window by hand cancels the trade
+	-- the header X would close the window without ending the trade; use Cancel
+	local closeBtn = tradeWin.Header:FindFirstChild("Close") :: GuiObject?
+	if closeBtn then
+		closeBtn.Visible = false
+	end
 	tradeWin.Closed:Connect(function()
-		if not closingByCode and State.Trade ~= nil then
-			Remote.Quiet("TradeCancel")
-		end
 		picker.Visible = false
+		pickerSig = ""
 		Kit.setButton(addBtn, { Text = Theme.Icons.Pets .. " Add pets" })
 	end)
 end
@@ -487,9 +501,11 @@ function Trade.Init()
 			lastCanTrade = d.CanTrade
 			renderList()
 		end
-		if picker.Visible then
-			renderedSig = ""
-			renderTrade()
+		renderPicker()
+	end)
+	Windows.Refused:Connect(function()
+		if Windows.LockedName() == "TradeSession" then
+			Toasts.Show("Finish or cancel your trade first.", "info")
 		end
 	end)
 	State.Notify:Connect(function(kind: string, data: { [string]: any })
