@@ -10,7 +10,7 @@ Net.Event("State").OnClientEvent:Connect(function(data)
 end)
 
 local Controllers = script.Parent:WaitForChild("Controllers")
-for _, name in { "Notify", "Hud", "PetMenu", "ShopMenu", "HatchView", "RaceHud", "Tutorial" } do
+for _, name in { "Sound", "Notify", "Hud", "DailyMenu", "PetMenu", "ShopMenu", "HatchView", "RaceHud", "Tutorial" } do
 	local ok, err = pcall(function()
 		local c = require(Controllers:WaitForChild(name)) :: any
 		c.Start()

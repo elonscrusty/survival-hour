@@ -10,6 +10,7 @@ local Net = require(Shared.Net)
 local PetModel = require(Shared.PetModel)
 local UI = require(script.Parent.Parent.UI)
 local Notify = require(script.Parent.Notify)
+local Sound = require(script.Parent.Sound)
 
 local HatchView = {}
 
@@ -35,6 +36,7 @@ local function show(species: string, eggId: string, uid: string)
 	UI.Corner(eggFrame, 80)
 	UI.Stroke(eggFrame, Color3.fromRGB(255, 255, 255), 4)
 	for i = 1, 3 do
+		Sound.Play("Wobble")
 		local t = TweenService:Create(eggFrame, TweenInfo.new(0.12, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, 3, true), { Rotation = if i % 2 == 0 then -14 - i * 4 else 14 + i * 4 })
 		t:Play()
 		t.Completed:Wait()
@@ -42,6 +44,7 @@ local function show(species: string, eggId: string, uid: string)
 	end
 	local flash = UI.Frame({ Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), ZIndex = 45 }, overlay)
 	eggFrame:Destroy()
+	Sound.Play("Hatch")
 	TweenService:Create(flash, TweenInfo.new(0.6), { BackgroundTransparency = 1 }):Play()
 
 	local holder = UI.Frame({ Size = UDim2.fromOffset(320, 320), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), BackgroundTransparency = 1, ZIndex = 41 }, overlay)

@@ -10,6 +10,7 @@ local specs = {
 	"./TrackLayout.spec",
 	"./AssetFit.spec",
 	"./Models.spec",
+	"./Daily.spec",
 }
 
 local passed, failed = 0, 0

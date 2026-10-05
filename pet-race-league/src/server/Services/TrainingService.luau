@@ -31,6 +31,7 @@ local function award(p: Player, stat: string, xp: number)
 	end
 	local before = PetStats.Ride(pet)
 	local gained = PetStats.AddXp(pet, stat, xp)
+	Profile.Bump(d, "TrainXp", xp)
 	ctx.DataService.Changed(p)
 	ctx.Util.Notify(p, "+" .. xp .. " " .. stat, "Xp")
 	if gained > 0 then
@@ -40,6 +41,7 @@ local function award(p: Player, stat: string, xp: number)
 			ctx.PetService.ResetCharges(p)
 		end
 		ctx.PetService.Apply(p)
+		ctx.DailyService.CheckBadges(p)
 	end
 end
 
@@ -92,6 +94,7 @@ local function tick(p: Player, dt: number)
 				t.Gate = i
 				t.GateAt = now
 				t.GateCount += 1
+				Profile.Bump(ctx.DataService.Get(p), "Gates")
 				award(p, "Speed", T.GateXp)
 				if t.GateCount % n == 0 then
 					award(p, "Speed", T.LapBonusXp)
@@ -116,6 +119,7 @@ local function tick(p: Player, dt: number)
 			if pos.X >= h.X0 and pos.X <= h.X1 and (t.LastZ - h.Z) * (pos.Z - h.Z) < 0 then
 				if now - (t.HurdleAt[i] or 0) > 1.5 then
 					t.HurdleAt[i] = now
+					Profile.Bump(ctx.DataService.Get(p), "Hurdles")
 					award(p, "Jump", math.max(2, math.floor(T.GateXp * h.H / 4 + 0.5)))
 				end
 				break

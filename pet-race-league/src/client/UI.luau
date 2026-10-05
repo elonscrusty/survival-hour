@@ -22,6 +22,9 @@ UI.Body = Enum.Font.GothamBold
 
 local screen: ScreenGui? = nil
 
+-- Set by the Sound controller: plays a click on every button press.
+UI.OnClick = nil :: (() -> ())?
+
 function UI.Screen(): ScreenGui
 	if screen then
 		return screen
@@ -109,6 +112,9 @@ function UI.Button(props: { [string]: any }, parent: Instance?, onClick: (() -> 
 			t.Completed:Once(function()
 				TweenService:Create(b, TweenInfo.new(0.08), { Size = s }):Play()
 			end)
+			if UI.OnClick then
+				UI.OnClick()
+			end
 			onClick()
 		end)
 	end

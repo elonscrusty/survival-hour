@@ -11,6 +11,7 @@ local STEPS = {
 	{ "Train your pet", "SPEED RING: ride through the gates in order.\nJUMP HURDLES: jump over the walls.\nSTAMINA TREADMILL: keep running on the belt." },
 	{ "Race!", "Stand on the pink RACE PORTAL. Finish fast for coins, trophies and medals.\nTap DASH for a burst of speed." },
 	{ "Hatch new pets", "Spend coins at the EGGS. Rare pets get a small bonus, but training matters most!" },
+	{ "Daily rewards", "Tap DAILY for your login reward, daily quests and codes. Come back tomorrow to grow your streak!" },
 }
 
 local shown = false

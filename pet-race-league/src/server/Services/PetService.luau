@@ -309,11 +309,12 @@ function PetService.Hatch(p: Player, eggId: any): (boolean, string)
 	end
 	d.Coins -= egg.Price
 	d.Pity[egg.Id] = count
-	d.Stats.Hatches = (d.Stats.Hatches or 0) + 1
+	Profile.Bump(d, "Hatches")
 	Data.Changed(p)
 	Net.Event("Hatched"):FireClient(p, species, egg.Id, pet.Uid)
 	local rank = Pets.Rank(species)
 	if rank >= 5 then
+		ctx.DailyService.Badge(p, "Legendary")
 		Util.NotifyAll(p.DisplayName .. " hatched a " .. Pets.RarityOf(species) .. " " .. Pets.ById[species].Name .. "!", "Rare")
 	end
 	return true, species

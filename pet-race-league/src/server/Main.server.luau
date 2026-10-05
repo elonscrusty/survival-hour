@@ -17,6 +17,7 @@ local order = {
 	"TrackBuilder",
 	"RaceService",
 	"ShopService",
+	"DailyService",
 	"LeaderboardService",
 }
 

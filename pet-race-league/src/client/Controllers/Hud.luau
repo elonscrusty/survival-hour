@@ -17,6 +17,16 @@ local player = Players.LocalPlayer
 Hud.Buttons = {} :: { [string]: TextButton }
 local openers: { [string]: () -> () } = {}
 
+local dots: { [string]: Frame } = {}
+
+-- Shows or hides the red "something to claim" dot on a HUD button.
+function Hud.SetDot(name: string, on: boolean)
+	local d = dots[name]
+	if d then
+		d.Visible = on
+	end
+end
+
 -- Other controllers register their menus here so the buttons can open them.
 function Hud.SetOpener(name: string, fn: () -> ())
 	openers[name] = fn
@@ -91,7 +101,15 @@ function Hud.Start()
 			openers.Shop()
 		end
 	end)
-	Hud.Buttons = { Dash = dashBtn, Ride = rideBtn, Pets = petsBtn, Shop = shopBtn }
+	local dailyBtn = UI.Button({ Text = "DAILY", Size = UDim2.fromOffset(120, 44), Position = UDim2.fromOffset(10, 152), BackgroundColor3 = UI.Colors.Purple }, screen, function()
+		if openers.Daily then
+			openers.Daily()
+		end
+	end)
+	local dot = UI.Frame({ Size = UDim2.fromOffset(16, 16), Position = UDim2.new(1, -10, 0, -6), BackgroundColor3 = UI.Colors.Red, Visible = false, ZIndex = 3 }, dailyBtn)
+	UI.Corner(dot, 8)
+	dots.Daily = dot
+	Hud.Buttons = { Dash = dashBtn, Ride = rideBtn, Pets = petsBtn, Shop = shopBtn, Daily = dailyBtn }
 
 	local function refreshAttrs()
 		local riding = player:GetAttribute("Riding")
@@ -105,6 +123,7 @@ function Hud.Start()
 		rideBtn.Visible = not inRace
 		petsBtn.Visible = not inRace
 		shopBtn.Visible = not inRace
+		dailyBtn.Visible = not inRace
 	end
 	for _, a in { "Riding", "DashCharges", "DashMax", "InRace" } do
 		player:GetAttributeChangedSignal(a):Connect(refreshAttrs)

@@ -3,6 +3,7 @@ local Config = require("../Config")
 local Pets = require("../Pets")
 local Cosmetics = require("../Cosmetics")
 local PetStats = require("./PetStats")
+local Daily = require("./Daily")
 
 local Profile = {}
 
@@ -20,6 +21,10 @@ export type Data = {
 	BigBarn: boolean,
 	Receipts: { string }, -- recent purchase ids (duplicate guard)
 	Tutorial: boolean,
+	Daily: Daily.State,
+	Codes: { [string]: boolean }, -- redeemed promo codes
+	Badges: { [string]: boolean }, -- badges already awarded
+	Muted: boolean, -- sound effects off
 }
 
 function Profile.Default(): Data
@@ -33,10 +38,14 @@ function Profile.Default(): Data
 		Owned = {},
 		Pity = {},
 		BestTimes = {},
-		Stats = { Races = 0, Wins = 0, Hatches = 0, Golds = 0 },
+		Stats = { Races = 0, Wins = 0, Hatches = 0, Golds = 0, Medals = 0, Gates = 0, Hurdles = 0, TrainXp = 0 },
 		BigBarn = false,
 		Receipts = {},
 		Tutorial = false,
+		Daily = Daily.New(),
+		Codes = {},
+		Badges = {},
+		Muted = false,
 	}
 	-- Everyone starts with a Pup so they can ride and race straight away.
 	local pup = Profile.AddPet(d, "Pup")
@@ -64,6 +73,44 @@ function Profile.Sanitize(raw: any): Data
 	d.NextUid = math.floor(num(raw.NextUid, 1, 1, 1e12))
 	d.BigBarn = raw.BigBarn == true
 	d.Tutorial = raw.Tutorial == true
+	d.Muted = raw.Muted == true
+	for _, key in { "Codes", "Badges" } do
+		if type(raw[key]) == "table" then
+			for k, v in raw[key] do
+				if type(k) == "string" and v == true then
+					(d :: any)[key][k] = true
+				end
+			end
+		end
+	end
+	local rd = raw.Daily
+	if type(rd) == "table" and type(rd.Day) == "number" then
+		local s = d.Daily
+		s.Day = math.floor(rd.Day)
+		s.Streak = math.floor(num(rd.Streak, 0, 0, 1e6))
+		s.LoginClaimed = rd.LoginClaimed == true
+		if type(rd.Quests) == "table" then
+			for _, id in rd.Quests do
+				if type(id) == "string" and Daily.ById[id] then
+					table.insert(s.Quests, id)
+				end
+			end
+		end
+		if type(rd.Base) == "table" then
+			for k, v in rd.Base do
+				if type(k) == "string" and type(v) == "number" and v == v then
+					s.Base[k] = v
+				end
+			end
+		end
+		if type(rd.Claimed) == "table" then
+			for k, v in rd.Claimed do
+				if type(k) == "string" and v == true then
+					s.Claimed[k] = true
+				end
+			end
+		end
+	end
 	if type(raw.Pets) == "table" then
 		local seen = {}
 		for _, p in raw.Pets do
@@ -168,6 +215,26 @@ function Profile.Release(d: Data, uid: string): (boolean, string?)
 		end
 	end
 	return false, "Pet not found."
+end
+
+-- Adds to a lifetime stat (used by daily quests).
+function Profile.Bump(d: Data, stat: string, n: number?)
+	d.Stats[stat] = (d.Stats[stat] or 0) + (n or 1)
+end
+
+-- Redeems a promo code. Returns coins given, or nil and a reason.
+function Profile.Redeem(d: Data, code: string, codes: { [string]: { Coins: number } }): (number?, string?)
+	local key = string.upper((string.gsub(code, "%s", "")))
+	local def = codes[key]
+	if not def then
+		return nil, "That code doesn't exist."
+	end
+	if d.Codes[key] then
+		return nil, "You already used that code."
+	end
+	d.Codes[key] = true
+	d.Coins += def.Coins
+	return def.Coins, nil
 end
 
 -- Records a purchase id. Returns false if it was already handled.

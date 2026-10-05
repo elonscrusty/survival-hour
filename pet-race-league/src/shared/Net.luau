@@ -18,10 +18,13 @@ Net.Events = {
 	"Rename", -- client -> server: uid, name
 	"LeaveRace", -- client -> server: give up the current race
 	"TutorialDone", -- client -> server
+	"ClaimDaily", -- client -> server: "Login" or a quest id
+	"SetMuted", -- client -> server: true/false
 }
 
 Net.Functions = {
 	"Hatch", -- client -> server: egg id -> ok, species | error
+	"Redeem", -- client -> server: code -> ok, message
 }
 
 local folder: Folder

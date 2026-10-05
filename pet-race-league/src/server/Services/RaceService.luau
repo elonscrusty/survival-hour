@@ -201,13 +201,23 @@ local function finishRace()
 		if d then
 			d.Coins += coins
 			d.Trophies += trophies
-			d.Stats.Races = (d.Stats.Races or 0) + 1
+			local B = ctx.DailyService
+			if r.Finished then
+				Profile.Bump(d, "Races")
+				B.Badge(r.Player, "FirstRace")
+			end
 			if place == 1 and count > 1 and r.Finished then
-				d.Stats.Wins = (d.Stats.Wins or 0) + 1
+				Profile.Bump(d, "Wins")
+				B.Badge(r.Player, "FirstWin")
+			end
+			if medal then
+				Profile.Bump(d, "Medals")
 			end
 			if medal == "Gold" then
-				d.Stats.Golds = (d.Stats.Golds or 0) + 1
+				Profile.Bump(d, "Golds")
+				B.Badge(r.Player, "GoldMedal")
 			end
+			B.CheckBadges(r.Player)
 			local best = d.BestTimes[built.Track.Id]
 			local newBest = false
 			if r.Time and (not best or r.Time < best) then
