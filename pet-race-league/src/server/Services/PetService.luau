@@ -378,6 +378,7 @@ function PetService.Start()
 		s.DefaultHip = nil
 		destroyModel(s) -- a follower lives outside the character, so clear it too
 		s.Riding = false
+		p:SetAttribute("Riding", false) -- no sit pose until the new pet is mounted
 		local hum = char:WaitForChild("Humanoid", 10) :: Humanoid?
 		char:WaitForChild("HumanoidRootPart", 10)
 		if not hum or not Data.Get(p) then
@@ -503,7 +504,8 @@ function PetService.Start()
 					if (cur.Position - goal.Position).Magnitude > 60 then
 						alpha = 1
 					end
-					built.Model:PivotTo(cur:Lerp(goal, alpha))
+					-- move only the anchored root; the rest hangs off it on joints
+					built.Root.CFrame = cur:Lerp(goal, alpha) * built.Root.PivotOffset:Inverse()
 				end
 			end
 		end

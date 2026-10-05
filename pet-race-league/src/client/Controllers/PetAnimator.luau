@@ -27,7 +27,11 @@ type Rig = {
 	Model: Model,
 	Root: BasePart?,
 	Joints: { [string]: Joint },
-	Eyes: { { Part: BasePart, Size: Vector3 } },
+	Eyes: { { Mesh: SpecialMesh, Scale: Vector3 } },
+	Shines: { BasePart },
+	Open: number,
+	Grounded: boolean,
+	MoveT: number,
 	Seed: number,
 	Phase: number,
 	Air: number,
@@ -47,17 +51,25 @@ type Rig = {
 }
 
 local rigs: { [Model]: Rig } = {}
+local onScreen: (Instance) -> boolean
 
 local function scan(model: Model, preview: boolean, owner: Player?): Rig
 	local joints = {}
 	local eyes = {}
+	local shines = {}
 	for _, d in model:GetDescendants() do
 		if d:IsA("Weld") and string.sub(d.Name, 1, 2) == "J_" then
 			joints[string.sub(d.Name, 3)] = { Weld = d, Rest = d.C0 }
 		elseif d:IsA("Bone") and table.find(PetAnim.Joints, d.Name) then
 			joints[d.Name] = { Bone = d, Rest = CFrame.new() }
 		elseif d:IsA("BasePart") and d.Name == "Eye" then
-			table.insert(eyes, { Part = d, Size = d.Size })
+			-- blink by squashing the eye's SpecialMesh (cheap; no physics rebuild)
+			local m = d:FindFirstChildOfClass("SpecialMesh")
+			if m then
+				table.insert(eyes, { Mesh = m, Scale = m.Scale })
+			end
+		elseif d:IsA("BasePart") and d.Name == "Shine" then
+			table.insert(shines, d)
 		end
 	end
 	local _, size = model:GetBoundingBox()
@@ -67,6 +79,10 @@ local function scan(model: Model, preview: boolean, owner: Player?): Rig
 		Root = root,
 		Joints = joints,
 		Eyes = eyes,
+		Shines = shines,
+		Open = 1,
+		Grounded = true,
+		MoveT = 0,
 		Seed = math.random(1, 1000),
 		Phase = math.random() * 6,
 		Air = 0,
@@ -137,21 +153,41 @@ local function step(r: Rig, dt: number, now: number, vel: Vector3?)
 	if not r.Preview and root then
 		local v = vel
 		if not v then
+			-- Followers: the replicated position arrives in steps, so measure the move
+			-- over the time since it last changed and skip frames where it didn't.
 			local pos = root.Position
-			v = if r.LastPos and dt > 0 then (pos - r.LastPos) / dt else Vector3.zero
-			r.LastPos = pos
+			r.MoveT += dt
+			if r.LastPos and pos ~= r.LastPos then
+				v = (pos - r.LastPos) / math.max(r.MoveT, 1 / 60)
+				r.MoveT = 0
+			elseif r.MoveT > 0.25 then
+				v = Vector3.zero
+			end
+			if not r.LastPos or pos ~= r.LastPos then
+				r.LastPos = pos
+			end
 		end
-		local flat = Vector3.new(v.X, 0, v.Z).Magnitude
-		r.Speed += (flat - r.Speed) * math.min(1, dt * 8)
-		r.VelY = v.Y
+		if v then
+			local flat = Vector3.new(v.X, 0, v.Z).Magnitude
+			r.Speed += (flat - r.Speed) * math.min(1, dt * 8)
+			r.VelY += (v.Y - r.VelY) * math.min(1, dt * 10)
+		end
 	end
 	local run = math.clamp(r.Speed / 22, 0, 1)
 	local airborne = math.abs(r.VelY) > 6
-	local wasAir = r.Air
-	r.Air += ((if airborne then 1 else 0) - r.Air) * math.min(1, dt * 10)
-	if wasAir > 0.6 and not airborne then
-		r.Land = 1
+	if airborne then
+		r.Grounded = false
+	elseif not r.Grounded then
+		-- touchdown (once): squash and a puff of dust
+		r.Grounded = true
+		if r.Air > 0.6 then
+			r.Land = 1
+			if r.Dust then
+				r.Dust:Emit(10)
+			end
+		end
 	end
+	r.Air += ((if airborne then 1 else 0) - r.Air) * math.min(1, dt * 10)
 	r.Land = math.max(0, r.Land - dt * 4)
 	r.Happy += ((if now < r.HappyUntil then 1 else 0) - r.Happy) * math.min(1, dt * 6)
 	if now > r.LookAt then
@@ -172,22 +208,29 @@ local function step(r: Rig, dt: number, now: number, vel: Vector3?)
 			end
 		end
 	end
-	local open = PetAnim.Blink(now, r.Seed)
-	for _, e in r.Eyes do
-		e.Part.Size = Vector3.new(e.Size.X, e.Size.Y * math.max(0.08, open), e.Size.Z)
+	local open = math.max(0.08, PetAnim.Blink(now, r.Seed))
+	if open ~= r.Open then
+		r.Open = open
+		for _, e in r.Eyes do
+			e.Mesh.Scale = Vector3.new(e.Scale.X, e.Scale.Y * open, e.Scale.Z)
+		end
+		for _, sh in r.Shines do
+			sh.LocalTransparencyModifier = if open < 0.5 then 1 else 0
+		end
 	end
 	if r.Dust then
 		r.Dust.Rate = if run > 0.45 and r.Air < 0.3 then 14 * run else 0
-		if r.Land > 0.95 then
-			r.Dust:Emit(10)
-		end
 	end
 end
 
 local function stopSit()
 	if sitTrack then
-		sitTrack:Stop(0.2)
+		local t = sitTrack
 		sitTrack = nil
+		t:Stop(0.2)
+		task.delay(0.3, function()
+			t:Destroy()
+		end)
 	end
 end
 
@@ -214,6 +257,20 @@ local function updateSit()
 	track.Looped = true
 	track:Play(0.2)
 	sitTrack = track
+end
+
+-- Is this preview model's ViewportFrame visible (every GUI ancestor shown)?
+onScreen = function(m: Instance): boolean
+	local node = m.Parent
+	while node do
+		if node:IsA("GuiObject") and not node.Visible then
+			return false
+		elseif node:IsA("ScreenGui") then
+			return node.Enabled
+		end
+		node = node.Parent
+	end
+	return false
 end
 
 function PetAnimator.Start()
@@ -261,12 +318,15 @@ function PetAnimator.Start()
 				end
 			end
 		end
-		-- previews (viewports)
+		-- previews (only while their viewport is actually on screen); forget world
+		-- pets that were removed without being destroyed
 		for m, r in rigs do
 			if r.Preview then
-				if m.Parent then
+				if m.Parent and onScreen(m) then
 					step(r, dt, now, nil)
 				end
+			elseif not m.Parent then
+				rigs[m] = nil
 			end
 		end
 	end)

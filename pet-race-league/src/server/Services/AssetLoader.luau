@@ -66,7 +66,15 @@ local function build(name: string, e: Models.Entry): (Model?, string?)
 	local f = AssetFit.Fit({ mesh.Size.X, mesh.Size.Y, mesh.Size.Z }, e.Size)
 	local c = AssetFit.Axes(f)
 	local rot = CFrame.fromMatrix(Vector3.zero, Vector3.new(c[1][1], c[1][2], c[1][3]), Vector3.new(c[2][1], c[2][2], c[2][3]), Vector3.new(c[3][1], c[3][2], c[3][3]))
+	local oldSize = mesh.Size
 	mesh.Size = Vector3.new(f.LocalSize[1], f.LocalSize[2], f.LocalSize[3])
+	-- Resizing a MeshPart doesn't move its bones: scale their positions to match.
+	local ratio = mesh.Size / oldSize
+	for _, b in mesh:GetDescendants() do
+		if b:IsA("Bone") then
+			b.Position *= ratio
+		end
+	end
 	-- Offset = pivot - centre, so the centre sits at -Offset from the pivot (origin).
 	mesh.CFrame = CFrame.new(-e.Offset[1], -e.Offset[2], -e.Offset[3]) * rot
 	mesh.PivotOffset = mesh.CFrame:ToObjectSpace(CFrame.new())

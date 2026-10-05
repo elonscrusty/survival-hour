@@ -29,11 +29,13 @@ local function petName(p: any): string
 	return p.Nick or (s and s.Name) or p.Species
 end
 
-local function preview(parent: Instance, p: any)
+local function preview(parent: Instance, p: any, animate: boolean?)
 	local built = PetModel.Build(p.Species, 1, p.Paint)
 	built.Root.Anchored = true
 	UI.Viewport(parent, built.Model)
-	PetAnimator.Register(built.Model)
+	if animate then
+		PetAnimator.Register(built.Model)
+	end
 end
 
 local function renderDetail()
@@ -48,7 +50,7 @@ local function renderDetail()
 	local rar = Pets.Rarities[s.Rarity]
 	local view = UI.Frame({ Size = UDim2.new(1, 0, 0.36, 0), BackgroundColor3 = UI.Colors.PanelLight }, detail)
 	UI.Corner(view, 12)
-	preview(view, p)
+	preview(view, p, true) -- only the big detail preview animates; grid cards stay still
 	UI.Text({ Text = petName(p), Size = UDim2.new(1, 0, 0, 30), Position = UDim2.new(0, 0, 0.37, 0) }, detail)
 	UI.Text({ Text = s.Rarity .. " " .. s.Name, Size = UDim2.new(1, 0, 0, 20), Position = UDim2.new(0, 0, 0.37, 30), TextColor3 = UI.Rgb(rar.Color), Font = UI.Body }, detail)
 	local ride = PetStats.Ride(p)
