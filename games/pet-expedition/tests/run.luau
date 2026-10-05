@@ -15,6 +15,7 @@ local specs = {
 	"./Profile.spec",
 	"./Trade.spec",
 	"./RateLimiter.spec",
+	"./Models.spec",
 }
 
 local passed, failed = 0, 0
