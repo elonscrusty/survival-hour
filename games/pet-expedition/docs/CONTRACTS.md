@@ -50,6 +50,9 @@ or services (they run in the CLI Luau for tests). No Color3/Vector3 in `Config`.
 - `SetTarget(breakableId?)`: client → server. Server checks the breakable exists, is within
   `Config.MaxTargetDistance` of the character and is on an island the player has opened.
 - `ClientReady()`: client → server once UI is ready.
+- Purchases: the client prompts `MarketplaceService` for configured ids (passes and products). For
+  Id 0 items in Studio it calls `DevPurchase(key)` instead (the server refuses outside Studio). VIP chat
+  tag is applied client-side from the `Vip` attribute (TextChatService).
 
 ## Replicated attributes (for rendering other players' pets)
 - `Player:GetAttribute("Pets")`: JSON string (HttpService) array of `{ Uid, Id, Variant, Shiny }` for the

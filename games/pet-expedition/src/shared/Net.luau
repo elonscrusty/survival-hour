@@ -34,6 +34,7 @@ Net.Functions = {
 	"TradeSetOffer", -- ({ uid }, gems) -> { ok }
 	"TradeReady", -- (ready: boolean) -> { ok }
 	"TradeCancel", -- () -> { ok }
+	"DevPurchase", -- (key) Studio only: simulate buying a pass/product whose Id is 0
 }
 
 -- RemoteEvents.
