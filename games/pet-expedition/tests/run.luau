@@ -5,6 +5,16 @@
 
 local specs = {
 	"./Data.spec",
+	"./Rng.spec",
+	"./PetMath.spec",
+	"./Hatch.spec",
+	"./Economy.spec",
+	"./Inventory.spec",
+	"./Expedition.spec",
+	"./Rewards.spec",
+	"./Profile.spec",
+	"./Trade.spec",
+	"./RateLimiter.spec",
 }
 
 local passed, failed = 0, 0
