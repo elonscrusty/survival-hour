@@ -29,6 +29,7 @@ create.roblox.com → your experience → **Monetization**.
 | MoreExpeditions | +2 Expedition Slots | 199 |
 | AutoFarm | Auto Farm | 249 |
 | BigBackpack | Big Backpack | 99 |
+| RingChampion | Ring Champion | 299 |
 
 **Developer Products** (Monetization → Developer Products → Create):
 | Key | Name | Price |
@@ -40,6 +41,7 @@ create.roblox.com → your experience → **Monetization**.
 | Gems7000 | 7,000 Gems | 999 |
 | Gems19000 | 19,000 Gems | 2499 |
 | BoostCoins | 2x Coins (30 min) | 49 |
+| BoostXp | 2x Pet XP (30 min) | 49 |
 | BoostLuck | 2x Luck (30 min) | 79 |
 | ServerLuck | Server Luck (15 min) | 199 |
 

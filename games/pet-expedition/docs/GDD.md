@@ -21,6 +21,13 @@ pets on timed expeditions that keep earning while you're away.
 5. Combine 5 of the same pet into a **Golden** (and 5 Golden into a **Rainbow**); pets level up as they work.
 6. At the end, **rebirth** for a permanent +100% coin bonus and gems, then run the islands again faster.
 
+## Pet Ring
+A roped ring north of the Meadow hub. Walk in and your strongest equipped pets fight everyone else inside,
+free-for-all; walk out and you're safe. KOs give trophies, coins and pet XP; the longest streak wears the
+King of the Ring crown. Alone in the ring, wild challengers jump in. Ring strength is mostly pet level (time
+spent), with rarity and paid help (Ring Champion's extra fighter, 2x XP, rarer pets) worth up to about 2x:
+paying gets you stronger faster but a dedicated free player can still win.
+
 ## Islands
 | # | Island | Gate (coins) | Egg cost | Expedition-only pet |
 |---|---|---|---|---|
@@ -37,8 +44,8 @@ Mythic Diamond Dragon (1%).
 
 ## Robux (all optional; see `src/shared/Products.luau`)
 Game passes: VIP (199), Lucky (349), Triple Hatch (299), Fast Hatch (99), +3 Equipped (249),
-+2 Expedition Slots (199), Auto Farm (249), Big Backpack (99).
-Developer products: gem packs (49–2,499 Robux), 2x Coins (49), 2x Luck (79), Server Luck (199).
++2 Expedition Slots (199), Auto Farm (249), Big Backpack (99), Ring Champion (299).
+Developer products: gem packs (49–2,499 Robux), 2x Coins (49), 2x Pet XP (49), 2x Luck (79), Server Luck (199).
 The best value per Robux is in larger packs, and the first pack is cheap (49) to make a first purchase easy.
 
 ## Fairness and compliance
