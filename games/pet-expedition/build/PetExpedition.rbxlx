@@ -340,6 +340,9 @@ export type MultContext = {
 	Premium: boolean?,
 	InGroup: boolean?,
 	ServerLuckUntil: number?,
+	-- PolicyService restricts paid random items for this player: luck from the
+	-- Lucky pass, luck boosts and server luck doesn't apply to them.
+	NoPaidLuck: boolean?,
 }
 
 local Economy = {}
@@ -371,6 +374,9 @@ function Economy.CoinMult(p: Profile, c: MultContext): number
 end
 
 function Economy.LuckMult(p: Profile, c: MultContext): number
+	if c.NoPaidLuck then
+		return 1
+	end
 	local mult = 1
 	if Economy.HasPass(p, "Lucky") then
 		mult *= Config.LuckyPassMult
@@ -1448,6 +1454,7 @@ export type StateContext = {
 	ServerLuckUntil: number?,
 	CanBuyGemEggs: boolean?,
 	CanTrade: boolean?,
+	NoPaidLuck: boolean?,
 }
 
 local Profile = {}
@@ -1780,7 +1787,7 @@ end
 -- The snapshot sent to the owning client.
 function Profile.BuildState(p: Profile, c: StateContext): Types.PlayerState
 	local now = c.Now
-	local mult: Economy.MultContext = { Now = now, Premium = c.Premium, InGroup = c.InGroup, ServerLuckUntil = c.ServerLuckUntil }
+	local mult: Economy.MultContext = { Now = now, Premium = c.Premium, InGroup = c.InGroup, ServerLuckUntil = c.ServerLuckUntil, NoPaidLuck = c.NoPaidLuck }
 	local day = Rewards.DayNumber(now)
 	local pets: { PetInstance } = {}
 	for _, pet in p.Pets do
@@ -2981,8 +2988,10 @@ local function newModel(name: string, entry: any, scale: number, profile: Profil
 	root.BottomSurface = Enum.SurfaceType.Smooth
 	root.Parent = m
 	Models.BuildRows(entry.P, m, CFrame.identity, scale, profile)
+	-- With a PrimaryPart the model pivot is PrimaryPart.CFrame * PivotOffset
+	-- (WorldPivot is ignored), so offset it down to the bottom centre.
+	root.PivotOffset = CFrame.new(0, -b[2] * scale / 2, 0)
 	m.PrimaryPart = root
-	m.WorldPivot = CFrame.identity
 	return m
 end
 
@@ -7690,6 +7699,7 @@ Net.Functions = {
 	"TradeReady", -- (ready: boolean) -> { ok }
 	"TradeCancel", -- () -> { ok }
 	"DevPurchase", -- (key) Studio only: simulate buying a pass/product whose Id is 0
+	"DevAction", -- (action) Studio only: test shortcuts (DevService)
 }
 
 -- RemoteEvents.
@@ -8044,10 +8054,10 @@ local Services = script.Parent:WaitForChild("Services")
 
 local ORDER = {
 	"Util",
+	"WorldService", -- first: DataService.Init yields on a DataStore probe and the map must exist before characters spawn
 	"DataService",
 	"StateService",
 	"BoostService",
-	"WorldService",
 	"PetService",
 	"HatchService",
 	"BreakableService",
@@ -8056,6 +8066,7 @@ local ORDER = {
 	"RebirthService",
 	"PurchaseService",
 	"TradeService",
+	"DevService", -- Studio-only test shortcuts; refuses everything on live servers
 }
 
 local ctx: any = {
@@ -8196,7 +8207,22 @@ local breakables: { [string]: any } = {}
 local countByArea: { [string]: number } = {}
 local targets: { [Player]: string } = {}
 
-local SPACING = 7 -- min studs between breakables
+-- Footprint radius per kind (studs, from the model's width). Two breakables
+-- spawn at least radiusA + radiusB + GAP apart so they never overlap.
+local RADIUS: { [string]: number } = {
+	CoinPile = 2,
+	Crate = 2.5,
+	Chest = 3,
+	GemRock = 2.5,
+	BigChest = 4.5,
+}
+local DEFAULT_RADIUS = 3
+local GAP = 1
+local PICK_TRIES = 10 -- retry cap per spawn
+
+local function radiusOf(kind: string): number
+	return RADIUS[kind] or DEFAULT_RADIUS
+end
 local EDGE = 4 -- keep this far inside a zone's edge
 local BROKEN_RADIUS = 250 -- players this close see the break effect
 local LEASH = 25 -- extra studs past MaxTargetDistance before pets are recalled
@@ -8292,7 +8318,7 @@ local function pickKind(area: Areas.Area): Areas.Breakable
 	return area.Breakables[1]
 end
 
-local function pickPosition(areaId: string): Vector3?
+local function pickPosition(areaId: string, kind: string): Vector3?
 	local zones = ctx.WorldService.Info.Zones[areaId]
 	if not zones or #zones == 0 then
 		return nil
@@ -8301,7 +8327,8 @@ local function pickPosition(areaId: string): Vector3?
 	for _, z in zones do
 		totalArea += math.max(1, z.Size.X * z.Size.Z)
 	end
-	for _ = 1, 10 do
+	local radius = radiusOf(kind)
+	for _ = 1, PICK_TRIES do
 		local roll = random:NextNumber() * totalArea
 		local zone = zones[1]
 		for _, z in zones do
@@ -8311,12 +8338,13 @@ local function pickPosition(areaId: string): Vector3?
 				break
 			end
 		end
-		local hx = math.max(0, zone.Size.X / 2 - EDGE)
-		local hz = math.max(0, zone.Size.Z / 2 - EDGE)
+		local inset = math.max(EDGE, radius + GAP)
+		local hx = math.max(0, zone.Size.X / 2 - inset)
+		local hz = math.max(0, zone.Size.Z / 2 - inset)
 		local pos = zone.Center + Vector3.new(random:NextNumber(-hx, hx), 0, random:NextNumber(-hz, hz))
 		local clear = true
 		for _, b in breakables do
-			if b.Area == areaId and (b.Position - pos).Magnitude < SPACING then
+			if b.Area == areaId and (b.Position - pos).Magnitude < radius + radiusOf(b.Kind) + GAP then
 				clear = false
 				break
 			end
@@ -8333,7 +8361,8 @@ function BreakableService._spawn(areaId: string)
 	if not area or (countByArea[areaId] or 0) >= area.MaxBreakables then
 		return
 	end
-	local pos = pickPosition(areaId)
+	local kind = pickKind(area)
+	local pos = pickPosition(areaId, kind.Kind)
 	if not pos then
 		-- Zone crowded right now: try again later (only if the island has zones).
 		local zones = ctx.WorldService.Info.Zones[areaId]
@@ -8342,7 +8371,6 @@ function BreakableService._spawn(areaId: string)
 		end
 		return
 	end
-	local kind = pickKind(area)
 	local ok, model = pcall(Models.Breakable, kind.Kind, areaId)
 	if not ok or typeof(model) ~= "Instance" or not model:IsA("Model") then
 		warn("[BreakableService] Models.Breakable failed:", model)
@@ -8550,10 +8578,19 @@ local function journalKey(tradeId: string): string
 	return "t_" .. tradeId
 end
 
+-- Studio uses its own DataStore so test saves (dev panel, test purchases,
+-- "reset my data") can never touch real players' live data.
+function DataService.StoreName(): string
+	if ctx and ctx.IsStudio then
+		return Config.DataStoreName .. "_Studio"
+	end
+	return Config.DataStoreName
+end
+
 function DataService.Init(c)
 	ctx = c
 	local ok, result = pcall(function()
-		return DataStoreService:GetDataStore(Config.DataStoreName)
+		return DataStoreService:GetDataStore(DataService.StoreName())
 	end)
 	if ok then
 		store = result
@@ -9000,6 +9037,95 @@ return DataService
         </Item>
         <Item class="ModuleScript" referent="34">
           <Properties>
+            <string name="Name">DevService</string>
+            <string name="Source"><![CDATA[--!nonstrict
+-- Studio-only test shortcuts for the client's DEV panel (remote "DevAction").
+-- Every call is refused outside Studio, and Studio saves go to a separate
+-- DataStore (DataService.StoreName), so none of this can touch live data.
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Areas = require(Shared:WaitForChild("Areas"))
+local Logic = Shared:WaitForChild("Logic")
+local Economy = require(Logic:WaitForChild("Economy"))
+local Profile = require(Logic:WaitForChild("Profile"))
+local Rewards = require(Logic:WaitForChild("Rewards"))
+
+local DevService = {}
+
+local ctx: any
+
+-- action -> handler(player, session) -> (ok, message?)
+local ACTIONS: { [string]: (Player, any) -> (boolean, string?) } = {
+	Coins1M = function(_player, s)
+		Economy.AddCoins(s.Profile, 1e6, false)
+		return true, "+1M coins"
+	end,
+	CoinsX1000 = function(_player, s)
+		local p = s.Profile
+		Economy.AddCoins(p, math.max(1000, p.Coins * 999), false)
+		return true, "Coins x1000"
+	end,
+	Gems1000 = function(_player, s)
+		Economy.AddGems(s.Profile, 1000)
+		return true, "+1000 gems"
+	end,
+	FinishExpeditions = function(_player, s)
+		local now = os.time()
+		local n = 0
+		for _, e in s.Profile.Expeditions do
+			if e.EndAt > now then
+				e.EndAt = now
+				e.StartAt = math.min(e.StartAt, now - 1)
+				n += 1
+			end
+		end
+		return true, n .. " expedition(s) finished"
+	end,
+	OpenGates = function(_player, s)
+		for _, a in Areas.List do
+			s.Profile.Areas[a.Id] = true
+		end
+		return true, "All gates open"
+	end,
+	ResetData = function(player, s)
+		if ctx.TradeService.InTrade(player) then
+			return false, "Cancel your trade first"
+		end
+		ctx.BreakableService.ClearTarget(player)
+		s.Profile = Profile.Default()
+		Rewards.EnsureQuests(s.Profile, Rewards.DayNumber(os.time()))
+		return true, "Data reset"
+	end,
+}
+
+function DevService.Init(c)
+	ctx = c
+	ctx.Util.Function("DevAction", function(player, s, action)
+		if not RunService:IsStudio() then
+			return ctx.Util.Fail("Only available in Studio")
+		end
+		if not ctx.Util.IsStr(action, 32) or not ACTIONS[action] then
+			return ctx.Util.Fail("Unknown dev action")
+		end
+		local ok, message = ACTIONS[action](player, s)
+		if not ok then
+			return ctx.Util.Fail(message or "Not possible right now")
+		end
+		ctx.DataService.Touch(s)
+		ctx.StateService.Dirty(player)
+		return { ok = true, message = message }
+	end)
+end
+
+return DevService
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="35">
+          <Properties>
             <string name="Name">ExpeditionService</string>
             <string name="Source"><![CDATA[--!nonstrict
 -- Expedition remotes. Timers use os.time(), so expeditions finish while the
@@ -9093,7 +9219,7 @@ return ExpeditionService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="35">
+        <Item class="ModuleScript" referent="36">
           <Properties>
             <string name="Name">HatchService</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -9196,7 +9322,7 @@ return HatchService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="36">
+        <Item class="ModuleScript" referent="37">
           <Properties>
             <string name="Name">PetService</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -9311,7 +9437,7 @@ return PetService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="37">
+        <Item class="ModuleScript" referent="38">
           <Properties>
             <string name="Name">PurchaseService</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -9337,6 +9463,20 @@ local Economy = require(Logic:WaitForChild("Economy"))
 local Profile = require(Logic:WaitForChild("Profile"))
 
 local PurchaseService = {}
+
+-- Luck items are paid random-item boosts. Players whose policy restricts paid
+-- random items can't buy them; if a receipt still arrives (bought before the
+-- policy answered, or from another device) they get gems instead so nobody
+-- pays for nothing.
+PurchaseService.LuckPass = "Lucky"
+PurchaseService.LuckProductGems = {
+	BoostLuck = 400,
+	ServerLuck = 1000,
+} :: { [string]: number }
+
+function PurchaseService.IsLuckItem(key: string): boolean
+	return key == PurchaseService.LuckPass or PurchaseService.LuckProductGems[key] ~= nil
+end
 
 local ctx: any
 local granting: { [string]: boolean } = {} -- PurchaseIds being processed right now
@@ -9376,6 +9516,9 @@ function PurchaseService.Init(c)
 		end
 		if not ctx.Util.IsStr(key, 32) then
 			return ctx.Util.Fail("Unknown item")
+		end
+		if PurchaseService.IsLuckItem(key) and ctx.StateService.PaidRandomRestricted(s) then
+			return ctx.Util.Fail("Luck items aren't available for your account")
 		end
 		local pass = Products.PassByKey[key]
 		if pass then
@@ -9432,6 +9575,13 @@ end
 
 -- Gives a product's contents (no dedupe here; see _processReceipt).
 function PurchaseService.GrantProduct(player: Player, s, product: Products.Product)
+	local swapGems = PurchaseService.LuckProductGems[product.Key]
+	if swapGems and ctx.StateService.PaidRandomRestricted(s) then
+		Economy.AddGems(s.Profile, swapGems)
+		ctx.Util.Notify(player, "Purchased", { Name = tostring(swapGems) .. " Gems (luck items aren't available for your account)" })
+		ctx.StateService.Dirty(player)
+		return
+	end
 	if product.Kind == "Gems" then
 		Economy.AddGems(s.Profile, product.Amount or 0)
 	elseif product.Kind == "Boost" and product.Boost then
@@ -9462,6 +9612,17 @@ function PurchaseService._processReceipt(receipt)
 		return NotYet
 	end
 	local purchaseId = tostring(receipt.PurchaseId)
+	-- Luck products depend on the player's policy: don't decide (gems vs the
+	-- boost) before PolicyService has answered.
+	if PurchaseService.LuckProductGems[product.Key] then
+		local deadline = os.clock() + 20
+		while not s.PolicyKnown and os.clock() < deadline and player.Parent ~= nil do
+			task.wait(0.5)
+		end
+		if not s.PolicyKnown then
+			return NotYet
+		end
+	end
 	-- The same receipt can arrive again while we're still saving it.
 	if granting[purchaseId] then
 		return NotYet
@@ -9491,7 +9652,7 @@ return PurchaseService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="38">
+        <Item class="ModuleScript" referent="39">
           <Properties>
             <string name="Name">RebirthService</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -9534,7 +9695,7 @@ return RebirthService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="39">
+        <Item class="ModuleScript" referent="40">
           <Properties>
             <string name="Name">RewardService</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -9649,7 +9810,7 @@ return RewardService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="40">
+        <Item class="ModuleScript" referent="41">
           <Properties>
             <string name="Name">StateService</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -9749,6 +9910,7 @@ local function fetchPolicy(player: Player, s)
 		if ok and type(info) == "table" then
 			s.CanBuyGemEggs = info.ArePaidRandomItemsRestricted ~= true
 			s.CanTrade = info.IsPaidItemTradingAllowed ~= false
+			s.PolicyKnown = true
 			return
 		end
 		task.wait(attempt)
@@ -9758,11 +9920,13 @@ local function fetchPolicy(player: Player, s)
 		-- everything so every flow can be tested.
 		s.CanBuyGemEggs = true
 		s.CanTrade = true
+		s.PolicyKnown = true
 		return
 	end
 	-- Unknown policy: stay on the safe side for paid random items and trading.
 	s.CanBuyGemEggs = false
 	s.CanTrade = false
+	s.PolicyKnown = true
 	warn("[StateService] PolicyService failed for", player.UserId, "- gem eggs and trading disabled")
 end
 
@@ -9800,7 +9964,16 @@ function StateService.MultContext(s): Economy.MultContext
 		Premium = s.Premium,
 		InGroup = s.InGroup,
 		ServerLuckUntil = ctx.BoostService.ServerLuckUntil(),
+		NoPaidLuck = StateService.PaidRandomRestricted(s),
 	}
+end
+
+-- True while paid random items are (or may be) restricted for this player:
+-- PolicyService said so, failed, or hasn't answered yet. Such players can't
+-- buy luck products, and paid luck (Lucky pass, Luck boost, server luck)
+-- doesn't apply to their hatches.
+function StateService.PaidRandomRestricted(s): boolean
+	return s.CanBuyGemEggs ~= true
 end
 
 function StateService.CoinMult(s): number
@@ -9861,6 +10034,7 @@ function StateService.Push(player: Player)
 		Premium = s.Premium,
 		InGroup = s.InGroup,
 		ServerLuckUntil = ctx.BoostService.ServerLuckUntil(),
+		NoPaidLuck = StateService.PaidRandomRestricted(s),
 		CanBuyGemEggs = s.CanBuyGemEggs,
 		CanTrade = s.CanTrade,
 	})
@@ -9871,7 +10045,7 @@ return StateService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="41">
+        <Item class="ModuleScript" referent="42">
           <Properties>
             <string name="Name">TradeService</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -10328,6 +10502,12 @@ function TradeService.OfferedSet(player: Player): { [string]: boolean }
 	return set
 end
 
+-- True while the player has an open trade.
+function TradeService.InTrade(player: Player): boolean
+	local t = trades[player]
+	return t ~= nil and Trade.IsActive(t)
+end
+
 -- Sends the current trade window (or nil) to one player.
 function TradeService.PushView(player: Player)
 	sendView(player, trades[player])
@@ -10337,7 +10517,7 @@ return TradeService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="42">
+        <Item class="ModuleScript" referent="43">
           <Properties>
             <string name="Name">Util</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -10375,6 +10555,7 @@ Util.Limits = {
 	TradeSetOffer = { Rate = 6, Burst = 12 },
 	TradeRequest = { Rate = 1, Burst = 3 },
 	DevPurchase = { Rate = 1, Burst = 3 },
+	DevAction = { Rate = 2, Burst = 5 },
 	SetSetting = { Rate = 5, Burst = 10 },
 } :: { [string]: { Rate: number, Burst: number } }
 
@@ -10552,7 +10733,7 @@ return Util
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="43">
+        <Item class="ModuleScript" referent="44">
           <Properties>
             <string name="Name">WorldService</string>
             <string name="Source"><![CDATA[--!nonstrict
@@ -10710,18 +10891,18 @@ return WorldService
       </Item>
     </Item>
   </Item>
-  <Item class="SoundService" referent="44">
+  <Item class="SoundService" referent="45">
     <Properties>
       <string name="Name">SoundService</string>
     </Properties>
   </Item>
-  <Item class="StarterGui" referent="45">
+  <Item class="StarterGui" referent="46">
     <Properties>
       <string name="Name">StarterGui</string>
       <bool name="ResetPlayerGuiOnSpawn">false</bool>
     </Properties>
   </Item>
-  <Item class="StarterPlayer" referent="46">
+  <Item class="StarterPlayer" referent="47">
     <Properties>
       <string name="Name">StarterPlayer</string>
       <float name="CameraMaxZoomDistance">60</float>
@@ -10730,19 +10911,19 @@ return WorldService
       <bool name="CharacterUseJumpPower">true</bool>
       <float name="CharacterWalkSpeed">22</float>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="47">
+    <Item class="StarterPlayerScripts" referent="48">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="48">
+      <Item class="Folder" referent="49">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="Folder" referent="49">
+        <Item class="Folder" referent="50">
           <Properties>
             <string name="Name">Controllers</string>
           </Properties>
-          <Item class="ModuleScript" referent="50">
+          <Item class="ModuleScript" referent="51">
             <Properties>
               <string name="Name">Craft</string>
               <string name="Source"><![CDATA[--!strict
@@ -10898,7 +11079,80 @@ return Craft
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="51">
+          <Item class="ModuleScript" referent="52">
+            <Properties>
+              <string name="Name">DevPanel</string>
+              <string name="Source"><![CDATA[--!strict
+-- Studio-only DEV panel: quick test shortcuts (coins, gems, finish
+-- expeditions, open gates, reset data) through the DevAction remote. Not
+-- created at all outside Studio, and the server refuses it there too.
+
+local RunService = game:GetService("RunService")
+
+local Remote = require("../Core/Remote")
+local Sounds = require("../Core/Sounds")
+local Theme = require("../UI/Theme")
+local Kit = require("../UI/Kit")
+local Windows = require("../UI/Windows")
+local Toasts = require("../UI/Toasts")
+
+local DevPanel = {}
+
+type Action = { Key: string, Label: string, Tone: string, Confirm: string? }
+
+local ACTIONS: { Action } = {
+	{ Key = "Coins1M", Label = Theme.Icons.Coins .. " +1M coins", Tone = "Yellow" },
+	{ Key = "CoinsX1000", Label = Theme.Icons.Coins .. " Coins x1000", Tone = "Yellow" },
+	{ Key = "Gems1000", Label = Theme.Icons.Gems .. " +1000 gems", Tone = "Cyan" },
+	{ Key = "FinishExpeditions", Label = Theme.Icons.Expeditions .. " Finish expeditions", Tone = "Green" },
+	{ Key = "OpenGates", Label = Theme.Icons.Islands .. " Open all gates", Tone = "Blue" },
+	{ Key = "ResetData", Label = "🗑 Reset my data", Tone = "Red", Confirm = "Wipe your Studio test profile and start fresh? (Studio saves use a separate DataStore, live data is never touched.)" },
+}
+
+local function run(a: Action)
+	local res = Remote.CallOnce("DevAction", a.Key)
+	if res then
+		Sounds.Play("Reward")
+		Toasts.Show("DEV: " .. tostring(res.message or a.Key), "purple")
+	end
+end
+
+function DevPanel.Init()
+	if not RunService:IsStudio() then
+		return
+	end
+	local win = Windows.Create("Dev", { Title = "DEV (Studio only)", Icon = "🛠", Color = Theme.Rarity.Mythic, Size = Vector2.new(640, 420) })
+	local grid = Kit.box({ Size = UDim2.fromScale(1, 1), Parent = win.Body }, { Kit.grid(Vector2.new(296, 92), 12) })
+	for i, a in ACTIONS do
+		Kit.button(a.Label, a.Tone, { LayoutOrder = i, TextSize = 22, Parent = grid }, function()
+			local text = a.Confirm
+			if text then
+				Windows.Confirm("Are you sure?", text, "Reset", "Red", function()
+					run(a)
+				end)
+			else
+				run(a)
+			end
+		end)
+	end
+	local btn = Kit.button("DEV", "Pink", {
+		Name = "DevButton",
+		Size = UDim2.fromOffset(80, 44),
+		AnchorPoint = Vector2.new(1, 1),
+		Position = UDim2.new(1, -8, 1, -150),
+		TextSize = 20,
+		Parent = Windows.Gui("Hud"),
+	}, function()
+		Windows.Toggle("Dev")
+	end)
+	Kit.autoScale(btn, 1)
+end
+
+return DevPanel
+]]></string>
+            </Properties>
+          </Item>
+          <Item class="ModuleScript" referent="53">
             <Properties>
               <string name="Name">Expeditions</string>
               <string name="Source"><![CDATA[--!strict
@@ -11512,7 +11766,7 @@ return Expeditions
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="52">
+          <Item class="ModuleScript" referent="54">
             <Properties>
               <string name="Name">Farming</string>
               <string name="Source"><![CDATA[--!strict
@@ -11956,7 +12210,7 @@ return Farming
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="53">
+          <Item class="ModuleScript" referent="55">
             <Properties>
               <string name="Name">Hatch</string>
               <string name="Source"><![CDATA[--!strict
@@ -12342,7 +12596,7 @@ return Hatch
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="54">
+          <Item class="ModuleScript" referent="56">
             <Properties>
               <string name="Name">HatchAnim</string>
               <string name="Source"><![CDATA[--!strict
@@ -12621,7 +12875,7 @@ return HatchAnim
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="55">
+          <Item class="ModuleScript" referent="57">
             <Properties>
               <string name="Name">Hud</string>
               <string name="Source"><![CDATA[--!strict
@@ -12980,7 +13234,8 @@ local function refreshTimers()
 	local seen: { [string]: boolean } = {}
 	for key, _ in d.Boosts do
 		local left = State.BoostLeft(key)
-		if left > 0 then
+		-- paid luck doesn't apply when the policy restricts paid random items
+		if left > 0 and (d.CanBuyGemEggs or not string.find(key, "Luck")) then
 			seen[key] = true
 			local def = Config.Boosts[key]
 			local name = if def then def.Name else key
@@ -12996,8 +13251,8 @@ local function refreshTimers()
 		end
 	end
 	local luck = State.ServerLuckLeft()
-	luckBanner.Visible = luck > 0
-	if luck > 0 then
+	luckBanner.Visible = luck > 0 and d.CanBuyGemEggs == true
+	if luckBanner.Visible then
 		Kit.setPill(luckBanner, Theme.Icons.Luck .. " Server Luck x" .. tostring(Config.ServerLuckMult) .. "  " .. Format.time(luck))
 	end
 end
@@ -13107,7 +13362,7 @@ return Hud
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="56">
+          <Item class="ModuleScript" referent="58">
             <Properties>
               <string name="Name">IndexMenu</string>
               <string name="Source"><![CDATA[--!strict
@@ -13286,7 +13541,7 @@ return IndexMenu
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="57">
+          <Item class="ModuleScript" referent="59">
             <Properties>
               <string name="Name">Inventory</string>
               <string name="Source"><![CDATA[--!strict
@@ -13744,7 +13999,7 @@ return Inventory
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="58">
+          <Item class="ModuleScript" referent="60">
             <Properties>
               <string name="Name">Notifications</string>
               <string name="Source"><![CDATA[--!strict
@@ -13800,6 +14055,10 @@ local function onNotify(kind: string, data: { [string]: any })
 		Sounds.Play("Rare")
 		Toasts.Show("🎉 Thank you! You got <b>" .. tostring(data.Name or "your item") .. "</b>", "gold", { Duration = 5 })
 	elseif kind == "ServerLuck" then
+		local d = State.Data
+		if not d or not d.CanBuyGemEggs then
+			return
+		end
 		Sounds.Play("Reward")
 		Toasts.Banner(
 			Theme.Icons.Luck .. " Server Luck x" .. tostring(Config.ServerLuckMult) .. "!",
@@ -13841,7 +14100,7 @@ return Notifications
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="59">
+          <Item class="ModuleScript" referent="61">
             <Properties>
               <string name="Name">PetRenderer</string>
               <string name="Source"><![CDATA[--!strict
@@ -13862,6 +14121,10 @@ local Breakables = require("../Core/Breakables")
 
 local PetRenderer = {}
 
+-- A part that cycles through the rainbow: its authored colour, the hue offset
+-- from its RainbowHue attribute, and its saturation/brightness (kept).
+type RainbowPart = { Part: BasePart, Color: Color3, Hue: number, S: number, V: number }
+
 type Follower = {
 	Uid: string,
 	Key: string,
@@ -13870,7 +14133,7 @@ type Follower = {
 	Pos: Vector3,
 	Yaw: number,
 	Phase: number,
-	Rainbow: { { Part: BasePart, Color: Color3 } }?,
+	Rainbow: { RainbowPart }?,
 }
 
 type Owner = {
@@ -14006,13 +14269,16 @@ local function rebuild(o: Owner)
 				Rainbow = nil,
 			}
 			if e.Variant == "Rainbow" then
-				local parts = {}
+				-- only parts the model marked with RainbowHue (eyes etc. keep their colour)
+				local parts: { RainbowPart } = {}
 				for _, d in m:GetDescendants() do
-					if d:IsA("BasePart") and d.Transparency < 1 then
-						table.insert(parts, { Part = d, Color = d.Color })
+					local hue = d:GetAttribute("RainbowHue")
+					if d:IsA("BasePart") and type(hue) == "number" then
+						local _, sat, val = d.Color:ToHSV()
+						table.insert(parts, { Part = d, Color = d.Color, Hue = hue, S = sat, V = val })
 					end
 				end
-				nf.Rainbow = parts
+				nf.Rainbow = if #parts > 0 then parts else nil
 			end
 			m.Parent = folder
 			f = nf
@@ -14142,9 +14408,8 @@ local function step(dt: number)
 			end
 			f.Model:PivotTo(CFrame.new(f.Pos) * CFrame.Angles(0, f.Yaw, 0))
 			if doRainbow and f.Rainbow then
-				for k, entry in f.Rainbow do
-					local hue = (now * 0.25 + k * 0.07) % 1
-					entry.Part.Color = entry.Color:Lerp(Color3.fromHSV(hue, 0.65, 1), 0.45)
+				for _, entry in f.Rainbow do
+					entry.Part.Color = Color3.fromHSV((entry.Hue + now * 0.25) % 1, entry.S, entry.V)
 				end
 			end
 		end
@@ -14179,7 +14444,7 @@ return PetRenderer
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="60">
+          <Item class="ModuleScript" referent="62">
             <Properties>
               <string name="Name">Quests</string>
               <string name="Source"><![CDATA[--!strict
@@ -14494,7 +14759,7 @@ return Quests
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="61">
+          <Item class="ModuleScript" referent="63">
             <Properties>
               <string name="Name">Rebirth</string>
               <string name="Source"><![CDATA[--!strict
@@ -14609,7 +14874,7 @@ return Rebirth
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="62">
+          <Item class="ModuleScript" referent="64">
             <Properties>
               <string name="Name">Settings</string>
               <string name="Source"><![CDATA[--!strict
@@ -14710,7 +14975,7 @@ return Settings
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="63">
+          <Item class="ModuleScript" referent="65">
             <Properties>
               <string name="Name">Shop</string>
               <string name="Source"><![CDATA[--!strict
@@ -14794,6 +15059,19 @@ local function priceText(kind: string, id: number, fallback: number): string
 	return "R$ " .. tostring(p or fallback)
 end
 
+-- Luck items (Lucky pass, luck boost, server luck) are hidden for players
+-- whose policy restricts paid random items (State.CanBuyGemEggs = false).
+local LUCK_ITEMS: { [string]: boolean } = { Lucky = true, BoostLuck = true, ServerLuck = true }
+
+local function luckAllowed(): boolean
+	local d = State.Data
+	return d ~= nil and d.CanBuyGemEggs == true
+end
+
+local function hidden(key: string): boolean
+	return LUCK_ITEMS[key] == true and not luckAllowed()
+end
+
 local function devPurchase(key: string)
 	local res = Remote.CallOnce("DevPurchase", key)
 	if res then
@@ -14803,7 +15081,7 @@ end
 
 function Shop.BuyPass(key: string)
 	local pass = Products.PassByKey[key]
-	if not pass then
+	if not pass or hidden(key) then
 		return
 	end
 	if State.HasPass(key) then
@@ -14827,7 +15105,7 @@ end
 
 function Shop.BuyProduct(key: string)
 	local product = Products.ByKey[key]
-	if not product then
+	if not product or hidden(key) then
 		return
 	end
 	if product.Id ~= 0 then
@@ -14848,7 +15126,7 @@ end
 -- Popup offering a pass (used when a locked feature is tapped).
 function Shop.Upsell(key: string, reason: string?)
 	local pass = Products.PassByKey[key]
-	if not pass then
+	if not pass or hidden(key) then
 		return
 	end
 	Windows.Confirm(
@@ -14911,7 +15189,7 @@ local function renderImpl(force: boolean?)
 	end
 	-- rebuild only when owned passes, known prices, the tab or which boosts
 	-- are active change; boost timers tick in place
-	local sig = tab
+	local sig = tab .. tostring(luckAllowed())
 	for _, pass in Products.Passes do
 		sig ..= if State.HasPass(pass.Key) then "1" else "0"
 	end
@@ -14934,6 +15212,9 @@ local function renderImpl(force: boolean?)
 	Kit.clear(content)
 	if tab == "Passes" then
 		for i, pass in Products.Passes do
+			if hidden(pass.Key) then
+				continue
+			end
 			local owned = State.HasPass(pass.Key)
 			local c = card(i, PASS_ICONS[pass.Key] or Theme.Icons.Star, pass.Name, pass.Blurb, Theme.Rarity.Legendary)
 			if owned then
@@ -14958,7 +15239,7 @@ local function renderImpl(force: boolean?)
 	else
 		local i = 0
 		for _, product in Products.Products do
-			if product.Kind ~= "Gems" then
+			if product.Kind ~= "Gems" and not hidden(product.Key) then
 				i += 1
 				local blurb: string
 				if product.Kind == "ServerLuck" then
@@ -15032,7 +15313,7 @@ return Shop
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="64">
+          <Item class="ModuleScript" referent="66">
             <Properties>
               <string name="Name">Trade</string>
               <string name="Source"><![CDATA[--!strict
@@ -15570,7 +15851,7 @@ return Trade
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="65">
+          <Item class="ModuleScript" referent="67">
             <Properties>
               <string name="Name">Tutorial</string>
               <string name="Source"><![CDATA[--!strict
@@ -15779,7 +16060,7 @@ return Tutorial
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="66">
+          <Item class="ModuleScript" referent="68">
             <Properties>
               <string name="Name">World</string>
               <string name="Source"><![CDATA[--!strict
@@ -16078,11 +16359,11 @@ return World
             </Properties>
           </Item>
         </Item>
-        <Item class="Folder" referent="67">
+        <Item class="Folder" referent="69">
           <Properties>
             <string name="Name">Core</string>
           </Properties>
-          <Item class="ModuleScript" referent="68">
+          <Item class="ModuleScript" referent="70">
             <Properties>
               <string name="Name">Breakables</string>
               <string name="Source"><![CDATA[--!strict
@@ -16215,7 +16496,7 @@ return Breakables
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="69">
+          <Item class="ModuleScript" referent="71">
             <Properties>
               <string name="Name">Format</string>
               <string name="Source"><![CDATA[--!strict
@@ -16304,7 +16585,7 @@ return Format
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="70">
+          <Item class="ModuleScript" referent="72">
             <Properties>
               <string name="Name">ModelCache</string>
               <string name="Source"><![CDATA[--!strict
@@ -16335,8 +16616,8 @@ local function fallback(name: string): Model
 	p.CanTouch = false
 	p.CFrame = CFrame.new(0, 1.25, 0)
 	p.Parent = m
+	p.PivotOffset = CFrame.new(0, -1.25, 0) -- pivot at the bottom centre, like Models
 	m.PrimaryPart = p
-	m.WorldPivot = CFrame.new()
 	return m
 end
 
@@ -16392,7 +16673,7 @@ return ModelCache
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="71">
+          <Item class="ModuleScript" referent="73">
             <Properties>
               <string name="Name">PetInfo</string>
               <string name="Source"><![CDATA[--!strict
@@ -16525,7 +16806,7 @@ return PetInfo
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="72">
+          <Item class="ModuleScript" referent="74">
             <Properties>
               <string name="Name">Remote</string>
               <string name="Source"><![CDATA[--!strict
@@ -16680,7 +16961,7 @@ return Remote
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="73">
+          <Item class="ModuleScript" referent="75">
             <Properties>
               <string name="Name">Signal</string>
               <string name="Source"><![CDATA[--!strict
@@ -16726,7 +17007,7 @@ return Signal
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="74">
+          <Item class="ModuleScript" referent="76">
             <Properties>
               <string name="Name">Sounds</string>
               <string name="Source"><![CDATA[--!strict
@@ -16842,7 +17123,7 @@ return Sounds
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="75">
+          <Item class="ModuleScript" referent="77">
             <Properties>
               <string name="Name">State</string>
               <string name="Source"><![CDATA[--!strict
@@ -17070,7 +17351,7 @@ return State
             </Properties>
           </Item>
         </Item>
-        <Item class="LocalScript" referent="76">
+        <Item class="LocalScript" referent="78">
           <Properties>
             <string name="Name">Main</string>
             <string name="Source"><![CDATA[--!strict
@@ -17100,6 +17381,7 @@ local Settings = require("./Controllers/Settings")
 local Trade = require("./Controllers/Trade")
 local Notifications = require("./Controllers/Notifications")
 local Tutorial = require("./Controllers/Tutorial")
+local DevPanel = require("./Controllers/DevPanel")
 
 -- the game has no tools, so hide the empty backpack bar
 pcall(function()
@@ -17133,6 +17415,7 @@ start("Settings", Settings.Init)
 start("Trade", Trade.Init)
 start("Notifications", Notifications.Init)
 start("Tutorial", Tutorial.Init)
+start("DevPanel", DevPanel.Init)
 
 Remote.Fire("ClientReady")
 
@@ -17150,11 +17433,11 @@ end)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="Folder" referent="77">
+        <Item class="Folder" referent="79">
           <Properties>
             <string name="Name">UI</string>
           </Properties>
-          <Item class="ModuleScript" referent="78">
+          <Item class="ModuleScript" referent="80">
             <Properties>
               <string name="Name">Kit</string>
               <string name="Source"><![CDATA[--!strict
@@ -17634,7 +17917,7 @@ return Kit
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="79">
+          <Item class="ModuleScript" referent="81">
             <Properties>
               <string name="Name">PetCard</string>
               <string name="Source"><![CDATA[--!strict
@@ -17849,7 +18132,7 @@ return PetCard
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="80">
+          <Item class="ModuleScript" referent="82">
             <Properties>
               <string name="Name">RewardText</string>
               <string name="Source"><![CDATA[--!strict
@@ -17892,7 +18175,7 @@ end
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="81">
+          <Item class="ModuleScript" referent="83">
             <Properties>
               <string name="Name">Theme</string>
               <string name="Source"><![CDATA[--!strict
@@ -18007,7 +18290,7 @@ return Theme
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="82">
+          <Item class="ModuleScript" referent="84">
             <Properties>
               <string name="Name">Toasts</string>
               <string name="Source"><![CDATA[--!strict
@@ -18186,7 +18469,7 @@ return Toasts
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="83">
+          <Item class="ModuleScript" referent="85">
             <Properties>
               <string name="Name">Viewport</string>
               <string name="Source"><![CDATA[--!strict
@@ -18302,7 +18585,7 @@ return Viewport
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="84">
+          <Item class="ModuleScript" referent="86">
             <Properties>
               <string name="Name">Windows</string>
               <string name="Source"><![CDATA[--!strict
@@ -18660,7 +18943,7 @@ return Windows
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="85">
+  <Item class="Workspace" referent="87">
     <Properties>
       <string name="Name">Workspace</string>
       <float name="Gravity">196.2</float>
