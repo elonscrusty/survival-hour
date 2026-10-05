@@ -8,7 +8,7 @@ local Eggs = require("../src/shared/Eggs")
 local Areas = require("../src/shared/Areas")
 
 local MAX_PET_PARTS = 45
-local MAX_EGG_PARTS = 40
+local MAX_EGG_PARTS = 48
 local MAX_BREAKABLE_PARTS = 45
 local MAX_WORLD_PARTS = 8000
 local SHAPES = { B = true, S = true, C = true, W = true }

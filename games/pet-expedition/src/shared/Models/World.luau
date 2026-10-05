@@ -5,7 +5,7 @@
 --
 -- Layout: six round islands along +X (WorldData.IslandSpacing apart), joined
 -- by bridges. Each bridge ends in a Gate before the next island. Ground top is
--- y = 0; Terrain water surrounds the islands at y = -8. Invisible walls keep
+-- y = 0; Terrain water surrounds the islands at y = -16. Invisible walls keep
 -- players on the islands and bridges, so the only way forward is a gate.
 
 local CollectionService = game:GetService("CollectionService")
@@ -30,7 +30,7 @@ World.IslandSpacing = Data.IslandSpacing :: number
 World.WaterLevel = Data.Water.level :: number
 
 local PROMPT_DISTANCE = 12
-local EGG_STAND_SCALE = 1.35
+local EGG_STAND_SCALE = 1.8
 local FONT = Enum.Font.FredokaOne
 
 local function v3(t: { number }): Vector3

@@ -347,7 +347,22 @@ def job_eggs(sc, ids=None):
         if ids and eid not in ids:
             continue
         render_one(sc, parts, os.path.join(OUT, "eggs", f"{eid}.png"), label=eid, direction=(0.3, 1, 0.25))
-    sheet([os.path.join(OUT, "eggs", f"{e}.png") for e in data["eggs"]], os.path.join(OUT, "eggs_sheet.jpg"), cols=7, cell=256)
+    # each egg on its pedestal, side by side like reference/eggs.jpg
+    stand_for = {e: f"EggStand_{a}" for a, e in G.WORLD.EGG_FOR.items()}
+    stand_for["PrismEgg"] = "PrismStand"
+    sc.clear()
+    for i, eid in enumerate(data["eggs"]):
+        prop = data["props"][stand_for[eid]]["parts"]
+        stand = [q for q in prop if q.tag != "SignFace" and q.pos[2] > -3.5]  # leave out the name board
+        x = (3 - i) * 9
+        sc.add_parts(G.L.T(stand, (x, 0, 0)))
+        sc.add_parts(G.L.T(data["eggs"][eid], G.L.add(G.egg_spot(prop), (x, 0, 0)), s=G.EGG_STAND_SCALE))
+    sc.s.render.resolution_x, sc.s.render.resolution_y = 1800, 520
+    sc.frame(direction=(0, 1, 0.22), margin=1.04)
+    tmp = os.path.join(OUT, "eggs_sheet.tmp.png")
+    sc.render(tmp)
+    on_background(tmp, os.path.join(OUT, "eggs_sheet.jpg"), (255, 255, 255), (240, 236, 250), jpg=True)
+    sc.s.render.resolution_x = sc.s.render.resolution_y = 320
 
 
 def job_breakables(sc, ids=None):

@@ -105,6 +105,9 @@ def _lum(c):
     return (0.3 * r + 0.59 * g + 0.11 * b) / 255
 
 
+RAINBOW_HUES = [0.0, 0.08, 0.15, 0.33, 0.58, 0.76]
+
+
 def variant_parts(parts, variant, shiny):
     """Python mirror of the runtime recolour in Models/init.luau (used only for previews)."""
     lo, hi = L.bounds(parts)
@@ -113,25 +116,25 @@ def variant_parts(parts, variant, shiny):
     for p in parts:
         q = p
         if p.tag != "Eye":
-            if variant == "Golden":
-                t = max(0.0, min(1.0, _lum(p.col) * 1.15 + 0.12))
-                col = L.mix(0x9A6512, 0xFFE27A, t)
+            if variant == "Golden" and p.tag != "Collar":
+                t = max(0.0, min(1.0, _lum(p.col) * 0.6 + 0.3))
+                col = L.mix(0xA66C0A, 0xFFCE4A, t)
                 q = p.copy(col=0xFFD54A if p.mat == "N" else col, mat="N" if p.mat == "N" else "F")
-            elif variant == "Rainbow":
-                hue = ((p.pos[1] - lo[1]) / h) * 0.85
-                col = L.hsv(hue, 0.72, 0.72 + 0.28 * _lum(p.col))
+            elif variant == "Rainbow" and p.tag not in ("Collar", "Face"):
+                band = int((1 - (p.pos[1] - lo[1]) / h) / 0.15) % 6
+                col = L.hsv(RAINBOW_HUES[band], 0.75, 0.97)
                 q = p.copy(col=col, mat="N" if p.mat == "N" else "P")
             if shiny:
-                q = q.copy(col=L.mix(q.col, 0xFFF0FF, 0.22))
+                q = q.copy(col=L.mix(q.col, 0xFFF6E0, 0.15))
         out.append(q)
     if shiny:
         import random
         rnd = random.Random(7)
         for _ in range(10):
             pos = (rnd.uniform(lo[0], hi[0]), rnd.uniform(lo[1], hi[1]) + 0.3, rnd.uniform(lo[2], hi[2]))
-            out.append(L.ball(0.12, pos, 0xFFFFFF, "N"))
-            out.append(L.box((0.03, 0.4, 0.03), pos, 0xFFF6C0, "N"))
-            out.append(L.box((0.4, 0.03, 0.03), pos, 0xFFF6C0, "N"))
+            out.append(L.ball(0.12, pos, 0xFFE680, "N"))
+            out.append(L.box((0.03, 0.4, 0.03), pos, 0xFFD23C, "N"))
+            out.append(L.box((0.4, 0.03, 0.03), pos, 0xFFD23C, "N"))
     return out
 
 

@@ -1,823 +1,700 @@
-"""All 40 pets, built from a few chibi archetypes (quadruped, bunny, bird,
-dragon, unicorn, sea creatures...) plus per-species details from the Look
-briefs in src/shared/Pets.luau.
+"""All 41 pets in the blocky voxel-toy style of reference/puppy_variants.jpg:
+box head bigger than the body, box ears, legs and square paws, and a flat
+cute face on the front of the head (big round disc eyes with two highlights,
+pink disc blush, small nose, open smiling mouth with a tongue).
 
-Pets are authored in loose "units" (head radius ~1) and normalised to their
-rarity height by gen_models.py. Front = -Z.
+Big boxes are split into horizontal slabs so the Rainbow variant (hue by
+height) paints stripes across them like the reference.
+
+Part tags used by the runtime recolour (Models/init.luau):
+  Eye     eyes, highlights, blush, nose, mouth: never recoloured
+  Collar  collar and bell: keep their colour on Golden/Rainbow
+  Face    muzzle / face patch: kept cream on Rainbow, gilded on Golden
+  Body    everything else that should be recoloured
+  Glow    neon accents
+Pets are authored in loose units and normalised to their rarity height by
+gen_models.py. Front = -Z.
 """
 import math
-from lib import (ball, box, cyl, wedge, T, sym, mirror, eyes, blush, cone, spike, tri, chain, ring,
-                 crystal, on_surface, ell_point, rot, mmul, rx, ry, rz, face_rot, up_rot, shade, mix,
-                 EYE, WHITE, PINK, RAINBOW, add, mul, norm)
+from lib import (ball, box, cyl, wedge, T, sym, mirror, tri, crystal, rot, mmul, rx, ry, rz, shade, mix,
+                 add, mul, RAINBOW)
 
-DARK = 0x2A2433
+EYE = 0x15121C
+WHITE = 0xFFFFFF
+CREAM = 0xFFF3DC
+BLUSH = 0xFF8FA8
+MOUTH = 0x5A1E2A
+TONGUE = 0xFF6F86
+DARK = 0x1E1A22
 GOLD = 0xFFC93C
+COLLAR = 0xE03A44
 
 
-# ======================================================================= parts
-def ear(kind, col, inner=None, at=(0.55, 2.52, -0.3), w=0.78, h=0.85, roll=-16, pitch=-6, size=1.0):
-    """One ear on the +X side (mirror for the other)."""
-    w, h = w * size, h * size
-    if kind == "pointy":
-        p = tri((0, 0, 0), w, h, 0.3 * size, col)
-        if inner is not None:
-            p += tri((0, 0.06 * size, -0.13 * size), w * 0.55, h * 0.62, 0.08, inner)
-        return T(p, at, r=(pitch, 0, roll))
-    if kind == "round":
-        p = [ball((0.62 * size, 0.6 * size, 0.32 * size), (0, 0, 0), col)]
-        if inner is not None:
-            p.append(ball((0.36 * size, 0.34 * size, 0.1), (0, -0.02, -0.13 * size), inner))
-        return T(p, at, r=(pitch, 0, roll))
-    if kind == "floppy":
-        p = [ball((0.44 * size, 1.0 * size, 0.34 * size), (0, -0.35 * size, 0), col)]
-        return T(p, at, r=(pitch, 0, roll))
-    raise ValueError(kind)
+# ======================================================================= building blocks
+def slab(size, center, col, n=1, mat="P", tag="Body", cols=None, t=0.0):
+    """A box split into n horizontal slabs (looks like one box, stripes on Rainbow)."""
+    sx, sy, sz = size
+    cx, cy, cz = center
+    h = sy / n
+    return [box((sx, h, sz), (cx, cy - sy / 2 + h * (i + 0.5), cz), cols[i % len(cols)] if cols else col, mat, tag=tag, t=t)
+            for i in range(n)]
 
 
-def legs4(col, paw=None, front_z=-0.35, back_z=0.78, x=0.42, size=(0.44, 0.62, 0.48), y=0.31, back_col=None):
+def disc(d, pos, col, mat="P", tag="Eye", th=0.06):
+    """Flat round disc facing -Z (a short cylinder)."""
+    return cyl(d, th, pos, col, mat, r=(90, 0, 0), tag=tag)
+
+
+def face(c, s=1.0, eye_dx=0.68, eye_y=0.2, eye=0.8, muzzle=CREAM, muzzle_w=1.1, muzzle_h=0.8, blaze=None,
+         mouth=True, nose=DARK, blush=BLUSH, iris=None, eye_col=EYE, R=None, open_mouth=True, nose_y=-0.2, small_hi=True):
+    """Flat cartoon face. c = centre of the face plane (front surface of the
+    head); the face looks along -Z. Sizes scale with s (head height ~2)."""
+    p = []
+    z = 0.0
+    if muzzle is not None:
+        p.append(box((muzzle_w, muzzle_h, 0.08), (0, -0.48, z - 0.03), muzzle, tag="Face"))
+    if blaze is not None:
+        p.append(box((0.3, 0.75, 0.08), (0, 0.18, z - 0.03), blaze, tag="Face"))
+    for sx in (-1, 1):
+        ex = sx * eye_dx
+        p.append(disc(eye, (ex, eye_y, z - 0.04), eye_col))
+        if iris is not None:
+            p.append(disc(eye * 0.62, (ex, eye_y - eye * 0.05, z - 0.08), iris, th=0.04))
+        p.append(disc(eye * 0.36, (ex + eye * 0.16, eye_y + eye * 0.17, z - 0.1), WHITE, "N", th=0.04))
+        if small_hi:
+            p.append(disc(eye * 0.16, (ex - eye * 0.15, eye_y - eye * 0.18, z - 0.1), WHITE, "N", th=0.04))
+        if blush is not None:
+            p.append(disc(0.4, (sx * (eye_dx + 0.3), eye_y - 0.6, z - 0.03), blush))
+    if nose is not None:
+        p.append(ball((0.32, 0.22, 0.18), (0, nose_y, z - 0.1), nose, tag="Eye"))
+    if mouth:
+        if open_mouth:
+            mc = muzzle if muzzle is not None else None
+            p.append(disc(0.56, (0, -0.52, z - 0.08), MOUTH, th=0.05))
+            if mc is not None:
+                p.append(box((0.66, 0.29, 0.06), (0, -0.375, z - 0.1), mc, tag="Face"))
+            p.append(disc(0.3, (0, -0.66, z - 0.11), TONGUE, th=0.04))
+        else:
+            p.append(box((0.36, 0.07, 0.05), (0, -0.48, z - 0.09), MOUTH, tag="Eye"))
+    return T(p, c, s=s, R=R)
+
+
+def legs(col, paw=None, x=0.5, zf=-0.3, zb=1.0, size=(0.58, 0.7, 0.6), back=True):
     out = []
-    for z in (front_z, back_z):
-        c = col if (z == front_z or back_col is None) else back_col
-        out.append(ball(size, (x, y, z), c))
+    for z in ((zf, zb) if back else (zf,)):
+        out.append(box(size, (x, size[1] / 2 + 0.05, z), col))
         if paw is not None:
-            out.append(ball((size[0] * 1.02, size[1] * 0.4, size[2] * 1.05), (x, size[1] * 0.18, z - 0.03), paw))
+            out.append(box((size[0] + 0.06, 0.3, size[2] + 0.08), (x, 0.15, z - 0.03), paw))
     return sym(out)
 
 
-def quad(body, head=None, belly=None, snout=None, nose=DARK, ears=("pointy", None, None), tail="thin", tail_col=None,
-         tip=None, paw=None, eye_iris=None, eye_size=0.52, snout_size=(0.78, 0.52, 0.5), long_snout=False,
-         blush_col=PINK, head_size=(2.0, 1.8, 1.76), extras=None, leg_col=None, ear_size=1.0, eye_yaw=30, eye_pitch=8,
-         body_size=(1.25, 1.0, 1.55)):
-    """Chibi standing quadruped: big head, small body, stubby legs."""
+def ears(kind, col, inner=None, hw=2.5, top=3.6, hz=-0.35, size=1.0):
+    """Ears for a head of width hw whose top is at y=top."""
+    s = size
+    if kind == "floppy":
+        return sym([box((0.5 * s, 1.5 * s, 1.0 * s), (hw / 2 + 0.2 * s, top - 0.62 * s, hz + 0.05), col, r=(0, 0, 14))])
+    if kind == "pointy":
+        p = tri((0, 0, 0), 0.9 * s, 0.85 * s, 0.42 * s, col)
+        if inner is not None:
+            p += tri((0, 0.05, -0.2 * s), 0.5 * s, 0.5 * s, 0.06, inner)
+        return sym(T(p, (hw / 2 - 0.45 * s, top - 0.05, hz), r=(0, 0, -10)))
+    if kind == "round":
+        p = [box((0.68 * s, 0.6 * s, 0.4 * s), (0, 0, 0), col)]
+        if inner is not None:
+            p.append(box((0.38 * s, 0.32 * s, 0.06), (0, -0.04, -0.22 * s), inner))
+        return sym(T(p, (hw / 2 - 0.35 * s, top + 0.15 * s, hz), r=(0, 0, -8)))
+    if kind == "long":
+        p = [box((0.55 * s, 1.75 * s, 0.38 * s), (0, 0.85 * s, 0), col)]
+        if inner is not None:
+            p.append(box((0.3 * s, 1.35 * s, 0.06), (0, 0.85 * s, -0.21 * s), inner))
+        return sym(T(p, (0.55 * s, top - 0.1, hz + 0.1), r=(6, 0, -8)))
+    raise ValueError(kind)
+
+
+def tail(kind, col, tip=None, base=(0, 1.55, 1.25)):
+    bx, by, bz = base
+    if kind == "dog":
+        return [box((0.42, 0.7, 0.42), (bx, by + 0.15, bz + 0.1), col, r=(-35, 0, 0)),
+                box((0.4, 0.55, 0.4), (bx, by + 0.6, bz + 0.38), tip if tip is not None else col, r=(-35, 0, 0))]
+    if kind == "bushy":
+        p = [box((0.85, 0.85, 1.3), (bx, by + 0.3, bz + 0.55), col, r=(-40, 0, 0))]
+        p.append(box((0.75, 0.75, 0.6), (bx, by + 0.95, bz + 1.15), tip if tip is not None else col, r=(-40, 0, 0)))
+        return p
+    if kind == "cat":
+        return [box((0.32, 0.32, 0.8), (bx, by - 0.1, bz + 0.3), col), box((0.32, 1.0, 0.32), (bx, by + 0.45, bz + 0.6), col),
+                box((0.34, 0.34, 0.34), (bx, by + 1.05, bz + 0.6), tip if tip is not None else col)]
+    if kind == "pom":
+        return [box((0.6, 0.6, 0.5), (bx, by - 0.15, bz + 0.05), tip if tip is not None else col)]
+    if kind == "long":
+        return [box((0.55, 0.45, 0.8), (bx, by - 0.6, bz + 0.3), col), box((0.42, 0.36, 0.8), (bx, by - 0.75, bz + 1.0), col),
+                box((0.32, 0.3, 0.6), (bx, by - 0.8, bz + 1.6), tip if tip is not None else col)]
+    raise ValueError(kind)
+
+
+def quad(body, head=None, face_kw=None, ears_kw=None, tail_kw=None, paw=None, belly=CREAM, collar=None, extras=None,
+         head_size=(2.6, 2.1, 2.2), body_size=(1.5, 1.15, 1.7), leg_col=None, head_n=3, body_n=2, legs_on=True):
+    """Blocky standing quadruped, puppy proportions: head ~55% of the height."""
     head = head if head is not None else body
-    leg_col = leg_col if leg_col is not None else body
-    hc = (0.0, 1.95, -0.3)
-    hr = (head_size[0] / 2, head_size[1] / 2, head_size[2] / 2)
+    hw, hh, hd = head_size
+    bw, bh, bd = body_size
+    leg_h = 0.62
+    body_c = (0, leg_h + bh / 2 - 0.05, 0.35)
+    head_c = (0, leg_h + bh - 0.25 + hh / 2, -0.25)
+    top = head_c[1] + hh / 2
     p = []
-    p += legs4(leg_col, paw)
-    p.append(ball(body_size, (0, 0.85, 0.28), body, tag="Body"))
+    if legs_on:
+        p += legs(leg_col if leg_col is not None else body, paw, x=bw / 2 - 0.3, zf=body_c[2] - bd / 2 + 0.32,
+                  zb=body_c[2] + bd / 2 - 0.32, size=(0.56, leg_h, 0.58))
+    p += slab(body_size, body_c, body, body_n)
     if belly is not None:
-        p.append(ball((0.82, 0.72, 0.5), (0, 0.98, -0.32), belly))
-    p.append(ball(head_size, hc, head, tag="Body"))
-    # snout / muzzle
-    if snout is not None:
-        if long_snout:
-            p.append(ball((snout_size[0] * 0.9, snout_size[1] * 0.9, snout_size[2] * 1.9), (0, 1.62, -1.12), snout))
-            p.append(ball((0.28, 0.2, 0.2), (0, 1.74, -1.6), nose))
-        else:
-            p.append(ball(snout_size, (0, 1.62, -1.08), snout))
-            p.append(ball((0.3, 0.2, 0.2), (0, 1.8, -1.32), nose))
-    p += eyes(hc, hr, yaw=eye_yaw, pitch=eye_pitch, size=eye_size, iris=eye_iris)
-    if blush_col is not None:
-        p += blush(hc, hr, yaw=50, pitch=-10, size=0.34, col=blush_col)
-    kind, ecol, inner = ears
-    if kind:
-        ecol = ecol if ecol is not None else head
-        if kind == "pointy":
-            p += sym(ear("pointy", ecol, inner, at=(0.56, 2.55, -0.25), size=ear_size))
-        elif kind == "round":
-            p += sym(ear("round", ecol, inner, at=(0.7, 2.6, -0.25), roll=-20, size=ear_size))
-        elif kind == "floppy":
-            p += sym(ear("floppy", ecol, inner, at=(0.88, 2.35, -0.22), roll=18, size=ear_size))
-    tc = tail_col if tail_col is not None else body
-    if tail == "thin":
-        p += chain([(0, 1.02, 1.0), (0, 1.25, 1.22), (0, 1.55, 1.32), (0, 1.85, 1.3)], [0.3, 0.28, 0.27, 0.3], tc)
-        if tip is not None:
-            p[-1] = p[-1].copy(col=tip)
-    elif tail == "bushy":
-        d = norm((0, 0.75, 0.66))
-        p.append(ball((0.8, 0.8, 1.5), (0, 1.4, 1.32), tc, r=(-48, 0, 0)))
-        if tip is not None:
-            p.append(ball((0.66, 0.66, 0.62), add((0, 1.4, 1.32), mul(d, 0.62)), tip, r=(-48, 0, 0)))
-    elif tail == "pom":
-        p.append(ball(0.55, (0, 1.0, 1.02), tc))
+        p.append(box((bw * 0.62, bh * 0.75, 0.08), (0, body_c[1] - 0.05, body_c[2] - bd / 2 - 0.03), belly, tag="Face"))
+    p += slab(head_size, head_c, head, head_n)
+    fk = dict(face_kw or {})
+    p += face((0, head_c[1] - 0.12, head_c[2] - hd / 2 - 0.01), **fk)
+    if ears_kw:
+        ek = dict(ears_kw)
+        kind = ek.pop("kind")
+        col = ek.pop("col", head)
+        p += ears(kind, col, hw=hw, top=top, hz=head_c[2], **ek)
+    if tail_kw:
+        tk = dict(tail_kw)
+        kind = tk.pop("kind")
+        col = tk.pop("col", body)
+        p += tail(kind, col, base=(0, body_c[1] + 0.2, body_c[2] + bd / 2 - 0.1), **tk)
+    if collar is not None:
+        p.append(box((bw + 0.14, 0.28, 1.0), (0, leg_h + bh - 0.2, body_c[2] - bd / 2 + 0.45), collar, tag="Collar"))
+        p.append(ball(0.36, (0, leg_h + bh - 0.42, body_c[2] - bd / 2 - 0.08), GOLD, "F", tag="Collar"))
     if extras:
         p += extras
     return p
 
 
-def bunny(body, inner=PINK, nose=0xFF7FA0, extras=None, ear_col=None, eye_iris=None, belly=None, foot=None):
-    """Sitting bunny with long upright ears."""
-    hc = (0.0, 1.78, -0.15)
-    hr = (0.93, 0.8, 0.8)
-    ec = ear_col if ear_col is not None else body
-    p = [
-        ball((1.4, 1.22, 1.38), (0, 0.68, 0.15), body, tag="Body"),
-        ball((1.86, 1.6, 1.6), hc, body, tag="Body"),
-        ball(0.55, (0, 0.62, 0.86), WHITE if body != WHITE else 0xF4F0F4),
-    ]
-    p += sym([ball((0.52, 0.32, 0.82), (0.4, 0.16, -0.28), foot if foot is not None else body),
-              ball((0.34, 0.4, 0.34), (0.3, 0.42, -0.48), body)])
+HEAD_TOP = 0.62 + 1.15 - 0.25 + 2.1  # quad(): top of the default head (y)
+HEAD_C = (0, 0.62 + 1.15 - 0.25 + 1.05, -0.25)
+HEAD_FRONT = -0.25 - 1.1
+BODY_TOP = 0.62 + 1.15 - 0.05  # quad(): top of the default body (y)
+
+
+def sitter(body, head=None, face_kw=None, ears_kw=None, tail_kw=None, paw=None, belly=CREAM, extras=None,
+           head_size=(2.5, 2.1, 2.1), body_size=(1.7, 1.5, 1.6), head_n=3):
+    """Blocky sitting pet (bunnies, bears): big feet in front, no back legs."""
+    head = head if head is not None else body
+    hw, hh, hd = head_size
+    bw, bh, bd = body_size
+    body_c = (0, bh / 2, 0.25)
+    head_c = (0, bh - 0.2 + hh / 2, -0.1)
+    top = head_c[1] + hh / 2
+    p = slab(body_size, body_c, body, 2)
+    p += sym([box((0.6, 0.36, 0.95), (bw / 2 - 0.3, 0.18, -0.35), paw if paw is not None else body),
+              box((0.42, 0.55, 0.42), (bw / 2 - 0.42, bh * 0.45, body_c[2] - bd / 2 - 0.05), body)])
     if belly is not None:
-        p.append(ball((0.85, 0.75, 0.4), (0, 0.72, -0.42), belly))
-    earp = [ball((0.5, 1.55, 0.34), (0, 0.72, 0), ec)]
-    if inner is not None:
-        earp.append(ball((0.27, 1.15, 0.12), (0, 0.72, -0.13), inner))
-    p += sym(T(earp, (0.36, 2.35, 0.02), r=(8, 0, -10)))
-    p += eyes(hc, hr, yaw=30, pitch=2, size=0.48, iris=eye_iris)
-    p += blush(hc, hr, yaw=48, pitch=-16, size=0.32)
-    p.append(ball((0.2, 0.13, 0.12), (0, 1.62, -0.93), nose))
-    p.append(box((0.2, 0.17, 0.06), (0, 1.43, -0.9), WHITE))
+        p.append(box((bw * 0.6, bh * 0.6, 0.08), (0, bh * 0.45, body_c[2] - bd / 2 - 0.03), belly, tag="Face"))
+    p += slab(head_size, head_c, head, head_n)
+    p += face((0, head_c[1] - 0.12, head_c[2] - hd / 2 - 0.01), **(face_kw or {}))
+    if ears_kw:
+        ek = dict(ears_kw)
+        kind = ek.pop("kind")
+        col = ek.pop("col", head)
+        p += ears(kind, col, hw=hw, top=top, hz=head_c[2], **ek)
+    if tail_kw:
+        tk = dict(tail_kw)
+        kind = tk.pop("kind")
+        col = tk.pop("col", body)
+        p += tail(kind, col, base=(0, 0.75, body_c[2] + bd / 2 - 0.1), **tk)
     if extras:
         p += extras
     return p
 
 
-def wings_bat(shoulder, col, membrane, n=3, span=1.6, sweep=-30, lift=25, mat_m="P", t=0.0, tag=None):
-    """Fan of flattened ellipsoids forming a wing on the +X side."""
-    p = []
+def wing(col, membrane=None, span=1.8, at=(1.0, 2.0, 0.6), lift=25, sweep=-25, mat="P", t=0.0, tag=None):
+    """Blocky wing on the +X side: a spar and two stepped membrane boxes."""
+    m = membrane if membrane is not None else col
+    p = [box((span, 0.28, 0.28), (span / 2, 0.15, 0), col),
+         box((span * 0.85, 0.75, 0.12), (span * 0.45, -0.3, 0), m, mat, t=t, tag=tag),
+         box((span * 0.55, 0.55, 0.12), (span * 0.3, -0.85, 0), m, mat, t=t, tag=tag)]
+    return T(p, at, r=(0, sweep, lift))
+
+
+def horn(base, col, mat="P", n=3, s=0.42, h=0.9, r=(0, 0, 0), tag=None, cols=None):
+    """Stepped blocky horn: shrinking cubes stacked along local Y."""
+    out = []
     for i in range(n):
-        a = math.radians(lift + 60 - i * (60 / max(1, n - 1)) * 1.4)
-        d = (math.cos(a), math.sin(a), 0)
-        L = span * (1.0 - i * 0.12)
-        p.append(ball((L, 0.62, 0.07), mul(d, L * 0.45), membrane, mat_m, R=rz(math.degrees(a)), t=t, tag=tag))
-    a0 = math.radians(lift + 62)
-    p.append(ball((span * 1.05, 0.16, 0.16), mul((math.cos(a0), math.sin(a0), 0), span * 0.5), col, R=rz(math.degrees(a0))))
-    return T(p, shoulder, r=(0, sweep, 0))
+        f = 1 - 0.7 * i / max(1, n - 1) if n > 2 else 1 - 0.3 * i
+        c = cols[i % len(cols)] if cols else col
+        out.append(box((s * f, h / n * 1.05, s * f), (0, h / n * (i + 0.5), 0), c, mat, r=(0, 45 * (i % 2), 0), tag=tag))
+    return T(out, base, r=r)
 
 
-def dragon(body, belly, horn, wing, membrane, spine=None, horn_mat="P", membrane_mat="P", extras=None, eye_iris=None,
-           tail_tip=None, spines=None, horns=None, wings=None, head=None, mem_t=0.0):
-    hc = (0.0, 1.95, -0.3)
-    hr = (1.0, 0.88, 0.88)
-    head = head if head is not None else body
-    p = []
-    p += legs4(body)
-    p.append(ball((1.3, 1.08, 1.6), (0, 0.88, 0.3), body, tag="Body"))
-    p.append(ball((0.86, 0.85, 0.5), (0, 0.95, -0.32), belly))
-    p.append(ball((2.0, 1.76, 1.76), hc, head, tag="Body"))
-    p.append(ball((1.05, 0.62, 0.7), (0, 1.58, -1.05), head))
-    p.append(ball((0.82, 0.3, 0.55), (0, 1.42, -1.1), belly))
-    p += eyes(hc, hr, yaw=30, pitch=10, size=0.52, iris=eye_iris)
-    p += blush(hc, hr, yaw=52, pitch=-8, size=0.3)
-    if horns is None:
-        p += sym(cone((0.5, 2.6, -0.05), 0.36, 0.95, horn, horn_mat, n=3, r=(-28, 0, -22), tip=0.3))
-    else:
-        p += horns
-    if wings is None:
-        p += sym(wings_bat((0.5, 1.4, 0.5), wing, membrane, mat_m=membrane_mat, t=mem_t))
-    else:
-        p += wings
-    # tail
-    tp = [(0, 0.85, 1.1), (0, 0.85, 1.55), (0, 1.1, 1.9)]
-    p += chain(tp, [0.62, 0.46, 0.34], body)
-    if tail_tip is not None:
-        p += tail_tip
-    else:
-        p += T(tri((0, 0, 0), 0.5, 0.45, 0.14, spine if spine is not None else horn), (0, 1.32, 2.06), r=(-30, 0, 0))
-    if spines is None:
-        sc = spine if spine is not None else horn
-        for i, (y, z) in enumerate(((1.42, 0.12), (1.38, 0.55), (1.18, 0.95))):
-            p.append(spike((0, y, z), 0.3, 0.32, sc, r=(-20 - i * 12, 0, 0)))
-    else:
-        p += spines
-    if extras:
-        p += extras
-    return p
-
-
-def unicorn(body, mane_cols, horn_cols, hoof, muzzle=None, extras=None, horn_mat="P", mane_mat="P", eye_iris=None,
-            speckle=None):
-    hc = (0.0, 2.2, -0.45)
-    hr = (0.92, 0.85, 0.85)
-    p = []
-    for z in (-0.25, 0.8):
-        p += sym([ball((0.38, 0.95, 0.42), (0.4, 0.5, z), body), ball((0.42, 0.26, 0.46), (0.4, 0.12, z - 0.02), hoof)])
-    p.append(ball((1.3, 1.05, 1.75), (0, 1.15, 0.28), body, tag="Body"))
-    p.append(ball((0.9, 1.0, 0.85), (0, 1.55, -0.3), body))  # neck
-    p.append(ball((1.84, 1.7, 1.7), hc, body, tag="Body"))
-    mz = muzzle if muzzle is not None else mix(body, 0xFFB6C8, 0.35)
-    p.append(ball((1.05, 0.78, 0.8), (0, 1.86, -1.22), mz))
-    p += eyes(hc, hr, yaw=32, pitch=10, size=0.5, iris=eye_iris)
-    p += blush(hc, hr, yaw=52, pitch=-8, size=0.28)
-    p += sym(ear("pointy", body, None, at=(0.45, 2.88, -0.25), w=0.5, h=0.6, roll=-14, size=1.0))
-    # horn: stacked cylinders, colours alternate for a spiral look
-    p += cone((0, 2.92, -0.95), 0.36, 1.2, horn_cols[0], horn_mat, n=4, r=(-28, 0, 0), tip=0.25, cols=horn_cols)
-    # mane: balls down the back of the head and neck
-    mp = [(0, 3.0, -0.3), (0, 2.85, 0.1), (0, 2.5, 0.35), (0, 2.1, 0.45), (0, 1.75, 0.4)]
-    ms = [0.72, 0.7, 0.66, 0.6, 0.5]
-    for i, (pt, s) in enumerate(zip(mp, ms)):
-        p.append(ball((s * 1.05, s, s), pt, mane_cols[i % len(mane_cols)], mane_mat))
-    p.append(ball((0.5, 0.42, 0.4), (0, 3.06, -0.8), mane_cols[-1], mane_mat))  # forelock
-    tp = [(0, 1.42, 1.1), (0, 1.2, 1.45), (0, 0.85, 1.6), (0, 0.5, 1.58)]
-    for i, (pt, s) in enumerate(zip(tp, [0.55, 0.6, 0.55, 0.45])):
-        p.append(ball(s, pt, mane_cols[(i + 2) % len(mane_cols)], mane_mat))
-    if speckle is not None:
-        for pt in ((0.52, 1.4, 0.2), (-0.5, 1.2, 0.6), (-0.66, 2.5, -0.6), (0.68, 2.45, -0.2)):
-            p.append(ball(0.14, pt, speckle, "N"))
-    if extras:
-        p += extras
-    return p
+def cubes(points, col, size=0.18, mat="N", tag="Glow"):
+    return [box((size, size, size), pt, col, mat, r=(0, 45, 0), tag=tag) for pt in points]
 
 
 # ======================================================================= Meadow
 def puppy():
-    tan, brown, cream = 0xE2B07A, 0x8B5A36, 0xFAE8CC
-    ex = [cyl(1.32, 0.22, (0, 1.2, -0.2), 0xE03A44, r=(12, 0, 0)), ball(0.26, (0, 1.0, -0.86), GOLD, "F"),
-          ball((0.24, 0.1, 0.22), (0.1, 1.4, -1.28), 0xFF6F86, r=(30, 0, 0)),
-          on_surface((0, 1.95, -0.3), (1.0, 0.9, 0.88), 34, 22, (0.7, 0.6, 0.14), brown, inset=0.35)]
-    return quad(tan, belly=cream, snout=cream, ears=("floppy", brown, None), tail="thin", paw=cream, extras=ex)
+    return quad(0xE7B57A, face_kw=dict(blaze=CREAM), ears_kw=dict(kind="floppy", col=0x9A6235),
+                tail_kw=dict(kind="dog"), paw=CREAM, collar=COLLAR)
 
 
 def kitten():
-    o, dk, cream = 0xF59A3A, 0xC8641E, 0xFFF1DE
-    hc, hr = (0, 1.95, -0.3), (1.0, 0.9, 0.88)
-    ex = [on_surface(hc, hr, 0, 62, (0.22, 0.75, 0.12), dk), on_surface(hc, hr, -18, 54, (0.18, 0.6, 0.12), dk, spin=-14),
-          on_surface(hc, hr, 18, 54, (0.18, 0.6, 0.12), dk, spin=14),
-          ball((0.16, 0.95, 0.9), (0, 1.33, 0.25), dk), ball((0.95, 0.16, 0.6), (0, 1.32, 0.55), dk, r=(0, 0, 0)),
-          box((0.05, 0.05, 0.62), (0.62, 1.66, -1.18), WHITE, r=(0, 72, 6)), box((0.05, 0.05, 0.62), (-0.62, 1.66, -1.18), WHITE, r=(0, -72, -6)),
-          ]
-    p = quad(o, belly=cream, snout=cream, nose=0xFF7FA0, ears=("pointy", o, 0xFFB0C4), tail="thin", paw=cream,
-             snout_size=(0.7, 0.42, 0.4), extras=ex)
-    return p
+    o, dk = 0xF59A3A, 0xC8641E
+    hc = HEAD_C
+    stripes = [box((0.3, 0.5, 0.08), (x, HEAD_TOP - 0.3, HEAD_FRONT - 0.03), dk) for x in (-0.45, 0, 0.45)]
+    stripes += [box((1.56, 0.06, 0.25), (0, BODY_TOP + 0.01, 0.35 + dz), dk) for dz in (-0.3, 0.3)]
+    return quad(o, face_kw=dict(nose=0xFF7FA0), ears_kw=dict(kind="pointy", inner=0xFFB0C4),
+                tail_kw=dict(kind="cat", tip=dk), paw=CREAM, extras=stripes)
 
 
 def bunny_pet():
-    return bunny(0xFAFAFA, inner=0xFFA6C0, eye_iris=None)
+    return sitter(0xFAFAFA, face_kw=dict(nose=0xFF7FA0, muzzle=0xFFF0F4), ears_kw=dict(kind="long", inner=0xFFA6C0),
+                  tail_kw=dict(kind="pom"), paw=0xF2EEF2, belly=0xFFF0F4)
 
 
-def fox(body=0xEC6A2C, chest=WHITE, sock=0x3A2A2A, ear_inner=0x3A2A2A, tail_tip=WHITE, extras=None, eye_iris=None, head=None):
-    ex = [ball((0.95, 0.5, 0.6), (0, 1.55, -0.9), chest)]
-    ex += extras or []
-    return quad(body, head=head, belly=chest, snout=chest, long_snout=True, snout_size=(0.6, 0.42, 0.45), nose=DARK,
-                ears=("pointy", body, ear_inner), tail="bushy", tip=tail_tip, paw=sock, ear_size=1.12,
-                eye_iris=eye_iris, extras=ex)
+def fox():
+    body, dk = 0xEC6A2C, 0x3A2A2A
+    return quad(body, face_kw=dict(muzzle=WHITE, muzzle_w=1.5, muzzle_h=0.9), ears_kw=dict(kind="pointy", inner=dk, size=1.1),
+                tail_kw=dict(kind="bushy", tip=WHITE), paw=dk, belly=WHITE)
 
 
 def honey_bear():
     gold, cream, pot, honey = 0xE7A63A, 0xFCE3B0, 0xC9732E, 0xFFC531
-    hc, hr = (0, 2.2, -0.15), (1.02, 0.92, 0.9)
-    p = [
-        ball((1.75, 1.6, 1.5), (0, 0.95, 0.15), gold, tag="Body"),
-        ball((1.1, 1.0, 0.4), (0, 0.95, -0.5), cream),
-        ball((2.04, 1.84, 1.8), hc, gold, tag="Body"),
-        ball((0.8, 0.55, 0.5), (0, 1.86, -0.95), cream),
-        ball((0.3, 0.2, 0.2), (0, 2.02, -1.18), DARK),
-    ]
-    p += eyes(hc, hr, yaw=30, pitch=10, size=0.5)
-    p += blush(hc, hr, yaw=50, pitch=-10, size=0.32)
-    p += sym(ear("round", gold, cream, at=(0.72, 2.95, -0.1), roll=-20))
-    p += sym([ball((0.62, 0.45, 0.9), (0.55, 0.22, -0.35), gold), ball((0.42, 0.42, 0.12), (0.55, 0.22, -0.82), cream)])
-    # honey pot held in front with both arms
-    p += [cyl(1.0, 0.85, (0, 1.05, -1.05), pot), cyl(0.82, 0.2, (0, 1.55, -1.05), shade(pot, 0.8)),
-          ball((0.78, 0.3, 0.78), (0, 1.62, -1.05), honey, "N"), ball((0.22, 0.4, 0.22), (0.3, 1.32, -1.5), honey, "N"),
-          box((0.55, 0.3, 0.05), (0, 1.0, -1.55), 0xFFF3D6)]
-    p += sym([ball((0.45, 0.9, 0.45), (0.62, 1.3, -0.75), gold, r=(50, 0, 25))])
-    # bee wings and a little stripe band
-    p += sym([ball((1.2, 0.75, 0.08), (0.75, 1.75, 0.85), 0xE8F6FF, "G", r=(0, -30, 30), t=0.35),
-              ball((0.85, 0.55, 0.08), (0.62, 1.2, 0.9), 0xE8F6FF, "G", r=(0, -30, -15), t=0.35)])
-    p.append(ball((1.5, 0.3, 1.3), (0, 1.4, 0.25), 0x3A2A1A))
-    return p
+    ex = [box((1.1, 1.0, 1.0), (0, 1.0, -0.95), pot), box((0.9, 0.25, 0.9), (0, 1.6, -0.95), honey, "N", tag="Glow"),
+          box((0.3, 0.45, 0.2), (0.3, 1.25, -1.5), honey, "N", tag="Glow"), box((0.7, 0.35, 0.06), (0, 0.95, -1.47), 0xFFF3D6)]
+    ex += sym([box((0.45, 0.45, 1.0), (0.75, 1.3, -0.55), gold, r=(30, 0, 0)),
+               box((1.2, 0.7, 0.08), (1.0, 2.7, 1.0), 0xE8F6FF, "G", r=(0, -30, 25), t=0.35),
+               box((0.8, 0.5, 0.08), (0.85, 2.1, 1.05), 0xE8F6FF, "G", r=(0, -30, -10), t=0.35)])
+    ex.append(box((1.82, 0.3, 1.72), (0, 1.25, 0.25), 0x3A2A1A))
+    return sitter(gold, face_kw=dict(muzzle=cream), ears_kw=dict(kind="round", inner=cream), paw=cream, belly=cream,
+                  extras=ex)
 
 
 def sunflower_sprite():
     g, lg, petal, centre = 0x6CC24A, 0xA6E07A, 0xFFD12E, 0x6B3E1E
-    hc, hr = (0, 1.75, -0.1), (0.85, 0.8, 0.8)
-    p = [ball((0.95, 1.05, 0.9), (0, 0.72, 0.05), g, tag="Body"), ball((1.7, 1.6, 1.6), hc, lg, tag="Body")]
-    p += sym([ball((0.32, 0.5, 0.36), (0.25, 0.2, -0.05), g), ball((0.7, 0.24, 0.36), (0.62, 0.95, -0.05), g, r=(0, 0, 30))])
-    p += eyes(hc, hr, yaw=28, pitch=0, size=0.48)
-    p += blush(hc, hr, size=0.3)
-    p.append(ball((0.24, 0.08, 0.06), (0, 1.38, -0.88), 0x3A6A2A))
-    # sunflower hat: brown disc + ring of petals
-    hat = [cyl(1.15, 0.28, (0, 0, 0), centre)]
-    for i in range(10):
-        a = 360 * i / 10
+    hat = [box((1.5, 0.35, 1.5), (0, 0, 0), centre)]
+    for i in range(8):
+        a = 360 * i / 8
         ar = math.radians(a)
-        hat.append(ball((0.42, 0.12, 0.85), (math.sin(ar) * 0.82, -0.02, -math.cos(ar) * 0.82), petal, r=(0, -a, 0)))
-    hat.append(cyl(0.12, 0.5, (0, 0.3, 0), g))
-    p += T(hat, (0, 2.5, -0.05), r=(-14, 0, 8))
-    # leaf wings
-    p += sym([ball((0.9, 0.5, 0.06), (0.55, 1.1, 0.55), 0x9BE36A, "P", r=(0, -35, 35))])
-    return p
+        hat.append(box((0.55, 0.16, 0.9), (math.sin(ar) * 1.05, -0.05, -math.cos(ar) * 1.05), petal, r=(0, -a, 0)))
+    hat.append(box((0.15, 0.5, 0.15), (0, 0.4, 0), g))
+    ex = T(hat, (0, 3.6, -0.15), r=(-12, 0, 6))
+    ex += sym([box((0.9, 0.3, 0.45), (1.0, 1.25, 0.1), 0x8FD45A, r=(0, 0, 30)),
+               box((1.0, 0.6, 0.08), (0.8, 1.7, 0.85), 0x9BE36A, r=(0, -35, 35))])
+    return sitter(g, head=lg, face_kw=dict(muzzle=None, nose=None), body_size=(1.3, 1.3, 1.2), head_size=(2.2, 2.0, 1.9),
+                  paw=0x4FA83A, belly=None, extras=ex)
 
 
 # ======================================================================= Grove
 def toadstool():
-    red, spot, stem, gill = 0xE0393E, 0xFFF6EA, 0xFFF0D8, 0xF0D2B0
-    hc = (0, 1.0, -0.05)
-    hr = (0.72, 0.8, 0.66)
-    p = [ball((1.44, 1.6, 1.32), hc, stem, tag="Body"),
-         ball((2.7, 1.45, 2.7), (0, 2.25, 0.05), red, tag="Body"),
-         ball((2.35, 0.4, 2.35), (0, 1.75, 0.05), gill)]
-    cr = (1.35, 0.72, 1.35)
-    for yaw, pitch, s in ((0, 30, 0.55), (60, 50, 0.45), (-70, 40, 0.5), (150, 35, 0.5), (-150, 55, 0.4), (100, 15, 0.4),
-                          (-110, 12, 0.38), (0, 80, 0.5)):
-        p.append(on_surface((0, 2.25, 0.05), cr, yaw, pitch, (s, s, 0.12), spot, inset=0.2))
-    p += eyes(hc, hr, yaw=24, pitch=-5, size=0.42)
-    p += blush(hc, hr, yaw=46, pitch=-22, size=0.26)
-    p.append(ball((0.22, 0.1, 0.06), (0, 0.66, -0.66), 0x8A3A2A))
-    p += sym([ball((0.5, 0.36, 0.7), (0.36, 0.17, -0.25), 0xD9B48A)])
-    p += sym([ball((0.26, 0.45, 0.26), (0.72, 0.85, -0.05), stem, r=(0, 0, 35))])
+    red, spot, stem = 0xE0393E, 0xFFF6EA, 0xFFF0D8
+    p = slab((1.7, 1.6, 1.5), (0, 0.95, 0), stem, 2)
+    p += sym([box((0.6, 0.35, 0.8), (0.45, 0.17, -0.2), 0xD9B48A)])
+    p += face((0, 0.95, -0.76), s=0.75, muzzle=None)
+    p += [box((3.0, 0.75, 3.0), (0, 2.15, 0), red, tag="Body"), box((2.2, 0.55, 2.2), (0, 2.75, 0), red, tag="Body"),
+          box((2.6, 0.2, 2.6), (0, 1.72, 0), 0xF0D2B0)]
+    for pos in ((0.6, 3.04, 0.3), (-0.55, 3.04, -0.45), (1.52, 2.2, 0.5), (-1.52, 2.25, -0.3), (0.3, 2.3, -1.52), (-0.6, 2.1, 1.52)):
+        sz = (0.5, 0.06, 0.5) if pos[1] > 3 else ((0.06, 0.45, 0.45) if abs(pos[0]) > 1.5 else (0.45, 0.45, 0.06))
+        p.append(box(sz, pos, spot))
     return p
 
 
 def snail():
     body, shell, ring_c, moss = 0xD8C08A, 0xA0673E, 0xC8915A, 0x6AB04F
-    p = [ball((1.0, 0.62, 2.6), (0, 0.31, 0.05), body, tag="Body"),
-         ball((1.05, 1.25, 0.95), (0, 0.95, -1.0), body, tag="Body")]
-    hc, hr = (0, 1.05, -1.0), (0.52, 0.62, 0.48)
-    p += eyes(hc, hr, yaw=30, pitch=8, size=0.34)
-    p += blush(hc, hr, yaw=50, pitch=-18, size=0.2)
-    # eye stalks with little balls
-    p += sym([cyl(0.12, 0.6, (0.22, 1.75, -1.0), body, r=(-10, 0, -15)), ball(0.24, (0.3, 2.05, -1.05), body)])
-    # shell: big disc (axis X) with two inner rings for the spiral
-    sc = (0, 1.45, 0.4)
-    p.append(ball((1.15, 2.1, 2.1), sc, shell, tag="Body"))
-    p += sym([ball((0.2, 1.45, 1.45), (0.5, 1.5, 0.45), ring_c), ball((0.18, 0.9, 0.9), (0.6, 1.58, 0.52), shell),
-              ball((0.12, 0.42, 0.42), (0.66, 1.64, 0.58), ring_c)])
-    for pt, s in (((0.15, 2.48, 0.25), 0.7), ((-0.25, 2.4, 0.7), 0.6), ((0.1, 2.25, 1.15), 0.5)):
-        p.append(ball((s, 0.28, s), pt, moss, "E"))
-    p.append(ball((0.3, 0.12, 0.5), (0.1, 2.7, 0.35), 0x8CE06A, r=(0, 30, 30)))
+    p = [box((1.1, 0.6, 2.8), (0, 0.3, 0.1), body), box((1.2, 1.4, 1.1), (0, 1.0, -1.0), body)]
+    p += face((0, 1.05, -1.56), s=0.55, muzzle=None)
+    p += sym([box((0.14, 0.6, 0.14), (0.3, 1.95, -1.0), body), box((0.26, 0.26, 0.26), (0.3, 2.3, -1.0), body)])
+    p += slab((1.3, 2.2, 2.2), (0, 1.65, 0.5), shell, 3)
+    p += sym([box((0.06, 1.5, 1.5), (0.66, 1.7, 0.5), ring_c), box((0.06, 0.9, 0.9), (0.7, 1.75, 0.55), shell),
+              box((0.06, 0.4, 0.4), (0.73, 1.8, 0.6), ring_c)])
+    p += [box((1.0, 0.25, 1.1), (0.1, 2.85, 0.4), moss, "E"), box((0.6, 0.2, 0.6), (-0.2, 3.05, 0.6), moss, "E"),
+          box((0.3, 0.12, 0.6), (0.1, 3.2, 0.35), 0x8CE06A, r=(0, 30, 30))]
     return p
 
 
 def frog():
     g, belly, dk = 0x5BBF4A, 0xDDF2A8, 0x3E8F35
-    p = [ball((2.1, 1.35, 1.9), (0, 0.85, 0), g, tag="Body"), ball((1.4, 0.8, 0.5), (0, 0.65, -0.72), belly)]
-    # bulging eye mounds on top with the eyes on their fronts
-    for sx in (1,):
-        p += sym([ball(0.9, (0.55, 1.55, -0.45), g)])
-    p += sym(eyes((0.55, 1.55, -0.45), (0.45, 0.45, 0.45), yaw=8, pitch=8, size=0.55, both=False))
-    p.append(ball((1.0, 0.09, 0.2), (0, 0.95, -0.92), 0x2E5A28, r=(0, 0, 0)))
-    p += blush((0, 0.85, 0), (1.05, 0.67, 0.95), yaw=48, pitch=0, size=0.3)
-    p += sym([ball((0.55, 0.5, 1.0), (0.85, 0.42, 0.35), g), ball((0.55, 0.18, 0.6), (0.95, 0.09, -0.12), dk),
-              ball((0.32, 0.5, 0.32), (0.55, 0.35, -0.65), g), ball((0.4, 0.14, 0.42), (0.6, 0.07, -0.78), dk)])
-    # leaf hat between the eyes
-    leaf = 0x3FA34D
-    p += [ball((1.5, 0.16, 1.15), (0, 1.75, 0.15), 0x8FD94A, r=(-12, 25, 6)), ball((0.07, 0.07, 1.05), (0, 1.82, 0.15), 0x5AA83A, r=(-12, 25, 6)),
-          cyl(0.09, 0.4, (0.22, 1.9, -0.38), 0x5AA83A, r=(25, 0, 25))]
-    for pt in ((0.5, 1.25, 0.6), (-0.7, 1.1, 0.4), (0.2, 1.45, 0.75)):
-        p.append(ball((0.3, 0.12, 0.3), pt, dk))
+    p = slab((2.5, 1.6, 2.1), (0, 1.0, 0), g, 2)
+    p.append(box((1.6, 0.9, 0.08), (0, 0.75, -1.08), belly, tag="Face"))
+    p += sym([box((0.9, 0.85, 0.9), (0.72, 2.1, -0.4), g)])
+    p += sym([disc(0.62, (0.72, 2.12, -0.88), EYE), disc(0.22, (0.82, 2.24, -0.93), WHITE, "N", th=0.04),
+              disc(0.1, (0.62, 2.0, -0.93), WHITE, "N", th=0.04), disc(0.36, (0.95, 1.25, -1.08), BLUSH)])
+    p += [disc(0.5, (0, 1.2, -1.1), MOUTH, th=0.05), box((0.6, 0.26, 0.06), (0, 1.33, -1.13), g),
+          disc(0.26, (0, 1.08, -1.14), TONGUE, th=0.04)]
+    p += sym([box((0.7, 0.6, 1.1), (1.15, 0.35, 0.4), g), box((0.75, 0.2, 0.7), (1.2, 0.1, -0.25), dk),
+              box((0.45, 0.6, 0.45), (0.7, 0.35, -0.75), g), box((0.55, 0.16, 0.55), (0.75, 0.08, -0.88), dk)])
+    p += [box((1.6, 0.14, 1.2), (0, 2.0, 0.35), 0x8FD94A, r=(-10, 25, 6)), box((0.1, 0.45, 0.1), (0.3, 2.25, -0.1), 0x5AA83A, r=(20, 0, 20))]
     return p
 
 
 def owl():
-    br, face, belly, beak, wing = 0x8A5A3C, 0xE2C29A, 0xC9A27C, 0xF2A33A, 0x6E4630
-    c = (0, 1.35, 0)
-    p = [ball((2.2, 2.5, 2.0), c, br, tag="Body"), ball((1.4, 1.5, 0.5), (0, 0.85, -0.78), belly)]
-    # face disc around each eye
-    p += sym([ball((0.95, 0.95, 0.3), (0.4, 1.75, -0.85), face, r=(0, -15, 0))])
-    p += sym(eyes((0.4, 1.75, -0.85), (0.48, 0.48, 0.2), yaw=12, pitch=0, size=0.7, iris=0xFFC93C, depth=0.3, both=False))
-    p.append(spike((0, 1.42, -1.0), 0.28, 0.32, beak, r=(180, 0, 0)))
-    p += sym([ball((0.5, 1.5, 1.2), (1.05, 1.2, 0.15), wing, r=(0, 0, 10))])
-    p += sym(T(tri((0, 0, 0), 0.55, 0.6, 0.25, br), (0.65, 2.42, -0.25), r=(0, 0, -25)))
-    for pt in ((0, 1.05, -0.98), (0.3, 0.8, -0.95), (-0.3, 0.8, -0.95), (0, 0.55, -0.9)):
-        p.append(ball((0.22, 0.12, 0.06), pt, shade(belly, 0.75)))
-    p += sym([ball((0.2, 0.16, 0.35), (0.38 + dx, 0.08, -0.45), beak) for dx in (-0.12, 0.12)])
+    br, face_c, belly, beak, wing_c = 0x8A5A3C, 0xE2C29A, 0xC9A27C, 0xF2A33A, 0x6E4630
+    p = slab((2.4, 2.8, 2.2), (0, 1.55, 0), br, 3)
+    p += sym([box((1.0, 1.0, 0.08), (0.52, 2.1, -1.13), face_c, tag="Face")])
+    p.append(box((1.4, 1.2, 0.08), (0, 0.9, -1.13), belly, tag="Face"))
+    p += sym([disc(0.8, (0.52, 2.12, -1.18), 0xFFC93C), disc(0.48, (0.52, 2.1, -1.22), EYE, th=0.04),
+              disc(0.2, (0.6, 2.22, -1.25), WHITE, "N", th=0.03), disc(0.09, (0.44, 2.0, -1.25), WHITE, "N", th=0.03),
+              disc(0.34, (0.95, 1.55, -1.14), BLUSH)])
+    p += T(tri((0, 0, 0), 0.4, 0.4, 0.25, beak), (0, 1.75, -1.2), r=(0, 0, 180))
+    p += sym([box((0.4, 1.7, 1.4), (1.35, 1.4, 0.2), wing_c, r=(0, 0, 8))])
+    p += sym(T(tri((0, 0, 0), 0.6, 0.65, 0.4, br), (0.85, 2.92, -0.2), r=(0, 0, -15)))
+    p += sym([box((0.5, 0.2, 0.6), (0.5, 0.1, -0.5), beak)])
     return p
 
 
 def glowcap_dragon():
-    purple, belly, cap = 0x7A4FC9, 0xC9A8F0, 0x52F2FF
-    def mush(at, s, r):
-        return T([cyl(0.18, 0.4, (0, 0.2, 0), 0xF6EEDC), ball((0.6, 0.32, 0.6), (0, 0.45, 0), cap, "N", tag="Glow")], at, r=r, s=s)
-    spines = mush((0, 1.4, 0.15), 1.0, (-15, 0, 0)) + mush((0, 1.3, 0.62), 0.85, (-30, 0, 0)) + mush((0, 1.0, 1.0), 0.7, (-50, 0, 0))
-    horns = sym(mush((0.45, 2.6, -0.1), 1.05, (-15, 0, -22)))
-    tip = mush((0, 1.3, 2.05), 0.8, (-40, 0, 0))
-    return dragon(purple, belly, cap, shade(purple, 0.75), 0x9E7AE0, spines=spines, horns=horns, tail_tip=tip,
-                  eye_iris=0x52F2FF)
+    purple, belly, cap = 0x7A4FC9, 0xC9A8F0, 0xFF6AD5
+    def mush(at, s, col):
+        return T([box((0.25, 0.4, 0.25), (0, 0.2, 0), 0xF6EEDC), box((0.75, 0.35, 0.75), (0, 0.52, 0), col, "N", tag="Glow")], at, s=s)
+    ex = mush((0.6, HEAD_TOP - 0.05, -0.3), 1.0, 0x52F2FF) + mush((-0.55, HEAD_TOP - 0.05, -0.4), 0.85, cap)
+    ex += mush((0, BODY_TOP, 0.6), 0.8, cap)
+    ex += sym(wing(purple, 0xB57CFF, span=1.6, at=(0.7, BODY_TOP, 0.5)))
+    return quad(purple, belly=belly, face_kw=dict(muzzle=belly, small_hi=False), ears_kw=dict(kind="pointy", size=0.7),
+                tail_kw=dict(kind="long", tip=0x52F2FF), paw=belly, extras=ex)
 
 
 def fairy_moth():
-    fluff, body, wing, eye = 0xFFF4E2, 0xE8D6C0, 0x5CF2E0, 0x1C1A2B
-    hc, hr = (0, 2.05, -0.35), (0.85, 0.8, 0.8)
-    p = [ball((1.25, 1.5, 1.35), (0, 1.05, 0.25), body, tag="Body"), ball((1.7, 1.6, 1.6), hc, fluff, tag="Body")]
-    for pt, s in (((0, 1.45, -0.35), 1.0), ((0.45, 1.38, -0.2), 0.7), ((-0.45, 1.38, -0.2), 0.7), ((0, 1.35, 0.25), 0.9)):
-        p.append(ball(s, pt, fluff))
-    p += eyes(hc, hr, yaw=28, pitch=4, size=0.58)
-    p += blush(hc, hr, size=0.28)
-    # feathery antennae
-    p += sym([cyl(0.08, 0.9, (0.3, 2.95, -0.45), 0x8A6E52, r=(-25, 0, -25)),
-              ball((0.3, 0.6, 0.12), (0.55, 3.35, -0.62), fluff, r=(-25, 0, -25))])
-    # four glowing wings
-    p += sym([ball((2.3, 1.6, 0.08), (1.3, 2.15, 0.55), 0x3ED8C8, "P", r=(0, -28, -22), t=0.1),
-              ball((1.9, 1.25, 0.1), (1.25, 2.15, 0.53), wing, "N", r=(0, -28, -22), t=0.2, tag="Glow"),
-              ball((1.5, 1.1, 0.08), (1.0, 1.05, 0.7), wing, "N", r=(0, -28, 28), t=0.2, tag="Glow"),
-              ball((0.5, 0.42, 0.12), (1.55, 2.3, 0.6), 0xFFF2A8, "N", r=(0, -28, -22))])
-    p += sym([ball((0.3, 0.3, 0.4), (0.3, 0.18, 0.0), body), ball((0.3, 0.3, 0.4), (0.32, 0.18, 0.5), body)])
-    return p
+    fluff, body, wing_c = 0xFFF4E2, 0xE8D6C0, 0x5CF2E0
+    ex = sym([box((2.2, 1.6, 0.1), (1.6, 3.0, 0.7), wing_c, "N", r=(0, -25, -18), t=0.25, tag="Glow"),
+              box((1.6, 1.1, 0.1), (1.4, 1.8, 0.8), wing_c, "N", r=(0, -25, 20), t=0.25, tag="Glow"),
+              box((0.5, 0.5, 0.12), (1.9, 3.2, 0.62), 0xFFF2A8, "N", r=(0, -25, -18)),
+              box((0.12, 0.9, 0.12), (0.5, HEAD_TOP + 0.75, -0.6), 0x8A6E52, r=(-20, 0, -20)),
+              box((0.45, 0.7, 0.12), (0.72, HEAD_TOP + 1.25, -0.8), fluff, r=(-20, 0, -20))])
+    ex.append(box((1.9, 0.5, 1.5), (0, 2.0, 0.1), WHITE))
+    return sitter(body, head=fluff, face_kw=dict(muzzle=None), belly=fluff, paw=body, extras=ex)
 
 
 # ======================================================================= Frost
 def penguin():
-    blk, wh, org, scarf = 0x2B2E44, 0xFAFAFA, 0xFF9A2E, 0xE0353F
-    c = (0, 1.4, 0)
-    p = [ball((2.0, 2.6, 1.85), c, blk, tag="Body"), ball((1.5, 1.85, 0.6), (0, 1.05, -0.68), wh),
-         ball((1.5, 1.05, 0.5), (0, 2.0, -0.62), wh)]
-    p += eyes((0, 1.95, 0), (1.0, 1.3, 0.93), yaw=24, pitch=22, size=0.52)
-    p.append(spike((0, 1.82, -1.0), 0.32, 0.3, org, r=(-90, 0, 0)))
-    p += blush((0, 1.4, 0), (1.0, 1.3, 0.93), yaw=40, pitch=12, size=0.25)
-    p += sym([ball((0.45, 1.35, 0.6), (1.0, 1.3, 0.05), blk, r=(0, 0, 18)),
-              ball((0.55, 0.2, 0.8), (0.4, 0.1, -0.3), org)])
-    # red scarf: band + hanging end
-    p += [cyl(2.04, 0.3, (0, 1.42, 0.0), scarf), box((0.34, 0.6, 0.12), (0.5, 1.12, -0.9), scarf, r=(12, 0, 10)),
-          box((0.36, 0.06, 0.13), (0.52, 0.86, -0.95), WHITE, r=(12, 0, 10))]
-    p.append(spike((0, 0.35, 0.95), 0.4, 0.35, blk, r=(110, 0, 0)))
+    blk, wh, org, scarf = 0x2B2E44, 0xFAFAFA, 0xFF9A2E, COLLAR
+    p = slab((2.3, 3.0, 2.0), (0, 1.6, 0), blk, 3)
+    p.append(box((1.7, 1.6, 0.08), (0, 1.0, -1.03), wh, tag="Face"))
+    p.append(box((2.0, 1.05, 0.08), (0, 2.35, -1.03), wh, tag="Face"))
+    p += face((0, 2.4, -1.08), s=0.8, muzzle=None, nose=None, mouth=False)
+    p += T(tri((0, 0, 0), 0.5, 0.45, 0.4, org), (0, 2.12, -1.2), r=(0, 0, 180))
+    p += sym([box((0.35, 1.4, 0.8), (1.25, 1.5, 0.05), blk, r=(0, 0, 15)), box((0.7, 0.2, 0.9), (0.5, 0.1, -0.3), org)])
+    p += [box((2.4, 0.38, 2.1), (0, 1.75, 0), scarf, "X", tag="Collar"), box((0.42, 0.9, 0.14), (0.55, 1.25, -1.1), scarf, "X", tag="Collar")]
     return p
 
 
 def snow_bunny():
     pale, muff = 0xCFE6FF, 0xFF7FB0
-    ex = sym([ball((0.62, 0.62, 0.55), (0.98, 1.8, -0.1), muff, "X"), ball((0.4, 0.4, 0.3), (1.08, 1.8, -0.1), 0xFFFFFF)])
-    for i in range(5):
-        a = math.radians(25 + i * 32.5)
-        ex.append(box((0.62, 0.14, 0.18), (math.cos(a) * 1.0, 1.85 + math.sin(a) * 1.0, -0.1), 0xFF7FB0, r=(0, 0, math.degrees(a) + 90)))
-    return bunny(pale, inner=0x9CCBFF, nose=0xFF8FB0, extras=ex, belly=WHITE)
+    top = 1.5 - 0.2 + 2.1
+    ex = sym([box((0.6, 0.7, 0.7), (1.38, top - 1.0, -0.1), muff, "X", tag="Collar")])
+    ex.append(box((2.9, 0.22, 0.3), (0, top + 0.15, -0.6), muff, "X", tag="Collar"))
+    ex += sym([box((0.22, 1.0, 0.3), (1.38, top - 0.4, -0.6), muff, "X", tag="Collar")])
+    return sitter(pale, face_kw=dict(nose=0xFF8FB0, muzzle=WHITE), ears_kw=dict(kind="long", inner=0x9CCBFF),
+                  tail_kw=dict(kind="pom", tip=WHITE), paw=WHITE, belly=WHITE, extras=ex)
 
 
 def arctic_fox():
-    return fox(body=0xF4F6FA, chest=0xFFFFFF, sock=0xDDE6F0, ear_inner=0x9FD6FF, tail_tip=0x6FC8FF, eye_iris=0x4FB0F0)
+    return quad(0xF4F6FA, face_kw=dict(muzzle=WHITE, muzzle_w=1.5, iris=0x4FB0F0), ears_kw=dict(kind="pointy", inner=0x9FD6FF, size=1.1),
+                tail_kw=dict(kind="bushy", tip=0x6FC8FF), paw=0xDDE6F0, belly=WHITE)
 
 
 def yeti():
-    wh, face, horn = 0xF6F8FC, 0x7EC8F0, 0xEDE3C8
-    c = (0, 1.5, 0.05)
-    p = [ball((2.3, 2.5, 2.0), c, wh, tag="Body")]
-    for pt, s in (((0.85, 2.4, 0.2), 0.9), ((-0.85, 2.4, 0.2), 0.9), ((0, 2.75, 0.15), 1.1), ((0.95, 1.2, 0.3), 0.9),
-                  ((-0.95, 1.2, 0.3), 0.9), ((0, 0.75, 0.55), 1.0)):
-        p.append(ball(s, pt, wh))
-    fc, fr = (0, 2.0, -0.78), (0.72, 0.62, 0.3)
-    p.append(ball((1.44, 1.24, 0.6), fc, face))
-    p += eyes(fc, fr, yaw=28, pitch=12, size=0.42)
-    p.append(ball((0.6, 0.2, 0.1), (0, 1.62, -1.05), 0x2A3A5A))
-    p += sym([spike((0.15, 1.58, -1.08), 0.1, 0.14, WHITE, r=(180, 0, 0))])
-    p += blush(fc, fr, yaw=40, pitch=-25, size=0.22)
-    p += sym(cone((0.65, 2.95, -0.2), 0.32, 0.6, horn, n=3, r=(-10, 0, -30), tip=0.3))
-    p += sym([ball((0.75, 1.6, 0.8), (1.25, 1.15, -0.25), wh, r=(15, 0, 12)),
-              ball((0.55, 0.3, 0.55), (1.35, 0.42, -0.45), face),
-              ball((0.75, 0.42, 1.0), (0.55, 0.21, -0.25), wh)])
+    wh, face_c, horn_c = 0xF6F8FC, 0x7EC8F0, 0xEDE3C8
+    p = slab((2.8, 2.4, 2.2), (0, 2.2, 0), wh, 3)
+    p += slab((2.2, 1.2, 1.8), (0, 0.75, 0.1), wh, 1)
+    p.append(box((2.0, 1.5, 0.08), (0, 2.1, -1.13), face_c, tag="Face"))
+    p += face((0, 2.25, -1.18), s=0.85, muzzle=None, nose=0x2A3A5A)
+    p += sym([box((0.12, 0.2, 0.06), (0.15, 1.82, -1.22), WHITE, tag="Eye")])
+    p += sym(horn((1.1, 3.3, -0.3), horn_c, r=(0, 0, -30), s=0.4, h=0.8))
+    p += sym([box((0.8, 1.7, 0.8), (1.75, 1.5, -0.2), wh, r=(10, 0, 10)), box((0.7, 0.4, 0.7), (1.85, 0.55, -0.35), face_c),
+              box((0.8, 0.4, 1.0), (0.6, 0.2, -0.3), wh)])
+    for pos in ((1.0, 3.45, 0.4), (-0.9, 3.45, 0.6), (0.1, 3.5, 0.9)):
+        p.append(box((0.6, 0.3, 0.6), pos, wh, r=(0, 30, 0)))
     return p
 
 
 def aurora_wolf():
     navy, belly = 0x2B2F4A, 0x5A6080
-    hc, hr = (0, 1.95, -0.3), (1.0, 0.9, 0.88)
-    ex = []
-    cols = (0x4CFFB0, 0x4CC9FF, 0xB06CFF)
-    for i, (z, c) in enumerate(zip((-0.1, 0.3, 0.7), cols)):
-        ex.append(ball((1.18, 0.16, 0.22), (0, 1.25 - i * 0.03, z), c, "N", tag="Glow"))
-    ex += [on_surface(hc, hr, 0, 60, (0.22, 0.7, 0.1), 0x4CFFB0, "N", tag="Glow")]
-    ex += sym([on_surface(hc, hr, 40, 35, (0.12, 0.5, 0.1), 0x4CC9FF, "N", spin=30, tag="Glow")])
-    ex.append(ball((0.5, 0.5, 0.5), (0, 2.0, 1.95), 0xB06CFF, "N", tag="Glow"))
-    return quad(navy, belly=belly, snout=belly, long_snout=True, snout_size=(0.66, 0.46, 0.5), nose=0x111111,
-                ears=("pointy", navy, 0x4CC9FF), tail="bushy", tip=0x4CFFB0, paw=0x1C1F33, eye_iris=0x7CF2FF,
-                ear_size=1.15, extras=ex, blush_col=None)
+    ex = [box((1.7, 0.18, 0.3), (0, BODY_TOP + 0.03, z), c, "N", tag="Glow") for z, c in ((-0.1, 0x4CFFB0), (0.4, 0x4CC9FF), (0.9, 0xB06CFF))]
+    ex += [box((0.3, 0.7, 0.08), (0, HEAD_TOP - 0.45, HEAD_FRONT - 0.03), 0x4CFFB0, "N", tag="Glow")]
+    ex += sym([box((0.08, 0.15, 0.7), (1.32, HEAD_C[1] + 0.2, HEAD_C[2]), 0x4CC9FF, "N", tag="Glow")])
+    return quad(navy, face_kw=dict(muzzle=belly, muzzle_w=1.4, iris=0x7CF2FF, blush=None), ears_kw=dict(kind="pointy", inner=0x4CC9FF, size=1.15),
+                tail_kw=dict(kind="bushy", tip=0x4CFFB0), paw=0x1C1F33, belly=belly, extras=ex)
 
 
 def polar_king():
     wh, crown, cape, trim = 0xF2F4F8, 0x9FE6FF, 0xC0263A, 0xFFFFFF
-    hc = (0, 1.95, -0.3)
-    cr = []
-    cr += [cyl(1.3, 0.28, (0, 0, 0), GOLD, "F")]
-    for i in range(5):
-        a = 2 * math.pi * i / 5
-        cr += crystal((math.sin(a) * 0.55, 0.05, -math.cos(a) * 0.55), 0.26, 0.75 if i == 0 else 0.55, crown, "G", t=0.1)
-    cr.append(ball(0.24, (0, 0.1, -0.66), 0x4FB0FF, "N", tag="Glow"))
-    ex = T(cr, (0, 2.78, -0.3), r=(-8, 0, 0))
-    ex += [ball((1.45, 1.1, 1.7), (0, 0.98, 0.42), cape, "X"),
-           ball((1.6, 0.42, 1.0), (0, 1.36, -0.02), trim, "X")]
-    ex += [ball(0.1, (x, 1.45, -0.48), 0x222222) for x in (-0.4, 0, 0.4)]
-    return quad(wh, belly=0xFFFFFF, snout=0xFFFFFF, nose=0x222222, ears=("round", wh, 0xDDE3EE), tail="pom",
-                paw=0xE4E8F0, eye_iris=None, extras=ex, snout_size=(0.85, 0.55, 0.55))
+    cr = [box((1.8, 0.3, 1.5), (0, 0, 0), GOLD, "F", tag="Collar")]
+    for x in (-0.6, 0, 0.6):
+        cr += crystal((x, 0.1, -0.5), 0.3, 0.9 if x == 0 else 0.65, crown, "G", t=0.1)
+    cr.append(box((0.26, 0.26, 0.1), (0, 0.05, -0.78), 0x4FB0FF, "N", tag="Glow"))
+    ex = T(cr, (0, HEAD_TOP + 0.1, -0.25))
+    ex += [box((1.85, 1.0, 1.9), (0, 1.7, 0.45), cape, "X", tag="Collar"), box((1.9, 0.4, 0.4), (0, 1.95, -0.6), trim, "X", tag="Collar")]
+    return quad(wh, face_kw=dict(muzzle=WHITE), ears_kw=dict(kind="round", inner=0xDDE3EE), tail_kw=dict(kind="pom"),
+                paw=0xE4E8F0, belly=None, extras=ex)
 
 
 # ======================================================================= Coral
 def crab():
     red, belly, claw = 0xE5483A, 0xFFB09A, 0xF0584A
-    c = (0, 0.95, 0)
-    p = [ball((2.3, 1.1, 1.7), c, red, tag="Body"), ball((1.6, 0.4, 1.2), (0, 0.55, -0.1), belly)]
-    # eye stalks
-    for sx in (1,):
-        p += sym([cyl(0.16, 0.6, (0.38, 1.6, -0.45), red), ball(0.62, (0.38, 2.05, -0.45), WHITE)])
-    p += sym([ball((0.38, 0.44, 0.2), (0.38, 2.05, -0.72), EYE, tag="Eye"), ball(0.14, (0.42, 2.13, -0.82), WHITE, "N", tag="Eye")])
-    p += sym([ball((0.3, 0.18, 0.1), (0.75, 1.0, -0.8), PINK)])
-    p.append(ball((0.5, 0.12, 0.1), (0, 0.95, -0.85), 0x7A1E1E))
-    # claws: arm + big pincer + small pincer
-    p += sym([ball((0.8, 0.35, 0.35), (1.25, 1.0, -0.5), red, r=(0, 35, 20)),
-              ball((0.95, 0.75, 1.05), (1.55, 1.35, -1.05), claw, r=(0, 20, 0)),
-              ball((0.4, 0.32, 0.7), (1.3, 1.65, -1.45), claw, r=(-15, 20, 0))])
-    # legs
-    for i, z in enumerate((-0.2, 0.25, 0.65)):
-        p += sym([ball((0.95, 0.2, 0.22), (1.3, 0.42, z), red, r=(0, -10 + i * 15, -35))])
+    p = slab((2.6, 1.3, 2.0), (0, 1.1, 0), red, 2)
+    p.append(box((1.8, 0.5, 0.08), (0, 0.85, -1.03), belly, tag="Face"))
+    p += sym([box((0.2, 0.7, 0.2), (0.5, 2.05, -0.4), red), box((0.75, 0.75, 0.6), (0.5, 2.6, -0.4), WHITE),
+              disc(0.5, (0.5, 2.6, -0.72), EYE), disc(0.18, (0.6, 2.7, -0.76), WHITE, "N", th=0.04),
+              disc(0.34, (0.9, 1.2, -1.03), BLUSH)])
+    p += [disc(0.44, (0, 1.2, -1.06), MOUTH, th=0.05), box((0.52, 0.22, 0.05), (0, 1.32, -1.09), red),
+          disc(0.22, (0, 1.1, -1.1), TONGUE, th=0.04)]
+    p += sym([box((0.9, 0.35, 0.35), (1.55, 1.2, -0.6), red, r=(0, 30, 20)),
+              box((1.0, 0.9, 1.1), (1.95, 1.5, -1.25), claw), box((0.45, 0.4, 0.7), (1.75, 2.05, -1.5), claw, r=(-15, 0, 0))])
+    for i, z in enumerate((-0.3, 0.3, 0.8)):
+        p += sym([box((1.0, 0.24, 0.24), (1.55, 0.45, z), red, r=(0, -10 + i * 15, -35))])
     return p
 
 
 def turtle():
     shell, rim, plate, skin = 0x3E9A57, 0xC9DD86, 0x2D7843, 0x8FD18A
-    p = [ball((2.0, 1.25, 2.2), (0, 0.95, 0.15), shell, tag="Body"), ball((2.3, 0.4, 2.5), (0, 0.55, 0.15), rim)]
-    sc, sr = (0, 0.95, 0.15), (1.0, 0.625, 1.1)
-    p.append(on_surface(sc, sr, 0, 90, (0.7, 0.7, 0.12), plate, inset=0.2))
-    for yaw in (0, 72, 144, 216, 288):
-        p.append(on_surface(sc, sr, yaw + 36, 40, (0.55, 0.5, 0.1), plate, inset=0.2))
-    hc, hr = (0, 1.25, -1.35), (0.62, 0.58, 0.58)
-    p.append(ball((1.24, 1.16, 1.16), hc, skin, tag="Body"))
-    p.append(ball((0.6, 0.6, 0.7), (0, 0.8, -0.95), skin))
-    p += eyes(hc, hr, yaw=32, pitch=8, size=0.4)
-    p += blush(hc, hr, yaw=50, pitch=-15, size=0.22)
-    p.append(ball((0.4, 0.07, 0.08), (0, 1.07, -1.88), 0x2E5A28))
-    p += sym([ball((1.3, 0.2, 0.55), (1.15, 0.45, -0.55), skin, r=(0, 35, -10)),
-              ball((0.75, 0.2, 0.42), (0.9, 0.35, 0.95), skin, r=(0, -35, -5))])
-    p.append(spike((0, 0.6, 1.4), 0.3, 0.3, skin, r=(90, 0, 0)))
-    for pt in ((0.3, 1.55, -1.35), (-0.25, 1.62, -1.2)):
-        p.append(ball((0.18, 0.08, 0.18), pt, shade(skin, 0.75)))
+    p = [box((2.7, 0.45, 2.9), (0, 0.6, 0.2), rim), box((2.4, 0.7, 2.6), (0, 1.15, 0.2), shell), box((1.8, 0.5, 2.0), (0, 1.7, 0.2), shell),
+         box((1.0, 0.1, 1.0), (0, 1.98, 0.2), plate)]
+    p += [box((0.7, 0.1, 0.7), (x, 1.53, z), plate) for x, z in ((0.8, -0.5), (-0.8, -0.5), (0.8, 0.9), (-0.8, 0.9))]
+    p += slab((1.6, 1.4, 1.4), (0, 1.5, -1.6), skin, 2)
+    p += face((0, 1.45, -2.31), s=0.6, muzzle=None)
+    p += sym([box((1.4, 0.25, 0.6), (1.4, 0.45, -0.7), skin, r=(0, 35, -10)), box((0.8, 0.25, 0.5), (1.1, 0.35, 1.2), skin, r=(0, -35, -5))])
+    p.append(box((0.4, 0.3, 0.6), (0, 0.6, 1.75), skin))
     return p
 
 
 def pufferfish():
-    y, belly, fin = 0xFFD23F, 0xFFF3C4, 0xFF9E3A
-    c = (0, 1.35, 0)
-    r = (1.15, 1.1, 1.1)
-    p = [ball((2.3, 2.2, 2.2), c, y, tag="Body"), ball((1.6, 1.0, 1.6), (0, 0.72, -0.1), belly)]
-    for yaw, pitch in ((0, 55), (60, 35), (-60, 35), (120, 40), (-120, 40), (180, 50), (90, -5), (-90, -5),
-                       (150, -10), (-150, -10), (30, 75), (0, 0)):
-        if (yaw, pitch) == (0, 0):
-            continue
-        pos, n = ell_point(c, r, yaw, pitch, inset=-0.05)
-        p.append(spike(pos, 0.2, 0.32, 0xF0A030, R=up_rot(n)))
-    p += eyes(c, r, yaw=32, pitch=12, size=0.6)
-    p += blush(c, r, yaw=52, pitch=-8, size=0.3)
-    mp, n = ell_point(c, r, 0, -12, inset=0.02)
-    p += [ball((0.42, 0.36, 0.16), mp, 0xE86A7A, R=rot(face_rot(n))), ball((0.24, 0.2, 0.1), add(mp, (0, 0, -0.06)), 0x8A2A3A, R=rot(face_rot(n)))]
-    p += sym([ball((0.7, 0.5, 0.1), (1.18, 1.25, -0.05), fin, r=(0, -50, 20))])
-    p += [ball((0.12, 0.9, 0.8), (0, 1.35, 1.2), fin), ball((0.1, 0.6, 0.55), (0, 2.45, 0.35), fin, r=(30, 0, 0))]
+    y, belly, fin, spk = 0xFFD23F, 0xFFF3C4, 0xFF9E3A, 0xF0A030
+    p = slab((2.6, 2.6, 2.4), (0, 1.5, 0), y, 3)
+    p.append(box((2.0, 0.9, 0.08), (0, 0.65, -1.23), belly, tag="Face"))
+    p += face((0, 1.6, -1.22), s=0.9, muzzle=None, nose=None)
+    for pos, r in (((0, 2.95, 0), (0, 45, 0)), ((1.4, 1.6, 0), (0, 0, 45)), ((-1.4, 1.6, 0), (0, 0, 45)), ((0.9, 2.6, 0.7), (45, 0, 45)),
+                   ((-0.9, 2.6, 0.7), (45, 0, 45)), ((1.4, 1.0, 0.8), (45, 0, 45)), ((-1.4, 1.0, 0.8), (45, 0, 45)), ((0, 2.7, 1.2), (45, 0, 0)),
+                   ((0.8, 2.85, -0.6), (0, 45, 45)), ((-0.8, 2.85, -0.6), (0, 45, 45))):
+        p.append(box((0.35, 0.35, 0.35), pos, spk, r=r))
+    p += sym([box((0.12, 0.6, 0.7), (1.35, 1.4, -0.2), fin, r=(0, -30, 0))])
+    p.append(box((0.15, 1.0, 0.8), (0, 1.5, 1.6), fin))
     return p
 
 
 def octopus():
     pink, spot = 0xF27BB0, 0xD95495
-    hc, hr = (0, 1.95, 0.05), (1.05, 1.1, 1.0)
-    p = [ball((2.1, 2.2, 2.0), hc, pink, tag="Body")]
-    for yaw, pitch, s in ((40, 55, 0.4), (-50, 45, 0.35), (150, 50, 0.4), (-140, 30, 0.3), (0, 75, 0.35)):
-        p.append(on_surface(hc, hr, yaw, pitch, (s, s, 0.1), spot, inset=0.2))
-    p += eyes(hc, hr, yaw=26, pitch=-12, size=0.56)
-    p += blush(hc, hr, yaw=48, pitch=-28, size=0.3)
-    p.append(ball((0.26, 0.12, 0.08), (0, 1.15, -0.9), 0x8A2A5A))
-    # six curly tentacles
-    for i, a in enumerate((25, 75, 130, 180 + 50, 180 + 105, 335 - 0)):
+    p = slab((2.6, 2.6, 2.4), (0, 2.4, 0), pink, 3)
+    p += [box((0.5, 0.06, 0.5), (0.6, 3.72, 0.3), spot), box((0.4, 0.06, 0.4), (-0.6, 3.72, -0.4), spot),
+          box((0.06, 0.45, 0.45), (1.32, 2.9, 0.3), spot), box((0.06, 0.4, 0.4), (-1.32, 2.7, -0.2), spot)]
+    p += face((0, 2.2, -1.22), s=0.85, muzzle=None, nose=None)
+    for i, a in enumerate((25, 80, 135, 225, 280, 335)):
         ar = math.radians(a)
         dx, dz = math.sin(ar), -math.cos(ar)
-        pts = [(dx * 0.65, 0.65, dz * 0.65 + 0.05), (dx * 1.05, 0.32, dz * 1.05 + 0.05), (dx * 1.4, 0.25, dz * 1.4 + 0.05),
-               (dx * 1.62, 0.5, dz * 1.62 + 0.05)]
-        p += chain(pts, [0.62, 0.5, 0.4, 0.32], pink)
+        p += [box((0.55, 0.8, 0.55), (dx * 0.85, 0.75, dz * 0.85), pink, r=(0, -a, 0)),
+              box((0.48, 0.45, 0.8), (dx * 1.35, 0.25, dz * 1.35), pink, r=(0, -a, 0)),
+              box((0.42, 0.55, 0.42), (dx * 1.75, 0.45, dz * 1.75), pink, r=(0, -a, 0))]
     return p
 
 
 def narwhal():
-    blue, belly, horn1, horn2 = 0x4A86D8, 0xDDEBFF, 0xFFD45A, 0xE0A92E
-    c = (0, 1.15, 0.2)
-    r = (0.95, 0.85, 1.4)
-    p = [ball((1.9, 1.7, 2.8), c, blue, tag="Body"), ball((1.4, 0.8, 2.2), (0, 0.65, 0.1), belly)]
-    p += eyes(c, r, yaw=30, pitch=12, size=0.45)
-    p += blush(c, r, yaw=46, pitch=-6, size=0.26)
-    p.append(ball((0.34, 0.08, 0.06), (0, 0.98, -1.36), 0x22315A))
-    # tail and flukes
-    p += chain([(0, 1.2, 1.55), (0, 1.38, 1.95)], [0.85, 0.6], blue)
-    p += sym([ball((0.8, 0.12, 0.5), (0.35, 1.55, 2.2), blue, r=(0, -30, 10))])
-    p += sym([ball((0.75, 0.15, 0.45), (0.95, 0.65, -0.2), blue, r=(0, 30, -30))])
-    for pt in ((0.4, 1.8, 0.3), (-0.3, 1.9, 0.6), (0.1, 1.95, 0.9), (-0.5, 1.6, -0.1)):
-        p.append(ball((0.15, 0.08, 0.15), pt, 0x3566B0))
-    # golden spiral horn
-    p += cone((0, 1.75, -1.0), 0.42, 1.9, horn1, "F", n=6, r=(-62, 0, 0), tip=0.18, cols=[horn1, horn2])
+    blue, belly, h1, h2 = 0x4A86D8, 0xDDEBFF, 0xFFD45A, 0xE0A92E
+    p = slab((2.4, 2.0, 3.2), (0, 1.15, 0.2), blue, 2)
+    p.append(box((1.9, 0.6, 0.08), (0, 0.55, -1.43), belly, tag="Face"))
+    p += face((0, 1.3, -1.42), s=0.8, muzzle=None, nose=None)
+    p += [box((1.4, 1.2, 0.9), (0, 1.3, 2.1), blue), box((0.9, 0.8, 0.8), (0, 1.55, 2.8), blue)]
+    p += sym([box((1.0, 0.2, 0.6), (0.5, 2.0, 3.2), blue, r=(0, -25, 12)), box((0.9, 0.2, 0.5), (1.35, 0.6, -0.3), blue, r=(0, 30, -30))])
+    p += horn((0, 2.0, -1.0), h1, "F", n=5, s=0.5, h=1.9, r=(-60, 0, 0), cols=[h1, h2])
     return p
 
 
 def pearl_seahorse():
     body, belly, fin, pearl = 0xF3C9E8, 0xFFF0F8, 0xB9E4FF, 0xFFFCF4
-    hc, hr = (0, 2.7, -0.15), (0.7, 0.7, 0.72)
-    p = [ball((1.4, 1.4, 1.44), hc, body, tag="Body")]
-    p.append(ball((0.34, 0.34, 1.15), (0, 2.5, -0.95), body, r=(-10, 0, 0)))
-    p.append(ball((0.36, 0.3, 0.16), (0, 2.6, -1.5), shade(body, 0.8)))
-    p += eyes(hc, hr, yaw=40, pitch=10, size=0.46)
-    p += blush(hc, hr, yaw=58, pitch=-12, size=0.24)
-    # body S-curve and curled tail
-    p += chain([(0, 1.9, 0.0), (0, 1.35, 0.05), (0, 0.85, 0.15), (0, 0.45, 0.4), (0, 0.32, 0.8), (0, 0.55, 1.05),
-                (0, 0.85, 0.95)], [1.15, 1.05, 0.85, 0.65, 0.5, 0.4, 0.32], body)
-    for i, y in enumerate((1.95, 1.6, 1.25, 0.95)):
-        p.append(ball((0.7 - i * 0.08, 0.14, 0.45), (0, y, -0.4 + i * 0.04), belly))
-    p.append(ball((0.12, 1.1, 0.75), (0, 1.55, 0.6), fin, "G", t=0.25))
-    p += sym([ball((0.45, 0.32, 0.08), (0.62, 2.35, 0.05), fin, "G", r=(0, -40, 0), t=0.2)])
-    # crest with a pearl
-    p += [ball((0.12, 0.55, 0.45), (0, 3.4, 0.05), fin, "G", t=0.15), ball((0.12, 0.42, 0.35), (0, 3.15, 0.45), fin, "G", t=0.15)]
-    p += [ball(0.52, (0, 3.55, -0.2), pearl, "P"), ball(0.16, (0.12, 3.68, -0.4), WHITE, "N")]
+    p = slab((1.8, 1.7, 1.7), (0, 3.2, -0.1), body, 2)
+    p += face((0, 3.15, -0.96), s=0.7, muzzle=None, nose=None, mouth=False)
+    p += [box((0.5, 0.5, 1.0), (0, 2.85, -1.3), body), box((0.55, 0.55, 0.15), (0, 2.85, -1.85), shade(body, 0.8))]
+    for i, (y, z, s) in enumerate(((2.05, 0.05, 1.3), (1.25, 0.15, 1.1), (0.6, 0.4, 0.8), (0.25, 0.85, 0.6), (0.5, 1.25, 0.45))):
+        p.append(box((s, s * 0.8, s), (0, y, z), body))
+    for y in (2.2, 1.7, 1.25):
+        p.append(box((0.9, 0.16, 0.1), (0, y, -0.62 + (2.2 - y) * 0.15), belly, tag="Face"))
+    p.append(box((0.12, 1.2, 0.8), (0, 1.8, 0.85), fin, "G", t=0.25))
+    p += sym([box((0.5, 0.35, 0.08), (0.95, 2.7, 0.1), fin, "G", r=(0, -40, 0), t=0.2)])
+    p += [box((0.12, 0.6, 0.5), (0, 4.25, 0.1), fin, "G", t=0.15), box(0.62 * 1, (0, 4.45, -0.35), pearl) if False else ball(0.62, (0, 4.4, -0.35), pearl),
+          ball(0.18, (0.13, 4.55, -0.58), WHITE, "N")]
     return p
 
 
 # ======================================================================= Volcano
 def lava_slime():
     o, glow, crust = 0xFF7A1F, 0xFFC23A, 0x3A2A2A
-    c, r = (0, 1.0, 0), (1.25, 1.0, 1.2)
-    p = [ball((2.5, 2.0, 2.4), c, o, tag="Body"), ball((2.75, 0.3, 2.65), (0, 0.15, 0), 0xFF9A2A, "N", tag="Glow"),
-         ball((1.3, 0.8, 1.2), (0.25, 1.55, 0.05), glow, "N", t=0.15, tag="Glow")]
-    p += eyes(c, r, yaw=24, pitch=8, size=0.55)
-    p += blush(c, r, yaw=44, pitch=-10, size=0.3, col=0xFFB060)
-    p.append(ball((0.42, 0.22, 0.12), ell_point(c, r, 0, -14, 0.03)[0], 0x7A1E10))
-    for yaw, pitch, s in ((70, 40, 0.5), (-60, 50, 0.42), (150, 30, 0.6), (-150, 60, 0.45)):
-        p.append(on_surface(c, r, yaw, pitch, (s, s * 0.8, 0.22), crust, "B", inset=0.3))
-    for yaw, pitch, s in ((100, 10, 0.3), (-110, 15, 0.25), (180, 20, 0.35), (-30, 65, 0.25)):
-        p.append(on_surface(c, r, yaw, pitch, (s, s, 0.25), glow, "N", inset=0.2, tag="Glow"))
+    p = [box((2.8, 0.3, 2.7), (0, 0.15, 0), 0xFF9A2A, "N", tag="Glow")]
+    p += slab((2.5, 1.9, 2.4), (0, 1.15, 0), o, 2)
+    p.append(box((1.7, 0.6, 1.6), (0, 2.35, 0), o))
+    p += face((0, 1.25, -1.22), s=0.85, muzzle=None, nose=None, blush=0xFFB060)
+    p += [box((0.7, 0.25, 0.6), (0.6, 2.7, 0.3), crust, "B"), box((0.5, 0.2, 0.5), (-0.7, 2.15, 0.7), crust, "B"),
+          box((0.08, 0.45, 0.45), (1.27, 1.6, 0.4), glow, "N", tag="Glow"), box((0.08, 0.35, 0.35), (-1.27, 1.0, -0.3), glow, "N", tag="Glow"),
+          box((0.35, 0.6, 0.3), (0.85, 0.75, -1.25), o)]
     return p
 
 
 def salamander():
     red, spot, belly = 0xE0402E, 0xFFD43A, 0xFF9A5A
-    hc, hr = (0, 1.25, -0.9), (0.92, 0.65, 0.78)
-    p = [ball((1.3, 0.85, 2.0), (0, 0.62, 0.3), red, tag="Body"), ball((1.84, 1.3, 1.56), hc, red, tag="Body"),
-         ball((1.4, 0.4, 1.0), (0, 0.9, -1.15), belly)]
-    p += eyes(hc, hr, yaw=36, pitch=26, size=0.5)
-    p += blush(hc, hr, yaw=58, pitch=-4, size=0.26)
-    p.append(ball((0.9, 0.08, 0.2), (0, 1.0, -1.6), 0x7A1E1E))
-    p += chain([(0, 0.55, 1.3), (0.2, 0.45, 1.75), (0.5, 0.4, 2.05), (0.8, 0.45, 2.15)], [0.65, 0.5, 0.38, 0.28], red)
-    p += sym([ball((0.75, 0.32, 0.36), (0.75, 0.3, -0.35), red, r=(0, 30, -15)),
-              ball((0.75, 0.32, 0.36), (0.75, 0.3, 0.75), red, r=(0, -30, -15)),
-              ball((0.36, 0.14, 0.4), (1.05, 0.08, -0.52), belly), ball((0.36, 0.14, 0.4), (1.05, 0.08, 0.95), belly)])
-    for pt in ((0.35, 1.0, 0.1), (-0.3, 1.0, 0.45), (0.15, 0.95, 0.8), (-0.2, 1.75, -0.95), (0.4, 1.7, -0.7), (0.2, 0.7, 1.65)):
-        p.append(ball((0.24, 0.12, 0.24), pt, spot))
-    return p
+    ex = [box((0.36, 0.08, 0.36), pt, spot) for pt in ((0.4, BODY_TOP + 0.03, 0.1), (-0.35, BODY_TOP + 0.03, 0.6), (0.2, BODY_TOP + 0.03, 0.95),
+                                                       (-0.5, HEAD_TOP + 0.04, -0.6), (0.55, HEAD_TOP + 0.04, 0.1))]
+    return quad(red, face_kw=dict(muzzle=belly), tail_kw=dict(kind="long", tip=spot), paw=belly, belly=belly,
+                body_size=(1.7, 1.1, 2.3), head_size=(2.5, 1.8, 2.0), extras=ex)
 
 
 def ember_bat():
     blk, ember, ear_in = 0x2A2230, 0xF0561A, 0xFF5A3A
-    c, r = (0, 1.55, 0), (1.05, 1.0, 0.95)
-    p = [ball((2.1, 2.0, 1.9), c, blk, tag="Body"), ball((1.0, 0.7, 0.3), (0, 0.85, -0.7), 0x4A3A48)]
-    p += eyes(c, r, yaw=28, pitch=12, size=0.55, iris=0xFFB03A)
-    p += blush(c, r, yaw=48, pitch=-6, size=0.28, col=0xFF7A5A)
-    p += sym([spike((0.18, 1.12, -0.88), 0.12, 0.16, WHITE, r=(195, 0, 0))])
-    p += sym(ear("pointy", blk, ear_in, at=(0.52, 2.35, 0.0), w=0.8, h=1.0, roll=-20))
-    p += sym(wings_bat((0.85, 1.6, 0.2), blk, ember, n=3, span=1.9, sweep=-15, lift=5, mat_m="N", t=0.1))
-    p += sym([ball((0.3, 0.35, 0.3), (0.4, 0.45, 0.1), blk)])
+    p = slab((2.4, 2.4, 2.0), (0, 1.6, 0), blk, 3)
+    p += face((0, 1.65, -1.02), s=0.85, muzzle=0x4A3A48, iris=0xFFB03A, nose=None)
+    p += sym([box((0.1, 0.18, 0.06), (0.14, 1.03, -1.12), WHITE, tag="Eye")])
+    p += sym(T(tri((0, 0, 0), 0.9, 1.1, 0.4, blk) + tri((0, 0.08, -0.2), 0.5, 0.6, 0.06, ear_in), (0.75, 2.75, 0), r=(0, 0, -15)))
+    p += sym(wing(blk, ember, span=2.0, at=(1.15, 2.0, 0.2), lift=10, sweep=-15, mat="N", t=0.1))
+    p += sym([box((0.35, 0.4, 0.35), (0.45, 0.2, 0.1), blk)])
     return p
 
 
 def lava_golem():
     rock, dark, lava = 0x4A3E3C, 0x2E2626, 0xFF6A00
-    p = [box((2.1, 1.75, 1.5), (0, 1.55, 0.1), rock, "B", r=(0, 0, 3), tag="Body"),
-         box((1.5, 1.15, 1.25), (0, 2.8, -0.1), rock, "B", r=(0, 0, -4), tag="Body"),
-         box((1.2, 0.35, 0.9), (0, 3.35, 0.05), dark, "B", r=(0, 0, -4))]
-    # glowing eyes and mouth
-    p += sym([box((0.3, 0.22, 0.08), (0.32, 2.88, -0.74), 0xFFD23A, "N", tag="Eye")])
-    p.append(box((0.6, 0.1, 0.08), (0, 2.5, -0.74), lava, "N", tag="Glow"))
-    # arms + fists, legs
-    p += sym([box((0.7, 1.35, 0.75), (1.45, 1.75, -0.05), rock, "B", r=(0, 0, 10)), box((0.95, 0.85, 0.95), (1.62, 0.75, -0.15), dark, "B"),
-              box((0.75, 0.75, 0.85), (0.55, 0.38, 0.1), dark, "B")])
-    # lava cracks
-    for pos, rr, size in (((0.3, 1.7, -0.66), (0, 0, 35), (0.9, 0.1, 0.06)), ((-0.35, 1.35, -0.66), (0, 0, -25), (0.8, 0.1, 0.06)),
-                          ((0, 1.05, -0.66), (0, 0, 70), (0.55, 0.1, 0.06)), ((0.45, 3.05, -0.73), (0, 0, -30), (0.4, 0.08, 0.05)),
-                          ((1.82, 1.95, -0.1), (0, 90, 60), (0.9, 0.1, 0.06)), ((-1.82, 1.95, -0.1), (0, 90, -60), (0.9, 0.1, 0.06)),
-                          ((0, 2.45, 0.86), (0, 0, 20), (1.2, 0.1, 0.06))):
+    p = slab((2.2, 1.8, 1.6), (0, 1.6, 0.1), rock, 2, mat="B")
+    p += slab((2.1, 1.7, 1.8), (0, 3.25, -0.1), rock, 2, mat="B")
+    p += face((0, 3.15, -1.01), s=0.75, muzzle=None, eye_col=0xFFD23A, nose=None, blush=0xFF8A3A)
+    p += sym([box((0.75, 1.4, 0.8), (1.55, 1.8, -0.05), rock, "B", r=(0, 0, 8)), box((1.0, 0.9, 1.0), (1.7, 0.75, -0.15), dark, "B"),
+              box((0.8, 0.75, 0.9), (0.55, 0.38, 0.1), dark, "B")])
+    for pos, rr, size in (((0.35, 1.7, -0.71), (0, 0, 35), (0.9, 0.1, 0.06)), ((-0.35, 1.35, -0.71), (0, 0, -25), (0.8, 0.1, 0.06)),
+                          ((0.6, 3.9, -1.01), (0, 0, -30), (0.5, 0.08, 0.05)), ((0, 2.45, 0.92), (0, 0, 20), (1.2, 0.1, 0.06))):
         p.append(box(size, pos, lava, "N", r=rr, tag="Glow"))
-    p.append(ball((0.9, 0.3, 0.7), (0.15, 3.55, 0.05), lava, "N", tag="Glow"))
+    p.append(box((1.0, 0.3, 0.8), (0.2, 4.2, 0.0), lava, "N", tag="Glow"))
     return p
 
 
 def inferno_dragon():
-    red, belly, flame, dk = 0xD8322A, 0xFFB04A, 0xFF8A1A, 0x8A1E1A
-    horns = sym(cone((0.5, 2.6, -0.05), 0.4, 1.1, flame, "N", n=3, r=(-28, 0, -22), tip=0.25, cols=[0xFF5A1A, flame, 0xFFD23A]))
-    tip = [ball((0.5, 0.7, 0.5), (0, 1.5, 2.05), flame, "N", tag="Glow"), ball((0.3, 0.45, 0.3), (0, 1.85, 2.0), 0xFFD23A, "N", tag="Glow")]
-    return dragon(red, belly, flame, dk, 0xFF7A2A, spine=0xFFB04A, horns=horns, tail_tip=tip, membrane_mat="P",
-                  eye_iris=0xFFC23A)
+    red, belly, flame = 0xD8322A, 0xFFB04A, 0xFF8A1A
+    ex = sym(horn((0.75, HEAD_TOP - 0.1, -0.4), flame, "N", n=3, s=0.42, h=1.0, r=(-15, 0, -18), cols=[0xFF5A1A, flame, 0xFFD23A], tag="Glow"))
+    ex += sym(wing(0x8A1E1A, 0xFF7A2A, span=1.8, at=(0.7, BODY_TOP, 0.5)))
+    ex += [box((0.4, 0.35, 0.4), (0, BODY_TOP + 0.03, z), 0xFFB04A, r=(0, 45, 0)) for z in (0.1, 0.6, 1.05)]
+    return quad(red, face_kw=dict(muzzle=belly, iris=0xFFC23A, small_hi=False), tail_kw=dict(kind="long", tip=0xFFD23A), paw=belly, belly=belly,
+                extras=ex)
 
 
 def phoenix():
     red, org, yel = 0xE8402A, 0xFF8A1A, 0xFFD23A
-    c, r = (0, 1.6, 0.1), (0.95, 1.05, 0.95)
-    p = [ball((1.9, 2.1, 1.9), c, red, tag="Body"), ball((1.2, 1.2, 0.4), (0, 1.3, -0.7), org)]
-    p += eyes(c, r, yaw=30, pitch=18, size=0.5, iris=0xFFC23A)
-    p += blush(c, r, yaw=50, pitch=0, size=0.26)
-    p.append(spike((0, 1.6, -1.0), 0.32, 0.36, yel, r=(-90, 0, 0)))
-    # flame crest
-    for i, (x, rr, h) in enumerate(((0, 0, 1.0), (0.28, -20, 0.75), (-0.28, 20, 0.75))):
-        p += cone((x, 2.5, 0.05), 0.32, h, org, "N", n=3, r=(-15, 0, rr), tip=0.2, cols=[red, org, yel], tag="Glow")
-    # layered wings
-    for i, (col, L, a) in enumerate(((red, 2.0, 45), (org, 1.7, 25), (yel, 1.3, 5))):
-        p += sym([ball((L, 0.5, 0.12), (0.9 + L * 0.35, 1.9 + i * -0.15 + L * 0.2, 0.4), col, "N" if i else "P",
-                       r=(0, -25, a), tag="Glow" if i else None)])
-    # long tail feathers
-    for i, (x, col) in enumerate(((0, yel), (0.3, org), (-0.3, org), (0.55, red), (-0.55, red))):
-        L_ = 2.6 - i * 0.2
-        ang = 22 + abs(x) * 10
-        d = (x * 0.35, -math.sin(math.radians(ang)), math.cos(math.radians(ang)))
-        p.append(ball((0.3, 0.16, L_), add((x * 0.5, 1.15, 0.85), mul(d, L_ * 0.48)), col, "N" if i == 0 else "P",
-                      r=(ang, -x * 18, 0), tag="Glow" if i == 0 else None))
-        p.append(ball((0.42, 0.14, 0.55), add((x * 0.5, 1.15, 0.85), mul(d, L_ * 0.98)), yel, "N", r=(ang, -x * 18, 0), tag="Glow"))
-    p += sym([ball((0.2, 0.4, 0.2), (0.3, 0.3, 0.2), yel)])
+    p = slab((2.2, 2.6, 2.0), (0, 1.75, 0.1), red, 3)
+    p.append(box((1.5, 1.2, 0.08), (0, 1.1, -0.93), org, tag="Face"))
+    p += face((0, 2.25, -0.92), s=0.8, muzzle=None, nose=None, mouth=False, iris=0xFFC23A)
+    p += T(tri((0, 0, 0), 0.5, 0.5, 0.45, yel), (0, 1.95, -1.05), r=(0, 0, 180))
+    for x, h, rr in ((0, 1.1, 0), (0.4, 0.8, -20), (-0.4, 0.8, 20)):
+        p += horn((x, 3.0, 0.1), org, "N", n=3, s=0.4, h=h, r=(-15, 0, rr), cols=[red, org, yel], tag="Glow")
+    p += sym(wing(red, org, span=2.0, at=(1.05, 2.3, 0.3), lift=35, mat="N", tag="Glow"))
+    for i, (x, col) in enumerate(((0, yel), (0.4, org), (-0.4, org))):
+        p.append(box((0.35, 0.2, 2.4 - i * 0.3), (x, 0.9, 1.9), col, "N", r=(25, -x * 20, 0), tag="Glow"))
+    p += sym([box((0.25, 0.5, 0.25), (0.4, 0.25, 0.2), yel)])
     return p
 
 
 # ======================================================================= Starfall
 def comet_cat():
     navy, belly, comet = 0x24346E, 0x5F78C8, 0xFFE66B
-    hc, hr = (0, 1.95, -0.3), (1.0, 0.9, 0.88)
-    ex = [on_surface(hc, hr, 0, 42, (0.36, 0.36, 0.14), comet, "N", spin=45, tag="Glow"),
-          on_surface(hc, hr, 0, 42, (0.36, 0.36, 0.14), comet, "N", spin=0, tag="Glow"),
-          box((0.05, 0.05, 0.62), (0.62, 1.66, -1.18), 0xBFD0FF, r=(0, 72, 6)), box((0.05, 0.05, 0.62), (-0.62, 1.66, -1.18), 0xBFD0FF, r=(0, -72, -6))]
-    # comet tail: glowing head + fading trail
-    ex += [ball(0.62, (0, 2.1, 1.35), comet, "N", tag="Glow"), ball((0.55, 0.55, 0.85), (0, 1.75, 1.45), 0xFFF5C0, "N", t=0.25, tag="Glow"),
-           ball((0.45, 0.45, 0.7), (0, 1.4, 1.35), 0xBFD7FF, "N", t=0.45), ball((0.35, 0.35, 0.5), (0, 1.12, 1.15), 0x9FB8FF, "N", t=0.6)]
-    return quad(navy, belly=belly, snout=belly, nose=0xFF8FB8, ears=("pointy", navy, 0x9FB8FF), tail=None, paw=belly,
-                snout_size=(0.7, 0.42, 0.4), eye_iris=0xFFE66B, extras=ex)
+    ex = [box((0.4, 0.4, 0.08), (0, HEAD_TOP - 0.4, HEAD_FRONT - 0.04), comet, "N", r=(0, 0, 45), tag="Glow"),
+          box((0.75, 0.75, 0.75), (0, 2.7, 1.5), comet, "N", r=(0, 45, 0), tag="Glow"),
+          box((0.6, 0.6, 0.9), (0, 2.2, 1.6), 0xFFF5C0, "N", t=0.3, tag="Glow"), box((0.45, 0.45, 0.8), (0, 1.8, 1.45), 0xBFD7FF, "N", t=0.5)]
+    return quad(navy, face_kw=dict(muzzle=belly, nose=0xFF8FB8, iris=0xFFE66B), ears_kw=dict(kind="pointy", inner=0x9FB8FF),
+                paw=belly, belly=belly, extras=ex)
 
 
 def moon_bunny():
     lilac, moon = 0xC9A8F0, 0xFFE27A
-    hc, hr = (0.0, 1.78, -0.15), (0.93, 0.8, 0.8)
-    pos, n = ell_point(hc, hr, 0, 34, inset=0.02)
-    R = rot(face_rot(n))
-    cres = T([cyl(0.62, 0.08, (0, 0, 0), moon, "N", r=(90, 0, 0), tag="Glow"), cyl(0.56, 0.1, (0.17, 0.08, -0.02), lilac, r=(90, 0, 0))], pos, R=R)
-    ex = cres + [ball(0.16, (0.7, 3.4, -0.2), moon, "N"), ball(0.12, (-0.75, 3.0, 0.1), moon, "N")]
-    return bunny(lilac, inner=0x8E6AD8, nose=0xFF8FC8, extras=ex, eye_iris=0xB08CFF)
+    top = 1.5 - 0.2 + 2.1
+    fz = -0.1 - 1.05 - 0.04
+    ex = [disc(0.7, (0, top - 0.35, fz), moon, "N", tag="Glow"), disc(0.6, (0.2, top - 0.27, fz - 0.03), lilac, tag="Body"),
+          box((0.2, 0.2, 0.2), (1.1, top + 1.6, 0), moon, "N", r=(0, 45, 45)), box((0.15, 0.15, 0.15), (-1.2, top + 1.2, 0.2), moon, "N", r=(0, 45, 45))]
+    return sitter(lilac, face_kw=dict(nose=0xFF8FC8, muzzle=0xEDE0FF, iris=0xB08CFF), ears_kw=dict(kind="long", inner=0x8E6AD8),
+                  tail_kw=dict(kind="pom", tip=WHITE), paw=0xEDE0FF, belly=0xEDE0FF, extras=ex)
 
 
 def nebula_fox():
     purple, pink = 0x7B3FC4, 0xF06AC8
-    ex = [ball(0.14, pt, WHITE, "N") for pt in ((0.5, 1.2, 0.1), (-0.4, 1.0, 0.6), (0.3, 2.65, -0.5), (-0.55, 2.3, -0.75),
-                                                 (0.15, 1.6, 1.6), (-0.2, 1.9, 1.3), (0.62, 2.05, -0.95))]
-    return fox(body=purple, chest=pink, sock=0x3A1E6E, ear_inner=pink, tail_tip=pink, extras=ex, eye_iris=0xF06AC8)
+    ex = cubes(((0.5, 2.1, 0.0), (-0.4, 1.4, 1.36), (0.3, HEAD_TOP + 0.05, -0.6), (-0.6, HEAD_TOP + 0.05, 0.1), (0.81, 1.5, 0.6),
+                (1.32, HEAD_C[1] + 0.4, -0.3)), WHITE)
+    return quad(purple, face_kw=dict(muzzle=pink, muzzle_w=1.5, iris=0xF06AC8), ears_kw=dict(kind="pointy", inner=pink, size=1.1),
+                tail_kw=dict(kind="bushy", tip=pink), paw=0x3A1E6E, belly=pink, extras=ex)
 
 
 def galaxy_axolotl():
     blue, belly, f1, f2 = 0x1E2A6E, 0x3A4AA0, 0xFF6AD5, 0x6AE8FF
-    hc, hr = (0, 1.4, -0.55), (1.15, 0.78, 0.82)
-    p = [ball((1.25, 0.95, 2.0), (0, 0.65, 0.5), blue, tag="Body"), ball((2.3, 1.56, 1.64), hc, blue, tag="Body"),
-         ball((1.4, 0.5, 0.6), (0, 1.0, -0.95), belly)]
-    p += eyes(hc, hr, yaw=36, pitch=12, size=0.46)
-    p += blush(hc, hr, yaw=55, pitch=-10, size=0.28, col=f1)
-    p.append(ball((0.8, 0.08, 0.12), (0, 1.12, -1.33), 0x0E1438))
-    # glowing frills, 3 per side
+    ex = []
     for i, (col, a) in enumerate(((f1, 35), (f2, 5), (f1, -25))):
-        p += sym([ball((0.95, 0.24, 0.16), (1.3, 1.6 + i * -0.12, -0.45 + i * 0.12), col, "N", r=(0, -20, a), tag="Glow")])
-    p += [ball((0.14, 0.7, 1.7), (0, 0.85, 1.65), blue), ball((0.1, 0.45, 1.4), (0, 1.15, 1.6), f2, "N", t=0.3, tag="Glow")]
-    p += sym([ball((0.32, 0.4, 0.32), (0.55, 0.2, -0.15), blue), ball((0.32, 0.4, 0.32), (0.55, 0.2, 0.9), blue)])
-    for pt in ((0.3, 1.15, 0.4), (-0.35, 1.05, 0.7), (0.5, 2.05, -0.5), (-0.6, 1.9, -0.3), (0.1, 0.95, 1.2)):
-        p.append(ball(0.13, pt, WHITE, "N"))
-    return p
+        ex += sym([box((1.1, 0.26, 0.2), (1.75, HEAD_C[1] + 0.45 - i * 0.35, HEAD_C[2] + 0.1), col, "N", r=(0, -15, a), tag="Glow")])
+    ex += cubes(((0.5, BODY_TOP + 0.03, 0.3), (-0.4, BODY_TOP + 0.03, 0.8), (0.6, HEAD_TOP + 0.05, -0.2)), WHITE)
+    return quad(blue, face_kw=dict(muzzle=belly, blush=f1), tail_kw=dict(kind="long", tip=f2), paw=belly, belly=belly,
+                head_size=(2.8, 1.8, 2.0), body_size=(1.6, 1.0, 2.2), extras=ex)
 
 
 def celestial_dragon():
     wh, gold, glow = 0xF7F3E6, 0xF2C44E, 0xFFE27A
-    halo = ring((0, 3.25, -0.2), 0.6, 5, (0, 0.1, 0.12), glow, "N", tilt=(-15, 0, 0), tag="Glow")
-    star_tips = []
-    wings = []
-    for s in (1,):
-        w = wings_bat((0.5, 1.4, 0.5), gold, 0xFFF4D0, n=3, span=1.7)
-        w += T([ball(0.26, (1.6, 1.3, 0), glow, "N", tag="Glow")],
-               (0.5, 1.4, 0.5), r=(0, -30, 0))
-        wings += sym(w)
-    horns = sym(cone((0.5, 2.6, -0.05), 0.36, 0.95, gold, "F", n=2, r=(-28, 0, -22), tip=0.4))
-    spines = [spike((0, 1.42, 0.12), 0.3, 0.32, gold, r=(-20, 0, 0)), spike((0, 1.3, 0.6), 0.28, 0.3, gold, r=(-35, 0, 0))]
-    return dragon(wh, 0xFFF0C8, gold, gold, 0xFFF4D0, spine=gold, horns=horns, wings=wings, extras=halo, spines=spines, eye_iris=0x6AB8FF)
+    halo = []
+    for i in range(5):
+        a = 2 * math.pi * i / 5
+        halo.append(box((0.62, 0.14, 0.14), (math.sin(a) * 0.62, 0, -math.cos(a) * 0.62), glow, "N", r=(0, -math.degrees(a), 0), tag="Glow"))
+    ex = T(halo, (0, HEAD_TOP + 0.6, -0.25), r=(-15, 0, 0))
+    ex += sym(horn((0.7, HEAD_TOP - 0.1, -0.4), gold, "F", n=2, s=0.38, h=0.8, r=(-15, 0, -18)))
+    ex += sym(wing(gold, 0xFFF4D0, span=1.9, at=(0.7, BODY_TOP, 0.5)) + [box((0.3, 0.3, 0.3), (2.6, 2.7, 1.3), glow, "N", r=(45, 0, 45), tag="Glow")])
+    return quad(wh, face_kw=dict(muzzle=0xFFF0C8, iris=0x6AB8FF, small_hi=False), tail_kw=dict(kind="dog", tip=gold), paw=gold, belly=None,
+                extras=ex)
+
+
+def unicorn(body, mane, horn_cols, hoof, muzzle=None, horn_mat="P", mane_mat="P", iris=None, speckle=None):
+    mz = muzzle if muzzle is not None else mix(body, 0xFFB6C8, 0.35)
+    ex = horn((0, HEAD_TOP - 0.05, HEAD_C[2] - 0.55), horn_cols[0], horn_mat, n=4, s=0.55, h=1.9, r=(-18, 0, 0), cols=horn_cols)
+    for i, (y, z) in enumerate(((HEAD_TOP + 0.1, -0.1), (HEAD_TOP - 0.2, 0.5), (HEAD_TOP - 0.8, 0.75), (HEAD_TOP - 1.4, 0.75))):
+        ex.append(box((0.9, 0.62, 0.75), (0, y, z + 0.15), mane[i % len(mane)], mane_mat))
+    ex.append(box((0.8, 0.4, 0.4), (0, HEAD_TOP + 0.05, -0.95), mane[-1], mane_mat))
+    if speckle is not None:
+        ex += cubes(((0.5, BODY_TOP + 0.03, 0.2), (-0.5, BODY_TOP + 0.03, 0.9), (1.32, HEAD_C[1] + 0.3, 0.2)), speckle)
+    sz = HEAD_FRONT - 0.3
+    sy = HEAD_C[1] - 0.6
+    ex += [box((1.5, 0.85, 0.6), (0, sy, sz + 0.28), mz, tag="Face"),
+           disc(0.16, (-0.35, sy + 0.15, sz - 0.03), DARK), disc(0.16, (0.35, sy + 0.15, sz - 0.03), DARK),
+           disc(0.4, (0, sy - 0.2, sz - 0.03), MOUTH, th=0.05), box((0.48, 0.21, 0.06), (0, sy - 0.1, sz - 0.05), mz, tag="Face")]
+    p = quad(body, face_kw=dict(muzzle=None, iris=iris, small_hi=False, nose=None, mouth=False, eye_y=0.42),
+             ears_kw=dict(kind="pointy", size=0.7), paw=hoof, belly=None, extras=ex, tail_kw=None)
+    p += [box((0.55, 0.9, 0.55), (0, 1.4, 1.3), mane[2 % len(mane)], mane_mat, r=(-20, 0, 0)),
+          box((0.5, 0.8, 0.5), (0, 0.85, 1.5), mane[3 % len(mane)], mane_mat)]
+    return p
 
 
 def cosmic_unicorn():
-    body = 0x2E2466
-    return unicorn(body, [0xFF6AD5, 0x6AE8FF, 0xB06CFF], [0xFFFFFF, 0x9FF4FF], 0x1A1440, muzzle=0x4A3A90, horn_mat="N",
-                   mane_mat="N", eye_iris=0xB06CFF, speckle=0xFFFFFF)
+    return unicorn(0x2E2466, [0xFF6AD5, 0x6AE8FF, 0xB06CFF], [0xFFFFFF, 0x9FF4FF], 0x1A1440, muzzle=0x4A3A90, horn_mat="N",
+                   mane_mat="N", iris=0xB06CFF, speckle=WHITE)
 
 
 def void_kraken():
-    blk, vio, dk = 0x1E1630, 0xB04CFF, 0x2E2248
-    hc, hr = (0, 2.25, 0.1), (1.1, 1.25, 1.0)
-    p = [ball((2.2, 2.5, 2.0), hc, blk, tag="Body")]
-    for yaw, pitch, s in ((60, 40, 0.35), (-55, 50, 0.3), (150, 30, 0.4), (-140, 55, 0.3)):
-        p.append(on_surface(hc, hr, yaw, pitch, (s, s, 0.12), vio, "N", inset=0.2, tag="Glow"))
-    p += eyes(hc, hr, yaw=28, pitch=-6, size=0.62, col=vio, iris=0xE8B0FF, hi=True)
-    p = [q.copy(mat="N") if q.col == vio else q for q in p]
-    p += sym([ball((0.45, 0.12, 0.1), (0.45, 2.55, -0.92), vio, "N", r=(0, 25, -20), tag="Glow")])
+    blk, vio = 0x1E1630, 0xB04CFF
+    p = slab((2.6, 2.8, 2.4), (0, 2.7, 0.1), blk, 3)
+    p += face((0, 2.5, -1.12), s=0.95, muzzle=None, nose=None, eye_col=vio, iris=0xE8B0FF, blush=0x6A2A9A)
+    p = [q.copy(mat="N", tag="Glow") if q.col == vio else q for q in p]
+    p += [box((0.4, 0.06, 0.4), pos, vio, "N", tag="Glow") for pos in ((0.6, 4.12, 0.4), (-0.5, 4.12, -0.3))]
     for i, a in enumerate((30, 90, 150, 210, 270, 330)):
         ar = math.radians(a)
         dx, dz = math.sin(ar), -math.cos(ar)
-        curl = 1 if i % 2 else -1
-        pts = [(dx * 0.8, 0.7, dz * 0.8 + 0.1), (dx * 1.4, 0.38, dz * 1.4 + 0.1),
-               (dx * 1.9 + dz * 0.25 * curl, 0.62, dz * 1.9 + 0.1 - dx * 0.25 * curl)]
-        p += chain(pts, [0.75, 0.55, 0.4], blk)
-        p.append(ball(0.26, add(pts[1], (0, 0.22, 0)), vio, "N", tag="Glow"))
+        p += [box((0.6, 1.0, 0.6), (dx * 0.95, 0.85, dz * 0.95 + 0.1), blk, r=(0, -a, 0)),
+              box((0.5, 0.45, 0.9), (dx * 1.5, 0.25, dz * 1.5 + 0.1), blk, r=(0, -a, 0)),
+              box((0.25, 0.25, 0.25), (dx * 1.85, 0.55, dz * 1.85 + 0.1), vio, "N", r=(0, 45, 0), tag="Glow")]
     return p
 
 
 # ======================================================================= Prism
 def crystal_pup():
     ice, deep = 0xA8E4FF, 0x6FC8F0
-    ex = [ball((0.24, 0.1, 0.22), (0.1, 1.4, -1.28), 0xFF9EC8, r=(30, 0, 0))]
-    ex += crystal((0.25, 1.25, 0.25), 0.32, 0.9, 0xD8F6FF, "G", r=(-10, 0, -15), t=0.15)
-    ex += crystal((-0.2, 1.25, 0.6), 0.26, 0.7, 0xD8F6FF, "G", r=(-25, 0, 20), t=0.15)
-    ex += crystal((0, 1.6, 1.15), 0.3, 0.8, deep, "G", r=(-50, 0, 0), t=0.1)
-    ex += [ball(0.4, (0, 1.4, -0.1), 0x7FF4FF, "N", tag="Glow")]
-    p = quad(ice, belly=0xE8FAFF, snout=0xE8FAFF, ears=("floppy", deep, None), tail=None, paw=0xE8FAFF,
-             eye_iris=0x3FA8E0, extras=ex)
+    ex = crystal((0.4, BODY_TOP, 0.3), 0.32, 0.9, 0xD8F6FF, "G", r=(-10, 0, -15), t=0.15)
+    ex += crystal((-0.3, BODY_TOP, 0.8), 0.28, 0.7, 0xD8F6FF, "G", r=(-25, 0, 20), t=0.15)
+    ex += crystal((0, HEAD_TOP - 0.05, -0.1), 0.3, 0.7, deep, "G", r=(-15, 0, 0), t=0.1)
+    p = quad(ice, face_kw=dict(blaze=0xE8FAFF, muzzle=0xE8FAFF, iris=0x3FA8E0), ears_kw=dict(kind="floppy", col=deep),
+             tail_kw=dict(kind="dog", tip=0xE8FAFF), paw=0xE8FAFF, belly=0xE8FAFF, extras=ex)
     return [q.copy(mat="I") if q.col in (ice, deep) and q.mat == "P" else q for q in p]
 
 
 def prism_fox():
     cols = [0xFFB3D9, 0xC9B3FF, 0xB3E6FF, 0xB3FFD9, 0xFFF0B3]
-    ex = crystal((0, 1.3, 0.35), 0.3, 0.8, 0xFFFFFF, "G", r=(-20, 0, 0), t=0.2)
-    ex += [ball(0.14, pt, WHITE, "N") for pt in ((0.5, 1.25, 0.1), (-0.45, 2.4, -0.7), (0.2, 1.65, 1.6))]
-    p = fox(body=cols[1], head=cols[0], chest=0xFFFFFF, sock=cols[2], ear_inner=cols[3], tail_tip=cols[4],
-            extras=ex, eye_iris=0xB06CFF)
-    # tail in a different hue band for the prism look
-    out = []
+    ex = crystal((0, BODY_TOP, 0.4), 0.32, 0.8, 0xFFFFFF, "G", r=(-20, 0, 0), t=0.2)
+    p = quad(cols[1], head=cols[0], face_kw=dict(muzzle=WHITE, muzzle_w=1.5, iris=0xB06CFF),
+             ears_kw=dict(kind="pointy", inner=cols[3], size=1.1), tail_kw=dict(kind="bushy", col=cols[2], tip=cols[4]),
+             paw=cols[2], belly=WHITE, extras=ex)
+    # alternate pastel slabs on head and body for the prism look
+    out, k = [], 0
     for q in p:
-        if q.shape == "ball" and q.size[2] > 1.4 and q.pos[2] > 1.0:
-            q = q.copy(col=cols[2])
-        out.append(q.copy(mat="G", tr=0.0) if q.col in cols[:2] and q.tag == "Body" else q)
+        if q.tag == "Body" and q.shape == "box" and q.col in cols[:2]:
+            q = q.copy(col=cols[k % len(cols)])
+            k += 1
+        out.append(q)
     return out
 
 
@@ -827,28 +704,14 @@ def rainbow_unicorn():
 
 def diamond_dragon():
     d, deep, glow = 0x9FF0FF, 0x4FC8E8, 0x6AF2FF
-    p = []
-    # faceted body: rotated blocks instead of spheres
-    p += sym([box((0.42, 0.55, 0.42), (0.42, 0.28, z), deep, "G", r=(0, 45, 0), t=0.05) for z in (-0.35, 0.78)])
-    p.append(box((1.1, 1.0, 1.4), (0, 0.95, 0.3), d, "G", r=(0, 45, 0), t=0.1, tag="Body"))
-    p.append(box((0.9, 0.9, 0.9), (0, 1.0, 0.3), deep, "G", r=(35, 45, 0), t=0.1))
-    hc = (0, 1.95, -0.3)
-    p.append(box((1.55, 1.45, 1.55), hc, d, "G", r=(0, 45, 0), t=0.1, tag="Body"))
-    p.append(box((1.35, 1.35, 1.35), (0, 2.05, -0.3), d, "G", r=(45, 45, 0), t=0.15))
-    p.append(box((0.7, 0.5, 0.7), (0, 1.62, -1.15), d, "G", r=(0, 45, 0), t=0.1))
-    p += eyes(hc, (0.98, 0.9, 0.98), yaw=30, pitch=8, size=0.5, iris=0x2A9AD0)
-    p.append(ball(0.6, (0, 1.0, 0.3), glow, "N", tag="Glow"))
-    p.append(ball(0.5, (0, 2.0, -0.3), glow, "N", t=0.3, tag="Glow"))
-    p += sym(crystal((0.45, 2.55, -0.1), 0.26, 0.85, 0xE0FCFF, "G", r=(-25, 0, -25), t=0.05))
-    # crystal wings
+    ex = sym(crystal((0.7, HEAD_TOP - 0.1, -0.3), 0.3, 0.9, 0xE0FCFF, "G", r=(-20, 0, -20), t=0.05))
     w = []
-    for i, (L, a) in enumerate(((1.7, 60), (1.4, 30), (1.1, 5))):
-        w += crystal((0, 0, 0), 0.3, L, d if i % 2 == 0 else deep, "G", r=(0, 0, -90 + a), t=0.1)
-    p += sym(T(w, (0.5, 1.4, 0.5), r=(0, -30, 0)))
-    p += crystal((0, 1.0, 1.15), 0.3, 0.9, d, "G", r=(-60, 0, 0), t=0.1)
-    for z in (0.0, 0.45):
-        p += crystal((0, 1.5, z), 0.2, 0.5, glow, "N", r=(-20, 0, 0), tag="Glow")
-    return p
+    for i, (L, a) in enumerate(((1.9, 55), (1.4, 15))):
+        w += crystal((0, 0, 0), 0.32, L, d if i % 2 == 0 else deep, "G", r=(0, 0, -90 + a), t=0.1)
+    ex += sym(T(w, (0.7, BODY_TOP, 0.5), r=(0, -30, 0)))
+    ex += crystal((0, BODY_TOP, 0.3), 0.24, 0.6, glow, "N", r=(-20, 0, 0), tag="Glow")
+    p = quad(d, face_kw=dict(muzzle=0xE0FCFF, iris=0x2A9AD0, small_hi=False), tail_kw=dict(kind="long", tip=glow), paw=deep, belly=0xE0FCFF, extras=ex)
+    return [q.copy(mat="G", tr=0.08) if q.tag == "Body" and q.col == d else q for q in p]
 
 
 # ======================================================================= registry

@@ -2,23 +2,26 @@
 hub, gates, egg stands, decorations, zones, spawns and bounds.
 
 Everything here is data; Models/World.luau builds it in Roblox and render.py
-draws the same layout. Ground top is y = 0, the sea surface is y = -8.
+draws the same layout. Ground top is y = 0, the sea surface is y = -16.
+Style: blocky islands with stepped stone cliffs (reference/islands.jpg).
 """
 import math
 import random
-from lib import box, cyl, ball, T
+from lib import box, cyl, ball, T, shade
+
+WHITE_FOAM = 0xF4FBFF
 
 SPACING = 320
 RADIUS = {"Meadow": 150}
 DEFAULT_RADIUS = 125
-WATER_LEVEL = -8
+WATER_LEVEL = -16
 BRIDGE_W = 18
 WALL_H = 40
 
 GROUND = {
     #           top colour, mat, rim colour, cliff colour, cliff mat, path colour, path mat
-    "Meadow": (0x6CC24A, "E", 0x5AAE3C, 0x9A7450, "g", 0xE3CC92, "A"),
-    "Grove": (0x3F8A4E, "E", 0x357A42, 0x5A4A5E, "T", 0x8A6E5A, "g"),
+    "Meadow": (0x6CC24A, "E", 0x5AAE3C, 0x9A7450, "g", 0xD9B07A, "g"),
+    "Grove": (0x8A6AD8, "E", 0x7A5AD0, 0x5A4A5E, "T", 0xE08AD8, "g"),
     "Frost": (0xF2F7FF, "S", 0xDDE8F5, 0x8FA3B8, "T", 0xBFE0F5, "I"),
     "Coral": (0xF2DCA2, "A", 0xE8CC8A, 0xD9B98A, "V", 0xC9A27C, "K"),
     "Volcano": (0x4A3E3E, "B", 0x3A3034, 0x2A2226, "B", 0x6E5A50, "T"),
@@ -27,31 +30,43 @@ GROUND = {
 
 DECOR = {
     # prop, weight, (min scale, max scale), footprint radius
-    "Meadow": [("TreeRound", 3, (0.9, 1.25), 7), ("Bush", 3, (0.8, 1.2), 4), ("Flowers", 5, (1.0, 1.5), 3),
-               ("HayBale", 2, (1.0, 1.1), 3), ("Rock", 1.5, (0.8, 1.3), 4)],
-    "Grove": [("GiantMushroom", 3, (0.9, 1.3), 7), ("GlowMushroom", 2, (0.9, 1.2), 5), ("MushroomCluster", 4, (1.0, 1.5), 3),
-              ("Log", 2, (1.0, 1.2), 5), ("GroveTree", 3, (0.9, 1.2), 7), ("GroveBush", 2, (0.9, 1.2), 4)],
-    "Frost": [("PineSnow", 6, (0.9, 1.4), 5), ("IceSpire", 2, (0.8, 1.3), 5), ("SnowRock", 2, (0.8, 1.2), 4),
+    "Meadow": [("VoxTree", 4, (0.9, 1.25), 6), ("VoxBush", 3, (0.8, 1.2), 3), ("Daisies", 5, (1.0, 1.4), 3),
+               ("HayCrate", 1.5, (1.0, 1.1), 3), ("Rock", 1.5, (0.7, 1.2), 4), ("GrassTuft", 3, (1.0, 1.4), 1.5)],
+    "Grove": [("GlowShroom", 3, (0.8, 1.2), 5), ("GlowShroomBlue", 2, (0.8, 1.1), 5), ("GlowCluster", 4, (1.0, 1.5), 3),
+              ("PurpleCrystal", 2, (0.8, 1.2), 3), ("VoxLog", 1.5, (1.0, 1.2), 5), ("GroveTree", 2, (0.9, 1.2), 6),
+              ("PurpleTuft", 3, (1.0, 1.4), 1.5)],
+    "Frost": [("VoxPine", 6, (0.9, 1.4), 5), ("IceCrystal", 3, (0.7, 1.2), 4), ("SnowRock", 2, (0.8, 1.2), 4),
               ("Snowman", 1, (1.0, 1.0), 3)],
-    "Coral": [("Palm", 4, (0.9, 1.25), 5), ("Coral", 3, (1.0, 1.5), 3), ("CoralPurple", 2, (1.0, 1.4), 3), ("Shell", 2, (0.8, 1.2), 3),
-              ("Starfish", 3, (1.0, 1.5), 2), ("Umbrella", 1, (1.0, 1.0), 5), ("BeachRock", 2, (0.8, 1.2), 4)],
-    "Volcano": [("LavaRock", 4, (0.9, 1.4), 4), ("LavaPool", 2, (1.0, 1.4), 7), ("DeadTree", 3, (0.9, 1.3), 4),
-                ("ObsidianSpike", 3, (0.8, 1.3), 4)],
+    "Coral": [("VoxPalm", 5, (0.9, 1.2), 5), ("Coral", 3, (1.0, 1.5), 3), ("CoralPurple", 2, (1.0, 1.4), 3), ("Shell", 2, (0.8, 1.2), 3),
+              ("Starfish", 3, (1.0, 1.5), 2), ("BeachRock", 2, (0.7, 1.1), 4)],
+    "Volcano": [("LavaRock", 4, (0.9, 1.3), 4), ("LavaPool", 2, (1.0, 1.3), 7), ("DeadTree", 2, (0.9, 1.3), 3),
+                ("FireCrystal", 3, (0.8, 1.3), 3)],
     "Starfall": [("FloatCrystal", 3, (0.9, 1.3), 4), ("FloatCrystalCyan", 2, (0.9, 1.3), 4), ("Planet", 2, (0.9, 1.2), 5),
-                 ("PlanetBlue", 1, (0.9, 1.1), 5), ("MoonRock", 2, (0.8, 1.2), 4), ("StarTree", 3, (0.9, 1.2), 4)],
+                 ("PlanetBlue", 1, (0.9, 1.1), 5), ("MoonRock", 2, (0.8, 1.2), 4), ("StarProp", 3, (0.9, 1.2), 3)],
 }
-DECOR_COUNT = {"Meadow": 85, "Grove": 75, "Frost": 75, "Coral": 75, "Volcano": 70, "Starfall": 70}
-DECOR_SCALE = 1.4  # decorations read better a bit oversized next to 5-stud avatars
-LAMP = {"Meadow": "Lamp", "Grove": "GroveLamp", "Frost": "FrostLamp", "Coral": "CoralLamp", "Volcano": "VolcanoLamp",
-        "Starfall": "StarLamp"}
-BACKDROP = {
-    # prop, offset from island centre (x, y, z), yaw, scale
-    "Grove": ("GiantMushroomBackdrop", (20, WATER_LEVEL - 2, -190), 0, 2.4),
-    "Frost": ("Mountain", (0, WATER_LEVEL - 2, -215), 0, 1.6),
-    "Coral": ("Lighthouse", (95, WATER_LEVEL - 2, -120), 0, 1.0),
-    "Volcano": ("VolcanoPeak", (0, WATER_LEVEL - 2, -220), 0, 1.0),
-    "Starfall": ("BigPlanet", (60, 110, -230), 0, 1.0),
+DECOR_COUNT = {"Meadow": 75, "Grove": 70, "Frost": 70, "Coral": 70, "Volcano": 60, "Starfall": 60}
+DECOR_SCALE = 1.7  # decorations read better a bit oversized next to 5-stud avatars
+LAMP = {"Meadow": "LanternPost", "Grove": "LanternPost", "Frost": "LanternPost", "Coral": "LanternPost", "Volcano": "StoneLantern",
+        "Starfall": "StoneLantern"}
+LANDMARK = {
+    # prop, offset from island centre (x, z), footprint radius; all north of the breakable zones
+    # prop, offset, footprint radius, yaw, scale
+    "Grove": ("LandmarkGrove", (0, -100), 28, 0, 1.5),
+    "Frost": ("LandmarkFrost", (0, -102), 26, 0, 1.6),
+    "Coral": ("LandmarkCoral", (0, -100), 26, 0, 1.2),
+    "Volcano": ("LandmarkVolcano", (0, -106), 32, 90, 1.4),
+    "Starfall": ("LandmarkStarfall", (0, -100), 22, 0, 1.6),
 }
+CLIFF = {
+    #           grass lip, stone, dark stone, stone material
+    "Meadow": (0x5DBB46, 0xA9A6A0, 0x8A8680, "R"),
+    "Grove": (0x7A5AD0, 0x6A5A8A, 0x54486E, "T"),
+    "Frost": (0xFFFFFF, 0xB8C6D6, 0x8FA3B8, "T"),
+    "Coral": (0xF2DCA2, 0xB8ABA0, 0x958A80, "V"),
+    "Volcano": (0x4A3E3E, 0x3A3034, 0x2A2226, "B"),
+    "Starfall": (0xA08CF0, 0x5B4B9E, 0x3B2E6E, "T"),
+}
+WATERFALLS = {"Meadow": (60, 120)}
 HUB = (-88.0, 0.0, 0.0)
 ARENA = (-60.0, 0.0, -86.0)  # Pet Ring: walk in and your equipped pets fight everyone else inside
 ARENA_R = 26.0
@@ -81,15 +96,8 @@ def build(areas, props):
         top, top_m, rim, cliff, cliff_m, path, path_m = GROUND[a]
         P = parts[a]
         P.append(cyl(2 * R, 4, (x, -2, 0), top, top_m, tag="Ground"))
-        P.append(cyl(2 * R + 4, 3, (x, -3.2, 0), rim, top_m))
-        P.append(cyl(2 * R - 4, 34, (x, -21, 0), cliff, cliff_m))
-        # a few lumps on the cliff so the outline is not a perfect cylinder
-        for k in range(10):
-            ang = 2 * math.pi * (k + 0.5) / 10 + 0.2
-            if abs(math.cos(ang)) > 0.93:
-                continue  # leave the bridge ends clear
-            d = rnd.uniform(26, 40)
-            P.append(ball((d, rnd.uniform(18, 26), d), (x + math.cos(ang) * (R - 6), -14, math.sin(ang) * (R - 6)), cliff, cliff_m))
+        P.append(cyl(2 * R - 6, 44, (x, -26, 0), CLIFF[a][2], CLIFF[a][3]))
+        island_edge(P, rnd, a, x, R, east=i < len(areas) - 1, west=i > 0)
         # main path from bridge to bridge
         P.append(box((2 * R - 8, 0.3, 14), (x, 0.12, 0), path, path_m))
         # invisible boundary walls: arcs of chords that stop exactly at the bridge corridors
@@ -131,9 +139,14 @@ def build(areas, props):
         blocked = []  # (x, z, r) circles that decorations must avoid
         if a == "Meadow":
             spawns[a] = (HUB[0], 3, HUB[2])
-            P.append(cyl(84, 0.3, (HUB[0], 0.14, HUB[2]), 0xE8DCC0, "U"))
+            P.append(cyl(58, 0.3, (HUB[0], 0.14, HUB[2]), 0xCFCAC0, "U"))
+            for ang in (0, 90, 180, 270, 35, -35, 145, -145):
+                ar = math.radians(ang)
+                L_ = 16
+                P.append(box((L_, 0.28, 7), (HUB[0] + math.cos(ar) * (29 + L_ / 2 - 3), 0.13, HUB[2] + math.sin(ar) * (29 + L_ / 2 - 3)), 0xC2BDB2, "U",
+                             r=(0, -ang, 0)))
             hub_items = [
-                ("SpawnLocation", "SpawnPad", (HUB[0], 0, HUB[2]), 0, {}),
+                ("SpawnLocation", "PawPlaza", (HUB[0], 0, HUB[2]), 0, {}),
                 ("EggStand", "EggStand_Meadow", (HUB[0] + 30, 0, -17), None, {"EggId": "MeadowEgg"}),
                 ("EggStand", "PrismStand", (HUB[0] + 30, 0, 17), None, {"EggId": "PrismEgg"}),
                 ("ExpeditionBoard", "ExpeditionBoard", (HUB[0] - 2, 0, -33), None, {}),
@@ -149,11 +162,13 @@ def build(areas, props):
             blocked.append((HUB[0], HUB[2], 50))
             place.append(("Windmill", -10, 0, -118, 20, 1.0, a))
             blocked.append((-10, -118, 12))
-            build_arena(P, interact, a)
+            build_arena(P, interact, place, a)
+            hub_dressing(place, a)
             blocked.append((ARENA[0], ARENA[2], ARENA_R + 10))
             blocked.append(((HUB[0] + ARENA[0]) / 2, (HUB[2] + ARENA[2]) / 2, 9))  # the path to the ring
-            for bx, bz in ((HUB[0] + 12, 40), (HUB[0] - 16, 40)):
+            for bx, bz in ((HUB[0] + 12, 46), (HUB[0] - 16, 46)):
                 place.append(("Bench", bx, 0, bz, yaw_towards((bx, 0, bz), HUB), 1.0, a))
+            blocked.append((HUB[0], HUB[2], 58))
         else:
             spawns[a] = (x - R + 18, 3, 0)
             stand = (x - R + 38, 0, 18)
@@ -166,9 +181,13 @@ def build(areas, props):
             # gate on the bridge just before this island
             gpos = (x - R - 12, 0, 0)
             interact.append({"kind": "Gate", "prop": f"Gate_{a}", "area": a, "pos": gpos, "yaw": 90.0, "attrs": {"AreaId": a}})
-        if a in BACKDROP:
-            name, off, yaw, s = BACKDROP[a]
-            place.append((name, x + off[0], off[1], off[2], yaw, s, a))
+        if a in LANDMARK:
+            name, (ox, oz), lr, lyaw, ls = LANDMARK[a]
+            place.append((name, x + ox, 0, oz, lyaw, ls, a))
+            blocked.append((x + ox, oz, lr))
+        for ang in WATERFALLS.get(a, (60, 240)):
+            ar = math.radians(ang)
+            blocked.append((x + math.cos(ar) * (R - 8), math.sin(ar) * (R - 8), 9))
 
         # lamps along the path
         for k in range(-3, 4):
@@ -219,24 +238,35 @@ def build(areas, props):
         x0 = centers[a0] + radius(a0) - 8
         x1 = centers[a1] - radius(a1) + 8
         L, cx = x1 - x0, (x0 + x1) / 2
-        deck, beam = 0xB0804A, 0x7E5230
+        deck, beam, rope = 0xB0804A, 0x7E5230, 0xE8D8B0
         B.append(box((L, 1.2, BRIDGE_W), (cx, -0.6, 0), deck, "K"))
+        # plank seams so the deck reads as boards
+        for k in range(int(L // 4)):
+            B.append(box((0.25, 1.22, BRIDGE_W - 1), (x0 + 2 + k * 4, -0.6, 0), shade(deck, 0.8), "K"))
         B.append(box((26, 1.2, BRIDGE_W + 10), (centers[a1] - radius(a1) - 12, -0.62, 0), deck, "K"))
         for sz in (-1, 1):
-            B.append(box((L, 1.8, 1.2), (cx, -0.3, sz * (BRIDGE_W / 2 + 0.4)), beam, "W"))
-            B.append(box((L, 0.5, 0.7), (cx, 3.4, sz * (BRIDGE_W / 2 + 0.4)), beam, "W"))
+            zz = sz * (BRIDGE_W / 2 + 0.4)
+            B.append(box((L, 1.0, 1.0), (cx, -0.5, zz), beam, "W"))
             B.append(box((L, WALL_H, 1), (cx, WALL_H / 2, sz * (BRIDGE_W / 2 + 1.2)), 0xFFFFFF, "P", tag="Wall", t=1.0))
-            n = max(2, int(L // 10))
-            for k in range(n + 1):
-                px = x0 + L * k / n
-                B.append(box((0.9, 4.2, 0.9), (px, 1.5, sz * (BRIDGE_W / 2 + 0.4)), beam, "W"))
+            # sagging rope rail between stone pillars, short wooden posts
+            n = 6
+            for k in range(n):
+                t0, t1 = k / n, (k + 1) / n
+                y0, y1 = 4.2 - 1.6 * math.sin(math.pi * t0), 4.2 - 1.6 * math.sin(math.pi * t1)
+                xa, xb = x0 + L * t0, x0 + L * t1
+                ang = math.degrees(math.atan2(y1 - y0, xb - xa))
+                B.append(box((math.hypot(xb - xa, y1 - y0) + 0.2, 0.3, 0.3), ((xa + xb) / 2, (y0 + y1) / 2, zz), rope, "X", r=(0, 0, ang)))
+                if k:
+                    hp = 3.6 - 1.6 * math.sin(math.pi * t0)
+                    B.append(box((0.6, hp, 0.6), (xa, hp / 2, zz), beam, "W"))
+            for px in (x0 + 1.5, x1 - 1.5):
+                B.append(box((2.6, 6.5, 2.6), (px, 3.25, sz * (BRIDGE_W / 2 + 1.5)), 0xA9A6A0, "U"))
+                B.append(box((3.0, 0.6, 3.0), (px, 6.8, sz * (BRIDGE_W / 2 + 1.5)), 0x8A8680, "U"))
+                B.append(box((1.3, 1.3, 1.3), (px, 7.75, sz * (BRIDGE_W / 2 + 1.5)), 0xFFE27A, "N", tag="Glow"))
         for k in range(1, max(2, int(L // 24)) + 1):
             px = x0 + L * k / (max(2, int(L // 24)) + 1)
             for sz in (-1, 1):
-                B.append(cyl(2.4, 16, (px, -8.6, sz * (BRIDGE_W / 2 - 1)), beam, "W"))
-        for px in (x0 + 4, x1 - 4):
-            for sz in (-1, 1):
-                place.append(("BridgeLantern", round(px, 2), 0, sz * (BRIDGE_W / 2 + 0.4), 0, 1.0, "Bridges"))
+                B.append(box((2.4, 20, 2.4), (px, -11, sz * (BRIDGE_W / 2 - 1)), beam, "W"))
 
     last = areas[-1]
     water = {"level": WATER_LEVEL, "minx": -radius(areas[0]) - 260, "maxx": centers[last] + radius(last) + 260,
@@ -248,14 +278,90 @@ def build(areas, props):
             "spawn_location": spawn_location}
 
 
-def build_arena(P, interact, area):
+def island_edge(P, rnd, a, x, R, east, west):
+    """Stepped blocky cliffs, a grass lip, waterfalls, a carved stair and rocks in the water."""
+    lip, stone, dark, mat = CLIFF[a]
+    corridor = BRIDGE_W / 2 + 3
+
+    def in_corridor(ang, rad):
+        cz = math.sin(ang) * rad
+        cxr = math.cos(ang)
+        return abs(cz) < corridor and ((cxr > 0 and east) or (cxr < 0 and west))
+
+    lip_mat = "E" if a in ("Meadow", "Grove", "Starfall") else ("S" if a == "Frost" else mat)
+    n = int(2 * math.pi * R / 15)
+    for k in range(n):
+        ang = 2 * math.pi * (k + 0.5) / n
+        chord = 2 * math.pi * R / n * 1.12
+        yaw = -math.degrees(ang) + 90
+        # upper tier: stone just under the grass, slightly uneven tops
+        top = -rnd.uniform(0.6, 3.0)
+        r1 = R - 2
+        P.append(box((chord, 40 + top, 9), (x + math.cos(ang) * r1, (top - 40) / 2, math.sin(ang) * r1),
+                     stone if k % 3 else shade(stone, 1.08), mat, r=(0, yaw, 0)))
+        # lower tier: a ledge stepping out towards the water
+        top2 = -rnd.uniform(6, 11)
+        r2 = R + 5 + rnd.uniform(-1.5, 1.5)
+        P.append(box((chord * 1.05, 40 + top2, 7), (x + math.cos(ang) * r2, (top2 - 40) / 2, math.sin(ang) * r2), dark, mat, r=(0, yaw, 0)))
+        # grass lip blocks on the rim
+        if not in_corridor(ang, R) and k % 2 == 0:
+            h = rnd.uniform(0.5, 1.4)
+            P.append(box((chord * 2.05, h + 2, 4), (x + math.cos(ang) * (R - 0.5), h / 2 - 1, math.sin(ang) * (R - 0.5)), lip, lip_mat,
+                         r=(0, yaw, 0)))
+    # waterfalls pouring off the rim into the sea
+    water_c = 0xBFEAFF if a == "Frost" else 0x7FD8FF
+    for ang_d in WATERFALLS.get(a, (60, 240)):
+        ang = math.radians(ang_d)
+        yaw = -ang_d + 90
+        ex, ez = x + math.cos(ang) * (R + 0.5), math.sin(ang) * (R + 0.5)
+        P.append(box((7, 0.3, 14), (x + math.cos(ang) * (R - 7), 0.16, math.sin(ang) * (R - 7)), water_c, "G", r=(0, yaw + 90, 0), t=0.2))
+        P.append(box((7, 1.0, 11), (x + math.cos(ang) * (R + 4.5), 0.0, math.sin(ang) * (R + 4.5)), water_c, "G", r=(0, yaw + 90, 0), t=0.2))
+        P.append(box((9, -WATER_LEVEL + 1.0, 1.6), (ex + math.cos(ang) * 9.5, (WATER_LEVEL + 1.0) / 2, ez + math.sin(ang) * 9.5), water_c,
+                     "G", r=(0, yaw, 0), t=0.15))
+        P.append(box((13, 1.6, 7), (ex + math.cos(ang) * 11.5, WATER_LEVEL + 0.4, ez + math.sin(ang) * 11.5), WHITE_FOAM, "P",
+                     r=(0, yaw, 0), t=0.2))
+    # stair carved down the cliff
+    ang = math.radians(150)
+    for k in range(5):
+        rr = R + 3 + k * 2.2
+        P.append(box((6, 1.2, 2.4), (x + math.cos(ang) * rr, -2.0 - k * 2.0, math.sin(ang) * rr), shade(stone, 1.12), mat,
+                     r=(0, -150 + 90, 0)))
+    # rocks in the water
+    for k in range(9):
+        ang = 2 * math.pi * (k + rnd.random() * 0.6) / 9
+        if in_corridor(ang, R + 20) or abs(math.sin(ang)) < 0.2:
+            continue
+        rr = R + rnd.uniform(16, 30)
+        sz = rnd.uniform(4, 9)
+        P.append(box((sz, sz * 1.1, sz * 0.9), (x + math.cos(ang) * rr, WATER_LEVEL + sz * 0.25, math.sin(ang) * rr), dark, mat,
+                     r=(0, rnd.uniform(0, 90), rnd.uniform(-8, 8))))
+
+
+def hub_dressing(place, area):
+    """Lantern posts, fences, hay crates and a dock around the Meadow hub (reference/hub.jpg)."""
+    hx, _, hz = HUB
+    for ang in (-170, -120, -45, 45, 120, 170):
+        ar = math.radians(ang)
+        place.append(("LanternPost", round(hx + math.cos(ar) * 44, 2), 0, round(hz + math.sin(ar) * 44, 2), 0, 1.0, area))
+    for ang in (-160, -140, 140, 160, 100, -100, 25, -25):
+        ar = math.radians(ang)
+        px, pz = hx + math.cos(ar) * 54, hz + math.sin(ar) * 54
+        place.append(("Fence", round(px, 2), 0, round(pz, 2), round(-ang + 90, 1), 1.0, area))
+    for px, pz in ((hx - 48, -30), (hx - 50, 26), (hx + 40, 44), (hx + 52, -40)):
+        place.append(("HayCrate", px, 0, pz, 15, 1.0, area))
+    place.append(("Dock", -150 - 10, WATER_LEVEL + 2.5, 40, 90, 1.0, area))
+
+
+def build_arena(P, interact, place, area):
     """The Pet Ring: a raised sand floor with a glowing edge, corner posts and ropes,
     an opening facing the hub, and a sign. Walking inside starts fights (RingService)."""
     cx, _, cz = ARENA
     R = ARENA_R
     P.append(cyl(2 * R + 6, 0.5, (cx, 0.25, cz), 0x8A5A3C, "K"))
     P.append(cyl(2 * R, 0.8, (cx, 0.4, cz), 0xE9C98B, "A"))
-    P.append(cyl(10, 0.82, (cx, 0.41, cz), 0xD9534F, "P"))
+    for k, (rr, ang) in enumerate(((0, 0), (9, 20), (9, 100), (9, 190), (9, 280), (17, 60), (17, 150), (17, 240), (17, 330), (15, 10))):
+        ar = math.radians(ang)
+        P.append(cyl(3.6 if k else 5, 0.84, (cx + math.cos(ar) * rr, 0.42, cz + math.sin(ar) * rr), 0xD2AE78, "A"))
     # gap in the ropes facing the hub
     gx, gz = HUB[0] - cx, HUB[2] - cz
     gap = math.atan2(gz, gx)
@@ -290,9 +396,17 @@ def build_arena(P, interact, area):
     L = math.hypot(ex - hx, ez - hz)
     ang = math.degrees(math.atan2(ez - hz, ex - hx))
     P.append(box((L, 0.3, 10), ((ex + hx) / 2, 0.13, (ez + hz) / 2), 0xE8DCC0, "U", r=(0, -ang, 0)))
-    sx, sz = ex + math.cos(gap + math.pi / 2) * 17, ez + math.sin(gap + math.pi / 2) * 17
-    interact.append({"kind": "Sign", "prop": "IslandSign", "area": area, "pos": (sx, 0, sz),
-                     "yaw": yaw_towards((sx, 0, sz), HUB), "attrs": {"Text": "PET RING"}})
+    # "PET RING" arch sign at the back, facing the entrance
+    sx, sz = cx - math.cos(gap) * (R + 4), cz - math.sin(gap) * (R + 4)
+    interact.append({"kind": "Sign", "prop": "RingArch", "area": area, "pos": (sx, 0, sz),
+                     "yaw": yaw_towards((sx, 0, sz), (cx, 0, cz)), "attrs": {"Text": "PET RING"}})
+    # grass tufts and grey rocks around the outside
+    for k in range(14):
+        t = gap + math.pi * 0.25 + (2 * math.pi - math.pi * 0.5) * k / 13
+        rr = R + 6 + (k % 3) * 2.5
+        name = "Rock" if k % 3 == 1 else "GrassTuft"
+        place.append((name, round(cx + math.cos(t) * rr, 2), 0, round(cz + math.sin(t) * rr, 2), (k * 47) % 360,
+                      0.55 if name == "Rock" else 1.4, area))
 
 
 EGG_FOR = {"Meadow": "MeadowEgg", "Grove": "GroveEgg", "Frost": "FrostEgg", "Coral": "CoralEgg", "Volcano": "VolcanoEgg",

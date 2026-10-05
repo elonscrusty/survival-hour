@@ -59,15 +59,18 @@ Models.Profiles = {
 }
 
 -- Parts with these names keep their colour for Golden/Rainbow variants.
-local KEEP_COLOUR = { Eye = true }
+local KEEP_COLOUR = { Eye = true, Collar = true }
+-- Rainbow also keeps the cream face / chest patches (see reference/puppy_variants.jpg).
+local KEEP_RAINBOW = { Eye = true, Collar = true, Face = true }
 -- Invisible helper parts inside props (never collide or block clicks).
 local HELPER = { Prompt = true, SignFace = true, EggSpot = true, Root = true }
 
 local SPARKLE_TEXTURE = "rbxasset://textures/particles/sparkles_main.dds"
-local GOLD_DARK = Color3.fromRGB(154, 101, 18)
-local GOLD_LIGHT = Color3.fromRGB(255, 226, 122)
+local GOLD_DARK = Color3.fromRGB(166, 108, 10)
+local GOLD_LIGHT = Color3.fromRGB(255, 206, 74)
+local RAINBOW_HUES = { 0, 0.08, 0.15, 0.33, 0.58, 0.76 }
 local GOLD_NEON = Color3.fromRGB(255, 213, 74)
-local SHINY_TINT = Color3.fromRGB(255, 240, 255)
+local SHINY_TINT = Color3.fromRGB(255, 246, 224)
 
 local function hexColor(c: number): Color3
 	return Color3.fromRGB(bit32.rshift(c, 16), bit32.band(bit32.rshift(c, 8), 255), bit32.band(c, 255))
@@ -175,7 +178,7 @@ local function applyGolden(m: Model)
 			if d.Material == Enum.Material.Neon then
 				d.Color = GOLD_NEON
 			else
-				local t = math.clamp(luminance(d.Color) * 1.15 + 0.12, 0, 1)
+				local t = math.clamp(luminance(d.Color) * 0.6 + 0.3, 0, 1)
 				d.Color = GOLD_DARK:Lerp(GOLD_LIGHT, t)
 				d.Material = Enum.Material.Foil
 				d.Reflectance = 0.08
@@ -189,9 +192,12 @@ end
 -- RainbowHue attribute (0..1) so the client can animate the hues.
 local function applyRainbow(m: Model, height: number)
 	for _, d in m:GetDescendants() do
-		if d:IsA("BasePart") and d.Name ~= "Root" and not KEEP_COLOUR[d.Name] then
-			local hue = math.clamp(d.Position.Y / math.max(height, 0.01), 0, 1) * 0.85
-			d.Color = Color3.fromHSV(hue, 0.72, 0.72 + 0.28 * luminance(d.Color))
+		if d:IsA("BasePart") and d.Name ~= "Root" and not KEEP_RAINBOW[d.Name] then
+			-- Horizontal bands (each 15% of the pet height) cycling red, orange, yellow,
+			-- green, blue, purple from the top down.
+			local rel = 1 - math.clamp(d.Position.Y / math.max(height, 0.01), 0, 1)
+			local hue = RAINBOW_HUES[(math.floor(rel / 0.15) % 6) + 1]
+			d.Color = Color3.fromHSV(hue, 0.75, 0.97)
 			if d.Material ~= Enum.Material.Neon then
 				d.Material = Enum.Material.SmoothPlastic
 			end
@@ -204,7 +210,7 @@ end
 local function applyShiny(m: Model)
 	for _, d in m:GetDescendants() do
 		if d:IsA("BasePart") and d.Name ~= "Root" and not KEEP_COLOUR[d.Name] then
-			d.Color = d.Color:Lerp(SHINY_TINT, 0.22)
+			d.Color = d.Color:Lerp(SHINY_TINT, 0.15)
 		end
 	end
 	local root = m.PrimaryPart :: BasePart
@@ -226,7 +232,7 @@ local function applyShiny(m: Model)
 		NumberSequenceKeypoint.new(0, 0.1),
 		NumberSequenceKeypoint.new(1, 0.8),
 	})
-	e.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(255, 240, 170))
+	e.Color = ColorSequence.new(Color3.fromRGB(255, 244, 170), Color3.fromRGB(255, 200, 60))
 	e.LightEmission = 1
 	e.Shape = Enum.ParticleEmitterShape.Box
 	e.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
