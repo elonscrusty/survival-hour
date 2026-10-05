@@ -237,7 +237,19 @@
    -3.937,
    -0.12
   ],
-  "tris": 8380
+  "tris": 8380,
+  "bones": [
+   "Root",
+   "Body",
+   "Head",
+   "EarL",
+   "EarR",
+   "LegFL",
+   "LegFR",
+   "LegBL",
+   "LegBR",
+   "Tail"
+  ]
  },
  {
   "name": "Pet_CosmicCat",
@@ -252,7 +264,19 @@
    -3.698,
    -0.602
   ],
-  "tris": 7800
+  "tris": 7800,
+  "bones": [
+   "Root",
+   "Body",
+   "Head",
+   "EarL",
+   "EarR",
+   "LegFL",
+   "LegFR",
+   "LegBL",
+   "LegBR",
+   "Tail"
+  ]
  },
  {
   "name": "Pet_Deer",
@@ -267,7 +291,19 @@
    -4.02,
    0.349
   ],
-  "tris": 7700
+  "tris": 7700,
+  "bones": [
+   "Root",
+   "Body",
+   "Head",
+   "EarL",
+   "EarR",
+   "LegFL",
+   "LegFR",
+   "LegBL",
+   "LegBR",
+   "Tail"
+  ]
  },
  {
   "name": "Pet_Dragon",
@@ -282,7 +318,19 @@
    -3.974,
    -1.674
   ],
-  "tris": 7920
+  "tris": 7920,
+  "bones": [
+   "Root",
+   "Body",
+   "Head",
+   "LegFL",
+   "LegFR",
+   "LegBL",
+   "LegBR",
+   "Tail",
+   "WingL",
+   "WingR"
+  ]
  },
  {
   "name": "Pet_Fox",
@@ -297,7 +345,19 @@
    -3.114,
    -0.311
   ],
-  "tris": 6872
+  "tris": 6872,
+  "bones": [
+   "Root",
+   "Body",
+   "Head",
+   "EarL",
+   "EarR",
+   "LegFL",
+   "LegFR",
+   "LegBL",
+   "LegBR",
+   "Tail"
+  ]
  },
  {
   "name": "Pet_Griffin",
@@ -312,7 +372,21 @@
    -3.786,
    -0.749
   ],
-  "tris": 7384
+  "tris": 7384,
+  "bones": [
+   "Root",
+   "Body",
+   "Head",
+   "EarL",
+   "EarR",
+   "LegFL",
+   "LegFR",
+   "LegBL",
+   "LegBR",
+   "Tail",
+   "WingL",
+   "WingR"
+  ]
  },
  {
   "name": "Pet_Kitty",
@@ -327,7 +401,19 @@
    -3.109,
    -0.431
   ],
-  "tris": 6612
+  "tris": 6612,
+  "bones": [
+   "Root",
+   "Body",
+   "Head",
+   "EarL",
+   "EarR",
+   "LegFL",
+   "LegFR",
+   "LegBL",
+   "LegBR",
+   "Tail"
+  ]
  },
  {
   "name": "Pet_Panda",
@@ -342,7 +428,19 @@
    -3.187,
    0.417
   ],
-  "tris": 6768
+  "tris": 6768,
+  "bones": [
+   "Root",
+   "Body",
+   "Head",
+   "EarL",
+   "EarR",
+   "LegFL",
+   "LegFR",
+   "LegBL",
+   "LegBR",
+   "Tail"
+  ]
  },
  {
   "name": "Pet_Penguin",
@@ -357,7 +455,19 @@
    -2.966,
    0.639
   ],
-  "tris": 6440
+  "tris": 6440,
+  "bones": [
+   "Root",
+   "Body",
+   "Head",
+   "LegFL",
+   "LegFR",
+   "LegBL",
+   "LegBR",
+   "Tail",
+   "WingL",
+   "WingR"
+  ]
  },
  {
   "name": "Pet_Phoenix",
@@ -372,7 +482,19 @@
    -3.981,
    -0.511
   ],
-  "tris": 7716
+  "tris": 7716,
+  "bones": [
+   "Root",
+   "Body",
+   "Head",
+   "LegFL",
+   "LegFR",
+   "LegBL",
+   "LegBR",
+   "Tail",
+   "WingL",
+   "WingR"
+  ]
  },
  {
   "name": "Pet_Piggy",
@@ -387,7 +509,19 @@
    -2.929,
    0.441
   ],
-  "tris": 7032
+  "tris": 7032,
+  "bones": [
+   "Root",
+   "Body",
+   "Head",
+   "EarL",
+   "EarR",
+   "LegFL",
+   "LegFR",
+   "LegBL",
+   "LegBR",
+   "Tail"
+  ]
  },
  {
   "name": "Pet_Pup",
@@ -402,7 +536,19 @@
    -2.946,
    0.436
   ],
-  "tris": 7660
+  "tris": 7660,
+  "bones": [
+   "Root",
+   "Body",
+   "Head",
+   "EarL",
+   "EarR",
+   "LegFL",
+   "LegFR",
+   "LegBL",
+   "LegBR",
+   "Tail"
+  ]
  },
  {
   "name": "Pet_Tiger",
@@ -417,7 +563,19 @@
    -3.338,
    -0.656
   ],
-  "tris": 8656
+  "tris": 8656,
+  "bones": [
+   "Root",
+   "Body",
+   "Head",
+   "EarL",
+   "EarR",
+   "LegFL",
+   "LegFR",
+   "LegBL",
+   "LegBR",
+   "Tail"
+  ]
  },
  {
   "name": "Pet_Unicorn",
@@ -432,7 +590,19 @@
    -4.232,
    -0.699
   ],
-  "tris": 8000
+  "tris": 8000,
+  "bones": [
+   "Root",
+   "Body",
+   "Head",
+   "EarL",
+   "EarR",
+   "LegFL",
+   "LegFR",
+   "LegBL",
+   "LegBR",
+   "Tail"
+  ]
  },
  {
   "name": "Pet_Wolf",
@@ -447,7 +617,19 @@
    -3.473,
    -0.369
   ],
-  "tris": 7160
+  "tris": 7160,
+  "bones": [
+   "Root",
+   "Body",
+   "Head",
+   "EarL",
+   "EarR",
+   "LegFL",
+   "LegFR",
+   "LegBL",
+   "LegBR",
+   "Tail"
+  ]
  },
  {
   "name": "Cloud",
