@@ -59,6 +59,9 @@ function Profile.Default(): Profile
 		ExtraEquip = 0,
 		ExtraStorage = 0,
 		Receipts = {},
+		ExpeditionMult = {},
+		PendingTrade = nil,
+		AppliedTrades = {},
 	}
 end
 
@@ -258,6 +261,20 @@ function Profile.Sanitize(raw: any): Profile
 		end
 	end
 	Profile.TrimReceipts(p)
+
+	for slot, mult in tbl(raw.ExpeditionMult) do
+		if type(slot) == "string" and p.Expeditions[slot] and Schema.IsFinite(mult) and mult > 0 then
+			p.ExpeditionMult[slot] = math.min(mult, Schema.MaxCoinMult)
+		end
+	end
+	if type(raw.PendingTrade) == "string" and #raw.PendingTrade > 0 and #raw.PendingTrade <= 64 then
+		p.PendingTrade = raw.PendingTrade
+	end
+	for _, id in tbl(raw.AppliedTrades) do
+		if type(id) == "string" and #id <= 64 and #p.AppliedTrades < Schema.MaxAppliedTrades then
+			table.insert(p.AppliedTrades, id)
+		end
+	end
 	return p
 end
 

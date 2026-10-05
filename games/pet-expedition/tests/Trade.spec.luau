@@ -196,4 +196,70 @@ return {
 		t.eq(va.Status, "Confirming", "status")
 		t.eq(Trade.View(tr, 3, NOW, profileOf), nil, "stranger")
 	end,
+	["journal replays each side exactly once"] = function(t)
+		local tr, a, b, ua, ub = setup()
+		Trade.SetOffer(tr, 1, a, { ua[1] }, 20)
+		Trade.SetOffer(tr, 2, b, { ub[1], ub[2] }, 0)
+		readyBoth(tr, NOW)
+		local plan = Trade.Plan(tr, a, b)
+		t.ok(plan, "planned")
+		local j = Trade.Journal(tr, plan)
+		-- Profiles as they were saved before the swap (PendingTrade set).
+		a.PendingTrade, b.PendingTrade = tr.Id, tr.Id
+		local stored = Profile.Sanitize(a)
+		local storedB = Profile.Sanitize(b)
+		-- The server applies in memory...
+		t.ok(Trade.ApplySide(a, j.Sides["1"], tr.Id), "a applied")
+		t.ok(Trade.ApplySide(b, j.Sides["2"], tr.Id), "b applied")
+		t.eq(a.PendingTrade, nil, "pending cleared")
+		t.no(Trade.ApplySide(a, j.Sides["1"], tr.Id), "second apply ignored")
+		t.eq(#a.Pets, 5, "a: 4 - 1 + 2")
+		t.eq(a.Gems, 480, "a gems")
+		-- ...then crashes before a's save: a's stored copy replays from the journal.
+		local side = Trade.SanitizeSide(j.Sides["1"])
+		t.ok(Trade.ApplySide(stored, side, tr.Id), "replayed")
+		t.eq(#stored.Pets, 5, "same result after replay")
+		t.eq(stored.Gems, 480, "same gems after replay")
+		t.eq(stored.PendingTrade, nil, "cleared")
+		t.no(Inventory.Find(stored, ua[1]), "given pet gone")
+		local seen = {}
+		for _, pet in stored.Pets do
+			t.no(seen[pet.Uid], "unique uids after replay")
+			seen[pet.Uid] = true
+		end
+		t.ok(Trade.ApplySide(storedB, Trade.SanitizeSide(j.Sides["2"]), tr.Id), "b replayed")
+		t.eq(#storedB.Pets, 3, "b: 4 - 2 + 1")
+		t.eq(storedB.Gems, 120, "b gems")
+	end,
+	["journal replay re-uids collisions and never goes below 0 gems"] = function(t)
+		local p = Profile.Default()
+		local mine = Inventory.Add(p, { Id = "Puppy" })
+		p.Gems = 5
+		local side = {
+			Give = { "ghost" },
+			GiveGems = 50,
+			Get = { { Uid = mine.Uid, Id = "Fox", Variant = "Normal", Shiny = false, Level = 1, Xp = 0, Locked = true } },
+			GetGems = 0,
+		}
+		t.ok(Trade.ApplySide(p, side, "T9"), "applied")
+		t.eq(#p.Pets, 2, "added")
+		t.ok(p.Pets[1].Uid ~= p.Pets[2].Uid, "collision renamed")
+		t.no(p.Pets[2].Locked, "arrives unlocked")
+		t.eq(p.Gems, 0, "clamped")
+		t.ok(p.Index.Fox, "indexed")
+	end,
+	["journal sides from storage are validated"] = function(t)
+		t.eq(Trade.SanitizeSide(nil), nil, "nil")
+		t.eq(Trade.SanitizeSide({ Give = "x", Get = {} }), nil, "bad give")
+		local s = Trade.SanitizeSide({
+			Give = { "1", 5, string.rep("x", 99) },
+			GiveGems = -4,
+			Get = { { Uid = "7", Id = "NotAPet" }, { Uid = "8", Id = "Fox" } },
+			GetGems = 1e300,
+		})
+		t.eq(#s.Give, 1, "bad uids dropped")
+		t.eq(s.GiveGems, 0, "negative gems")
+		t.eq(#s.Get, 1, "unknown pets dropped")
+		t.eq(s.GetGems, Config.TradeMaxGems, "gem cap")
+	end,
 }

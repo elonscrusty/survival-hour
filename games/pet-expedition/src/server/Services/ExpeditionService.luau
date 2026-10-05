@@ -35,7 +35,7 @@ function ExpeditionService.Init(c)
 			return U.Fail(err or "Bad pet list")
 		end
 		local seed = random:NextInteger(1, 2147483646)
-		local slot, _, err2 = Expedition.Start(s.Profile, areaId, durationKey, list, os.time(), seed, ctx.TradeService.OfferedSet(player))
+		local slot, _, err2 = Expedition.Start(s.Profile, areaId, durationKey, list, os.time(), seed, ctx.TradeService.OfferedSet(player), ctx.StateService.CoinMult(s))
 		if not slot then
 			return U.Fail(err2 or "Can't start that expedition")
 		end

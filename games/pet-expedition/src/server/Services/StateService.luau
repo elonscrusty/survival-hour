@@ -157,9 +157,11 @@ function StateService.LuckMult(s): number
 	return Economy.LuckMult(s.Profile, StateService.MultContext(s))
 end
 
--- Marks a player's state as changed; it is sent within PUSH_INTERVAL.
+-- Marks a player's state as changed; it is sent within PUSH_INTERVAL. Also
+-- bumps the profile's change counter so the next save counts it.
 function StateService.Dirty(player: Player)
 	dirty[player] = true
+	ctx.DataService.Touch(ctx.DataService.Get(player))
 end
 
 function StateService.DirtyAll()
