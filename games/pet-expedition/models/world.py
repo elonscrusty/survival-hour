@@ -290,7 +290,7 @@ def build_arena(P, interact, area):
     L = math.hypot(ex - hx, ez - hz)
     ang = math.degrees(math.atan2(ez - hz, ex - hx))
     P.append(box((L, 0.3, 10), ((ex + hx) / 2, 0.13, (ez + hz) / 2), 0xE8DCC0, "U", r=(0, -ang, 0)))
-    sx, sz = ex + math.cos(gap + math.pi / 2) * 9, ez + math.sin(gap + math.pi / 2) * 9
+    sx, sz = ex + math.cos(gap + math.pi / 2) * 17, ez + math.sin(gap + math.pi / 2) * 17
     interact.append({"kind": "Sign", "prop": "IslandSign", "area": area, "pos": (sx, 0, sz),
                      "yaw": yaw_towards((sx, 0, sz), HUB), "attrs": {"Text": "PET RING"}})
 

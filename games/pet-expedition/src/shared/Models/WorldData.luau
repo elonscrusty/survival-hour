@@ -1069,7 +1069,7 @@ return {
 		{ Kind = "RebirthStatue", Prop = "RebirthStatue", Area = "Meadow", P = {-118,0,-19}, Yaw = -122.3, A = {  } },
 		{ Kind = "IndexBook", Prop = "IndexBook", Area = "Meadow", P = {-118,0,19}, Yaw = -57.7, A = {  } },
 		{ Kind = "Sign", Prop = "IslandSign", Area = "Meadow", P = {-42,0,-14}, Yaw = 106.9, A = { Text = "Sunny Meadow" } },
-		{ Kind = "Sign", Prop = "IslandSign", Area = "Meadow", P = {-77.23,0,-62.16}, Yaw = 170.2, A = { Text = "PET RING" } },
+		{ Kind = "Sign", Prop = "IslandSign", Area = "Meadow", P = {-84.83,0,-64.64}, Yaw = 177.2, A = { Text = "PET RING" } },
 		{ Kind = "EggStand", Prop = "EggStand_Grove", Area = "Grove", P = {233,0,18}, Yaw = 0, A = { EggId = "GroveEgg" } },
 		{ Kind = "Sign", Prop = "IslandSign", Area = "Grove", P = {225,0,-17}, Yaw = 103.7, A = { Text = "Mushroom Grove" } },
 		{ Kind = "Gate", Prop = "Gate_Grove", Area = "Grove", P = {183,0,0}, Yaw = 90, A = { AreaId = "Grove" } },
