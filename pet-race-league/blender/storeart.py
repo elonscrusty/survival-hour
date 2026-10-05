@@ -137,6 +137,7 @@ def main():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
     ap = argparse.ArgumentParser()
     ap.add_argument("--samples", type=int, default=24)
+    ap.add_argument("--icon-only", action="store_true")
     args = ap.parse_args(argv)
 
     bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -167,13 +168,16 @@ def main():
 
     # Icon: a Dragon leaping toward you with its rider, a Unicorn racing behind.
     ground()
-    ridden(meshes, "Dragon", "Rider0", 1.5, 0, -20, y=1.2)
-    ridden(meshes, "Unicorn", "Rider1", -5, 9, 15)
-    place(meshes, "Egg_Sky", 7, 12, -20, 1.0)
+    ridden(meshes, "Dragon", "Rider0", 0, 0, -22, y=0.4)
+    ridden(meshes, "Unicorn", "Rider1", -8, 10, 20)
+    place(meshes, "Egg_Sky", 9, 11, -20, 1.0)
     place(meshes, "Tree_Round", -14, 26, 0, 1.3)
     place(meshes, "Tree_Blossom", 13, 28, 0, 1.3)
-    camera(to_blender(4, 6, -16), to_blender(-1, 5.5, 4), 30)
-    shot(os.path.join(OUT, "Icon.png"), 512, 512, 2.0)
+    camera(to_blender(2.5, 7.2, -15.5), to_blender(0, 6.0, 0), 36)
+    shot(os.path.join(OUT, "Icon.png"), 512, 512, 1.3)
+    if args.icon_only:
+        os.remove(pal)
+        return
 
     # Thumb 1: a race, four ridden pets charging down the track under the arch.
     clear_scene()

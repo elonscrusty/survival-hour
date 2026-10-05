@@ -544,6 +544,120 @@ return Hatch
         </Item>
         <Item class="ModuleScript" referent="10">
           <Properties>
+            <string name="Name">PetAnim</string>
+            <string name="Source"><![CDATA[-- Procedural pet animation (tested by tests/PetAnim.spec.luau; mirrored in
+-- blender/build.py for the preview video). Pure numbers: for each joint it returns
+-- a small offset {rx, ry, rz, x, y, z} (radians / studs, Roblox axes, pet faces -Z)
+-- that the client applies on top of the joint's rest pose:
+--   part-built pets: Weld.C0 = rest * CFrame.new(x, y, z) * CFrame.Angles(rx, ry, rz)
+--   mesh pets:       Bone.Transform = the same CFrame (axes fixed up by BoneAxis)
+-- Joints form a tree: Body (everything hangs off it), Head, EarL/EarR (on Head),
+-- Tail, WingL/WingR, LegFL/LegFR/LegBL/LegBR. Missing joints are simply skipped.
+local PetAnim = {}
+
+PetAnim.Joints = { "Body", "Head", "EarL", "EarR", "Tail", "WingL", "WingR", "LegFL", "LegFR", "LegBL", "LegBR" }
+
+export type Offset = { rx: number, ry: number, rz: number, x: number, y: number, z: number }
+export type State = {
+	Run: number, -- 0 idle .. 1 full gallop
+	Air: number, -- 0 grounded .. 1 mid-jump
+	Land: number, -- landing squash impulse, 1 on touchdown, decays to 0
+	Happy: number, -- 0..1: excited hopping (hatch reveal, level up, win)
+	Look: number, -- idle head turn, radians
+	Size: number, -- pet height in studs (scales bob distances)
+}
+export type Pose = { [string]: Offset }
+
+local sin, abs = math.sin, math.abs
+
+local function off(): Offset
+	return { rx = 0, ry = 0, rz = 0, x = 0, y = 0, z = 0 }
+end
+
+-- How fast the run cycle turns (radians per second) at a given run amount.
+function PetAnim.CycleSpeed(run: number): number
+	return 4 + 9 * math.clamp(run, 0, 1)
+end
+
+-- t: seconds (idle motions); phase: run cycle angle (advance it by CycleSpeed * dt).
+function PetAnim.Sample(s: State, t: number, phase: number): Pose
+	local run = math.clamp(s.Run, 0, 1)
+	local air = math.clamp(s.Air, 0, 1)
+	local land = math.clamp(s.Land, 0, 1)
+	local happy = math.clamp(s.Happy, 0, 1)
+	local ground = 1 - air
+	local idle = (1 - run) * ground
+	local k = math.max(s.Size, 1) / 4 -- bob distances were tuned on a 4-stud-tall pet
+	local p: Pose = {}
+	for _, j in PetAnim.Joints do
+		p[j] = off()
+	end
+
+	-- Body: breathe when idle, bounce and rock when running, stretch in the air,
+	-- squash on landing, hop when happy.
+	local b = p.Body
+	b.y = (0.05 * sin(t * 2.2) * idle + 0.32 * abs(sin(phase)) * run * ground - 0.3 * land + 0.7 * abs(sin(t * 9)) * happy) * k
+	b.rx = 0.07 * sin(phase * 2) * run * ground - 0.16 * air + 0.12 * land
+	b.rz = 0.05 * sin(phase) * run * ground + 0.06 * sin(t * 9) * happy
+	b.z = -0.08 * run * k
+
+	-- Head: looks around when idle, counters the body when running, tilts when happy.
+	local h = p.Head
+	h.ry = s.Look * idle
+	h.rx = 0.06 * sin(t * 2.2 + 0.7) * idle - 0.1 * sin(phase * 2 + 0.6) * run * ground + 0.12 * air - 0.15 * land
+	h.rz = 0.18 * sin(t * 4.5) * happy + 0.05 * sin(t * 0.9) * idle
+
+	-- Ears: twitch when idle, sweep back when running fast, flop on landing.
+	for i, j in { "EarL", "EarR" } do
+		local side = if i == 1 then 1 else -1
+		local e = p[j]
+		local twitch = math.max(0, sin(t * 1.3 + i * 2.1)) ^ 12
+		e.rz = side * (0.12 * twitch * idle + 0.1 * sin(phase * 2) * run + 0.25 * land + 0.2 * sin(t * 9 + i) * happy)
+		e.rx = 0.45 * run + 0.25 * air - 0.2 * land
+	end
+
+	-- Tail: wags (fast when happy), lifts while running.
+	local tl = p.Tail
+	tl.ry = 0.35 * sin(t * 4) * idle + 0.25 * sin(phase) * run + 0.6 * sin(t * 15) * happy
+	tl.rx = -0.35 * run - 0.2 * air + 0.1 * sin(t * 2.2) * idle
+
+	-- Wings: slow fold-breathe idle, flap with the stride, spread wide in the air.
+	for i, j in { "WingL", "WingR" } do
+		local side = if i == 1 then 1 else -1
+		local w = p[j]
+		w.rz = side * (0.08 * sin(t * 1.8) * idle + 0.55 * sin(phase * 2) * run * ground + (0.75 + 0.45 * sin(t * 14)) * air + 0.5 * sin(t * 12) * happy)
+		w.ry = side * 0.15 * run
+	end
+
+	-- Legs: diagonal pairs swing opposite (a trot), tuck in the air, splay on landing.
+	local legs = { LegFL = 0, LegBR = 0, LegFR = math.pi, LegBL = math.pi }
+	for j, ph in legs do
+		local front = string.sub(j, 4, 4) == "F"
+		local l = p[j]
+		local swing = sin(phase + ph)
+		l.rx = 0.85 * swing * run * ground + (if front then -0.75 else 0.65) * air + 0.15 * sin(t * 9 + ph) * happy
+		l.y = math.max(0, -sin(phase + ph)) * 0.22 * run * ground * k -- lift the foot on the way forward
+		l.rz = (if string.sub(j, 5, 5) == "L" then 1 else -1) * 0.12 * land
+	end
+	return p
+end
+
+-- Eye openness 0..1: a quick blink every few seconds (seeded so pets don't sync).
+function PetAnim.Blink(t: number, seed: number): number
+	local period = 3.2 + (seed % 7) * 0.35
+	local x = (t + seed * 0.37) % period
+	if x < 0.12 then
+		return 1 - math.sin(x / 0.12 * math.pi)
+	end
+	return 1
+end
+
+return PetAnim
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="11">
+          <Properties>
             <string name="Name">PetStats</string>
             <string name="Source"><![CDATA[-- Pet levels, xp and the riding numbers they give.
 local Config = require("../Config")
@@ -654,7 +768,7 @@ return PetStats
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="11">
+        <Item class="ModuleScript" referent="12">
           <Properties>
             <string name="Name">Profile</string>
             <string name="Source"><![CDATA[-- Player save data: defaults, cleaning up loaded data, and pet inventory rules.
@@ -912,7 +1026,7 @@ return Profile
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="12">
+        <Item class="ModuleScript" referent="13">
           <Properties>
             <string name="Name">RaceRules</string>
             <string name="Source"><![CDATA[-- Race results, rewards, medals and leagues.
@@ -1034,7 +1148,7 @@ return RaceRules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="13">
+        <Item class="ModuleScript" referent="14">
           <Properties>
             <string name="Name">TrackLayout</string>
             <string name="Source"><![CDATA[-- Pure track maths: turns a track's segment list into positioned pieces and
@@ -1146,7 +1260,7 @@ return TrackLayout
           </Properties>
         </Item>
       </Item>
-      <Item class="ModuleScript" referent="14">
+      <Item class="ModuleScript" referent="15">
         <Properties>
           <string name="Name">Models</string>
           <string name="Source"><![CDATA[--!strict
@@ -1197,7 +1311,7 @@ return Models
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="15">
+      <Item class="ModuleScript" referent="16">
         <Properties>
           <string name="Name">Net</string>
           <string name="Source"><![CDATA[-- Remote names in one place. The server creates them; clients wait for them.
@@ -1263,7 +1377,7 @@ return Net
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="16">
+      <Item class="ModuleScript" referent="17">
         <Properties>
           <string name="Name">PetModel</string>
           <string name="Source"><![CDATA[-- Builds a pet out of simple parts. Shared so the server (riding, following) and the
@@ -1314,6 +1428,7 @@ export type Built = {
 	Root: BasePart,
 	Height: number, -- top of the back, from the feet
 	Legs: { BasePart },
+	Body: BasePart, -- the visible body (decorations hang off it); Root is the pivot part
 	Footprint: Vector2, -- body width (X) and length (Z), for the collision box
 }
 
@@ -1355,6 +1470,7 @@ local function fromMesh(s: any, scale: number, paint: string?): Built?
 	return {
 		Model = model,
 		Root = mesh,
+		Body = mesh,
 		Height = (s.Legs + s.Body[2]) * scale,
 		Legs = {},
 		Footprint = Vector2.new(s.Body[1] * scale, (s.Body[3] + s.Head * 0.3) * scale),
@@ -1376,7 +1492,7 @@ local function sparkle(built: Built, s: any)
 	e.Speed = NumberRange.new(1, 2.5)
 	e.SpreadAngle = Vector2.new(180, 180)
 	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.3, 0.7), NumberSequenceKeypoint.new(1, 0) })
-	e.Parent = built.Root
+	e.Parent = built.Body
 end
 
 -- scale: overall size (grows with level). paint: cosmetic id or nil.
@@ -1387,7 +1503,10 @@ function PetModel.Build(speciesId: string, scale: number, paint: string?): Built
 	return built
 end
 
--- The part-built look (used until the 3D models are uploaded).
+-- The part-built look (used until the 3D models are uploaded). A jointed rig:
+-- an invisible Root at the feet, the Body jointed to it, and Head (with EarL/EarR),
+-- Tail, WingL/WingR and four legs jointed to the Body. Joints are Welds named
+-- "J_<Joint>" so the client animator (PetAnimator) can pose them.
 function PetModel.BuildParts(s: any, scale: number, paint: string?): Built
 	local model = Instance.new("Model")
 	model.Name = s.Name
@@ -1401,98 +1520,121 @@ function PetModel.BuildParts(s: any, scale: number, paint: string?): Built
 	local dark = Color3.fromRGB(25, 20, 35)
 	local white = Color3.new(1, 1, 1)
 	local blush = Color3.fromRGB(255, 120, 150)
+	local pinkIn = Color3.fromRGB(255, 170, 190)
 	local bx, by, bz = s.Body[1] * k, s.Body[2] * k, s.Body[3] * k
 	local legH = s.Legs * k
 	local hs = s.Head * k
 	local bodyY = legH + by / 2
 
-	-- Chibi layout (same as blender/build.py): bean body, big head over the front.
-	local body = part(model, "Body", Vector3.new(bx, by, bz), CFrame.new(0, bodyY, 0), color, "Ball")
-	model.PrimaryPart = body
-	part(model, "Back", Vector3.new(bx * 0.96, by * 0.96, bz * 0.6), CFrame.new(0, bodyY + by * 0.06, bz * 0.18), color, "Ball")
-	part(model, "Belly", Vector3.new(bx * 0.8, by * 0.8, bz * 0.78), CFrame.new(0, bodyY - by * 0.14, -bz * 0.1), accent, "Ball")
+	local root = part(model, "Root", Vector3.new(1, 0.2, 1), CFrame.new(0, 0.1, 0), white)
+	root.Transparency = 1
+	model.PrimaryPart = root
 
+	-- Joins `child` to `parent` at `pivot` (world CFrame at build time).
+	local function joint(name: string, parent: BasePart, child: BasePart, pivot: CFrame)
+		local w = Instance.new("Weld")
+		w.Name = "J_" .. name
+		w.Part0 = parent
+		w.Part1 = child
+		w.C0 = parent.CFrame:ToObjectSpace(pivot)
+		w.C1 = child.CFrame:ToObjectSpace(pivot)
+		w.Parent = child
+	end
+	-- Rigidly attaches a decoration to the part that carries it.
+	local function attach(host: BasePart, p: BasePart)
+		local w = Instance.new("WeldConstraint")
+		w.Part0 = host
+		w.Part1 = p
+		w.Parent = p
+	end
+
+	-- Body
+	local body = part(model, "Body", Vector3.new(bx, by, bz), CFrame.new(0, bodyY, 0), color, "Ball")
+	joint("Body", root, body, CFrame.new(0, bodyY, 0))
+	attach(body, part(model, "Back", Vector3.new(bx * 0.96, by * 0.96, bz * 0.6), CFrame.new(0, bodyY + by * 0.06, bz * 0.18), color, "Ball"))
+	attach(body, part(model, "Belly", Vector3.new(bx * 0.8, by * 0.8, bz * 0.78), CFrame.new(0, bodyY - by * 0.14, -bz * 0.1), accent, "Ball"))
+
+	-- Head (pivots at the neck, behind and below its centre)
 	local headCf = CFrame.new(0, legH + by * 0.85 + hs * 0.2, -bz * 0.4)
 	local head = part(model, "Head", Vector3.new(hs * 1.04, hs * 0.96, hs), headCf, color, "Ball")
-	part(model, "Snout", Vector3.new(hs * 0.42, hs * 0.28, hs * 0.26), headCf * CFrame.new(0, -hs * 0.17, -hs * 0.38), accent, "Ball")
-	part(model, "Nose", Vector3.new(hs * 0.13, hs * 0.09, hs * 0.07), headCf * CFrame.new(0, -hs * 0.09, -hs * 0.51), dark, "Ball")
+	joint("Head", body, head, headCf * CFrame.new(0, -hs * 0.3, hs * 0.25))
+	attach(head, part(model, "Snout", Vector3.new(hs * 0.42, hs * 0.28, hs * 0.26), headCf * CFrame.new(0, -hs * 0.17, -hs * 0.38), accent, "Ball"))
+	attach(head, part(model, "Nose", Vector3.new(hs * 0.13, hs * 0.09, hs * 0.07), headCf * CFrame.new(0, -hs * 0.09, -hs * 0.51), dark, "Ball"))
 	for _, side in { -1, 1 } do
-		local eye = headCf * CFrame.new(side * hs * 0.2, hs * 0.05, -hs * 0.455)
-		part(model, "Eye", Vector3.new(hs * 0.19, hs * 0.26, hs * 0.1), eye, dark, "Ball")
-		part(model, "Shine", Vector3.new(hs * 0.08, hs * 0.08, hs * 0.04), eye * CFrame.new(-side * hs * 0.03, hs * 0.06, -hs * 0.045), white, "Ball")
-		part(model, "Shine2", Vector3.new(hs * 0.035, hs * 0.035, hs * 0.02), eye * CFrame.new(side * hs * 0.035, -hs * 0.06, -hs * 0.04), white, "Ball")
-		part(model, "Blush", Vector3.new(hs * 0.14, hs * 0.08, hs * 0.06), headCf * CFrame.new(side * hs * 0.33, -hs * 0.12, -hs * 0.36), blush, "Ball")
+		local eyeCf = headCf * CFrame.new(side * hs * 0.2, hs * 0.05, -hs * 0.455)
+		attach(head, part(model, "Eye", Vector3.new(hs * 0.19, hs * 0.26, hs * 0.1), eyeCf, dark, "Ball"))
+		attach(head, part(model, "Shine", Vector3.new(hs * 0.08, hs * 0.08, hs * 0.04), eyeCf * CFrame.new(-side * hs * 0.03, hs * 0.06, -hs * 0.045), white, "Ball"))
+		attach(head, part(model, "Shine", Vector3.new(hs * 0.035, hs * 0.035, hs * 0.02), eyeCf * CFrame.new(side * hs * 0.035, -hs * 0.06, -hs * 0.04), white, "Ball"))
+		attach(head, part(model, "Blush", Vector3.new(hs * 0.14, hs * 0.08, hs * 0.06), headCf * CFrame.new(side * hs * 0.33, -hs * 0.12, -hs * 0.36), blush, "Ball"))
 	end
-
-	-- Ears
-	if s.Ears then
-		for _, side in { -1, 1 } do
-			if s.Ears == "Long" then
-				local cf = headCf * CFrame.new(side * hs * 0.18, hs * 0.78, hs * 0.04) * CFrame.Angles(0, 0, side * -0.2)
-				part(model, "Ear", Vector3.new(hs * 0.24, hs * 0.8, hs * 0.14), cf, color, "Ball")
-				part(model, "EarIn", Vector3.new(hs * 0.13, hs * 0.6, hs * 0.06), cf * CFrame.new(0, 0, -hs * 0.055), accent, "Ball")
-			elseif s.Ears == "Round" then
-				local cf = headCf * CFrame.new(side * hs * 0.34, hs * 0.38, hs * 0.03)
-				part(model, "Ear", Vector3.new(hs * 0.32, hs * 0.32, hs * 0.16), cf, color, "Ball")
-				part(model, "EarIn", Vector3.new(hs * 0.18, hs * 0.18, hs * 0.07), cf * CFrame.new(0, 0, -hs * 0.06), Color3.fromRGB(255, 170, 190), "Ball")
-			else
-				local cf = headCf * CFrame.new(side * hs * 0.3, hs * 0.5, hs * 0.02) * CFrame.Angles(0, 0, side * -0.25)
-				part(model, "Ear", Vector3.new(hs * 0.3, hs * 0.42, hs * 0.14), cf, color, "Ball")
-				part(model, "EarIn", Vector3.new(hs * 0.16, hs * 0.28, hs * 0.06), cf * CFrame.new(0, -hs * 0.03, -hs * 0.05), Color3.fromRGB(255, 170, 190), "Ball")
-			end
-		end
-	end
-
 	if s.Horn then
 		local horn = part(model, "Horn", Vector3.new(hs * 0.14, hs * 0.55, hs * 0.14), headCf * CFrame.new(0, hs * 0.68, -hs * 0.24) * CFrame.Angles(-0.3, 0, 0), Color3.fromRGB(255, 205, 80))
 		if s.Neon then
 			horn.Material = Enum.Material.Neon
 		end
+		attach(head, horn)
 	end
 
-	-- Stubby legs on hip joints (Welds, so the client can swing them while running).
+	-- Ears (pivot at the base, on the head)
+	if s.Ears then
+		for i, side in { 1, -1 } do
+			local name = if i == 1 then "EarL" else "EarR"
+			local cf, size, inSize, inCol, base
+			if s.Ears == "Long" then
+				cf = headCf * CFrame.new(side * hs * 0.18, hs * 0.78, hs * 0.04) * CFrame.Angles(0, 0, side * -0.2)
+				size, inSize, inCol = Vector3.new(hs * 0.24, hs * 0.8, hs * 0.14), Vector3.new(hs * 0.13, hs * 0.6, hs * 0.06), accent
+				base = cf * CFrame.new(0, -hs * 0.35, 0)
+			elseif s.Ears == "Round" then
+				cf = headCf * CFrame.new(side * hs * 0.34, hs * 0.38, hs * 0.03)
+				size, inSize, inCol = Vector3.new(hs * 0.32, hs * 0.32, hs * 0.16), Vector3.new(hs * 0.18, hs * 0.18, hs * 0.07), pinkIn
+				base = cf * CFrame.new(0, -hs * 0.12, 0)
+			else
+				cf = headCf * CFrame.new(side * hs * 0.3, hs * 0.5, hs * 0.02) * CFrame.Angles(0, 0, side * -0.25)
+				size, inSize, inCol = Vector3.new(hs * 0.3, hs * 0.42, hs * 0.14), Vector3.new(hs * 0.16, hs * 0.28, hs * 0.06), pinkIn
+				base = cf * CFrame.new(0, -hs * 0.18, 0)
+			end
+			local ear = part(model, "Ear", size, cf, color, "Ball")
+			joint(name, head, ear, base)
+			attach(ear, part(model, "EarIn", inSize, cf * CFrame.new(0, -hs * 0.02, -hs * 0.06), inCol, "Ball"))
+		end
+	end
+
+	-- Legs (pivot at the hip) with round feet
 	local legs = {}
 	local legLen = legH + by * 0.35
-	for _, lx in { -1, 1 } do
-		for _, lz in { -1, 1 } do
-			local x, z = lx * bx * 0.27, lz * bz * 0.28
-			local leg = part(model, "Leg", Vector3.new(bx * 0.3, legLen, bx * 0.3), CFrame.new(x, legLen / 2, z), color, "Ball")
-			local foot = part(model, "Paw", Vector3.new(bx * 0.36, bx * 0.24, bx * 0.42), CFrame.new(x, bx * 0.11, z - bx * 0.05), accent, "Ball")
-			local fw = Instance.new("WeldConstraint")
-			fw.Part0 = leg
-			fw.Part1 = foot
-			fw.Parent = foot
-			local hip = Instance.new("Weld")
-			hip.Name = "LegJoint"
-			hip.Part0 = body
-			hip.Part1 = leg
-			hip.C0 = body.CFrame:ToObjectSpace(CFrame.new(x, legLen, z))
-			hip.C1 = CFrame.new(0, legLen / 2, 0)
-			hip:SetAttribute("Phase", if lx * lz > 0 then 0 else math.pi)
-			hip.Parent = leg
-			table.insert(legs, leg)
-		end
+	for _, def in { { "LegFL", 1, -1 }, { "LegFR", -1, -1 }, { "LegBL", 1, 1 }, { "LegBR", -1, 1 } } do
+		local x, z = def[2] * bx * 0.27, def[3] * bz * 0.28
+		local leg = part(model, "Leg", Vector3.new(bx * 0.3, legLen, bx * 0.3), CFrame.new(x, legLen / 2, z), color, "Ball")
+		joint(def[1], body, leg, CFrame.new(x, legLen, z))
+		attach(leg, part(model, "Paw", Vector3.new(bx * 0.36, bx * 0.24, bx * 0.42), CFrame.new(x, bx * 0.11, z - bx * 0.05), accent, "Ball"))
+		table.insert(legs, leg)
 	end
 
-	-- Tail
+	-- Tail (pivot where it meets the body)
 	if s.Tail then
-		local tailCf = CFrame.new(0, bodyY + by * 0.15, bz * 0.48)
+		local base = CFrame.new(0, bodyY + by * 0.15, bz * 0.46)
+		local tail
 		if s.Tail == "Short" then
-			part(model, "Tail", Vector3.new(bx * 0.3, bx * 0.3, bx * 0.3), tailCf, accent, "Ball")
+			tail = part(model, "Tail", Vector3.new(bx * 0.3, bx * 0.3, bx * 0.3), base * CFrame.new(0, 0, bx * 0.06), accent, "Ball")
 		elseif s.Tail == "Fluffy" then
-			part(model, "Tail", Vector3.new(bx * 0.42, bx * 0.42, bz * 0.48), tailCf * CFrame.new(0, by * 0.35, bz * 0.16) * CFrame.Angles(0.7, 0, 0), color, "Ball")
+			tail = part(model, "Tail", Vector3.new(bx * 0.42, bx * 0.42, bz * 0.48), base * CFrame.new(0, by * 0.35, bz * 0.16) * CFrame.Angles(0.7, 0, 0), color, "Ball")
+			attach(tail, part(model, "TailTip", Vector3.new(bx * 0.3, bx * 0.3, bx * 0.3), base * CFrame.new(0, by * 0.55, bz * 0.33), accent, "Ball"))
 		else
-			part(model, "Tail", Vector3.new(bx * 0.16, bx * 0.16, bz * 0.55), tailCf * CFrame.new(0, by * 0.2, bz * 0.22) * CFrame.Angles(0.6, 0, 0), color, "Ball")
+			tail = part(model, "Tail", Vector3.new(bx * 0.16, bx * 0.16, bz * 0.55), base * CFrame.new(0, by * 0.2, bz * 0.22) * CFrame.Angles(0.6, 0, 0), color, "Ball")
+			attach(tail, part(model, "TailTip", Vector3.new(bx * 0.26, bx * 0.26, bx * 0.26), base * CFrame.new(0, by * 0.4, bz * 0.44), accent, "Ball"))
 		end
+		joint("Tail", body, tail, base)
 	end
 
-	-- Wings
+	-- Wings (pivot at the shoulder)
 	if s.Wings then
-		for _, side in { -1, 1 } do
-			local w = part(model, "Wing", Vector3.new(bx * 0.9, by * 0.1, bz * 0.42), CFrame.new(side * bx * 0.85, bodyY + by * 0.38, 0) * CFrame.Angles(0, side * -0.2, side * 0.55), accent, "Ball")
+		for i, side in { 1, -1 } do
+			local shoulder = CFrame.new(side * bx * 0.42, bodyY + by * 0.38, 0)
+			local w = part(model, "Wing", Vector3.new(bx * 0.9, by * 0.1, bz * 0.42), shoulder * CFrame.Angles(0, side * -0.2, side * 0.55) * CFrame.new(side * bx * 0.42, 0, 0), accent, "Ball")
 			if s.Neon then
 				w.Material = Enum.Material.Neon
 			end
+			joint(if i == 1 then "WingL" else "WingR", body, w, shoulder)
 		end
 	end
 
@@ -1503,30 +1645,18 @@ function PetModel.BuildParts(s: any, scale: number, paint: string?): Built
 		light.Brightness = 1.5
 		light.Parent = body
 	end
-
-	-- Weld everything else to the body (legs and paws are already jointed).
-	for _, p in model:GetChildren() do
-		if p:IsA("BasePart") and p ~= body and p.Name ~= "Leg" and p.Name ~= "Paw" then
-			local w = Instance.new("WeldConstraint")
-			w.Part0 = body
-			w.Part1 = p
-			w.Parent = p
-		end
-	end
-	local _ = head
-	-- Pivot at the feet so callers can place the pet on the ground. A model with a
-	-- PrimaryPart pivots on that part, so the offset goes on the body.
-	body.PivotOffset = CFrame.new(0, -bodyY, 0)
-	return { Model = model, Root = body, Height = legH + by, Legs = legs, Footprint = Vector2.new(bx, bz + hs * 0.3) }
+	-- Pivot at the feet so callers can place the pet on the ground.
+	root.PivotOffset = CFrame.new(0, -0.1, 0)
+	return { Model = model, Root = root, Body = body, Height = legH + by, Legs = legs, Footprint = Vector2.new(bx, bz + hs * 0.3) }
 end
 
 -- Adds or replaces a trail behind the pet.
 function PetModel.SetTrail(built: Built, trailId: string?)
-	local old = built.Root:FindFirstChild("PetTrail")
+	local old = built.Body:FindFirstChild("PetTrail")
 	if old then
 		old:Destroy()
 	end
-	for _, a in built.Root:GetChildren() do
+	for _, a in built.Body:GetChildren() do
 		if a:IsA("Attachment") and string.sub(a.Name, 1, 5) == "Trail" then
 			a:Destroy()
 		end
@@ -1535,15 +1665,15 @@ function PetModel.SetTrail(built: Built, trailId: string?)
 	if not def or def.Kind ~= "Trail" then
 		return
 	end
-	local size = built.Root.Size
+	local size = built.Body.Size
 	local a0 = Instance.new("Attachment")
 	a0.Name = "TrailTop"
 	a0.Position = Vector3.new(0, size.Y * 0.3, size.Z / 2)
-	a0.Parent = built.Root
+	a0.Parent = built.Body
 	local a1 = Instance.new("Attachment")
 	a1.Name = "TrailBottom"
 	a1.Position = Vector3.new(0, -size.Y * 0.3, size.Z / 2)
-	a1.Parent = built.Root
+	a1.Parent = built.Body
 	local trail = Instance.new("Trail")
 	trail.Name = "PetTrail"
 	trail.Attachment0 = a0
@@ -1561,14 +1691,14 @@ function PetModel.SetTrail(built: Built, trailId: string?)
 	end
 	trail.Color = ColorSequence.new(keys)
 	trail.Transparency = NumberSequence.new(0.1, 1)
-	trail.Parent = built.Root
+	trail.Parent = built.Body
 end
 
 return PetModel
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="17">
+      <Item class="ModuleScript" referent="18">
         <Properties>
           <string name="Name">Pets</string>
           <string name="Source"><![CDATA[-- Pet species. Models are built from simple parts (see server PetModel), so no
@@ -1637,7 +1767,7 @@ return Pets
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="18">
+      <Item class="ModuleScript" referent="19">
         <Properties>
           <string name="Name">Products</string>
           <string name="Source"><![CDATA[-- Robux products. Robux buys Coins, cosmetics and storage only, never race speed.
@@ -1663,7 +1793,7 @@ return Products
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="19">
+      <Item class="ModuleScript" referent="20">
         <Properties>
           <string name="Name">Sounds</string>
           <string name="Source"><![CDATA[-- Sound effects. Ids are Roblox's built-in engine sounds (always available, no
@@ -1695,7 +1825,7 @@ return Sounds
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="20">
+      <Item class="ModuleScript" referent="21">
         <Properties>
           <string name="Name">Tracks</string>
           <string name="Source"><![CDATA[-- Race tracks. Each track is a straight run along +X made of segments, laid out by
@@ -1803,15 +1933,15 @@ return Tracks
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="21">
+  <Item class="ServerScriptService" referent="22">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="22">
+    <Item class="Folder" referent="23">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="23">
+      <Item class="ModuleScript" referent="24">
         <Properties>
           <string name="Name">Codes</string>
           <string name="Source"><![CDATA[-- Promo codes (typed in the DAILY menu). Server-only, so players can't read
@@ -1825,7 +1955,7 @@ return {
 ]]></string>
         </Properties>
       </Item>
-      <Item class="Script" referent="24">
+      <Item class="Script" referent="25">
         <Properties>
           <string name="Name">Main</string>
           <token name="RunContext">0</token>
@@ -1871,11 +2001,11 @@ end
 ]]></string>
         </Properties>
       </Item>
-      <Item class="Folder" referent="25">
+      <Item class="Folder" referent="26">
         <Properties>
           <string name="Name">Services</string>
         </Properties>
-        <Item class="ModuleScript" referent="26">
+        <Item class="ModuleScript" referent="27">
           <Properties>
             <string name="Name">AssetLoader</string>
             <string name="Source"><![CDATA[-- Loads the uploaded 3D models (Shared/Models with an Id) with InsertService into
@@ -1946,7 +2076,15 @@ local function build(name: string, e: Models.Entry): (Model?, string?)
 	local f = AssetFit.Fit({ mesh.Size.X, mesh.Size.Y, mesh.Size.Z }, e.Size)
 	local c = AssetFit.Axes(f)
 	local rot = CFrame.fromMatrix(Vector3.zero, Vector3.new(c[1][1], c[1][2], c[1][3]), Vector3.new(c[2][1], c[2][2], c[2][3]), Vector3.new(c[3][1], c[3][2], c[3][3]))
+	local oldSize = mesh.Size
 	mesh.Size = Vector3.new(f.LocalSize[1], f.LocalSize[2], f.LocalSize[3])
+	-- Resizing a MeshPart doesn't move its bones: scale their positions to match.
+	local ratio = mesh.Size / oldSize
+	for _, b in mesh:GetDescendants() do
+		if b:IsA("Bone") then
+			b.Position *= ratio
+		end
+	end
 	-- Offset = pivot - centre, so the centre sits at -Offset from the pivot (origin).
 	mesh.CFrame = CFrame.new(-e.Offset[1], -e.Offset[2], -e.Offset[3]) * rot
 	mesh.PivotOffset = mesh.CFrame:ToObjectSpace(CFrame.new())
@@ -1957,6 +2095,9 @@ local function build(name: string, e: Models.Entry): (Model?, string?)
 	mesh.Name = name
 	if f.Error > 0.25 then
 		warn(string.format("[AssetLoader] %s: uploaded proportions differ from the catalog by %d%%", name, math.floor(f.Error * 100)))
+	end
+	if e.Category == "Pets" and not mesh:FindFirstChildWhichIsA("Bone", true) then
+		warn("[AssetLoader] " .. name .. ": no skeleton found under the mesh; it will show but not animate")
 	end
 	local m = Instance.new("Model")
 	m.Name = name
@@ -2007,7 +2148,7 @@ return AssetLoader
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="27">
+        <Item class="ModuleScript" referent="28">
           <Properties>
             <string name="Name">DailyService</string>
             <string name="Source"><![CDATA[-- Daily login streak, daily quests, promo codes, badges and the sound setting.
@@ -2127,7 +2268,7 @@ return DailyService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="28">
+        <Item class="ModuleScript" referent="29">
           <Properties>
             <string name="Name">DataService</string>
             <string name="Source"><![CDATA[-- Loads and saves player profiles (DataStore), keeps leaderstats in sync and
@@ -2398,7 +2539,7 @@ return DataService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="29">
+        <Item class="ModuleScript" referent="30">
           <Properties>
             <string name="Name">LeaderboardService</string>
             <string name="Source"><![CDATA[-- Global top-10 trophies board in the lobby (OrderedDataStore). Falls back to the
@@ -2526,7 +2667,7 @@ return LeaderboardService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="30">
+        <Item class="ModuleScript" referent="31">
           <Properties>
             <string name="Name">PetService</string>
             <string name="Source"><![CDATA[-- Pets in the world: hatching, equipping, riding, following, dashing and the
@@ -2729,11 +2870,10 @@ local function spawnFollower(p: Player)
 	local built = PetModel.Build(pet.Species, ride.Size * 0.8, pet.Paint)
 	PetModel.SetTrail(built, pet.Trail)
 	outline(built)
-	for _, d in built.Model:GetDescendants() do
-		if d:IsA("BasePart") then
-			d.Anchored = true
-		end
-	end
+	-- Only the root is anchored (the server moves it); everything else hangs off it on
+	-- joints, so clients can animate the follower too.
+	built.Root.Anchored = true
+	built.Model:SetAttribute("Owner", p.UserId)
 	built.Model.Name = p.Name .. "Pet"
 	built.Model:PivotTo(root.CFrame * CFrame.new(4, -3, 3))
 	built.Model.Parent = folder
@@ -2910,6 +3050,7 @@ function PetService.Start()
 		s.DefaultHip = nil
 		destroyModel(s) -- a follower lives outside the character, so clear it too
 		s.Riding = false
+		p:SetAttribute("Riding", false) -- no sit pose until the new pet is mounted
 		local hum = char:WaitForChild("Humanoid", 10) :: Humanoid?
 		char:WaitForChild("HumanoidRootPart", 10)
 		if not hum or not Data.Get(p) then
@@ -3035,7 +3176,8 @@ function PetService.Start()
 					if (cur.Position - goal.Position).Magnitude > 60 then
 						alpha = 1
 					end
-					built.Model:PivotTo(cur:Lerp(goal, alpha))
+					-- move only the anchored root; the rest hangs off it on joints
+					built.Root.CFrame = cur:Lerp(goal, alpha) * built.Root.PivotOffset:Inverse()
 				end
 			end
 		end
@@ -3046,7 +3188,7 @@ return PetService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="31">
+        <Item class="ModuleScript" referent="32">
           <Properties>
             <string name="Name">RaceService</string>
             <string name="Source"><![CDATA[-- Races: players standing on the lobby portal are queued; after a short wait they're
@@ -3524,7 +3666,7 @@ return RaceService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="32">
+        <Item class="ModuleScript" referent="33">
           <Properties>
             <string name="Name">ShopService</string>
             <string name="Source"><![CDATA[-- Coin shop (cosmetics) and Robux purchases. Robux buys Coins, cosmetics and
@@ -3660,7 +3802,7 @@ return ShopService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="33">
+        <Item class="ModuleScript" referent="34">
           <Properties>
             <string name="Name">TrackBuilder</string>
             <string name="Source"><![CDATA[-- Builds a race track from parts using Logic/TrackLayout. The track sits high in the
@@ -3958,7 +4100,7 @@ return TrackBuilder
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="34">
+        <Item class="ModuleScript" referent="35">
           <Properties>
             <string name="Name">TrainingService</string>
             <string name="Source"><![CDATA[-- Lobby training: ride through the Speed Ring gates, jump the hurdles, run on the
@@ -4127,7 +4269,7 @@ return TrainingService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="35">
+        <Item class="ModuleScript" referent="36">
           <Properties>
             <string name="Name">Util</string>
             <string name="Source"><![CDATA[-- Small server helpers: rate-limited remote handlers, part building, notifications.
@@ -4263,7 +4405,7 @@ return Util
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="36">
+        <Item class="ModuleScript" referent="37">
           <Properties>
             <string name="Name">WorldService</string>
             <string name="Source"><![CDATA[-- Builds the lobby from parts at server start: spawn, egg stands, training area,
@@ -4755,7 +4897,7 @@ return WorldService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="37">
+  <Item class="StarterPlayer" referent="38">
     <Properties>
       <string name="Name">StarterPlayer</string>
       <float name="CameraMaxZoomDistance">60</float>
@@ -4764,19 +4906,19 @@ return WorldService
       <float name="CharacterWalkSpeed">16</float>
       <bool name="EnableMouseLockOption">false</bool>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="38">
+    <Item class="StarterPlayerScripts" referent="39">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="39">
+      <Item class="Folder" referent="40">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="Folder" referent="40">
+        <Item class="Folder" referent="41">
           <Properties>
             <string name="Name">Controllers</string>
           </Properties>
-          <Item class="ModuleScript" referent="41">
+          <Item class="ModuleScript" referent="42">
             <Properties>
               <string name="Name">DailyMenu</string>
               <string name="Source"><![CDATA[-- DAILY menu: login streak reward, today's quests, promo codes and the sound switch.
@@ -4926,7 +5068,7 @@ return DailyMenu
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="42">
+          <Item class="ModuleScript" referent="43">
             <Properties>
               <string name="Name">HatchView</string>
               <string name="Source"><![CDATA[-- Hatch reveal: the egg wobbles, cracks with a flash, and the new pet spins in.
@@ -4942,6 +5084,7 @@ local PetModel = require(Shared.PetModel)
 local UI = require(script.Parent.Parent.UI)
 local Notify = require(script.Parent.Notify)
 local Sound = require(script.Parent.Sound)
+local PetAnimator = require(script.Parent.PetAnimator)
 
 local HatchView = {}
 
@@ -4982,12 +5125,9 @@ local function show(species: string, eggId: string, uid: string)
 	local rays = UI.Frame({ Size = UDim2.fromScale(1, 1), BackgroundColor3 = UI.Rgb(rar.Color), BackgroundTransparency = 0.6, ZIndex = 41 }, holder)
 	UI.Corner(rays, 160)
 	local built = PetModel.Build(species, 1)
-	for _, d in built.Model:GetDescendants() do
-		if d:IsA("BasePart") then
-			d.Anchored = true
-		end
-	end
+	built.Root.Anchored = true -- the rest hangs off it on joints so it can animate
 	UI.Viewport(holder, built.Model, { ZIndex = 42 })
+	PetAnimator.Register(built.Model, 2.5) -- excited hops when it pops out
 	local spin = 0
 	local conn = RunService.RenderStepped:Connect(function(dt)
 		spin += dt * 1.5
@@ -5039,7 +5179,7 @@ return HatchView
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="43">
+          <Item class="ModuleScript" referent="44">
             <Properties>
               <string name="Name">Hud</string>
               <string name="Source"><![CDATA[-- Always-on HUD: coins, trophies, league, and the main buttons (Pets, Shop,
@@ -5192,7 +5332,7 @@ return Hud
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="44">
+          <Item class="ModuleScript" referent="45">
             <Properties>
               <string name="Name">Notify</string>
               <string name="Source"><![CDATA[-- Toasts: short messages from the server. "Xp" pops small above the buttons,
@@ -5280,7 +5420,348 @@ return Notify
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="45">
+          <Item class="ModuleScript" referent="46">
+            <Properties>
+              <string name="Name">PetAnimator</string>
+              <string name="Source"><![CDATA[-- Animates every pet this client can see, using Logic/PetAnim:
+--   * ridden pets (in characters) and following pets (workspace.Pets)
+--   * preview pets in viewports (hatch reveal, pet menu), registered by those screens
+-- Part-built pets are posed through their "J_<Joint>" Welds; uploaded mesh pets
+-- through Bones with the same names. Everything here is local and visual only.
+-- Also: the local player's sit pose while riding, blinking, dust puffs when running,
+-- a landing squash and happy hops (hatching, levelling up).
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage.Shared
+local PetAnim = require(Shared.Logic.PetAnim)
+local Net = require(Shared.Net)
+
+local PetAnimator = {}
+
+local player = Players.LocalPlayer
+local sitTrack: AnimationTrack? = nil
+
+-- Mesh bones are authored in Blender, whose bone axes differ from Roblox's:
+-- rotations/moves about X and Z flip sign. (Check in Studio once models are uploaded.)
+local BONE_AXIS = { X = -1, Y = 1, Z = -1 }
+
+type Joint = { Weld: Weld?, Bone: Bone?, Rest: CFrame }
+type Rig = {
+	Model: Model,
+	Root: BasePart?,
+	Joints: { [string]: Joint },
+	Eyes: { { Mesh: SpecialMesh, Scale: Vector3 } },
+	Shines: { BasePart },
+	Open: number,
+	Grounded: boolean,
+	MoveT: number,
+	Seed: number,
+	Phase: number,
+	Air: number,
+	Land: number,
+	Happy: number,
+	HappyUntil: number,
+	Look: number,
+	LookGoal: number,
+	LookAt: number,
+	LastPos: Vector3?,
+	Speed: number,
+	VelY: number,
+	Size: number,
+	Dust: ParticleEmitter?,
+	Preview: boolean,
+	Owner: Player?,
+}
+
+local rigs: { [Model]: Rig } = {}
+local onScreen: (Instance) -> boolean
+
+local function scan(model: Model, preview: boolean, owner: Player?): Rig
+	local joints = {}
+	local eyes = {}
+	local shines = {}
+	for _, d in model:GetDescendants() do
+		if d:IsA("Weld") and string.sub(d.Name, 1, 2) == "J_" then
+			joints[string.sub(d.Name, 3)] = { Weld = d, Rest = d.C0 }
+		elseif d:IsA("Bone") and table.find(PetAnim.Joints, d.Name) then
+			joints[d.Name] = { Bone = d, Rest = CFrame.new() }
+		elseif d:IsA("BasePart") and d.Name == "Eye" then
+			-- blink by squashing the eye's SpecialMesh (cheap; no physics rebuild)
+			local m = d:FindFirstChildOfClass("SpecialMesh")
+			if m then
+				table.insert(eyes, { Mesh = m, Scale = m.Scale })
+			end
+		elseif d:IsA("BasePart") and d.Name == "Shine" then
+			table.insert(shines, d)
+		end
+	end
+	local _, size = model:GetBoundingBox()
+	local root = model.PrimaryPart
+	local r: Rig = {
+		Model = model,
+		Root = root,
+		Joints = joints,
+		Eyes = eyes,
+		Shines = shines,
+		Open = 1,
+		Grounded = true,
+		MoveT = 0,
+		Seed = math.random(1, 1000),
+		Phase = math.random() * 6,
+		Air = 0,
+		Land = 0,
+		Happy = 0,
+		HappyUntil = 0,
+		Look = 0,
+		LookGoal = 0,
+		LookAt = 0,
+		Speed = 0,
+		VelY = 0,
+		Size = size.Y,
+		Preview = preview,
+		Owner = owner,
+	}
+	if root and not preview then
+		local dust = Instance.new("ParticleEmitter")
+		dust.Name = "Dust"
+		dust.Texture = "rbxasset://textures/particles/smoke_main.dds"
+		dust.Color = ColorSequence.new(Color3.fromRGB(235, 225, 205))
+		dust.Transparency = NumberSequence.new(0.35, 1)
+		dust.Size = NumberSequence.new(0.6, 2.2)
+		dust.Lifetime = NumberRange.new(0.4, 0.7)
+		dust.Speed = NumberRange.new(1, 3)
+		dust.SpreadAngle = Vector2.new(60, 60)
+		dust.EmissionDirection = Enum.NormalId.Top
+		dust.Rate = 0
+		dust.LightInfluence = 0.5
+		dust.Parent = root
+		r.Dust = dust
+	end
+	rigs[model] = r
+	model.Destroying:Once(function()
+		rigs[model] = nil
+	end)
+	return r
+end
+
+-- Screens with a preview pet call this so it idles, blinks and (optionally) hops.
+function PetAnimator.Register(model: Model, happySeconds: number?)
+	local r = rigs[model] or scan(model, true, nil)
+	if happySeconds then
+		r.HappyUntil = os.clock() + happySeconds
+	end
+end
+
+-- Makes the local player's pet hop for a moment (level up, win).
+function PetAnimator.Cheer(seconds: number)
+	local char = player.Character
+	local pet = char and char:FindFirstChild("RiddenPet")
+	if pet and pet:IsA("Model") then
+		local r = rigs[pet] or scan(pet, false, player)
+		r.HappyUntil = os.clock() + seconds
+	end
+end
+
+local function toCF(o: PetAnim.Offset, ax: { X: number, Y: number, Z: number }?): CFrame
+	local sx, sy, sz = 1, 1, 1
+	if ax then
+		sx, sy, sz = ax.X, ax.Y, ax.Z
+	end
+	return CFrame.new(o.x * sx, o.y * sy, o.z * sz) * CFrame.Angles(o.rx * sx, o.ry * sy, o.rz * sz)
+end
+
+local function step(r: Rig, dt: number, now: number, vel: Vector3?)
+	-- Movement: from the rider's root, or from how far the pet moved since last frame.
+	local root = r.Root
+	if not r.Preview and root then
+		local v = vel
+		if not v then
+			-- Followers: the replicated position arrives in steps, so measure the move
+			-- over the time since it last changed and skip frames where it didn't.
+			local pos = root.Position
+			r.MoveT += dt
+			if r.LastPos and pos ~= r.LastPos then
+				v = (pos - r.LastPos) / math.max(r.MoveT, 1 / 60)
+				r.MoveT = 0
+			elseif r.MoveT > 0.25 then
+				v = Vector3.zero
+			end
+			if not r.LastPos or pos ~= r.LastPos then
+				r.LastPos = pos
+			end
+		end
+		if v then
+			local flat = Vector3.new(v.X, 0, v.Z).Magnitude
+			r.Speed += (flat - r.Speed) * math.min(1, dt * 8)
+			r.VelY += (v.Y - r.VelY) * math.min(1, dt * 10)
+		end
+	end
+	local run = math.clamp(r.Speed / 22, 0, 1)
+	local airborne = math.abs(r.VelY) > 6
+	if airborne then
+		r.Grounded = false
+	elseif not r.Grounded then
+		-- touchdown (once): squash and a puff of dust
+		r.Grounded = true
+		if r.Air > 0.6 then
+			r.Land = 1
+			if r.Dust then
+				r.Dust:Emit(10)
+			end
+		end
+	end
+	r.Air += ((if airborne then 1 else 0) - r.Air) * math.min(1, dt * 10)
+	r.Land = math.max(0, r.Land - dt * 4)
+	r.Happy += ((if now < r.HappyUntil then 1 else 0) - r.Happy) * math.min(1, dt * 6)
+	if now > r.LookAt then
+		r.LookAt = now + 1.5 + math.random() * 3
+		r.LookGoal = (math.random() - 0.5) * 1.1
+	end
+	r.Look += (r.LookGoal - r.Look) * math.min(1, dt * 3)
+	r.Phase += PetAnim.CycleSpeed(run) * dt
+
+	local pose = PetAnim.Sample({ Run = run, Air = r.Air, Land = r.Land, Happy = r.Happy, Look = r.Look, Size = r.Size }, now + r.Seed, r.Phase)
+	for name, j in r.Joints do
+		local o = pose[name]
+		if o then
+			if j.Weld then
+				j.Weld.C0 = j.Rest * toCF(o)
+			elseif j.Bone then
+				j.Bone.Transform = toCF(o, BONE_AXIS)
+			end
+		end
+	end
+	local open = math.max(0.08, PetAnim.Blink(now, r.Seed))
+	if open ~= r.Open then
+		r.Open = open
+		for _, e in r.Eyes do
+			e.Mesh.Scale = Vector3.new(e.Scale.X, e.Scale.Y * open, e.Scale.Z)
+		end
+		for _, sh in r.Shines do
+			sh.LocalTransparencyModifier = if open < 0.5 then 1 else 0
+		end
+	end
+	if r.Dust then
+		r.Dust.Rate = if run > 0.45 and r.Air < 0.3 then 14 * run else 0
+	end
+end
+
+local function stopSit()
+	if sitTrack then
+		local t = sitTrack
+		sitTrack = nil
+		t:Stop(0.2)
+		task.delay(0.3, function()
+			t:Destroy()
+		end)
+	end
+end
+
+local function updateSit()
+	local char = player.Character
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	local animator = hum and hum:FindFirstChildOfClass("Animator")
+	if not player:GetAttribute("Riding") or not animator or not char then
+		stopSit()
+		return
+	end
+	if sitTrack then
+		return
+	end
+	-- The sit pose from the character's default Animate script.
+	local animate = char:FindFirstChild("Animate")
+	local sit = animate and animate:FindFirstChild("sit")
+	local anim = sit and sit:FindFirstChildOfClass("Animation")
+	if not anim then
+		return
+	end
+	local track = (animator :: Animator):LoadAnimation(anim)
+	track.Priority = Enum.AnimationPriority.Action
+	track.Looped = true
+	track:Play(0.2)
+	sitTrack = track
+end
+
+-- Is this preview model's ViewportFrame visible (every GUI ancestor shown)?
+onScreen = function(m: Instance): boolean
+	local node = m.Parent
+	while node do
+		if node:IsA("GuiObject") and not node.Visible then
+			return false
+		elseif node:IsA("ScreenGui") then
+			return node.Enabled
+		end
+		node = node.Parent
+	end
+	return false
+end
+
+function PetAnimator.Start()
+	player:GetAttributeChangedSignal("Riding"):Connect(updateSit)
+	player.CharacterAdded:Connect(function()
+		sitTrack = nil
+		task.wait(0.5)
+		updateSit()
+	end)
+	updateSit()
+	Net.Event("Notify").OnClientEvent:Connect(function(_, kind)
+		if kind == "Level" then
+			PetAnimator.Cheer(1.5)
+		end
+	end)
+	Net.Event("Race").OnClientEvent:Connect(function(kind, data)
+		if kind == "Results" and data and data.Mine and data.Mine.Place == 1 then
+			PetAnimator.Cheer(3)
+		end
+	end)
+
+	local pets: Instance? = workspace:FindFirstChild("Pets")
+	if not pets then
+		task.spawn(function()
+			pets = workspace:WaitForChild("Pets", 60)
+		end)
+	end
+	RunService.RenderStepped:Connect(function(dt)
+		local now = os.clock()
+		-- ridden pets: use the rider's real velocity
+		for _, p in Players:GetPlayers() do
+			local char = p.Character
+			local pet = char and char:FindFirstChild("RiddenPet")
+			local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+			if pet and pet:IsA("Model") and hrp then
+				local r = rigs[pet] or scan(pet, false, p)
+				step(r, dt, now, hrp.AssemblyLinearVelocity)
+			end
+		end
+		-- followers
+		if pets then
+			for _, m in (pets :: Instance):GetChildren() do
+				if m:IsA("Model") then
+					step(rigs[m] or scan(m, false, nil), dt, now, nil)
+				end
+			end
+		end
+		-- previews (only while their viewport is actually on screen); forget world
+		-- pets that were removed without being destroyed
+		for m, r in rigs do
+			if r.Preview then
+				if m.Parent and onScreen(m) then
+					step(r, dt, now, nil)
+				end
+			elseif not m.Parent then
+				rigs[m] = nil
+			end
+		end
+	end)
+end
+
+return PetAnimator
+]]></string>
+            </Properties>
+          </Item>
+          <Item class="ModuleScript" referent="47">
             <Properties>
               <string name="Name">PetMenu</string>
               <string name="Source"><![CDATA[-- The Pets menu: every pet you own, its stats, and Ride / Rename / Release.
@@ -5296,6 +5777,7 @@ local Profile = require(Shared.Logic.Profile)
 local UI = require(script.Parent.Parent.UI)
 local State = require(script.Parent.Parent.State)
 local Hud = require(script.Parent.Hud)
+local PetAnimator = require(script.Parent.PetAnimator)
 
 local PetMenu = {}
 
@@ -5313,14 +5795,13 @@ local function petName(p: any): string
 	return p.Nick or (s and s.Name) or p.Species
 end
 
-local function preview(parent: Instance, p: any)
+local function preview(parent: Instance, p: any, animate: boolean?)
 	local built = PetModel.Build(p.Species, 1, p.Paint)
-	for _, d in built.Model:GetDescendants() do
-		if d:IsA("BasePart") then
-			d.Anchored = true
-		end
-	end
+	built.Root.Anchored = true
 	UI.Viewport(parent, built.Model)
+	if animate then
+		PetAnimator.Register(built.Model)
+	end
 end
 
 local function renderDetail()
@@ -5335,7 +5816,7 @@ local function renderDetail()
 	local rar = Pets.Rarities[s.Rarity]
 	local view = UI.Frame({ Size = UDim2.new(1, 0, 0.36, 0), BackgroundColor3 = UI.Colors.PanelLight }, detail)
 	UI.Corner(view, 12)
-	preview(view, p)
+	preview(view, p, true) -- only the big detail preview animates; grid cards stay still
 	UI.Text({ Text = petName(p), Size = UDim2.new(1, 0, 0, 30), Position = UDim2.new(0, 0, 0.37, 0) }, detail)
 	UI.Text({ Text = s.Rarity .. " " .. s.Name, Size = UDim2.new(1, 0, 0, 20), Position = UDim2.new(0, 0, 0.37, 30), TextColor3 = UI.Rgb(rar.Color), Font = UI.Body }, detail)
 	local ride = PetStats.Ride(p)
@@ -5490,7 +5971,7 @@ return PetMenu
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="46">
+          <Item class="ModuleScript" referent="48">
             <Properties>
               <string name="Name">RaceHud</string>
               <string name="Source"><![CDATA[-- Race screens: queue banner, countdown, live place/timer/progress, checkpoint
@@ -5667,121 +6148,7 @@ return RaceHud
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="47">
-            <Properties>
-              <string name="Name">RideFx</string>
-              <string name="Source"><![CDATA[-- Riding feel, all visual and local:
---   * the local player sits on their pet (the default sit pose; played by the owner,
---     so other players see it too)
---   * every ridden pet bounces and leans while it runs, and part-built pets swing
---     their legs (each client animates the pets it can see)
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-
-local RideFx = {}
-
-local player = Players.LocalPlayer
-local sitTrack: AnimationTrack? = nil
-
-local function stopSit()
-	if sitTrack then
-		sitTrack:Stop(0.2)
-		sitTrack = nil
-	end
-end
-
-local function updateSit()
-	local char = player.Character
-	local hum = char and char:FindFirstChildOfClass("Humanoid")
-	local animator = hum and hum:FindFirstChildOfClass("Animator")
-	if not player:GetAttribute("Riding") or not animator or not char then
-		stopSit()
-		return
-	end
-	if sitTrack then
-		return
-	end
-	-- The sit animation from the character's default Animate script.
-	local animate = char:FindFirstChild("Animate")
-	local sit = animate and animate:FindFirstChild("sit")
-	local anim = sit and sit:FindFirstChildOfClass("Animation")
-	if not anim then
-		return
-	end
-	local track = (animator :: Animator):LoadAnimation(anim)
-	track.Priority = Enum.AnimationPriority.Action
-	track.Looped = true
-	track:Play(0.2)
-	sitTrack = track
-end
-
--- Per pet: the rest pose of its ride weld and leg joints, and its run phase.
-type Rig = { Weld: Weld?, Base: CFrame?, Joints: { { Weld: Weld, Base: CFrame, Phase: number } }, T: number }
-local rigs: { [Model]: Rig } = {}
-
-local function rigFor(model: Model): Rig
-	local r = rigs[model]
-	if r then
-		return r
-	end
-	local joints = {}
-	local rideWeld: Weld? = nil
-	for _, d in model:GetDescendants() do
-		if d:IsA("Weld") then
-			if d.Name == "LegJoint" then
-				table.insert(joints, { Weld = d, Base = d.C0, Phase = d:GetAttribute("Phase") or 0 })
-			elseif d.Name == "RideWeld" then
-				rideWeld = d
-			end
-		end
-	end
-	r = { Weld = rideWeld, Base = rideWeld and rideWeld.C0, Joints = joints, T = 0 }
-	rigs[model] = r
-	model.Destroying:Once(function()
-		rigs[model] = nil
-	end)
-	return r
-end
-
-function RideFx.Start()
-	player:GetAttributeChangedSignal("Riding"):Connect(updateSit)
-	player.CharacterAdded:Connect(function()
-		sitTrack = nil
-		task.wait(0.5)
-		updateSit()
-	end)
-	updateSit()
-
-	RunService.RenderStepped:Connect(function(dt)
-		for _, p in Players:GetPlayers() do
-			local char = p.Character
-			local pet = char and char:FindFirstChild("RiddenPet")
-			local root = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
-			if pet and pet:IsA("Model") and root then
-				local r = rigFor(pet)
-				local v = root.AssemblyLinearVelocity
-				local speed = Vector3.new(v.X, 0, v.Z).Magnitude
-				local run = math.clamp(speed / 20, 0, 1)
-				r.T += dt * (6 + speed * 0.35)
-				local swing = math.sin(r.T) * 0.7 * run
-				for _, j in r.Joints do
-					j.Weld.C0 = j.Base * CFrame.Angles(math.sin(r.T + j.Phase) * 0.7 * run, 0, 0)
-				end
-				if r.Weld and r.Base then
-					local bob = math.abs(math.sin(r.T)) * 0.35 * run
-					local lean = -0.06 * run + swing * 0.04
-					r.Weld.C0 = r.Base * CFrame.new(0, bob, 0) * CFrame.Angles(lean, 0, 0)
-				end
-			end
-		end
-	end)
-end
-
-return RideFx
-]]></string>
-            </Properties>
-          </Item>
-          <Item class="ModuleScript" referent="48">
+          <Item class="ModuleScript" referent="49">
             <Properties>
               <string name="Name">ShopMenu</string>
               <string name="Source"><![CDATA[-- Shop: trails and paint for your ridden pet (coins), plus the Robux tab.
@@ -5955,7 +6322,7 @@ return ShopMenu
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="49">
+          <Item class="ModuleScript" referent="50">
             <Properties>
               <string name="Name">Sound</string>
               <string name="Source"><![CDATA[-- Plays sound effects (and music, if one is set) on this client. Muting is saved
@@ -6063,7 +6430,7 @@ return Sound
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="50">
+          <Item class="ModuleScript" referent="51">
             <Properties>
               <string name="Name">Tutorial</string>
               <string name="Source"><![CDATA[-- First-time tips: four short cards, shown once per player.
@@ -6123,7 +6490,7 @@ return Tutorial
             </Properties>
           </Item>
         </Item>
-        <Item class="LocalScript" referent="51">
+        <Item class="LocalScript" referent="52">
           <Properties>
             <string name="Name">Main</string>
             <string name="Source"><![CDATA[-- Client entry: connects remotes and starts each controller.
@@ -6138,7 +6505,7 @@ Net.Event("State").OnClientEvent:Connect(function(data)
 end)
 
 local Controllers = script.Parent:WaitForChild("Controllers")
-for _, name in { "Sound", "Notify", "RideFx", "Hud", "DailyMenu", "PetMenu", "ShopMenu", "HatchView", "RaceHud", "Tutorial" } do
+for _, name in { "Sound", "Notify", "PetAnimator", "Hud", "DailyMenu", "PetMenu", "ShopMenu", "HatchView", "RaceHud", "Tutorial" } do
 	local ok, err = pcall(function()
 		local c = require(Controllers:WaitForChild(name)) :: any
 		c.Start()
@@ -6150,7 +6517,7 @@ end
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="52">
+        <Item class="ModuleScript" referent="53">
           <Properties>
             <string name="Name">State</string>
             <string name="Source"><![CDATA[-- Holds the latest profile snapshot from the server and tells listeners when it changes.
@@ -6191,7 +6558,7 @@ return State
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="53">
+        <Item class="ModuleScript" referent="54">
           <Properties>
             <string name="Name">UI</string>
             <string name="Source"><![CDATA[-- Tiny UI kit: everything is built in code with big, phone-friendly buttons.
