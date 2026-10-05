@@ -1,0 +1,4955 @@
+<roblox version="4">
+  <Item class="ReplicatedStorage" referent="0">
+    <Properties>
+      <string name="Name">ReplicatedStorage</string>
+    </Properties>
+    <Item class="Folder" referent="1">
+      <Properties>
+        <string name="Name">Shared</string>
+      </Properties>
+      <Item class="ModuleScript" referent="2">
+        <Properties>
+          <string name="Name">Config</string>
+          <string name="Source"><![CDATA[-- All tuning numbers for Pet Race League live here.
+local Config = {}
+
+Config.StartCoins = 250
+Config.ProfileVersion = 1
+
+Config.Slots = {
+	Base = 24, -- pet storage for everyone
+	BonusPass = 36, -- extra slots from the "Big Barn" game pass
+}
+
+-- Pet stats: Speed, Jump and Stamina each level from 1 to MaxLevel.
+Config.Stats = {
+	Names = { "Speed", "Jump", "Stamina" },
+	MaxLevel = 50,
+	XpBase = 20, -- xp needed for level 1 -> 2
+	XpGrowth = 1.09, -- each level needs this much more
+}
+
+-- Riding numbers. Rarity adds a small bonus on top (see Pets.Rarities), so training
+-- matters far more than luck.
+Config.Ride = {
+	OnFootSpeed = 16,
+	OnFootJump = 42,
+	BaseSpeed = 20,
+	SpeedPerLevel = 0.5,
+	BaseJump = 46,
+	JumpPerLevel = 0.5,
+	DashBoost = 1.6, -- WalkSpeed multiplier while dashing
+	DashTime = 1.2,
+	DashChargesBase = 1,
+	DashChargesEvery = 15, -- +1 charge per this many Stamina levels
+	DashChargesMax = 4,
+	DashRechargeBase = 6,
+	DashRechargePerLevel = 0.06,
+	DashRechargeMin = 3,
+	SizeBase = 1,
+	SizePerLevel = 0.01, -- pets grow as they level (cosmetic only)
+}
+
+Config.Training = {
+	GateXp = 5, -- per gate passed in order
+	GateMinGap = 0.5, -- seconds between gates (anti-spam)
+	LapBonusXp = 15,
+	PadXp = 3, -- treadmill xp per tick
+	PadTick = 1.5,
+}
+
+Config.Hatch = {
+	PityEvery = 10, -- every 10th hatch of an egg is Rare or better
+	RarePlus = 3, -- rarity rank that counts as "Rare or better"
+}
+
+Config.Race = {
+	QueueTime = 20, -- seconds the portal waits for more racers
+	MinPlayers = 1, -- solo races are allowed (race the medal times)
+	MaxPlayers = 8,
+	Countdown = 3,
+	TimeLimit = 150,
+	ResultsTime = 6,
+	FallDepth = 30, -- studs below the track that count as a fall
+	FallPenalty = 1.5, -- seconds of freeze after respawning at a checkpoint
+	BoostMult = 1.5, -- speed on boost pads
+	MudMult = 0.6, -- speed in mud
+	HurryTime = 30, -- after the first finisher, everyone else has this long
+	PlaceCoins = { 120, 90, 70, 55, 45, 40, 35, 30 },
+	FinishCoins = 25, -- for finishing at all
+	DnfCoins = 10,
+	MedalCoins = { Gold = 60, Silver = 35, Bronze = 15 },
+	-- Trophies only go up. Multiplayer: by place, scaled by how many raced.
+	PlaceTrophies = { 12, 9, 7, 5, 4, 3, 2, 2 },
+	MedalTrophies = { Gold = 3, Silver = 2, Bronze = 1 },
+	SoloTrophyCap = 3, -- solo races give medal trophies only
+	-- Anti-cheat: the fastest legal speed between checkpoints, with slack.
+	SpeedSlack = 1.35,
+	TimeSlack = 0.75,
+	-- Medal targets: average speeds (studs/s) needed over the whole track.
+	MedalSpeeds = { Gold = 34, Silver = 27, Bronze = 20 },
+}
+
+Config.Leagues = {
+	{ Name = "Bronze", Min = 0, Color = { 205, 127, 50 } },
+	{ Name = "Silver", Min = 100, Color = { 192, 192, 200 } },
+	{ Name = "Gold", Min = 300, Color = { 255, 205, 60 } },
+	{ Name = "Diamond", Min = 700, Color = { 110, 220, 255 } },
+	{ Name = "Champion", Min = 1500, Color = { 255, 90, 170 } },
+}
+
+Config.AutosaveEvery = 120
+
+return Config
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="3">
+        <Properties>
+          <string name="Name">Cosmetics</string>
+          <string name="Source"><![CDATA[-- Cosmetics: trails and pet paint. Looks only, never stats.
+-- Price = coins; Robux-only items have Price = nil and are unlocked by a product
+-- (see Products.luau).
+export type Cosmetic = {
+	Id: string,
+	Kind: string, -- "Trail" | "Paint"
+	Name: string,
+	Price: number?,
+	Colors: { { number } },
+}
+
+local Cosmetics = {}
+
+local list: { Cosmetic } = {
+	{ Id = "TrailDust", Kind = "Trail", Name = "Dust Trail", Price = 150, Colors = { { 200, 180, 140 }, { 240, 230, 200 } } },
+	{ Id = "TrailSky", Kind = "Trail", Name = "Sky Trail", Price = 600, Colors = { { 90, 170, 255 }, { 255, 255, 255 } } },
+	{ Id = "TrailFire", Kind = "Trail", Name = "Fire Trail", Price = 1800, Colors = { { 255, 60, 0 }, { 255, 220, 40 } } },
+	{ Id = "TrailRainbow", Kind = "Trail", Name = "Rainbow Trail", Price = nil, Colors = { { 255, 0, 0 }, { 255, 200, 0 }, { 0, 200, 80 }, { 0, 120, 255 }, { 170, 0, 255 } } },
+	{ Id = "PaintGold", Kind = "Paint", Name = "Gold Paint", Price = 2500, Colors = { { 255, 200, 50 } } },
+	{ Id = "PaintShadow", Kind = "Paint", Name = "Shadow Paint", Price = 1200, Colors = { { 40, 40, 55 } } },
+	{ Id = "PaintGalaxy", Kind = "Paint", Name = "Galaxy Paint", Price = nil, Colors = { { 80, 40, 160 } } },
+}
+
+Cosmetics.List = list
+Cosmetics.ById = {} :: { [string]: Cosmetic }
+for _, c in list do
+	Cosmetics.ById[c.Id] = c
+end
+
+return Cosmetics
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="4">
+        <Properties>
+          <string name="Name">Eggs</string>
+          <string name="Source"><![CDATA[-- Eggs are bought with Coins (earned by racing and training). Weights are relative.
+export type Egg = {
+	Id: string,
+	Name: string,
+	Price: number,
+	Color: { number },
+	Odds: { { Pet: string, W: number } },
+}
+
+local Eggs = {}
+
+local list: { Egg } = {
+	{
+		Id = "Meadow",
+		Name = "Meadow Egg",
+		Price = 100,
+		Color = { 140, 220, 110 },
+		Odds = {
+			{ Pet = "Pup", W = 30 },
+			{ Pet = "Kitty", W = 30 },
+			{ Pet = "Bunny", W = 25 },
+			{ Pet = "Piggy", W = 8 },
+			{ Pet = "Fox", W = 5 },
+			{ Pet = "Panda", W = 2 },
+		},
+	},
+	{
+		Id = "Forest",
+		Name = "Forest Egg",
+		Price = 450,
+		Color = { 60, 140, 70 },
+		Odds = {
+			{ Pet = "Fox", W = 30 },
+			{ Pet = "Penguin", W = 26 },
+			{ Pet = "Deer", W = 20 },
+			{ Pet = "Wolf", W = 15 },
+			{ Pet = "Tiger", W = 7 },
+			{ Pet = "Unicorn", W = 2 },
+		},
+	},
+	{
+		Id = "Sky",
+		Name = "Sky Egg",
+		Price = 1500,
+		Color = { 120, 190, 255 },
+		Odds = {
+			{ Pet = "Wolf", W = 30 },
+			{ Pet = "Tiger", W = 28 },
+			{ Pet = "Unicorn", W = 24 },
+			{ Pet = "Griffin", W = 10 },
+			{ Pet = "Dragon", W = 6 },
+			{ Pet = "Phoenix", W = 1.5 },
+			{ Pet = "Cosmic Cat", W = 0.5 },
+		},
+	},
+}
+
+Eggs.List = list
+Eggs.ById = {} :: { [string]: Egg }
+for _, e in list do
+	Eggs.ById[e.Id] = e
+end
+
+return Eggs
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="Folder" referent="5">
+        <Properties>
+          <string name="Name">Logic</string>
+        </Properties>
+        <Item class="ModuleScript" referent="6">
+          <Properties>
+            <string name="Name">Hatch</string>
+            <string name="Source"><![CDATA[-- Egg rolls with a pity counter: every Config.Hatch.PityEvery-th hatch of the same
+-- egg is guaranteed Rare or better.
+local Config = require("../Config")
+local Pets = require("../Pets")
+
+local Hatch = {}
+
+-- r is a number in [0, 1). Returns the species id.
+function Hatch.Roll(egg: any, r: number, pity: boolean?): string
+	local pool = {}
+	local total = 0
+	for _, o in egg.Odds do
+		if not pity or Pets.Rank(o.Pet) >= Config.Hatch.RarePlus then
+			table.insert(pool, o)
+			total += o.W
+		end
+	end
+	if #pool == 0 then
+		-- this egg has nothing Rare or better: roll normally
+		return Hatch.Roll(egg, r, false)
+	end
+	local pick = r * total
+	for _, o in pool do
+		pick -= o.W
+		if pick < 0 then
+			return o.Pet
+		end
+	end
+	return pool[#pool].Pet
+end
+
+-- count = hatches of this egg so far, including this one.
+function Hatch.IsPity(count: number): boolean
+	return count > 0 and count % Config.Hatch.PityEvery == 0
+end
+
+-- Chance (0..1) of each pet, for the egg odds display.
+function Hatch.Chances(egg: any): { { Pet: string, Chance: number } }
+	local total = 0
+	for _, o in egg.Odds do
+		total += o.W
+	end
+	local out = {}
+	for _, o in egg.Odds do
+		table.insert(out, { Pet = o.Pet, Chance = o.W / total })
+	end
+	return out
+end
+
+return Hatch
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="7">
+          <Properties>
+            <string name="Name">PetStats</string>
+            <string name="Source"><![CDATA[-- Pet levels, xp and the riding numbers they give.
+local Config = require("../Config")
+local Pets = require("../Pets")
+
+local PetStats = {}
+
+export type Pet = {
+	Uid: string,
+	Species: string,
+	Levels: { [string]: number },
+	Xp: { [string]: number },
+	Paint: string?,
+	Trail: string?,
+	Nick: string?,
+}
+
+function PetStats.XpToNext(level: number): number
+	return math.floor(Config.Stats.XpBase * Config.Stats.XpGrowth ^ (level - 1))
+end
+
+function PetStats.New(uid: string, species: string): Pet
+	local levels, xp = {}, {}
+	for _, s in Config.Stats.Names do
+		levels[s] = 1
+		xp[s] = 0
+	end
+	return { Uid = uid, Species = species, Levels = levels, Xp = xp }
+end
+
+local function isStat(stat: string): boolean
+	return table.find(Config.Stats.Names, stat) ~= nil
+end
+
+-- Adds xp to one stat. Returns how many levels were gained.
+function PetStats.AddXp(pet: Pet, stat: string, amount: number): number
+	if not isStat(stat) or amount <= 0 then
+		return 0
+	end
+	local max = Config.Stats.MaxLevel
+	local level = pet.Levels[stat] or 1
+	if level >= max then
+		pet.Xp[stat] = 0
+		return 0
+	end
+	local xp = (pet.Xp[stat] or 0) + amount
+	local gained = 0
+	while level < max and xp >= PetStats.XpToNext(level) do
+		xp -= PetStats.XpToNext(level)
+		level += 1
+		gained += 1
+	end
+	if level >= max then
+		xp = 0
+	end
+	pet.Levels[stat] = level
+	pet.Xp[stat] = xp
+	return gained
+end
+
+function PetStats.Bonus(pet: Pet): number
+	local s = Pets.ById[pet.Species]
+	local r = s and Pets.Rarities[s.Rarity]
+	return r and r.Bonus or 0
+end
+
+export type Ride = {
+	WalkSpeed: number,
+	JumpPower: number,
+	DashCharges: number,
+	DashRecharge: number,
+	Size: number,
+}
+
+function PetStats.Ride(pet: Pet): Ride
+	local R = Config.Ride
+	local mult = 1 + PetStats.Bonus(pet)
+	local sp = pet.Levels.Speed or 1
+	local jp = pet.Levels.Jump or 1
+	local st = pet.Levels.Stamina or 1
+	local total = sp + jp + st
+	return {
+		WalkSpeed = (R.BaseSpeed + (sp - 1) * R.SpeedPerLevel) * mult,
+		JumpPower = (R.BaseJump + (jp - 1) * R.JumpPerLevel) * mult,
+		DashCharges = math.min(R.DashChargesMax, R.DashChargesBase + math.floor(st / R.DashChargesEvery)),
+		DashRecharge = math.max(R.DashRechargeMin, R.DashRechargeBase - (st - 1) * R.DashRechargePerLevel),
+		Size = R.SizeBase + (total - 3) * R.SizePerLevel / 3,
+	}
+end
+
+-- The fastest a racer on this pet can legally move (used by the anti-cheat).
+function PetStats.MaxSpeed(pet: Pet?): number
+	local R = Config.Ride
+	local base = if pet then PetStats.Ride(pet).WalkSpeed else R.OnFootSpeed
+	return base * R.DashBoost
+end
+
+-- A short "power" number shown on pet cards: average level.
+function PetStats.Power(pet: Pet): number
+	local sum = 0
+	for _, s in Config.Stats.Names do
+		sum += pet.Levels[s] or 1
+	end
+	return math.floor(sum / #Config.Stats.Names * 10 + 0.5) / 10
+end
+
+return PetStats
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="8">
+          <Properties>
+            <string name="Name">Profile</string>
+            <string name="Source"><![CDATA[-- Player save data: defaults, cleaning up loaded data, and pet inventory rules.
+local Config = require("../Config")
+local Pets = require("../Pets")
+local Cosmetics = require("../Cosmetics")
+local PetStats = require("./PetStats")
+
+local Profile = {}
+
+export type Data = {
+	Version: number,
+	Coins: number,
+	Trophies: number,
+	Pets: { PetStats.Pet },
+	Equipped: string?, -- pet uid
+	NextUid: number,
+	Owned: { [string]: boolean }, -- cosmetics
+	Pity: { [string]: number }, -- hatches per egg
+	BestTimes: { [string]: number }, -- per track
+	Stats: { [string]: number }, -- lifetime: Races, Wins, Hatches, Golds
+	BigBarn: boolean,
+	Receipts: { string }, -- recent purchase ids (duplicate guard)
+	Tutorial: boolean,
+}
+
+function Profile.Default(): Data
+	local d: Data = {
+		Version = Config.ProfileVersion,
+		Coins = Config.StartCoins,
+		Trophies = 0,
+		Pets = {},
+		Equipped = nil,
+		NextUid = 1,
+		Owned = {},
+		Pity = {},
+		BestTimes = {},
+		Stats = { Races = 0, Wins = 0, Hatches = 0, Golds = 0 },
+		BigBarn = false,
+		Receipts = {},
+		Tutorial = false,
+	}
+	-- Everyone starts with a Pup so they can ride and race straight away.
+	local pup = Profile.AddPet(d, "Pup")
+	d.Equipped = pup and pup.Uid
+	return d
+end
+
+local function num(v: any, default: number, lo: number, hi: number): number
+	if type(v) ~= "number" or v ~= v then
+		return default
+	end
+	return math.clamp(v, lo, hi)
+end
+
+-- Repairs anything missing or broken in loaded data (old versions, bad values).
+function Profile.Sanitize(raw: any): Data
+	if type(raw) ~= "table" then
+		return Profile.Default()
+	end
+	local d = Profile.Default()
+	d.Pets = {}
+	d.Equipped = nil
+	d.Coins = math.floor(num(raw.Coins, Config.StartCoins, 0, 1e12))
+	d.Trophies = math.floor(num(raw.Trophies, 0, 0, 1e9))
+	d.NextUid = math.floor(num(raw.NextUid, 1, 1, 1e12))
+	d.BigBarn = raw.BigBarn == true
+	d.Tutorial = raw.Tutorial == true
+	if type(raw.Pets) == "table" then
+		local seen = {}
+		for _, p in raw.Pets do
+			if type(p) == "table" and type(p.Uid) == "string" and Pets.ById[p.Species] and not seen[p.Uid] then
+				seen[p.Uid] = true
+				local pet = PetStats.New(p.Uid, p.Species)
+				for _, s in Config.Stats.Names do
+					pet.Levels[s] = math.floor(num(p.Levels and p.Levels[s], 1, 1, Config.Stats.MaxLevel))
+					pet.Xp[s] = num(p.Xp and p.Xp[s], 0, 0, 1e9)
+				end
+				if type(p.Paint) == "string" and Cosmetics.ById[p.Paint] then
+					pet.Paint = p.Paint
+				end
+				if type(p.Trail) == "string" and Cosmetics.ById[p.Trail] then
+					pet.Trail = p.Trail
+				end
+				if type(p.Nick) == "string" then
+					pet.Nick = string.sub(p.Nick, 1, 20)
+				end
+				table.insert(d.Pets, pet)
+			end
+		end
+	end
+	if type(raw.Owned) == "table" then
+		for id, v in raw.Owned do
+			if v == true and Cosmetics.ById[id] then
+				d.Owned[id] = true
+			end
+		end
+	end
+	for _, key in { "Pity", "BestTimes", "Stats" } do
+		local src = raw[key]
+		if type(src) == "table" then
+			for k, v in src do
+				if type(k) == "string" and type(v) == "number" and v == v and v >= 0 then
+					(d :: any)[key][k] = v
+				end
+			end
+		end
+	end
+	if type(raw.Receipts) == "table" then
+		for _, r in raw.Receipts do
+			if type(r) == "string" then
+				table.insert(d.Receipts, r)
+			end
+		end
+	end
+	if #d.Pets == 0 then
+		local pup = Profile.AddPet(d, "Pup")
+		d.Equipped = pup and pup.Uid
+	elseif Profile.FindPet(d, raw.Equipped) then
+		d.Equipped = raw.Equipped
+	else
+		d.Equipped = d.Pets[1].Uid
+	end
+	return d
+end
+
+function Profile.Capacity(d: Data): number
+	return Config.Slots.Base + (if d.BigBarn then Config.Slots.BonusPass else 0)
+end
+
+function Profile.FindPet(d: Data, uid: any): PetStats.Pet?
+	if type(uid) ~= "string" then
+		return nil
+	end
+	for _, p in d.Pets do
+		if p.Uid == uid then
+			return p
+		end
+	end
+	return nil
+end
+
+function Profile.EquippedPet(d: Data): PetStats.Pet?
+	return Profile.FindPet(d, d.Equipped)
+end
+
+-- Adds a new pet. Returns nil if storage is full.
+function Profile.AddPet(d: Data, species: string): PetStats.Pet?
+	if #d.Pets >= Profile.Capacity(d) or not Pets.ById[species] then
+		return nil
+	end
+	local pet = PetStats.New("p" .. d.NextUid, species)
+	d.NextUid += 1
+	table.insert(d.Pets, pet)
+	return pet
+end
+
+-- Removes a pet. You can't release your ridden pet or your last pet.
+function Profile.Release(d: Data, uid: string): (boolean, string?)
+	if #d.Pets <= 1 then
+		return false, "You can't release your last pet."
+	end
+	if d.Equipped == uid then
+		return false, "Pick another pet before releasing this one."
+	end
+	for i, p in d.Pets do
+		if p.Uid == uid then
+			table.remove(d.Pets, i)
+			return true, p.Species
+		end
+	end
+	return false, "Pet not found."
+end
+
+-- Records a purchase id. Returns false if it was already handled.
+function Profile.TakeReceipt(d: Data, id: string): boolean
+	if table.find(d.Receipts, id) then
+		return false
+	end
+	table.insert(d.Receipts, id)
+	while #d.Receipts > 50 do
+		table.remove(d.Receipts, 1)
+	end
+	return true
+end
+
+return Profile
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="9">
+          <Properties>
+            <string name="Name">RaceRules</string>
+            <string name="Source"><![CDATA[-- Race results, rewards, medals and leagues.
+local Config = require("../Config")
+
+local RaceRules = {}
+
+export type Racer = {
+	Id: number,
+	Finished: boolean,
+	Time: number?, -- finish time in seconds
+	Progress: number, -- distance reached (for racers who didn't finish)
+}
+
+-- Sorts racers: finishers by time, then everyone else by how far they got.
+function RaceRules.Order(racers: { Racer }): { Racer }
+	local out = table.clone(racers)
+	table.sort(out, function(a, b)
+		if a.Finished ~= b.Finished then
+			return a.Finished
+		end
+		if a.Finished then
+			if a.Time ~= b.Time then
+				return (a.Time or math.huge) < (b.Time or math.huge)
+			end
+		elseif a.Progress ~= b.Progress then
+			return a.Progress > b.Progress
+		end
+		return a.Id < b.Id
+	end)
+	return out
+end
+
+function RaceRules.MedalTimes(length: number): { Gold: number, Silver: number, Bronze: number }
+	local s = Config.Race.MedalSpeeds
+	return {
+		Gold = math.floor(length / s.Gold * 10 + 0.5) / 10,
+		Silver = math.floor(length / s.Silver * 10 + 0.5) / 10,
+		Bronze = math.floor(length / s.Bronze * 10 + 0.5) / 10,
+	}
+end
+
+function RaceRules.Medal(length: number, time: number?): string?
+	if not time then
+		return nil
+	end
+	local m = RaceRules.MedalTimes(length)
+	if time <= m.Gold then
+		return "Gold"
+	elseif time <= m.Silver then
+		return "Silver"
+	elseif time <= m.Bronze then
+		return "Bronze"
+	end
+	return nil
+end
+
+-- Coins and trophies for one racer. place is 1-based; count = racers who started.
+function RaceRules.Rewards(place: number, count: number, finished: boolean, medal: string?): (number, number)
+	local R = Config.Race
+	if not finished then
+		return R.DnfCoins, 0
+	end
+	local coins = R.FinishCoins
+	local trophies = 0
+	if count > 1 then
+		coins += R.PlaceCoins[place] or R.PlaceCoins[#R.PlaceCoins]
+		-- Beating more racers is worth more: scale by the share of the field you beat.
+		local base = R.PlaceTrophies[place] or 0
+		trophies += math.max(0, math.floor(base * math.min(1, (count - 1) / 3) + 0.5))
+	end
+	if medal then
+		coins += R.MedalCoins[medal] or 0
+		local mt = R.MedalTrophies[medal] or 0
+		trophies += if count > 1 then mt else math.min(mt, R.SoloTrophyCap)
+	end
+	return coins, trophies
+end
+
+-- Anti-cheat: could someone move dx studs in dt seconds at this top speed?
+function RaceRules.Plausible(dx: number, dt: number, maxSpeed: number): boolean
+	return dx <= maxSpeed * Config.Race.SpeedSlack * dt + maxSpeed * Config.Race.TimeSlack
+end
+
+function RaceRules.League(trophies: number): (number, any)
+	local idx = 1
+	for i, l in Config.Leagues do
+		if trophies >= l.Min then
+			idx = i
+		end
+	end
+	return idx, Config.Leagues[idx]
+end
+
+function RaceRules.PlaceText(place: number): string
+	local suffix = "th"
+	local mod100 = place % 100
+	if mod100 < 11 or mod100 > 13 then
+		local m = place % 10
+		suffix = if m == 1 then "st" elseif m == 2 then "nd" elseif m == 3 then "rd" else "th"
+	end
+	return tostring(place) .. suffix
+end
+
+function RaceRules.FormatTime(t: number): string
+	local m = math.floor(t / 60)
+	local s = t - m * 60
+	return string.format("%d:%05.2f", m, s)
+end
+
+return RaceRules
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="10">
+          <Properties>
+            <string name="Name">TrackLayout</string>
+            <string name="Source"><![CDATA[-- Pure track maths: turns a track's segment list into positioned pieces and
+-- checkpoints (numbers only, so it can be unit tested without Roblox).
+-- X runs along the track from 0 (start line) to Length (finish line). Y is the
+-- floor height relative to the start floor.
+local TrackLayout = {}
+
+export type Piece = {
+	Kind: string,
+	X0: number,
+	X1: number,
+	Y0: number, -- floor height at X0
+	Y1: number, -- floor height at X1
+	H: number?,
+	Count: number?,
+	Rise: number?,
+}
+
+export type Checkpoint = { X: number, Y: number }
+
+export type Layout = {
+	Pieces: { Piece },
+	Checkpoints: { Checkpoint }, -- [1] is the start line
+	Length: number,
+	MinY: number,
+	MaxY: number,
+}
+
+function TrackLayout.Build(segments: { any }): Layout
+	local pieces = {}
+	local checkpoints = { { X = 0, Y = 0 } }
+	local x, y = 0, 0
+	local minY, maxY = 0, 0
+	for i, seg in segments do
+		local y1 = y
+		if seg.Kind == "Ramp" then
+			y1 = y + (seg.Rise or 0)
+		elseif seg.Kind == "Steps" then
+			y1 = y + (seg.Rise or 0) * (seg.Count or 1)
+		end
+		table.insert(pieces, {
+			Kind = seg.Kind,
+			X0 = x,
+			X1 = x + seg.L,
+			Y0 = y,
+			Y1 = y1,
+			H = seg.H,
+			Count = seg.Count,
+			Rise = seg.Rise,
+		})
+		-- A checkpoint where each segment with a floor starts (never over a gap), so
+		-- respawning just past it always lands on solid ground.
+		if i > 1 and seg.Kind ~= "Gap" then
+			table.insert(checkpoints, { X = x, Y = y })
+		end
+		x += seg.L
+		y = y1
+		minY = math.min(minY, y)
+		maxY = math.max(maxY, y)
+	end
+	return { Pieces = pieces, Checkpoints = checkpoints, Length = x, MinY = minY, MaxY = maxY }
+end
+
+-- Floor height under x (nil over a gap or off the track).
+function TrackLayout.FloorAt(layout: Layout, x: number): number?
+	for _, p in layout.Pieces do
+		if x >= p.X0 and x <= p.X1 then
+			if p.Kind == "Gap" then
+				return nil
+			elseif p.Kind == "Steps" then
+				local n = p.Count or 1
+				local step = math.min(n - 1, math.floor((x - p.X0) / ((p.X1 - p.X0) / n)))
+				return p.Y0 + (p.Rise or 0) * (step + 1)
+			end
+			local t = (x - p.X0) / math.max(p.X1 - p.X0, 1e-6)
+			return p.Y0 + (p.Y1 - p.Y0) * t
+		end
+	end
+	return nil
+end
+
+-- "Boost", "Mud" or nil for the piece under x.
+function TrackLayout.ZoneAt(layout: Layout, x: number): string?
+	for _, p in layout.Pieces do
+		if x >= p.X0 and x < p.X1 then
+			if p.Kind == "Boost" or p.Kind == "Mud" then
+				return p.Kind
+			end
+			return nil
+		end
+	end
+	return nil
+end
+
+-- Index of the furthest checkpoint at or behind x.
+function TrackLayout.CheckpointAt(layout: Layout, x: number): number
+	local best = 1
+	for i, cp in layout.Checkpoints do
+		if cp.X <= x then
+			best = i
+		end
+	end
+	return best
+end
+
+return TrackLayout
+]]></string>
+          </Properties>
+        </Item>
+      </Item>
+      <Item class="ModuleScript" referent="11">
+        <Properties>
+          <string name="Name">Net</string>
+          <string name="Source"><![CDATA[-- Remote names in one place. The server creates them; clients wait for them.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Net = {}
+
+Net.Events = {
+	"State", -- server -> client: full profile snapshot
+	"Notify", -- server -> client: toast text
+	"Race", -- server -> client: race state updates
+	"Hatched", -- server -> client: hatch reveal
+	"Equip", -- client -> server: uid
+	"Ride", -- client -> server: true/false
+	"Release", -- client -> server: uid
+	"Dash", -- client -> server
+	"BuyCosmetic", -- client -> server: cosmetic id
+	"SetCosmetic", -- client -> server: kind, id or nil (applies to ridden pet)
+	"Rename", -- client -> server: uid, name
+	"LeaveRace", -- client -> server: give up the current race
+	"TutorialDone", -- client -> server
+}
+
+Net.Functions = {
+	"Hatch", -- client -> server: egg id -> ok, species | error
+}
+
+local folder: Folder
+
+function Net.Init()
+	if RunService:IsServer() then
+		folder = Instance.new("Folder")
+		folder.Name = "Remotes"
+		for _, n in Net.Events do
+			local r = Instance.new("RemoteEvent")
+			r.Name = n
+			r.Parent = folder
+		end
+		for _, n in Net.Functions do
+			local r = Instance.new("RemoteFunction")
+			r.Name = n
+			r.Parent = folder
+		end
+		folder.Parent = ReplicatedStorage
+	else
+		folder = ReplicatedStorage:WaitForChild("Remotes") :: Folder
+	end
+end
+
+function Net.Event(name: string): RemoteEvent
+	return folder:WaitForChild(name) :: RemoteEvent
+end
+
+function Net.Function(name: string): RemoteFunction
+	return folder:WaitForChild(name) :: RemoteFunction
+end
+
+return Net
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="12">
+        <Properties>
+          <string name="Name">PetModel</string>
+          <string name="Source"><![CDATA[-- Builds a pet out of simple parts. Shared so the server (riding, following) and the
+-- client (hatch reveal, pet cards) draw the same thing.
+-- The model faces -Z (Roblox forward). Its feet touch Y = 0 at the pivot.
+local Pets = require("./Pets")
+local Cosmetics = require("./Cosmetics")
+
+local PetModel = {}
+
+local function rgb(c: { number }): Color3
+	return Color3.fromRGB(c[1], c[2], c[3])
+end
+
+local function part(model: Model, name: string, size: Vector3, cf: CFrame, color: Color3, shape: string?): BasePart
+	local p = Instance.new("Part")
+	p.Name = name
+	p.Size = size
+	p.CFrame = cf
+	p.Color = color
+	p.Material = Enum.Material.SmoothPlastic
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+	p.Massless = true
+	p.Anchored = false
+	p.CastShadow = true
+	if shape == "Ball" then
+		local m = Instance.new("SpecialMesh")
+		m.MeshType = Enum.MeshType.Sphere
+		m.Parent = p
+	elseif shape == "Round" then
+		-- a softened block: looks friendlier than a hard cube
+		local m = Instance.new("SpecialMesh")
+		m.MeshType = Enum.MeshType.Sphere
+		m.Scale = Vector3.new(1.15, 1.15, 1.15)
+		m.Parent = p
+	end
+	p.Parent = model
+	return p
+end
+
+export type Built = {
+	Model: Model,
+	Root: BasePart,
+	Height: number, -- top of the back, from the feet
+	Legs: { BasePart },
+}
+
+-- scale: overall size (grows with level). paint: cosmetic id or nil.
+function PetModel.Build(speciesId: string, scale: number, paint: string?): Built
+	local s = Pets.ById[speciesId] or Pets.ById.Pup
+	local model = Instance.new("Model")
+	model.Name = s.Name
+	local k = scale
+	local color = rgb(s.Color)
+	local paintDef = paint and Cosmetics.ById[paint]
+	if paintDef and paintDef.Kind == "Paint" then
+		color = rgb(paintDef.Colors[1])
+	end
+	local accent = rgb(s.Accent)
+	local bx, by, bz = s.Body[1] * k, s.Body[2] * k, s.Body[3] * k
+	local legH = s.Legs * k
+	local headS = s.Head * k
+	local bodyY = legH + by / 2
+
+	local body = part(model, "Body", Vector3.new(bx, by, bz), CFrame.new(0, bodyY, 0), color, "Round")
+	model.PrimaryPart = body
+
+	-- Belly patch
+	part(model, "Belly", Vector3.new(bx * 0.7, by * 0.5, bz * 0.7), CFrame.new(0, bodyY - by * 0.28, 0), accent, "Ball")
+
+	-- Head and face
+	local headCf = CFrame.new(0, legH + by * 0.95, -bz / 2 - headS * 0.15)
+	local head = part(model, "Head", Vector3.new(headS, headS, headS), headCf, color, "Round")
+	part(model, "Snout", Vector3.new(headS * 0.5, headS * 0.35, headS * 0.4), headCf * CFrame.new(0, -headS * 0.15, -headS * 0.48), accent, "Ball")
+	part(model, "Nose", Vector3.new(headS * 0.18, headS * 0.13, headS * 0.12), headCf * CFrame.new(0, -headS * 0.05, -headS * 0.68), Color3.fromRGB(40, 30, 30), "Ball")
+	for _, side in { -1, 1 } do
+		part(model, "Eye", Vector3.new(headS * 0.2, headS * 0.24, headS * 0.1), headCf * CFrame.new(side * headS * 0.24, headS * 0.12, -headS * 0.52), Color3.fromRGB(20, 20, 25), "Ball")
+		part(model, "Shine", Vector3.new(headS * 0.07, headS * 0.07, headS * 0.04), headCf * CFrame.new(side * headS * 0.21, headS * 0.17, -headS * 0.57), Color3.new(1, 1, 1), "Ball")
+	end
+
+	-- Ears
+	if s.Ears then
+		for _, side in { -1, 1 } do
+			local size, offset, tilt
+			if s.Ears == "Long" then
+				size = Vector3.new(headS * 0.22, headS * 0.9, headS * 0.12)
+				offset = CFrame.new(side * headS * 0.22, headS * 0.85, 0)
+				tilt = CFrame.Angles(0, 0, side * -0.15)
+			elseif s.Ears == "Round" then
+				size = Vector3.new(headS * 0.32, headS * 0.32, headS * 0.12)
+				offset = CFrame.new(side * headS * 0.38, headS * 0.5, 0)
+				tilt = CFrame.new()
+			else
+				size = Vector3.new(headS * 0.28, headS * 0.42, headS * 0.12)
+				offset = CFrame.new(side * headS * 0.3, headS * 0.58, 0)
+				tilt = CFrame.Angles(0, 0, side * -0.25)
+			end
+			part(model, "Ear", size, headCf * offset * tilt, if s.Ears == "Long" then color else accent, "Ball")
+		end
+	end
+
+	-- Horn
+	if s.Horn then
+		local horn = part(model, "Horn", Vector3.new(headS * 0.14, headS * 0.7, headS * 0.14), headCf * CFrame.new(0, headS * 0.75, -headS * 0.15) * CFrame.Angles(-0.35, 0, 0), accent)
+		if s.Neon then
+			horn.Material = Enum.Material.Neon
+		end
+	end
+
+	-- Legs
+	local legs = {}
+	for _, lx in { -1, 1 } do
+		for _, lz in { -1, 1 } do
+			local leg = part(model, "Leg", Vector3.new(bx * 0.26, legH + by * 0.2, bx * 0.26), CFrame.new(lx * bx * 0.3, (legH + by * 0.2) / 2, lz * bz * 0.32), color)
+			table.insert(legs, leg)
+			part(model, "Paw", Vector3.new(bx * 0.3, bx * 0.14, bx * 0.34), CFrame.new(lx * bx * 0.3, bx * 0.07, lz * bz * 0.32 - bx * 0.03), accent, "Ball")
+		end
+	end
+
+	-- Tail
+	if s.Tail then
+		local tailCf = CFrame.new(0, bodyY + by * 0.2, bz / 2)
+		if s.Tail == "Short" then
+			part(model, "Tail", Vector3.new(bx * 0.25, bx * 0.25, bx * 0.25), tailCf, accent, "Ball")
+		elseif s.Tail == "Fluffy" then
+			part(model, "Tail", Vector3.new(bx * 0.45, bx * 0.45, bz * 0.4), tailCf * CFrame.new(0, by * 0.2, bz * 0.15) * CFrame.Angles(0.6, 0, 0), accent, "Ball")
+		else
+			part(model, "Tail", Vector3.new(bx * 0.14, bx * 0.14, bz * 0.55), tailCf * CFrame.new(0, by * 0.15, bz * 0.22) * CFrame.Angles(0.5, 0, 0), color)
+		end
+	end
+
+	-- Wings
+	if s.Wings then
+		for _, side in { -1, 1 } do
+			local w = part(model, "Wing", Vector3.new(bx * 1.1, by * 0.12, bz * 0.6), CFrame.new(side * bx * 0.85, bodyY + by * 0.35, -bz * 0.05) * CFrame.Angles(0, 0, side * 0.35), accent, "Ball")
+			if s.Neon then
+				w.Material = Enum.Material.Neon
+			end
+		end
+	end
+
+	if s.Neon then
+		local light = Instance.new("PointLight")
+		light.Color = accent
+		light.Range = 10 * k
+		light.Brightness = 1.5
+		light.Parent = body
+	end
+
+	-- Weld everything to the body.
+	for _, p in model:GetChildren() do
+		if p:IsA("BasePart") and p ~= body then
+			local w = Instance.new("WeldConstraint")
+			w.Part0 = body
+			w.Part1 = p
+			w.Parent = p
+		end
+	end
+	local _ = head
+	-- Pivot at the feet so callers can place the pet on the ground.
+	model.WorldPivot = CFrame.new()
+	return { Model = model, Root = body, Height = legH + by, Legs = legs }
+end
+
+-- Adds or replaces a trail behind the pet.
+function PetModel.SetTrail(built: Built, trailId: string?)
+	local old = built.Root:FindFirstChild("PetTrail")
+	if old then
+		old:Destroy()
+	end
+	for _, a in built.Root:GetChildren() do
+		if a:IsA("Attachment") and string.sub(a.Name, 1, 5) == "Trail" then
+			a:Destroy()
+		end
+	end
+	local def = trailId and Cosmetics.ById[trailId]
+	if not def or def.Kind ~= "Trail" then
+		return
+	end
+	local size = built.Root.Size
+	local a0 = Instance.new("Attachment")
+	a0.Name = "TrailTop"
+	a0.Position = Vector3.new(0, size.Y * 0.3, size.Z / 2)
+	a0.Parent = built.Root
+	local a1 = Instance.new("Attachment")
+	a1.Name = "TrailBottom"
+	a1.Position = Vector3.new(0, -size.Y * 0.3, size.Z / 2)
+	a1.Parent = built.Root
+	local trail = Instance.new("Trail")
+	trail.Name = "PetTrail"
+	trail.Attachment0 = a0
+	trail.Attachment1 = a1
+	trail.Lifetime = 0.6
+	trail.LightEmission = 0.4
+	trail.FaceCamera = true
+	local keys = {}
+	local n = #def.Colors
+	for i, c in def.Colors do
+		table.insert(keys, ColorSequenceKeypoint.new(if n == 1 then 0 else (i - 1) / (n - 1), rgb(c)))
+	end
+	if n == 1 then
+		table.insert(keys, ColorSequenceKeypoint.new(1, rgb(def.Colors[1])))
+	end
+	trail.Color = ColorSequence.new(keys)
+	trail.Transparency = NumberSequence.new(0.1, 1)
+	trail.Parent = built.Root
+end
+
+return PetModel
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="13">
+        <Properties>
+          <string name="Name">Pets</string>
+          <string name="Source"><![CDATA[-- Pet species. Models are built from simple parts (see server PetModel), so no
+-- uploads are needed: each species picks a body shape, colours and extras.
+export type Species = {
+	Id: string,
+	Name: string,
+	Rarity: string,
+	Body: { number }, -- body size {x, y, z} at size 1
+	Head: number,
+	Legs: number, -- leg height
+	Color: { number },
+	Accent: { number },
+	Ears: string?, -- "Point" | "Long" | "Round" | nil
+	Tail: string?, -- "Short" | "Long" | "Fluffy" | nil
+	Horn: boolean?,
+	Wings: boolean?,
+	Neon: boolean?,
+}
+
+local Pets = {}
+
+Pets.Rarities = {
+	Common = { Refund = 5, Rank = 1, Bonus = 0.00, Color = { 200, 200, 200 } },
+	Uncommon = { Refund = 15, Rank = 2, Bonus = 0.02, Color = { 90, 210, 90 } },
+	Rare = { Refund = 40, Rank = 3, Bonus = 0.04, Color = { 70, 150, 255 } },
+	Epic = { Refund = 100, Rank = 4, Bonus = 0.06, Color = { 180, 90, 255 } },
+	Legendary = { Refund = 250, Rank = 5, Bonus = 0.08, Color = { 255, 180, 40 } },
+	Mythic = { Refund = 600, Rank = 6, Bonus = 0.10, Color = { 255, 70, 140 } },
+}
+
+local list: { Species } = {
+	{ Id = "Pup", Name = "Pup", Rarity = "Common", Body = { 2.2, 1.6, 3.2 }, Head = 1.5, Legs = 1.2, Color = { 196, 150, 100 }, Accent = { 120, 80, 50 }, Ears = "Round", Tail = "Short" },
+	{ Id = "Kitty", Name = "Kitty", Rarity = "Common", Body = { 2, 1.5, 3 }, Head = 1.4, Legs = 1.1, Color = { 255, 170, 80 }, Accent = { 255, 240, 220 }, Ears = "Point", Tail = "Long" },
+	{ Id = "Bunny", Name = "Bunny", Rarity = "Common", Body = { 2, 1.8, 2.6 }, Head = 1.4, Legs = 0.9, Color = { 245, 245, 245 }, Accent = { 255, 180, 200 }, Ears = "Long", Tail = "Fluffy" },
+	{ Id = "Piggy", Name = "Piggy", Rarity = "Uncommon", Body = { 2.6, 1.9, 3.2 }, Head = 1.6, Legs = 0.9, Color = { 255, 175, 190 }, Accent = { 230, 120, 140 }, Ears = "Round", Tail = "Short" },
+	{ Id = "Fox", Name = "Fox", Rarity = "Uncommon", Body = { 2, 1.5, 3.4 }, Head = 1.4, Legs = 1.3, Color = { 235, 110, 40 }, Accent = { 255, 255, 255 }, Ears = "Point", Tail = "Fluffy" },
+	{ Id = "Penguin", Name = "Penguin", Rarity = "Uncommon", Body = { 2.2, 2.4, 2.2 }, Head = 1.5, Legs = 0.7, Color = { 40, 40, 50 }, Accent = { 250, 250, 250 }, Tail = "Short" },
+	{ Id = "Panda", Name = "Panda", Rarity = "Rare", Body = { 2.8, 2.2, 3.4 }, Head = 1.8, Legs = 1.1, Color = { 245, 245, 245 }, Accent = { 30, 30, 30 }, Ears = "Round", Tail = "Short" },
+	{ Id = "Deer", Name = "Deer", Rarity = "Rare", Body = { 2, 1.7, 3.6 }, Head = 1.3, Legs = 2, Color = { 170, 110, 60 }, Accent = { 240, 220, 190 }, Ears = "Point", Tail = "Short", Horn = true },
+	{ Id = "Wolf", Name = "Wolf", Rarity = "Rare", Body = { 2.3, 1.8, 3.8 }, Head = 1.5, Legs = 1.6, Color = { 120, 125, 140 }, Accent = { 220, 220, 230 }, Ears = "Point", Tail = "Fluffy" },
+	{ Id = "Tiger", Name = "Tiger", Rarity = "Epic", Body = { 2.6, 2, 4.2 }, Head = 1.7, Legs = 1.6, Color = { 255, 140, 30 }, Accent = { 30, 20, 20 }, Ears = "Round", Tail = "Long" },
+	{ Id = "Unicorn", Name = "Unicorn", Rarity = "Epic", Body = { 2.4, 2.2, 4.2 }, Head = 1.6, Legs = 2.2, Color = { 255, 240, 255 }, Accent = { 255, 140, 230 }, Ears = "Point", Tail = "Long", Horn = true },
+	{ Id = "Griffin", Name = "Griffin", Rarity = "Legendary", Body = { 2.6, 2.2, 4.2 }, Head = 1.6, Legs = 1.8, Color = { 230, 190, 110 }, Accent = { 255, 255, 255 }, Ears = "Point", Tail = "Long", Wings = true },
+	{ Id = "Dragon", Name = "Dragon", Rarity = "Legendary", Body = { 3, 2.4, 4.8 }, Head = 1.9, Legs = 1.7, Color = { 60, 180, 90 }, Accent = { 255, 220, 80 }, Tail = "Long", Horn = true, Wings = true },
+	{ Id = "Phoenix", Name = "Phoenix", Rarity = "Mythic", Body = { 2.6, 2.4, 3.8 }, Head = 1.6, Legs = 1.6, Color = { 255, 90, 30 }, Accent = { 255, 230, 60 }, Tail = "Fluffy", Wings = true, Neon = true },
+	{ Id = "Cosmic Cat", Name = "Cosmic Cat", Rarity = "Mythic", Body = { 2.4, 1.9, 3.6 }, Head = 1.6, Legs = 1.6, Color = { 60, 30, 140 }, Accent = { 120, 255, 255 }, Ears = "Point", Tail = "Long", Neon = true },
+}
+
+Pets.List = list
+Pets.ById = {} :: { [string]: Species }
+for _, s in list do
+	Pets.ById[s.Id] = s
+end
+
+function Pets.RarityOf(id: string): string
+	local s = Pets.ById[id]
+	return s and s.Rarity or "Common"
+end
+
+function Pets.Rank(id: string): number
+	return Pets.Rarities[Pets.RarityOf(id)].Rank
+end
+
+return Pets
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="14">
+        <Properties>
+          <string name="Name">Products</string>
+          <string name="Source"><![CDATA[-- Robux products. Robux buys Coins, cosmetics and storage only, never race speed.
+-- The owner fills in the ids after creating the products on the Creator Dashboard.
+-- An entry with Id = nil is hidden from the shop.
+local Products = {}
+
+-- Developer products (can be bought many times).
+Products.Dev = {
+	{ Key = "Coins500", Name = "500 Coins", Robux = 25, Id = nil :: number?, Coins = 500 },
+	{ Key = "Coins3000", Name = "3,000 Coins", Robux = 120, Id = nil :: number?, Coins = 3000 },
+	{ Key = "Coins10000", Name = "10,000 Coins", Robux = 350, Id = nil :: number?, Coins = 10000 },
+	{ Key = "RainbowTrail", Name = "Rainbow Trail", Robux = 99, Id = nil :: number?, Cosmetic = "TrailRainbow" },
+	{ Key = "GalaxyPaint", Name = "Galaxy Paint", Robux = 79, Id = nil :: number?, Cosmetic = "PaintGalaxy" },
+}
+
+-- Game passes (bought once).
+Products.Passes = {
+	{ Key = "BigBarn", Name = "Big Barn (+36 pet slots)", Robux = 149, Id = nil :: number? },
+}
+
+return Products
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="15">
+        <Properties>
+          <string name="Name">Tracks</string>
+          <string name="Source"><![CDATA[-- Race tracks. Each track is a straight run along +X made of segments, laid out by
+-- Logic/TrackLayout and built from parts by the server's TrackBuilder.
+-- Segment kinds:
+--   Straight {L}            plain floor
+--   Gap {L}                 no floor: jump it or fall (respawn at checkpoint)
+--   Hurdles {L, H, Count}   walls of height H to jump over
+--   Ramp {L, Rise}          slope up (Rise > 0) or down (Rise < 0)
+--   Steps {L, Count, Rise}  platforms, each Rise higher than the last
+--   Boost {L}               speed pad
+--   Mud {L}                 slows you down
+--   Zigzag {L, Count}       pillars to steer around
+export type Segment = {
+	Kind: string,
+	L: number,
+	H: number?,
+	Count: number?,
+	Rise: number?,
+}
+
+export type Track = {
+	Id: string,
+	Name: string,
+	Theme: string, -- "Meadow" | "Canyon" | "Sky"
+	Segments: { Segment },
+}
+
+local Tracks = {}
+
+local list: { Track } = {
+	{
+		Id = "MeadowDash",
+		Name = "Meadow Dash",
+		Theme = "Meadow",
+		Segments = {
+			{ Kind = "Straight", L = 60 },
+			{ Kind = "Hurdles", L = 60, H = 3, Count = 3 },
+			{ Kind = "Boost", L = 30 },
+			{ Kind = "Gap", L = 6 },
+			{ Kind = "Straight", L = 40 },
+			{ Kind = "Zigzag", L = 70, Count = 5 },
+			{ Kind = "Ramp", L = 40, Rise = 8 },
+			{ Kind = "Straight", L = 30 },
+			{ Kind = "Ramp", L = 40, Rise = -8 },
+			{ Kind = "Mud", L = 40 },
+			{ Kind = "Boost", L = 30 },
+			{ Kind = "Straight", L = 60 },
+		},
+	},
+	{
+		Id = "CanyonLeap",
+		Name = "Canyon Leap",
+		Theme = "Canyon",
+		Segments = {
+			{ Kind = "Straight", L = 50 },
+			{ Kind = "Gap", L = 7 },
+			{ Kind = "Straight", L = 30 },
+			{ Kind = "Gap", L = 9 },
+			{ Kind = "Boost", L = 30 },
+			{ Kind = "Hurdles", L = 70, H = 4, Count = 4 },
+			{ Kind = "Mud", L = 30 },
+			{ Kind = "Ramp", L = 50, Rise = 12 },
+			{ Kind = "Gap", L = 10 },
+			{ Kind = "Straight", L = 30 },
+			{ Kind = "Zigzag", L = 60, Count = 6 },
+			{ Kind = "Ramp", L = 50, Rise = -12 },
+			{ Kind = "Boost", L = 30 },
+			{ Kind = "Straight", L = 50 },
+		},
+	},
+	{
+		Id = "SkySteps",
+		Name = "Sky Steps",
+		Theme = "Sky",
+		Segments = {
+			{ Kind = "Straight", L = 40 },
+			{ Kind = "Steps", L = 60, Count = 5, Rise = 4 },
+			{ Kind = "Straight", L = 30 },
+			{ Kind = "Gap", L = 11 },
+			{ Kind = "Boost", L = 30 },
+			{ Kind = "Hurdles", L = 60, H = 5, Count = 3 },
+			{ Kind = "Steps", L = 50, Count = 4, Rise = 5 },
+			{ Kind = "Gap", L = 12 },
+			{ Kind = "Zigzag", L = 60, Count = 6 },
+			{ Kind = "Ramp", L = 60, Rise = -30 },
+			{ Kind = "Mud", L = 30 },
+			{ Kind = "Boost", L = 30 },
+			{ Kind = "Straight", L = 50 },
+		},
+	},
+}
+
+Tracks.List = list
+Tracks.ById = {} :: { [string]: Track }
+for _, t in list do
+	Tracks.ById[t.Id] = t
+end
+
+Tracks.Width = 30
+
+return Tracks
+]]></string>
+        </Properties>
+      </Item>
+    </Item>
+  </Item>
+  <Item class="ServerScriptService" referent="16">
+    <Properties>
+      <string name="Name">ServerScriptService</string>
+    </Properties>
+    <Item class="Folder" referent="17">
+      <Properties>
+        <string name="Name">Server</string>
+      </Properties>
+      <Item class="Script" referent="18">
+        <Properties>
+          <string name="Name">Main</string>
+          <token name="RunContext">0</token>
+          <string name="Source"><![CDATA[-- Server entry: creates remotes, then starts each service in order.
+-- Every service gets the shared ctx table and can reach the others as ctx.<Name>.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Net = require(Shared.Net)
+
+Net.Init()
+
+local Services = script.Parent:WaitForChild("Services")
+local order = {
+	"Util",
+	"DataService",
+	"WorldService",
+	"PetService",
+	"TrainingService",
+	"TrackBuilder",
+	"RaceService",
+	"ShopService",
+	"LeaderboardService",
+}
+
+local ctx = {}
+for _, name in order do
+	ctx[name] = require(Services:WaitForChild(name)) :: any
+end
+for _, name in order do
+	local s = ctx[name]
+	if s.Init then
+		s.Init(ctx)
+	end
+end
+for _, name in order do
+	local s = ctx[name]
+	if s.Start then
+		task.spawn(s.Start)
+	end
+end
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="Folder" referent="19">
+        <Properties>
+          <string name="Name">Services</string>
+        </Properties>
+        <Item class="ModuleScript" referent="20">
+          <Properties>
+            <string name="Name">DataService</string>
+            <string name="Source"><![CDATA[-- Loads and saves player profiles (DataStore), keeps leaderstats in sync and
+-- sends each player a snapshot of their profile whenever it changes.
+local Players = game:GetService("Players")
+local DataStoreService = game:GetService("DataStoreService")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage.Shared
+local Config = require(Shared.Config)
+local Net = require(Shared.Net)
+local Profile = require(Shared.Logic.Profile)
+local RaceRules = require(Shared.Logic.RaceRules)
+
+local DataService = {}
+
+local store: DataStore? = nil
+local profiles: { [Player]: Profile.Data } = {}
+local loaded: { [Player]: boolean } = {}
+local dirty: { [Player]: boolean } = {}
+local listeners: { (Player, Profile.Data) -> () } = {}
+
+local function key(p: Player): string
+	return "u" .. p.UserId
+end
+
+local function withRetry<T>(fn: () -> T): (boolean, any)
+	local ok, res
+	for attempt = 1, 4 do
+		ok, res = pcall(fn)
+		if ok then
+			return true, res
+		end
+		task.wait(attempt)
+	end
+	return false, res
+end
+
+local function setupLeaderstats(p: Player, d: Profile.Data)
+	local ls = Instance.new("Folder")
+	ls.Name = "leaderstats"
+	local trophies = Instance.new("IntValue")
+	trophies.Name = "Trophies"
+	trophies.Value = d.Trophies
+	trophies.Parent = ls
+	local coins = Instance.new("IntValue")
+	coins.Name = "Coins"
+	coins.Value = d.Coins
+	coins.Parent = ls
+	ls.Parent = p
+end
+
+local function syncLeaderstats(p: Player, d: Profile.Data)
+	local ls = p:FindFirstChild("leaderstats")
+	if ls then
+		(ls:FindFirstChild("Coins") :: IntValue).Value = d.Coins;
+		(ls:FindFirstChild("Trophies") :: IntValue).Value = d.Trophies
+	end
+	local _, league = RaceRules.League(d.Trophies)
+	p:SetAttribute("League", league.Name)
+end
+
+local function load(p: Player)
+	local data: Profile.Data
+	if store then
+		local ok, raw = withRetry(function()
+			return (store :: DataStore):GetAsync(key(p))
+		end)
+		if not ok then
+			-- Don't risk overwriting real data with a fresh profile.
+			p:Kick("Couldn't load your save. Please rejoin in a minute.")
+			return
+		end
+		data = Profile.Sanitize(raw)
+	else
+		data = Profile.Default()
+	end
+	if not p.Parent then
+		return
+	end
+	profiles[p] = data
+	loaded[p] = true
+	setupLeaderstats(p, data)
+	DataService.Changed(p)
+	for _, fn in listeners do
+		task.spawn(fn, p, data)
+	end
+end
+
+local function save(p: Player)
+	local d = profiles[p]
+	if not d or not store or not loaded[p] then
+		return
+	end
+	dirty[p] = nil
+	local ok, err = withRetry(function()
+		return (store :: DataStore):UpdateAsync(key(p), function()
+			return d
+		end)
+	end)
+	if not ok then
+		warn("Save failed for " .. p.Name .. ": " .. tostring(err))
+		dirty[p] = true
+	end
+end
+
+function DataService.Init()
+	local ok, res = pcall(function()
+		return DataStoreService:GetDataStore("PetRaceLeague_v1")
+	end)
+	if ok then
+		store = res
+	else
+		warn("DataStore unavailable (enable API access in Studio to save). Progress won't save.")
+	end
+	if RunService:IsStudio() and store then
+		-- Probe once so Studio without API access falls back cleanly.
+		local probeOk = pcall(function()
+			(store :: DataStore):GetAsync("probe")
+		end)
+		if not probeOk then
+			warn("DataStore blocked in Studio. Progress won't save this session.")
+			store = nil
+		end
+	end
+end
+
+function DataService.Start()
+	Players.PlayerAdded:Connect(load)
+	for _, p in Players:GetPlayers() do
+		task.spawn(load, p)
+	end
+	Players.PlayerRemoving:Connect(function(p)
+		save(p)
+		profiles[p] = nil
+		loaded[p] = nil
+		dirty[p] = nil
+	end)
+	game:BindToClose(function()
+		local threads = {}
+		for p in profiles do
+			table.insert(threads, task.spawn(save, p))
+		end
+		local deadline = os.clock() + 25
+		while os.clock() < deadline do
+			local busy = false
+			for _, th in threads do
+				if coroutine.status(th) ~= "dead" then
+					busy = true
+				end
+			end
+			if not busy then
+				break
+			end
+			task.wait(0.2)
+		end
+	end)
+	while true do
+		task.wait(Config.AutosaveEvery)
+		for p in profiles do
+			if dirty[p] then
+				task.spawn(save, p)
+			end
+		end
+	end
+end
+
+function DataService.Get(p: Player): Profile.Data?
+	return profiles[p]
+end
+
+-- Called when a profile has loaded.
+function DataService.OnLoaded(fn: (Player, Profile.Data) -> ())
+	table.insert(listeners, fn)
+	for p, d in profiles do
+		task.spawn(fn, p, d)
+	end
+end
+
+-- Call after every change: marks for saving and sends the new snapshot.
+function DataService.Changed(p: Player)
+	local d = profiles[p]
+	if not d then
+		return
+	end
+	dirty[p] = true
+	syncLeaderstats(p, d)
+	Net.Event("State"):FireClient(p, d)
+end
+
+function DataService.AddCoins(p: Player, amount: number)
+	local d = profiles[p]
+	if d and amount ~= 0 then
+		d.Coins = math.max(0, d.Coins + math.floor(amount))
+		DataService.Changed(p)
+	end
+end
+
+function DataService.SaveNow(p: Player)
+	task.spawn(save, p)
+end
+
+return DataService
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="21">
+          <Properties>
+            <string name="Name">LeaderboardService</string>
+            <string name="Source"><![CDATA[-- Global top-10 trophies board in the lobby (OrderedDataStore). Falls back to the
+-- players in this server when DataStores aren't available (Studio without API access).
+local Players = game:GetService("Players")
+local DataStoreService = game:GetService("DataStoreService")
+
+local LeaderboardService = {}
+
+local ctx: any
+local store: OrderedDataStore? = nil
+local rows: { TextLabel } = {}
+
+local function buildBoard()
+	local board = ctx.WorldService.Leaderboard :: BasePart?
+	if not board then
+		return
+	end
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Front
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = 25
+	local title = Instance.new("TextLabel")
+	title.Size = UDim2.fromScale(1, 0.14)
+	title.BackgroundTransparency = 1
+	title.Text = "TOP RACERS"
+	title.Font = Enum.Font.FredokaOne
+	title.TextScaled = true
+	title.TextColor3 = Color3.fromRGB(255, 220, 90)
+	title.Parent = gui
+	for i = 1, 10 do
+		local row = Instance.new("TextLabel")
+		row.Size = UDim2.fromScale(0.92, 0.075)
+		row.Position = UDim2.fromScale(0.04, 0.15 + (i - 1) * 0.083)
+		row.BackgroundTransparency = 1
+		row.Font = Enum.Font.GothamBold
+		row.TextScaled = true
+		row.TextXAlignment = Enum.TextXAlignment.Left
+		row.TextColor3 = if i == 1 then Color3.fromRGB(255, 215, 0) elseif i == 2 then Color3.fromRGB(210, 210, 220) elseif i == 3 then Color3.fromRGB(220, 150, 90) else Color3.new(1, 1, 1)
+		row.Text = i .. ".  ---"
+		row.Parent = gui
+		rows[i] = row
+	end
+	gui.Parent = board
+end
+
+local nameCache: { [number]: string } = {}
+local function nameOf(userId: number): string
+	if nameCache[userId] then
+		return nameCache[userId]
+	end
+	local ok, name = pcall(function()
+		return Players:GetNameFromUserIdAsync(userId)
+	end)
+	local n = if ok then name else "Racer"
+	nameCache[userId] = n
+	return n
+end
+
+local function refresh()
+	-- push our players' scores
+	local entries = {}
+	if store then
+		for _, p in Players:GetPlayers() do
+			local d = ctx.DataService.Get(p)
+			if d and d.Trophies > 0 then
+				pcall(function()
+					(store :: OrderedDataStore):SetAsync("u" .. p.UserId, d.Trophies)
+				end)
+			end
+		end
+		local ok, pages = pcall(function()
+			return (store :: OrderedDataStore):GetSortedAsync(false, 10)
+		end)
+		if ok then
+			for _, e in pages:GetCurrentPage() do
+				local id = tonumber(string.sub(e.key, 2))
+				if id then
+					table.insert(entries, { Name = nameOf(id), Trophies = e.value })
+				end
+			end
+		end
+	end
+	if #entries == 0 then
+		for _, p in Players:GetPlayers() do
+			local d = ctx.DataService.Get(p)
+			if d then
+				table.insert(entries, { Name = p.DisplayName, Trophies = d.Trophies })
+			end
+		end
+		table.sort(entries, function(a, b)
+			return a.Trophies > b.Trophies
+		end)
+	end
+	for i, row in rows do
+		local e = entries[i]
+		row.Text = if e then string.format("%d.  %s  -  %d", i, e.Name, e.Trophies) else i .. ".  ---"
+	end
+end
+
+function LeaderboardService.Init(c)
+	ctx = c
+	local ok, res = pcall(function()
+		return DataStoreService:GetOrderedDataStore("PetRaceLeague_Trophies_v1")
+	end)
+	if ok then
+		store = res
+	end
+end
+
+function LeaderboardService.Start()
+	buildBoard()
+	task.wait(5)
+	while true do
+		local ok, err = pcall(refresh)
+		if not ok then
+			warn("[Leaderboard] " .. tostring(err))
+			store = nil -- fall back to this server's players
+		end
+		task.wait(60)
+	end
+end
+
+return LeaderboardService
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="22">
+          <Properties>
+            <string name="Name">PetService</string>
+            <string name="Source"><![CDATA[-- Pets in the world: hatching, equipping, riding, following, dashing and the
+-- speed every rider gets. All movement numbers are set here, on the server.
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TextService = game:GetService("TextService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage.Shared
+local Config = require(Shared.Config)
+local Pets = require(Shared.Pets)
+local Eggs = require(Shared.Eggs)
+local Cosmetics = require(Shared.Cosmetics)
+local Net = require(Shared.Net)
+local PetModel = require(Shared.PetModel)
+local Hatch = require(Shared.Logic.Hatch)
+local PetStats = require(Shared.Logic.PetStats)
+local Profile = require(Shared.Logic.Profile)
+
+local PetService = {}
+
+type State = {
+	Built: PetModel.Built?,
+	Uid: string?,
+	Riding: boolean,
+	WantRide: boolean,
+	DefaultHip: number?,
+	Charges: number,
+	DashUntil: number,
+	ZoneMult: number, -- set by races: mud/boost
+	Frozen: boolean, -- set by races: countdown, respawn penalty
+	Locked: boolean, -- in a race: can't change pet or dismount
+	Recharging: boolean,
+}
+
+local states: { [Player]: State } = {}
+local ctx: any
+local Util: any
+local Data: any
+local rng = Random.new()
+local folder: Folder
+
+local function state(p: Player): State
+	local s = states[p]
+	if not s then
+		s = {
+			Riding = false,
+			WantRide = true,
+			Charges = 0,
+			DashUntil = 0,
+			ZoneMult = 1,
+			Frozen = false,
+			Locked = false,
+			Recharging = false,
+		}
+		states[p] = s
+	end
+	return s
+end
+
+local function equippedPet(p: Player): PetStats.Pet?
+	local d = Data.Get(p)
+	return d and Profile.EquippedPet(d)
+end
+
+local function destroyModel(s: State)
+	if s.Built then
+		s.Built.Model:Destroy()
+		s.Built = nil
+	end
+	s.Uid = nil
+end
+
+-- Applies WalkSpeed/JumpPower/HipHeight for the player's current state.
+function PetService.Apply(p: Player)
+	local hum = Util.Humanoid(p)
+	if not hum then
+		return
+	end
+	local s = state(p)
+	local pet = equippedPet(p)
+	hum.UseJumpPower = true
+	if s.DefaultHip == nil then
+		s.DefaultHip = hum.HipHeight
+	end
+	local speed, jump
+	if s.Riding and pet and s.Built then
+		local ride = PetStats.Ride(pet)
+		speed, jump = ride.WalkSpeed, ride.JumpPower
+		hum.HipHeight = (s.DefaultHip :: number) + s.Built.Height
+		if os.clock() < s.DashUntil then
+			speed *= Config.Ride.DashBoost
+		end
+	else
+		speed, jump = Config.Ride.OnFootSpeed, Config.Ride.OnFootJump
+		hum.HipHeight = s.DefaultHip :: number
+	end
+	speed *= s.ZoneMult
+	if s.Frozen then
+		speed, jump = 0, 0
+	end
+	hum.WalkSpeed = speed
+	hum.JumpPower = jump
+	p:SetAttribute("Riding", s.Riding)
+end
+
+local function mount(p: Player)
+	local s = state(p)
+	local pet = equippedPet(p)
+	local char = p.Character
+	local root = Util.Root(p)
+	local hum = Util.Humanoid(p)
+	if not pet or not char or not root or not hum or hum.Health <= 0 then
+		return
+	end
+	destroyModel(s)
+	local ride = PetStats.Ride(pet)
+	local built = PetModel.Build(pet.Species, ride.Size, pet.Paint)
+	PetModel.SetTrail(built, pet.Trail)
+	if s.DefaultHip == nil then
+		s.DefaultHip = hum.HipHeight
+	end
+	local hip = s.DefaultHip :: number
+	-- Rider stands on the pet's back: the pet's feet go where the rider's feet were.
+	local feetY = -(hip + root.Size.Y / 2) - built.Height
+	built.Model:PivotTo(root.CFrame * CFrame.new(0, feetY, 0))
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = root
+	weld.Part1 = built.Root
+	weld.Parent = built.Root
+	built.Model.Name = "RiddenPet"
+	built.Model.Parent = char
+	s.Built = built
+	s.Uid = pet.Uid
+	s.Riding = true
+	-- lift the character so the pet doesn't sink into the floor
+	root.CFrame += Vector3.new(0, built.Height, 0)
+	PetService.Apply(p)
+end
+
+local function spawnFollower(p: Player)
+	local s = state(p)
+	local pet = equippedPet(p)
+	destroyModel(s)
+	s.Riding = false
+	PetService.Apply(p)
+	local root = Util.Root(p)
+	if not pet or not root then
+		return
+	end
+	local ride = PetStats.Ride(pet)
+	local built = PetModel.Build(pet.Species, ride.Size * 0.8, pet.Paint)
+	PetModel.SetTrail(built, pet.Trail)
+	for _, d in built.Model:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.Anchored = true
+		end
+	end
+	built.Model.Name = p.Name .. "Pet"
+	built.Model:PivotTo(root.CFrame * CFrame.new(4, -3, 3))
+	built.Model.Parent = folder
+	s.Built = built
+	s.Uid = pet.Uid
+end
+
+-- Ride or walk. force=true ignores the race lock (used by RaceService).
+function PetService.SetRiding(p: Player, on: boolean, force: boolean?)
+	local s = state(p)
+	if s.Locked and not force then
+		return
+	end
+	s.WantRide = on
+	if on then
+		mount(p)
+	else
+		spawnFollower(p)
+	end
+end
+
+function PetService.Refresh(p: Player)
+	local s = state(p)
+	if s.WantRide then
+		mount(p)
+	else
+		spawnFollower(p)
+	end
+end
+
+function PetService.SetZone(p: Player, mult: number)
+	local s = state(p)
+	if s.ZoneMult ~= mult then
+		s.ZoneMult = mult
+		PetService.Apply(p)
+	end
+end
+
+function PetService.SetFrozen(p: Player, frozen: boolean)
+	state(p).Frozen = frozen
+	PetService.Apply(p)
+end
+
+function PetService.SetLocked(p: Player, locked: boolean)
+	state(p).Locked = locked
+end
+
+function PetService.IsRiding(p: Player): boolean
+	return state(p).Riding
+end
+
+function PetService.ResetCharges(p: Player)
+	local s = state(p)
+	local pet = equippedPet(p)
+	local max = if pet then PetStats.Ride(pet).DashCharges else 0
+	s.Charges = max
+	s.DashUntil = 0
+	p:SetAttribute("DashCharges", max)
+	p:SetAttribute("DashMax", max)
+end
+
+local function recharge(p: Player)
+	local s = state(p)
+	if s.Recharging then
+		return
+	end
+	s.Recharging = true
+	task.spawn(function()
+		while p.Parent do
+			local pet = equippedPet(p)
+			if not pet then
+				break
+			end
+			local ride = PetStats.Ride(pet)
+			if s.Charges >= ride.DashCharges then
+				break
+			end
+			task.wait(ride.DashRecharge)
+			s.Charges = math.min(ride.DashCharges, s.Charges + 1)
+			p:SetAttribute("DashCharges", s.Charges)
+		end
+		s.Recharging = false
+	end)
+end
+
+local function dash(p: Player)
+	local s = state(p)
+	if not s.Riding or s.Frozen or s.Charges <= 0 or os.clock() < s.DashUntil then
+		return
+	end
+	s.Charges -= 1
+	s.DashUntil = os.clock() + Config.Ride.DashTime
+	p:SetAttribute("DashCharges", s.Charges)
+	PetService.Apply(p)
+	task.delay(Config.Ride.DashTime + 0.05, function()
+		if p.Parent then
+			PetService.Apply(p)
+		end
+	end)
+	recharge(p)
+end
+
+-- Hatches an egg. Returns ok, species or error text.
+function PetService.Hatch(p: Player, eggId: any): (boolean, string)
+	local egg = type(eggId) == "string" and Eggs.ById[eggId]
+	local d = Data.Get(p)
+	if not egg or not d then
+		return false, "That egg doesn't exist."
+	end
+	if state(p).Locked then
+		return false, "Finish your race first!"
+	end
+	local root = Util.Root(p)
+	local stand = ctx.WorldService.EggStands[egg.Id]
+	if not root or not stand or (root.Position - stand).Magnitude > 30 then
+		return false, "Get closer to the egg."
+	end
+	if d.Coins < egg.Price then
+		return false, "You need " .. (egg.Price - d.Coins) .. " more coins."
+	end
+	if #d.Pets >= Profile.Capacity(d) then
+		return false, "Your barn is full! Release a pet first."
+	end
+	local count = (d.Pity[egg.Id] or 0) + 1
+	local species = Hatch.Roll(egg, rng:NextNumber(), Hatch.IsPity(count))
+	local pet = Profile.AddPet(d, species)
+	if not pet then
+		return false, "Your barn is full!"
+	end
+	d.Coins -= egg.Price
+	d.Pity[egg.Id] = count
+	d.Stats.Hatches = (d.Stats.Hatches or 0) + 1
+	Data.Changed(p)
+	Net.Event("Hatched"):FireClient(p, species, egg.Id, pet.Uid)
+	local rank = Pets.Rank(species)
+	if rank >= 5 then
+		Util.NotifyAll(p.DisplayName .. " hatched a " .. Pets.RarityOf(species) .. " " .. Pets.ById[species].Name .. "!", "Rare")
+	end
+	return true, species
+end
+
+function PetService.Equip(p: Player, uid: any)
+	local d = Data.Get(p)
+	local s = state(p)
+	if not d or s.Locked or not Profile.FindPet(d, uid) then
+		return
+	end
+	d.Equipped = uid
+	Data.Changed(p)
+	PetService.ResetCharges(p)
+	PetService.Refresh(p)
+end
+
+function PetService.Init(c)
+	ctx = c
+	Util = c.Util
+	Data = c.DataService
+	folder = Instance.new("Folder")
+	folder.Name = "Pets"
+	folder.Parent = workspace
+end
+
+function PetService.Start()
+	Data.OnLoaded(function(p: Player, d)
+		PetService.ResetCharges(p)
+		if p.Character then
+			PetService.Refresh(p)
+		end
+		local _ = d
+	end)
+	local function onChar(p: Player, char: Model)
+		local s = state(p)
+		s.DefaultHip = nil
+		destroyModel(s) -- a follower lives outside the character, so clear it too
+		s.Riding = false
+		local hum = char:WaitForChild("Humanoid", 10) :: Humanoid?
+		char:WaitForChild("HumanoidRootPart", 10)
+		if not hum or not Data.Get(p) then
+			return
+		end
+		task.wait(0.2)
+		if p.Character == char then
+			PetService.ResetCharges(p)
+			PetService.Refresh(p)
+		end
+	end
+	Players.PlayerAdded:Connect(function(p)
+		p.CharacterAdded:Connect(function(c)
+			onChar(p, c)
+		end)
+	end)
+	for _, p in Players:GetPlayers() do
+		p.CharacterAdded:Connect(function(c)
+			onChar(p, c)
+		end)
+		if p.Character then
+			task.spawn(onChar, p, p.Character)
+		end
+	end
+	Players.PlayerRemoving:Connect(function(p)
+		local s = states[p]
+		if s then
+			destroyModel(s)
+		end
+		states[p] = nil
+	end)
+
+	-- Hatch from the egg prompts.
+	for _, d in workspace:WaitForChild("Lobby"):GetDescendants() do
+		if d:IsA("ProximityPrompt") and d.Name == "HatchPrompt" then
+			d.Triggered:Connect(function(p)
+				local ok, err = PetService.Hatch(p, d:GetAttribute("Egg"))
+				if not ok then
+					Util.Notify(p, err, "Error")
+				end
+			end)
+		end
+	end
+	Util.Invoke("Hatch", 0.6, function(p, eggId)
+		return PetService.Hatch(p, eggId)
+	end)
+
+	Util.Connect("Equip", 0.4, PetService.Equip)
+	Util.Connect("Ride", 0.4, function(p, on)
+		PetService.SetRiding(p, on == true)
+	end)
+	Util.Connect("Dash", 0.15, dash)
+	Util.Connect("Release", 0.3, function(p, uid)
+		local d = Data.Get(p)
+		if not d or type(uid) ~= "string" then
+			return
+		end
+		local ok, res = Profile.Release(d, uid)
+		if not ok then
+			Util.Notify(p, res or "Can't release that pet.", "Error")
+			return
+		end
+		local refund = Pets.Rarities[Pets.RarityOf(res :: string)].Refund
+		d.Coins += refund
+		Data.Changed(p)
+		Util.Notify(p, "Released! +" .. refund .. " coins", "Coins")
+	end)
+	Util.Connect("SetCosmetic", 0.4, function(p, kind, id)
+		local d = Data.Get(p)
+		local pet = d and Profile.EquippedPet(d)
+		if not d or not pet or (kind ~= "Trail" and kind ~= "Paint") then
+			return
+		end
+		if id ~= nil then
+			local def = type(id) == "string" and Cosmetics.ById[id]
+			if not def or def.Kind ~= kind or not d.Owned[id] then
+				return
+			end
+		end
+		if kind == "Trail" then
+			pet.Trail = id
+		else
+			pet.Paint = id
+		end
+		Data.Changed(p)
+		PetService.Refresh(p)
+	end)
+	Util.Connect("Rename", 2, function(p, uid, name)
+		local d = Data.Get(p)
+		local pet = d and Profile.FindPet(d, uid)
+		if not pet or type(name) ~= "string" then
+			return
+		end
+		name = string.sub(string.gsub(name, "[%c]", ""), 1, 20)
+		if name == "" then
+			pet.Nick = nil
+		else
+			local ok, filtered = pcall(function()
+				return TextService:FilterStringAsync(name, p.UserId):GetNonChatStringForBroadcastAsync()
+			end)
+			if not ok then
+				Util.Notify(p, "Couldn't check that name, try again.", "Error")
+				return
+			end
+			pet.Nick = filtered
+		end
+		Data.Changed(p)
+	end)
+
+	-- Followers trot after their owner.
+	RunService.Heartbeat:Connect(function(dt)
+		for p, s in states do
+			local built = s.Built
+			if built and not s.Riding then
+				local root = Util.Root(p)
+				if root then
+					local target = root.CFrame * CFrame.new(4, 0, 4)
+					local hum = Util.Humanoid(p)
+					local ground = target.Position.Y - ((hum and hum.HipHeight or 2) + root.Size.Y / 2)
+					local goal = CFrame.new(target.Position.X, ground, target.Position.Z) * root.CFrame.Rotation
+					local cur = built.Model:GetPivot()
+					local alpha = math.min(1, dt * 8)
+					if (cur.Position - goal.Position).Magnitude > 60 then
+						alpha = 1
+					end
+					built.Model:PivotTo(cur:Lerp(goal, alpha))
+				end
+			end
+		end
+	end)
+end
+
+return PetService
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="23">
+          <Properties>
+            <string name="Name">RaceService</string>
+            <string name="Source"><![CDATA[-- Races: players standing on the lobby portal are queued; after a short wait they're
+-- sent to a freshly built track, race to the finish, and get coins and trophies.
+-- Progress is measured from server-side positions with an anti-cheat speed check.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage.Shared
+local Config = require(Shared.Config)
+local Tracks = require(Shared.Tracks)
+local Net = require(Shared.Net)
+local TrackLayout = require(Shared.Logic.TrackLayout)
+local RaceRules = require(Shared.Logic.RaceRules)
+local PetStats = require(Shared.Logic.PetStats)
+local Profile = require(Shared.Logic.Profile)
+
+local RaceService = {}
+
+type Racer = {
+	Player: Player,
+	Id: number,
+	Cp: number, -- checkpoint index reached
+	CpX: number,
+	CpAt: number,
+	Progress: number,
+	Finished: boolean,
+	Time: number?,
+	Char: Model?,
+	MaxSpeed: number,
+	FrozenUntil: number,
+	Left: boolean,
+}
+
+local ctx: any
+local Util: any
+local phase = "Idle" -- Idle | Queue | Racing | Results
+local queueEnds = 0
+local trackIndex = 0
+local racers: { Racer } = {}
+local built: any = nil
+local startAt = 0
+local endAt = 0
+local firstFinish: number? = nil
+local lastQueueSig = -1
+
+local function send(p: Player, kind: string, data: any?)
+	Net.Event("Race"):FireClient(p, kind, data)
+end
+
+local function sendAll(kind: string, data: any?)
+	for _, r in racers do
+		if not r.Left then
+			send(r.Player, kind, data)
+		end
+	end
+end
+
+local function racerOf(p: Player): Racer?
+	for _, r in racers do
+		if r.Player == p and not r.Left then
+			return r
+		end
+	end
+	return nil
+end
+
+-- Puts a racer at a local track position (x along the track, y floor height).
+local function place(r: Racer, x: number, y: number, z: number?)
+	local root = Util.Root(r.Player)
+	if not root or not built then
+		return
+	end
+	local pos = built.ToWorld(x, y + 12, z or 0)
+	root.AssemblyLinearVelocity = Vector3.zero
+	root.CFrame = CFrame.lookAt(pos, pos + Vector3.new(1, 0, 0))
+end
+
+local function queued(): { Player }
+	local out = {}
+	local portal = ctx.WorldService.Portal
+	for _, p in Players:GetPlayers() do
+		local root = Util.Root(p)
+		if root and ctx.DataService.Get(p) and not p:GetAttribute("InRace") and ctx.WorldService.InBox(root.Position, portal.Center, portal.Size) then
+			table.insert(out, p)
+		end
+	end
+	return out
+end
+
+local function maxSpeedFor(p: Player): number
+	local d = ctx.DataService.Get(p)
+	local pet = d and Profile.EquippedPet(d)
+	return PetStats.MaxSpeed(pet) * Config.Race.BoostMult
+end
+
+local function startRace(players: { Player })
+	trackIndex = trackIndex % #Tracks.List + 1
+	local track = Tracks.List[trackIndex]
+	built = ctx.TrackBuilder.Build(track)
+	racers = {}
+	firstFinish = nil
+	local layout = built.Layout
+	for i, p in players do
+		if i > Config.Race.MaxPlayers then
+			break
+		end
+		local r: Racer = {
+			Player = p,
+			Id = i,
+			Cp = 1,
+			CpX = 0,
+			CpAt = 0,
+			Progress = 0,
+			Finished = false,
+			Char = p.Character,
+			MaxSpeed = maxSpeedFor(p),
+			FrozenUntil = 0,
+			Left = false,
+		}
+		table.insert(racers, r)
+		p:SetAttribute("InRace", true)
+		ctx.PetService.SetLocked(p, true)
+		ctx.PetService.SetRiding(p, true, true)
+		ctx.PetService.ResetCharges(p)
+		ctx.PetService.SetFrozen(p, true)
+		local sp = built.StartPositions[i]
+		local root = Util.Root(p)
+		if root then
+			root.AssemblyLinearVelocity = Vector3.zero
+			root.CFrame = CFrame.lookAt(sp + Vector3.new(0, 6, 0), sp + Vector3.new(1, 6, 0))
+		end
+	end
+	phase = "Racing"
+	local medals = RaceRules.MedalTimes(layout.Length)
+	local names = {}
+	for _, r in racers do
+		table.insert(names, r.Player.DisplayName)
+	end
+	sendAll("Start", {
+		Track = track.Name,
+		Length = layout.Length,
+		Medals = medals,
+		Checkpoints = #layout.Checkpoints,
+		Countdown = Config.Race.Countdown,
+		Racers = names,
+	})
+	ctx.WorldService.SetPortalText("Race in progress: " .. track.Name)
+	for n = Config.Race.Countdown, 1, -1 do
+		sendAll("Count", n)
+		task.wait(1)
+	end
+	startAt = os.clock()
+	endAt = startAt + Config.Race.TimeLimit
+	for _, r in racers do
+		r.CpAt = startAt
+		if not r.Left then
+			ctx.PetService.SetFrozen(r.Player, false)
+		end
+	end
+	sendAll("Go", { EndsIn = Config.Race.TimeLimit })
+end
+
+local function release(r: Racer)
+	local p = r.Player
+	p:SetAttribute("InRace", nil)
+	ctx.PetService.SetLocked(p, false)
+	ctx.PetService.SetFrozen(p, false)
+	ctx.PetService.SetZone(p, 1)
+	ctx.PetService.ResetCharges(p)
+	local root = Util.Root(p)
+	if root then
+		local spawn = ctx.WorldService.SpawnPos + Vector3.new(math.random(-6, 6), 8, math.random(-6, 6))
+		root.AssemblyLinearVelocity = Vector3.zero
+		root.CFrame = CFrame.new(spawn)
+	end
+end
+
+local function finishRace()
+	phase = "Results"
+	local layout = built.Layout
+	local list = {}
+	for _, r in racers do
+		table.insert(list, { Id = r.Id, Finished = r.Finished, Time = r.Time, Progress = r.Progress })
+	end
+	local order = RaceRules.Order(list)
+	local count = #racers
+	local rows = {}
+	local mine = {}
+	for place, o in order do
+		local r = racers[o.Id]
+		local medal = if r.Finished then RaceRules.Medal(layout.Length, r.Time) else nil
+		local coins, trophies = RaceRules.Rewards(place, count, r.Finished, medal)
+		table.insert(rows, {
+			Name = r.Player.DisplayName,
+			Place = place,
+			Time = r.Time,
+			Medal = medal,
+			Finished = r.Finished,
+		})
+		local d = not r.Left and ctx.DataService.Get(r.Player)
+		if d then
+			d.Coins += coins
+			d.Trophies += trophies
+			d.Stats.Races = (d.Stats.Races or 0) + 1
+			if place == 1 and count > 1 and r.Finished then
+				d.Stats.Wins = (d.Stats.Wins or 0) + 1
+			end
+			if medal == "Gold" then
+				d.Stats.Golds = (d.Stats.Golds or 0) + 1
+			end
+			local best = d.BestTimes[built.Track.Id]
+			local newBest = false
+			if r.Time and (not best or r.Time < best) then
+				d.BestTimes[built.Track.Id] = r.Time
+				newBest = best ~= nil
+			end
+			ctx.DataService.Changed(r.Player)
+			mine[r.Player] = { Place = place, Coins = coins, Trophies = trophies, Medal = medal, NewBest = newBest }
+		end
+	end
+	for _, r in racers do
+		if not r.Left then
+			send(r.Player, "Results", { Rows = rows, Mine = mine[r.Player], Track = built.Track.Name })
+		end
+	end
+	task.wait(Config.Race.ResultsTime)
+	for _, r in racers do
+		if not r.Left then
+			release(r)
+		end
+	end
+	racers = {}
+	ctx.TrackBuilder.Clear()
+	built = nil
+	phase = "Idle"
+	ctx.WorldService.SetPortalText("Stand here to race!")
+end
+
+-- Respawn spot just past the racer's checkpoint.
+local function respawn(r: Racer)
+	local cp = built.Layout.Checkpoints[r.Cp]
+	local x = cp.X + 3
+	place(r, x, TrackLayout.FloorAt(built.Layout, x) or cp.Y)
+end
+
+local function racerTick(r: Racer, now: number)
+	local p = r.Player
+	local root = Util.Root(p)
+	if not root or r.Finished then
+		return
+	end
+	local layout = built.Layout
+	-- Respawned after a reset: put them back at their checkpoint.
+	if p.Character ~= r.Char then
+		r.Char = p.Character
+		task.delay(0.6, function()
+			if racerOf(p) == r and not r.Finished then
+				ctx.PetService.SetRiding(p, true, true)
+				respawn(r)
+			end
+		end)
+		return
+	end
+	if now < r.FrozenUntil then
+		return
+	end
+	if r.FrozenUntil > 0 then
+		r.FrozenUntil = 0
+		ctx.PetService.SetFrozen(p, false)
+	end
+	local rel = root.Position - built.ToWorld(0, 0, 0)
+	local x, y = rel.X, rel.Y
+	-- Fell off: back to the last checkpoint with a short freeze.
+	if y < layout.MinY - Config.Race.FallDepth then
+		respawn(r)
+		r.FrozenUntil = now + Config.Race.FallPenalty
+		ctx.PetService.SetFrozen(p, true)
+		send(p, "Fell")
+		return
+	end
+	r.Progress = math.max(r.Progress, math.min(x, layout.Length))
+	-- Zones
+	local zone = TrackLayout.ZoneAt(layout, x)
+	ctx.PetService.SetZone(p, if zone == "Boost" then Config.Race.BoostMult elseif zone == "Mud" then Config.Race.MudMult else 1)
+	-- Checkpoints, in order, at a believable speed.
+	local nextCp = TrackLayout.CheckpointAt(layout, x)
+	local finishing = x >= layout.Length and r.Cp == #layout.Checkpoints
+	if nextCp > r.Cp or finishing then
+		local targetX = if finishing then layout.Length else layout.Checkpoints[nextCp].X
+		if nextCp > r.Cp + 1 and not finishing then
+			-- Skipped a checkpoint (shouldn't happen on a straight track): only count the next one.
+			nextCp = r.Cp + 1
+			targetX = layout.Checkpoints[nextCp].X
+		end
+		if not RaceRules.Plausible(targetX - r.CpX, now - r.CpAt, r.MaxSpeed) then
+			respawn(r)
+			warn("[Race] " .. p.Name .. " moved too fast; sent back")
+			return
+		end
+		if finishing then
+			r.Finished = true
+			r.Time = math.floor((now - startAt) * 100 + 0.5) / 100
+			ctx.PetService.SetZone(p, 1)
+			local placeNow = 0
+			for _, o in racers do
+				if o.Finished then
+					placeNow += 1
+				end
+			end
+			if not firstFinish then
+				firstFinish = now
+				endAt = math.min(endAt, now + Config.Race.HurryTime)
+				sendAll("Hurry", { EndsIn = endAt - now })
+			end
+			sendAll("Finished", { Name = p.DisplayName, Place = placeNow, Time = r.Time })
+		else
+			r.Cp = nextCp
+			r.CpX = targetX
+			r.CpAt = now
+			send(p, "Checkpoint", { Index = nextCp - 1, Total = #layout.Checkpoints - 1 })
+		end
+	end
+end
+
+local function raceTick()
+	local now = os.clock()
+	if now < startAt then
+		return
+	end
+	local active = 0
+	for _, r in racers do
+		if not r.Left then
+			local ok, err = pcall(racerTick, r, now)
+			if not ok then
+				warn("[Race] " .. tostring(err))
+			end
+			if not r.Finished then
+				active += 1
+			end
+		end
+	end
+	if active == 0 or now >= endAt then
+		finishRace()
+	end
+end
+
+local lastStanding = 0
+local function standings()
+	local now = os.clock()
+	if now - lastStanding < 0.5 then
+		return
+	end
+	lastStanding = now
+	local list = {}
+	for _, r in racers do
+		if not r.Left then
+			table.insert(list, { Id = r.Id, Finished = r.Finished, Time = r.Time, Progress = r.Progress })
+		end
+	end
+	local order = RaceRules.Order(list)
+	for place, o in order do
+		local r = racers[o.Id]
+		send(r.Player, "Standing", {
+			Place = place,
+			Of = #order,
+			Progress = r.Progress / built.Layout.Length,
+			Time = now - startAt,
+			EndsIn = endAt - now,
+		})
+	end
+end
+
+function RaceService.Init(c)
+	ctx = c
+	Util = c.Util
+end
+
+function RaceService.Start()
+	Players.PlayerRemoving:Connect(function(p)
+		local r = racerOf(p)
+		if r then
+			r.Left = true
+		end
+	end)
+	Util.Connect("LeaveRace", 1, function(p)
+		local r = racerOf(p)
+		if r and phase == "Racing" and not r.Finished then
+			r.Left = true
+			release(r)
+			Util.Notify(p, "You left the race.", "Info")
+		end
+	end)
+	while true do
+		task.wait(0.1)
+		if phase == "Idle" or phase == "Queue" then
+			local q = queued()
+			if #q < Config.Race.MinPlayers then
+				if phase == "Queue" then
+					phase = "Idle"
+					ctx.WorldService.SetPortalText("Stand here to race!")
+				end
+			else
+				if phase == "Idle" then
+					phase = "Queue"
+					queueEnds = os.clock() + Config.Race.QueueTime
+				end
+				if #q >= Config.Race.MaxPlayers then
+					queueEnds = math.min(queueEnds, os.clock() + 3)
+				end
+				local left = math.max(0, math.ceil(queueEnds - os.clock()))
+				ctx.WorldService.SetPortalText(string.format("Race in %d... (%d/%d)", left, #q, Config.Race.MaxPlayers))
+				local sig = left * 100 + #q
+				if sig ~= lastQueueSig then
+					lastQueueSig = sig
+					for _, p in q do
+						send(p, "Queue", { In = left, Count = #q })
+					end
+				end
+				if os.clock() >= queueEnds then
+					local ok, err = pcall(startRace, q)
+					if not ok then
+						warn("[Race] start failed: " .. tostring(err))
+						for _, r in racers do
+							release(r)
+						end
+						racers = {}
+						phase = "Idle"
+					end
+				end
+			end
+		elseif phase == "Racing" then
+			raceTick()
+			if phase == "Racing" then
+				standings()
+			end
+		end
+	end
+end
+
+function RaceService.Phase(): string
+	return phase
+end
+
+return RaceService
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="24">
+          <Properties>
+            <string name="Name">ShopService</string>
+            <string name="Source"><![CDATA[-- Coin shop (cosmetics) and Robux purchases. Robux buys Coins, cosmetics and
+-- storage only.
+local Players = game:GetService("Players")
+local MarketplaceService = game:GetService("MarketplaceService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage.Shared
+local Cosmetics = require(Shared.Cosmetics)
+local Products = require(Shared.Products)
+local Profile = require(Shared.Logic.Profile)
+
+local ShopService = {}
+
+local ctx: any
+
+local function byProductId(id: number)
+	for _, p in Products.Dev do
+		if p.Id == id then
+			return p
+		end
+	end
+	return nil
+end
+
+local function checkPasses(p: Player)
+	local d = ctx.DataService.Get(p)
+	if not d then
+		return
+	end
+	for _, pass in Products.Passes do
+		if pass.Id and pass.Key == "BigBarn" and not d.BigBarn then
+			local ok, owns = pcall(function()
+				return MarketplaceService:UserOwnsGamePassAsync(p.UserId, pass.Id :: number)
+			end)
+			if ok and owns then
+				d.BigBarn = true
+				ctx.DataService.Changed(p)
+			end
+		end
+	end
+end
+
+function ShopService.Init(c)
+	ctx = c
+end
+
+function ShopService.Start()
+	ctx.Util.Connect("BuyCosmetic", 0.5, function(p: Player, id)
+		local d = ctx.DataService.Get(p)
+		local def = type(id) == "string" and Cosmetics.ById[id]
+		if not d or not def then
+			return
+		end
+		if d.Owned[id] then
+			ctx.Util.Notify(p, "You already own that.", "Info")
+			return
+		end
+		if not def.Price then
+			ctx.Util.Notify(p, "That one is in the Robux shop.", "Info")
+			return
+		end
+		if d.Coins < def.Price then
+			ctx.Util.Notify(p, "You need " .. (def.Price - d.Coins) .. " more coins.", "Error")
+			return
+		end
+		d.Coins -= def.Price
+		d.Owned[id] = true
+		ctx.DataService.Changed(p)
+		ctx.Util.Notify(p, "Unlocked " .. def.Name .. "!", "Level")
+	end)
+
+	ctx.Util.Connect("TutorialDone", 2, function(p: Player)
+		local d = ctx.DataService.Get(p)
+		if d and not d.Tutorial then
+			d.Tutorial = true
+			ctx.DataService.Changed(p)
+		end
+	end)
+
+	ctx.DataService.OnLoaded(function(p: Player)
+		checkPasses(p)
+	end)
+
+	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(p, passId, bought)
+		if bought then
+			for _, pass in Products.Passes do
+				if pass.Id == passId and pass.Key == "BigBarn" then
+					local d = ctx.DataService.Get(p)
+					if d then
+						d.BigBarn = true
+						ctx.DataService.Changed(p)
+						ctx.Util.Notify(p, "Big Barn unlocked: +36 pet slots!", "Level")
+					end
+				end
+			end
+		end
+	end)
+
+	MarketplaceService.ProcessReceipt = function(info)
+		local p = Players:GetPlayerByUserId(info.PlayerId)
+		local d = p and ctx.DataService.Get(p)
+		if not p or not d then
+			return Enum.ProductPurchaseDecision.NotProcessedYet
+		end
+		local product = byProductId(info.ProductId)
+		if not product then
+			return Enum.ProductPurchaseDecision.NotProcessedYet
+		end
+		if not Profile.TakeReceipt(d, info.PurchaseId) then
+			return Enum.ProductPurchaseDecision.PurchaseGranted -- already given
+		end
+		if product.Coins then
+			d.Coins += product.Coins
+			ctx.Util.Notify(p, "+" .. product.Coins .. " coins! Thank you!", "Coins")
+		elseif product.Cosmetic then
+			d.Owned[product.Cosmetic] = true
+			ctx.Util.Notify(p, "Unlocked " .. product.Name .. "!", "Level")
+		end
+		ctx.DataService.Changed(p)
+		ctx.DataService.SaveNow(p)
+		return Enum.ProductPurchaseDecision.PurchaseGranted
+	end
+end
+
+return ShopService
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="25">
+          <Properties>
+            <string name="Name">TrackBuilder</string>
+            <string name="Source"><![CDATA[-- Builds a race track from parts using Logic/TrackLayout. The track sits high in the
+-- sky, far from the lobby, and runs along +X. Lane width is Tracks.Width (along Z).
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage.Shared
+local Tracks = require(Shared.Tracks)
+local TrackLayout = require(Shared.Logic.TrackLayout)
+
+local TrackBuilder = {}
+
+TrackBuilder.Origin = Vector3.new(0, 400, 3000)
+
+local Util: any
+local current: Folder? = nil
+
+local THEMES = {
+	Meadow = { Floor = Color3.fromRGB(120, 205, 95), FloorMat = Enum.Material.Grass, Wall = Color3.fromRGB(255, 255, 255), Prop = Color3.fromRGB(255, 120, 80) },
+	Canyon = { Floor = Color3.fromRGB(215, 150, 90), FloorMat = Enum.Material.Sandstone, Wall = Color3.fromRGB(150, 85, 50), Prop = Color3.fromRGB(110, 70, 45) },
+	Sky = { Floor = Color3.fromRGB(240, 245, 255), FloorMat = Enum.Material.SmoothPlastic, Wall = Color3.fromRGB(140, 200, 255), Prop = Color3.fromRGB(255, 170, 230) },
+}
+
+export type Built = {
+	Folder: Folder,
+	Layout: TrackLayout.Layout,
+	Track: any,
+	ToWorld: (x: number, y: number, z: number?) -> Vector3,
+	StartPositions: { Vector3 },
+}
+
+function TrackBuilder.Init(ctx)
+	Util = ctx.Util
+end
+
+function TrackBuilder.Clear()
+	if current then
+		current:Destroy()
+		current = nil
+	end
+end
+
+function TrackBuilder.Build(track: any): Built
+	TrackBuilder.Clear()
+	local folder = Instance.new("Folder")
+	folder.Name = "RaceTrack"
+	local layout = TrackLayout.Build(track.Segments)
+	local theme = THEMES[track.Theme] or THEMES.Meadow
+	local W = Tracks.Width
+	local O = TrackBuilder.Origin
+	local function at(x: number, y: number, z: number?): Vector3
+		return O + Vector3.new(x, y, z or 0)
+	end
+
+	local function floor(x0: number, x1: number, y: number, color: Color3?, mat: Enum.Material?, name: string?)
+		local thick = 4
+		return Util.Part({
+			Size = Vector3.new(x1 - x0, thick, W),
+			CFrame = CFrame.new(at((x0 + x1) / 2, y - thick / 2)),
+			Color = color or theme.Floor,
+			Material = mat or theme.FloorMat,
+			Name = name or "Floor",
+		}, folder)
+	end
+
+	-- Start area and finish run-off.
+	floor(-40, 0, 0, theme.Floor, theme.FloorMat, "StartArea")
+	local fy = layout.Pieces[#layout.Pieces].Y1
+	floor(layout.Length, layout.Length + 50, fy, theme.Floor, theme.FloorMat, "FinishArea")
+
+	for _, p in layout.Pieces do
+		local L = p.X1 - p.X0
+		if p.Kind == "Straight" or p.Kind == "Zigzag" or p.Kind == "Hurdles" then
+			floor(p.X0, p.X1, p.Y0)
+		elseif p.Kind == "Boost" then
+			floor(p.X0, p.X1, p.Y0, Color3.fromRGB(255, 220, 60), Enum.Material.Neon, "Boost")
+			for i = 1, math.floor(L / 10) do
+				local arrow = Util.Part({
+					Size = Vector3.new(4, 0.2, 10),
+					CFrame = CFrame.new(at(p.X0 + i * 10 - 5, p.Y0 + 0.1)) * CFrame.Angles(0, math.rad(45), 0),
+					Color = Color3.fromRGB(255, 120, 0),
+					Material = Enum.Material.Neon,
+					CanCollide = false,
+					Name = "Arrow",
+				}, folder)
+				arrow.CanQuery = false
+			end
+		elseif p.Kind == "Mud" then
+			floor(p.X0, p.X1, p.Y0, Color3.fromRGB(100, 70, 45), Enum.Material.Mud, "Mud")
+		elseif p.Kind == "Ramp" then
+			local rise = p.Y1 - p.Y0
+			local len = math.sqrt(L * L + rise * rise)
+			local angle = math.atan2(rise, L)
+			Util.Part({
+				Size = Vector3.new(len + 1, 4, W),
+				CFrame = CFrame.new(at(p.X0 + L / 2, (p.Y0 + p.Y1) / 2)) * CFrame.Angles(0, 0, angle) * CFrame.new(0, -2, 0),
+				Color = theme.Floor,
+				Material = theme.FloorMat,
+				Name = "Ramp",
+			}, folder)
+		elseif p.Kind == "Steps" then
+			local n = p.Count or 1
+			local stepL = L / n
+			for k = 1, n do
+				local top = p.Y0 + (p.Rise or 0) * k
+				local bottom = p.Y0 - 4
+				Util.Part({
+					Size = Vector3.new(stepL, top - bottom, W),
+					CFrame = CFrame.new(at(p.X0 + (k - 0.5) * stepL, (top + bottom) / 2)),
+					Color = if k % 2 == 0 then theme.Floor else theme.Wall,
+					Material = theme.FloorMat,
+					Name = "Step",
+				}, folder)
+			end
+		elseif p.Kind == "Gap" then
+			-- warning stripes on the edge before the gap
+			Util.Part({
+				Size = Vector3.new(1.5, 0.2, W),
+				CFrame = CFrame.new(at(p.X0 - 0.75, p.Y0 + 0.1)),
+				Color = Color3.fromRGB(255, 60, 60),
+				Material = Enum.Material.Neon,
+				CanCollide = false,
+				Name = "GapEdge",
+			}, folder)
+		end
+
+		if p.Kind == "Hurdles" then
+			local n = p.Count or 1
+			for k = 1, n do
+				local x = p.X0 + L * k / (n + 1)
+				local h = p.H or 3
+				Util.Part({
+					Size = Vector3.new(1.5, h, W),
+					CFrame = CFrame.new(at(x, p.Y0 + h / 2)),
+					Color = if k % 2 == 0 then theme.Wall else theme.Prop,
+					Name = "Hurdle",
+				}, folder)
+			end
+		elseif p.Kind == "Zigzag" then
+			local n = p.Count or 4
+			for k = 1, n do
+				local x = p.X0 + L * k / (n + 1)
+				local side = if k % 2 == 0 then 1 else -1
+				Util.Part({
+					Size = Vector3.new(4, 12, W * 0.6),
+					CFrame = CFrame.new(at(x, p.Y0 + 6, side * W * 0.2)),
+					Color = theme.Prop,
+					Name = "Pillar",
+				}, folder)
+			end
+		end
+	end
+
+	-- Side rails (low and visible) plus tall invisible walls so nobody falls off sideways.
+	local totalX0, totalX1 = -40, layout.Length + 50
+	local midX = (totalX0 + totalX1) / 2
+	local spanX = totalX1 - totalX0
+	local low = layout.MinY - 40
+	local high = layout.MaxY + 40
+	for _, side in { -1, 1 } do
+		Util.Part({
+			Size = Vector3.new(spanX, high - low, 2),
+			CFrame = CFrame.new(at(midX, (low + high) / 2, side * (W / 2 + 1))),
+			Transparency = 1,
+			Name = "SideWall",
+		}, folder)
+	end
+	for _, p in layout.Pieces do
+		if p.Kind ~= "Gap" and p.Kind ~= "Ramp" and p.Kind ~= "Steps" then
+			for _, side in { -1, 1 } do
+				Util.Part({
+					Size = Vector3.new(p.X1 - p.X0, 2.5, 1),
+					CFrame = CFrame.new(at((p.X0 + p.X1) / 2, p.Y0 + 1.25, side * (W / 2 - 0.5))),
+					Color = theme.Wall,
+					Name = "Rail",
+				}, folder)
+			end
+		end
+	end
+	-- Back wall behind the start.
+	Util.Part({
+		Size = Vector3.new(2, 40, W),
+		CFrame = CFrame.new(at(-41, 20)),
+		Transparency = 1,
+		Name = "BackWall",
+	}, folder)
+
+	-- Checkpoint arches (skip [1], the start line).
+	for i, cp in layout.Checkpoints do
+		if i > 1 then
+			for _, side in { -1, 1 } do
+				Util.Part({
+					Size = Vector3.new(1, 10, 1),
+					CFrame = CFrame.new(at(cp.X, cp.Y + 5, side * (W / 2 - 1))),
+					Color = Color3.fromRGB(120, 230, 255),
+					Material = Enum.Material.Neon,
+					CanCollide = false,
+					Name = "Checkpoint",
+				}, folder)
+			end
+		end
+	end
+
+	-- Start and finish arches.
+	local function arch(x: number, y: number, label: string, color: Color3)
+		for _, side in { -1, 1 } do
+			Util.Part({
+				Size = Vector3.new(2, 16, 2),
+				CFrame = CFrame.new(at(x, y + 8, side * (W / 2 - 1))),
+				Color = color,
+				Name = "ArchPost",
+			}, folder)
+		end
+		local top = Util.Part({
+			Size = Vector3.new(2, 4, W),
+			CFrame = CFrame.new(at(x, y + 18)),
+			Color = color,
+			Name = "ArchTop",
+		}, folder)
+		local gui = Instance.new("SurfaceGui")
+		gui.Face = Enum.NormalId.Left
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		gui.PixelsPerStud = 25
+		local t = Instance.new("TextLabel")
+		t.Size = UDim2.fromScale(1, 1)
+		t.BackgroundTransparency = 1
+		t.Text = label
+		t.TextScaled = true
+		t.Font = Enum.Font.FredokaOne
+		t.TextColor3 = Color3.new(1, 1, 1)
+		t.Parent = gui
+		gui.Parent = top
+		Util.Part({
+			Size = Vector3.new(3, 0.2, W),
+			CFrame = CFrame.new(at(x, y + 0.1)),
+			Color = color,
+			Material = Enum.Material.Neon,
+			CanCollide = false,
+			Name = "Line",
+		}, folder)
+	end
+	arch(0, 0, "START", Color3.fromRGB(80, 200, 120))
+	arch(layout.Length, fy, "FINISH", Color3.fromRGB(255, 80, 160))
+
+	-- Floating clouds/scenery far below so the sky track doesn't feel empty.
+	local rng = Random.new(#track.Id)
+	for _ = 1, 18 do
+		local c = Util.Part({
+			Size = Vector3.new(rng:NextNumber(30, 70), rng:NextNumber(8, 16), rng:NextNumber(30, 60)),
+			CFrame = CFrame.new(at(rng:NextNumber(-60, layout.Length + 60), layout.MinY - rng:NextNumber(60, 140), rng:NextNumber(-150, 150))),
+			Color = Color3.fromRGB(255, 255, 255),
+			Material = Enum.Material.SmoothPlastic,
+			Transparency = 0.15,
+			CanCollide = false,
+			Name = "Cloud",
+		}, folder)
+		local m = Instance.new("SpecialMesh")
+		m.MeshType = Enum.MeshType.Sphere
+		m.Parent = c
+	end
+
+	folder.Parent = workspace
+	current = folder
+
+	local starts = {}
+	for i = 1, 8 do
+		local row = math.floor((i - 1) / 4)
+		local col = (i - 1) % 4
+		table.insert(starts, at(-8 - row * 12, 4, (col - 1.5) * (W / 4.5)))
+	end
+
+	return {
+		Folder = folder,
+		Layout = layout,
+		Track = track,
+		ToWorld = at,
+		StartPositions = starts,
+	}
+end
+
+return TrackBuilder
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="26">
+          <Properties>
+            <string name="Name">TrainingService</string>
+            <string name="Source"><![CDATA[-- Lobby training: ride through the Speed Ring gates, jump the hurdles, run on the
+-- treadmill. Positions are polled on the server, so there's nothing to fake.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage.Shared
+local Config = require(Shared.Config)
+local Profile = require(Shared.Logic.Profile)
+local PetStats = require(Shared.Logic.PetStats)
+
+local TrainingService = {}
+
+type Track = {
+	Gate: number?, -- last gate passed
+	Dir: number?, -- +1 or -1 once two gates are passed
+	GateCount: number,
+	GateAt: number,
+	LastZ: number?,
+	HurdleAt: { [number]: number },
+	PadTime: number,
+}
+
+local tracks: { [Player]: Track } = {}
+local ctx: any
+
+local function award(p: Player, stat: string, xp: number)
+	local d = ctx.DataService.Get(p)
+	local pet = d and Profile.EquippedPet(d)
+	if not pet then
+		return
+	end
+	local before = PetStats.Ride(pet)
+	local gained = PetStats.AddXp(pet, stat, xp)
+	ctx.DataService.Changed(p)
+	ctx.Util.Notify(p, "+" .. xp .. " " .. stat, "Xp")
+	if gained > 0 then
+		ctx.Util.Notify(p, stat .. " level " .. pet.Levels[stat] .. "!", "Level")
+		local after = PetStats.Ride(pet)
+		if after.DashCharges ~= before.DashCharges then
+			ctx.PetService.ResetCharges(p)
+		end
+		ctx.PetService.Apply(p)
+	end
+end
+
+local function tick(p: Player, dt: number)
+	local root = ctx.Util.Root(p)
+	if not root or not ctx.PetService.IsRiding(p) or p:GetAttribute("InRace") then
+		tracks[p] = nil
+		return
+	end
+	local t = tracks[p]
+	if not t then
+		t = { GateCount = 0, GateAt = 0, HurdleAt = {}, PadTime = 0 }
+		tracks[p] = t
+	end
+	local pos = root.Position
+	local now = os.clock()
+	local W = ctx.WorldService
+	local T = Config.Training
+
+	-- Speed ring
+	local gates = W.SpeedGates
+	local n = #gates
+	for i, g in gates do
+		local flat = Vector3.new(pos.X - g.X, 0, pos.Z - g.Z)
+		if flat.Magnitude < 8 and i ~= t.Gate and now - t.GateAt >= T.GateMinGap then
+			local ok = false
+			if t.Gate == nil then
+				ok = true
+			else
+				local fwd = (t.Gate % n) + 1
+				local back = ((t.Gate - 2) % n) + 1
+				if t.Dir == nil and (i == fwd or i == back) then
+					t.Dir = if i == fwd then 1 else -1
+					ok = true
+				elseif (t.Dir == 1 and i == fwd) or (t.Dir == -1 and i == back) then
+					ok = true
+				end
+			end
+			if ok then
+				t.Gate = i
+				t.GateAt = now
+				t.GateCount += 1
+				award(p, "Speed", T.GateXp)
+				if t.GateCount % n == 0 then
+					award(p, "Speed", T.LapBonusXp)
+					ctx.Util.Notify(p, "Lap bonus!", "Level")
+				end
+			else
+				-- skipped a gate: start a fresh sequence from here
+				t.Gate = i
+				t.Dir = nil
+				t.GateAt = now
+				t.GateCount = 0
+			end
+			break
+		end
+	end
+
+	-- Hurdles: crossing a hurdle line inside the lane means you jumped it.
+	if t.LastZ then
+		for i, h in W.Hurdles do
+			if pos.X >= h.X0 and pos.X <= h.X1 and (t.LastZ - h.Z) * (pos.Z - h.Z) < 0 then
+				if now - (t.HurdleAt[i] or 0) > 1.5 then
+					t.HurdleAt[i] = now
+					award(p, "Jump", math.max(2, math.floor(T.GateXp * h.H / 4 + 0.5)))
+				end
+			end
+		end
+	end
+	t.LastZ = pos.Z
+
+	-- Treadmill
+	local tm = W.Treadmill
+	if W.InBox(pos, tm.Center, tm.Size) then
+		t.PadTime += dt
+		if t.PadTime >= T.PadTick then
+			t.PadTime -= T.PadTick
+			award(p, "Stamina", T.PadXp)
+		end
+	else
+		t.PadTime = 0
+	end
+end
+
+function TrainingService.Init(c)
+	ctx = c
+end
+
+function TrainingService.Start()
+	Players.PlayerRemoving:Connect(function(p)
+		tracks[p] = nil
+	end)
+	local step = 0.1
+	while true do
+		task.wait(step)
+		for _, p in Players:GetPlayers() do
+			local ok, err = pcall(tick, p, step)
+			if not ok then
+				warn("[Training] " .. tostring(err))
+			end
+		end
+	end
+end
+
+return TrainingService
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="27">
+          <Properties>
+            <string name="Name">Util</string>
+            <string name="Source"><![CDATA[-- Small server helpers: rate-limited remote handlers, part building, notifications.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Net = require(ReplicatedStorage.Shared.Net)
+
+local Util = {}
+
+local last: { [Player]: { [string]: number } } = {}
+
+-- Connects a RemoteEvent with a per-player cooldown and pcall so one bad call
+-- can't break the server.
+function Util.Connect(name: string, cooldown: number, fn: (Player, ...any) -> ())
+	Net.Event(name).OnServerEvent:Connect(function(player, ...)
+		local t = os.clock()
+		local per = last[player]
+		if not per then
+			per = {}
+			last[player] = per
+		end
+		if per[name] and t - per[name] < cooldown then
+			return
+		end
+		per[name] = t
+		local ok, err = pcall(fn, player, ...)
+		if not ok then
+			warn("[" .. name .. "] " .. tostring(err))
+		end
+	end)
+end
+
+function Util.Invoke(name: string, cooldown: number, fn: (Player, ...any) -> ...any)
+	Net.Function(name).OnServerInvoke = function(player, ...)
+		local t = os.clock()
+		local per = last[player]
+		if not per then
+			per = {}
+			last[player] = per
+		end
+		if per[name] and t - per[name] < cooldown then
+			return false, "Slow down!"
+		end
+		per[name] = t
+		local result = table.pack(pcall(fn, player, ...))
+		if not result[1] then
+			warn("[" .. name .. "] " .. tostring(result[2]))
+			return false, "Something went wrong."
+		end
+		return table.unpack(result, 2, result.n)
+	end
+end
+
+function Util.Init()
+	game:GetService("Players").PlayerRemoving:Connect(function(p)
+		last[p] = nil
+	end)
+end
+
+function Util.Notify(player: Player, text: string, kind: string?)
+	Net.Event("Notify"):FireClient(player, text, kind or "Info")
+end
+
+function Util.NotifyAll(text: string, kind: string?)
+	Net.Event("Notify"):FireAllClients(text, kind or "Info")
+end
+
+function Util.Rgb(c: { number }): Color3
+	return Color3.fromRGB(c[1], c[2], c[3])
+end
+
+export type PartProps = {
+	Size: Vector3,
+	CFrame: CFrame,
+	Color: Color3?,
+	Material: Enum.Material?,
+	Transparency: number?,
+	CanCollide: boolean?,
+	Anchored: boolean?,
+	Shape: Enum.PartType?,
+	Name: string?,
+}
+
+function Util.Part(props: PartProps, parent: Instance?): Part
+	local p = Instance.new("Part")
+	p.Size = props.Size
+	p.CFrame = props.CFrame
+	p.Color = props.Color or Color3.new(1, 1, 1)
+	p.Material = props.Material or Enum.Material.SmoothPlastic
+	p.Transparency = props.Transparency or 0
+	p.CanCollide = if props.CanCollide == nil then true else props.CanCollide
+	p.Anchored = if props.Anchored == nil then true else props.Anchored
+	if props.Shape then
+		p.Shape = props.Shape
+	end
+	p.Name = props.Name or "Part"
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	p.Parent = parent
+	return p
+end
+
+function Util.Label(parent: BasePart, text: string, size: number, color: Color3?): BillboardGui
+	local bb = Instance.new("BillboardGui")
+	bb.Size = UDim2.fromScale(size * 2, size * 0.5)
+	bb.StudsOffset = Vector3.new(0, parent.Size.Y / 2 + size * 0.4, 0)
+	bb.AlwaysOnTop = false
+	bb.MaxDistance = 150
+	local t = Instance.new("TextLabel")
+	t.Size = UDim2.fromScale(1, 1)
+	t.BackgroundTransparency = 1
+	t.Text = text
+	t.TextScaled = true
+	t.Font = Enum.Font.FredokaOne
+	t.TextColor3 = color or Color3.new(1, 1, 1)
+	t.TextStrokeTransparency = 0.2
+	t.Name = "Text"
+	t.Parent = bb
+	bb.Parent = parent
+	return bb
+end
+
+function Util.Root(player: Player): BasePart?
+	local c = player.Character
+	return c and c:FindFirstChild("HumanoidRootPart") :: BasePart?
+end
+
+function Util.Humanoid(player: Player): Humanoid?
+	local c = player.Character
+	return c and c:FindFirstChildOfClass("Humanoid")
+end
+
+return Util
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="28">
+          <Properties>
+            <string name="Name">WorldService</string>
+            <string name="Source"><![CDATA[-- Builds the lobby from parts at server start: spawn, egg stands, training area,
+-- race portal, leaderboard and decoration. Other services read the positions it
+-- publishes (gates, hurdles, treadmill, portal).
+local Lighting = game:GetService("Lighting")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage.Shared
+local Eggs = require(Shared.Eggs)
+local Pets = require(Shared.Pets)
+local Hatch = require(Shared.Logic.Hatch)
+
+local WorldService = {}
+local Util
+
+WorldService.SpawnPos = Vector3.new(0, 3, 0)
+WorldService.EggStands = {} :: { [string]: Vector3 }
+WorldService.SpeedGates = {} :: { Vector3 }
+WorldService.Hurdles = {} :: { { Z: number, X0: number, X1: number, H: number } }
+WorldService.Treadmill = { Center = Vector3.new(), Size = Vector3.new() }
+WorldService.Portal = { Center = Vector3.new(0, 0, 75), Size = Vector3.new(26, 12, 20) }
+WorldService.Leaderboard = nil :: BasePart?
+
+local lobby: Folder
+
+local GRASS = Color3.fromRGB(110, 200, 90)
+
+local function tree(pos: Vector3, scale: number)
+	Util.Part({
+		Size = Vector3.new(8, 1.6, 1.6) * scale,
+		CFrame = CFrame.new(pos + Vector3.new(0, 4 * scale, 0)),
+		Color = Color3.fromRGB(120, 80, 50),
+		Material = Enum.Material.Wood,
+		Shape = Enum.PartType.Cylinder,
+		Name = "Trunk",
+	}, lobby).CFrame = CFrame.new(pos + Vector3.new(0, 4 * scale, 0)) * CFrame.Angles(0, 0, math.rad(90))
+	Util.Part({
+		Size = Vector3.new(9, 9, 9) * scale,
+		CFrame = CFrame.new(pos + Vector3.new(0, 10 * scale, 0)),
+		Color = Color3.fromRGB(70, 170, 70),
+		Material = Enum.Material.Grass,
+		Shape = Enum.PartType.Ball,
+		Name = "Leaves",
+	}, lobby)
+end
+
+local function sign(pos: Vector3, text: string, color: Color3)
+	local board = Util.Part({
+		Size = Vector3.new(14, 4, 0.6),
+		CFrame = CFrame.new(pos),
+		Color = color,
+		Name = "Sign",
+	}, lobby)
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Front
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = 30
+	local t = Instance.new("TextLabel")
+	t.Size = UDim2.fromScale(1, 1)
+	t.BackgroundTransparency = 1
+	t.Text = text
+	t.TextScaled = true
+	t.Font = Enum.Font.FredokaOne
+	t.TextColor3 = Color3.new(1, 1, 1)
+	t.TextStrokeTransparency = 0.3
+	t.Parent = gui
+	gui.Parent = board
+	local back = gui:Clone()
+	back.Face = Enum.NormalId.Back
+	back.Parent = board
+	Util.Part({
+		Size = Vector3.new(0.6, pos.Y, 0.6),
+		CFrame = CFrame.new(pos.X, pos.Y / 2, pos.Z),
+		Color = Color3.fromRGB(120, 80, 50),
+		Name = "Post",
+	}, lobby)
+end
+
+local function buildGround()
+	Util.Part({
+		Size = Vector3.new(500, 2, 500),
+		CFrame = CFrame.new(0, -1, 0),
+		Color = GRASS,
+		Material = Enum.Material.Grass,
+		Name = "Ground",
+	}, lobby)
+	-- Invisible walls so nobody wanders off the edge.
+	for _, d in { Vector3.new(1, 0, 0), Vector3.new(-1, 0, 0), Vector3.new(0, 0, 1), Vector3.new(0, 0, -1) } do
+		Util.Part({
+			Size = if d.X ~= 0 then Vector3.new(2, 80, 500) else Vector3.new(500, 80, 2),
+			CFrame = CFrame.new(d * 250 + Vector3.new(0, 40, 0)),
+			Transparency = 1,
+			Name = "Edge",
+		}, lobby)
+	end
+	local spawnLoc = Instance.new("SpawnLocation")
+	spawnLoc.Size = Vector3.new(12, 1, 12)
+	spawnLoc.CFrame = CFrame.new(0, 0.5, 0)
+	spawnLoc.Anchored = true
+	spawnLoc.Color = Color3.fromRGB(255, 230, 120)
+	spawnLoc.Material = Enum.Material.SmoothPlastic
+	spawnLoc.Neutral = true
+	spawnLoc.Duration = 0
+	spawnLoc.Parent = lobby
+	-- Dirt paths from spawn to each area.
+	for _, p in { { Vector3.new(0, 0.05, -25), Vector3.new(8, 0.1, 40) }, { Vector3.new(0, 0.05, 40), Vector3.new(8, 0.1, 60) }, { Vector3.new(45, 0.05, 0), Vector3.new(80, 0.1, 8) }, { Vector3.new(-45, 0.05, 0), Vector3.new(80, 0.1, 8) } } do
+		Util.Part({
+			Size = p[2],
+			CFrame = CFrame.new(p[1]),
+			Color = Color3.fromRGB(210, 180, 130),
+			Material = Enum.Material.Sand,
+			CanCollide = false,
+			Name = "Path",
+		}, lobby)
+	end
+	local rng = Random.new(7)
+	for _ = 1, 40 do
+		local x = rng:NextNumber(-230, 230)
+		local z = rng:NextNumber(-230, 230)
+		-- keep clear of the play areas
+		if math.abs(x) > 140 or math.abs(z) > 120 then
+			tree(Vector3.new(x, 0, z), rng:NextNumber(0.8, 1.4))
+		end
+	end
+end
+
+local function buildEggs()
+	local spacing = 26
+	local startX = -spacing * (#Eggs.List - 1) / 2
+	sign(Vector3.new(0, 14, -38), "EGGS", Color3.fromRGB(255, 170, 60))
+	for i, egg in Eggs.List do
+		local pos = Vector3.new(startX + (i - 1) * spacing, 0, -55)
+		WorldService.EggStands[egg.Id] = pos
+		Util.Part({
+			Size = Vector3.new(3, 10, 10),
+			CFrame = CFrame.new(pos + Vector3.new(0, 1.5, 0)),
+			Color = Color3.fromRGB(240, 240, 240),
+			Material = Enum.Material.Marble,
+			Shape = Enum.PartType.Cylinder,
+			Name = "Pedestal",
+		}, lobby).CFrame = CFrame.new(pos + Vector3.new(0, 1.5, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		local e = Util.Part({
+			Size = Vector3.new(5, 7, 5),
+			CFrame = CFrame.new(pos + Vector3.new(0, 6.5, 0)),
+			Color = Util.Rgb(egg.Color),
+			Material = Enum.Material.SmoothPlastic,
+			Name = egg.Id .. "Egg",
+		}, lobby)
+		local mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType.Sphere
+		mesh.Parent = e
+		-- Spots
+		for s = 1, 5 do
+			local a = s * 1.3
+			local spot = Util.Part({
+				Size = Vector3.new(1.2, 1.2, 0.3),
+				CFrame = CFrame.new(pos + Vector3.new(0, 6.5, 0))
+					* CFrame.Angles(0, a, 0)
+					* CFrame.new(0, (s - 3) * 0.9, -2.4),
+				Color = Color3.new(1, 1, 1),
+				CanCollide = false,
+				Name = "Spot",
+			}, e)
+			local m = Instance.new("SpecialMesh")
+			m.MeshType = Enum.MeshType.Sphere
+			m.Parent = spot
+		end
+		local prompt = Instance.new("ProximityPrompt")
+		prompt.ActionText = "Hatch"
+		prompt.ObjectText = egg.Name .. " (" .. egg.Price .. " coins)"
+		prompt.HoldDuration = 0.3
+		prompt.MaxActivationDistance = 14
+		prompt.RequiresLineOfSight = false
+		prompt.Name = "HatchPrompt"
+		prompt:SetAttribute("Egg", egg.Id)
+		prompt.Parent = e
+		-- Odds board above the egg.
+		local bb = Instance.new("BillboardGui")
+		bb.Size = UDim2.fromOffset(200, 40 + 22 * #egg.Odds)
+		bb.StudsOffset = Vector3.new(0, 7.5, 0)
+		bb.MaxDistance = 60
+		local frame = Instance.new("Frame")
+		frame.Size = UDim2.fromScale(1, 1)
+		frame.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+		frame.BackgroundTransparency = 0.25
+		frame.Parent = bb
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0, 10)
+		corner.Parent = frame
+		local title = Instance.new("TextLabel")
+		title.Size = UDim2.new(1, 0, 0, 34)
+		title.BackgroundTransparency = 1
+		title.Text = egg.Name .. " - " .. egg.Price .. " coins"
+		title.Font = Enum.Font.FredokaOne
+		title.TextScaled = true
+		title.TextColor3 = Color3.fromRGB(255, 230, 120)
+		title.Parent = frame
+		for j, c in Hatch.Chances(egg) do
+			local s = Pets.ById[c.Pet]
+			local row = Instance.new("TextLabel")
+			row.Size = UDim2.new(1, -12, 0, 20)
+			row.Position = UDim2.fromOffset(6, 36 + (j - 1) * 22)
+			row.BackgroundTransparency = 1
+			row.Font = Enum.Font.GothamBold
+			row.TextSize = 15
+			row.TextXAlignment = Enum.TextXAlignment.Left
+			local pct = c.Chance * 100
+			row.Text = string.format("%s  %s%%", s.Name, if pct < 1 then string.format("%.1f", pct) else tostring(math.floor(pct + 0.5)))
+			row.TextColor3 = Util.Rgb(Pets.Rarities[s.Rarity].Color)
+			row.Parent = frame
+		end
+		bb.Parent = e
+	end
+end
+
+local function buildTraining()
+	-- SPEED: a ring of gates; ride through them in order.
+	local center = Vector3.new(120, 0, 10)
+	local radius = 45
+	sign(Vector3.new(68, 14, 0), "SPEED RING", Color3.fromRGB(60, 160, 255))
+	Util.Part({
+		Size = Vector3.new(0.2, radius * 2 + 16, radius * 2 + 16),
+		CFrame = CFrame.new(center + Vector3.new(0, 0.06, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+		Color = Color3.fromRGB(210, 180, 130),
+		Material = Enum.Material.Sand,
+		Shape = Enum.PartType.Cylinder,
+		CanCollide = false,
+		Name = "RingTrack",
+	}, lobby)
+	Util.Part({
+		Size = Vector3.new(0.4, radius * 2 - 16, radius * 2 - 16),
+		CFrame = CFrame.new(center + Vector3.new(0, 0.1, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+		Color = GRASS,
+		Material = Enum.Material.Grass,
+		Shape = Enum.PartType.Cylinder,
+		CanCollide = false,
+		Name = "RingInfield",
+	}, lobby)
+	local n = 8
+	for i = 1, n do
+		local a = (i - 1) / n * math.pi * 2
+		local pos = center + Vector3.new(math.cos(a) * radius, 0, math.sin(a) * radius)
+		table.insert(WorldService.SpeedGates, pos)
+		local facing = CFrame.lookAt(pos, center)
+		for _, side in { -1, 1 } do
+			Util.Part({
+				Size = Vector3.new(1.2, 14, 1.2),
+				CFrame = facing * CFrame.new(side * 7, 7, 0),
+				Color = Color3.fromRGB(60, 160, 255),
+				Material = Enum.Material.Neon,
+				Name = "GatePost",
+			}, lobby)
+		end
+		local top = Util.Part({
+			Size = Vector3.new(15.2, 1.2, 1.2),
+			CFrame = facing * CFrame.new(0, 14, 0),
+			Color = Color3.fromRGB(60, 160, 255),
+			Material = Enum.Material.Neon,
+			Name = "GateTop",
+		}, lobby)
+		Util.Label(top, tostring(i), 2)
+	end
+
+	-- JUMP: a line of hurdles that get taller.
+	sign(Vector3.new(-68, 14, 0), "JUMP HURDLES", Color3.fromRGB(255, 120, 60))
+	local hx0, hx1 = -150, -110
+	Util.Part({
+		Size = Vector3.new(hx1 - hx0 + 6, 0.2, 170),
+		CFrame = CFrame.new((hx0 + hx1) / 2, 0.06, 10),
+		Color = Color3.fromRGB(210, 180, 130),
+		Material = Enum.Material.Sand,
+		CanCollide = false,
+		Name = "HurdleLane",
+	}, lobby)
+	for i, h in { 2, 3, 4, 5, 6, 7, 8 } do
+		local z = -60 + (i - 1) * 22
+		table.insert(WorldService.Hurdles, { Z = z, X0 = hx0, X1 = hx1, H = h })
+		local wall = Util.Part({
+			Size = Vector3.new(hx1 - hx0, h, 1.5),
+			CFrame = CFrame.new((hx0 + hx1) / 2, h / 2, z),
+			Color = if i % 2 == 0 then Color3.fromRGB(255, 255, 255) else Color3.fromRGB(255, 120, 60),
+			Name = "Hurdle",
+		}, lobby)
+		Util.Label(wall, h .. " studs", 2.5)
+	end
+
+	-- STAMINA: a treadmill that pushes you back; keep running to stay on.
+	sign(Vector3.new(-40, 14, -95), "STAMINA TREADMILL", Color3.fromRGB(120, 220, 80))
+	local tCenter = Vector3.new(-60, 0.5, -120)
+	local tSize = Vector3.new(24, 1, 50)
+	WorldService.Treadmill = { Center = tCenter, Size = tSize }
+	local belt = Util.Part({
+		Size = tSize,
+		CFrame = CFrame.new(tCenter),
+		Color = Color3.fromRGB(50, 50, 60),
+		Material = Enum.Material.DiamondPlate,
+		Name = "Treadmill",
+	}, lobby)
+	belt.AssemblyLinearVelocity = Vector3.new(0, 0, 18)
+	local tex = Instance.new("Texture")
+	tex.Texture = "rbxasset://textures/ui/Controls/DesignSystem/ButtonDefault.png"
+	tex.Face = Enum.NormalId.Top
+	tex.Transparency = 0.8
+	tex.StudsPerTileU = 4
+	tex.StudsPerTileV = 4
+	tex.Parent = belt
+	for _, side in { -1, 1 } do
+		Util.Part({
+			Size = Vector3.new(1, 4, tSize.Z),
+			CFrame = CFrame.new(tCenter + Vector3.new(side * (tSize.X / 2 + 0.5), 1.5, 0)),
+			Color = Color3.fromRGB(120, 220, 80),
+			Name = "Rail",
+		}, lobby)
+	end
+end
+
+local function buildPortal()
+	local c = WorldService.Portal.Center
+	sign(Vector3.new(0, 16, 50), "RACE PORTAL", Color3.fromRGB(255, 80, 160))
+	Util.Part({
+		Size = Vector3.new(WorldService.Portal.Size.X, 0.4, WorldService.Portal.Size.Z),
+		CFrame = CFrame.new(c + Vector3.new(0, 0.2, 0)),
+		Color = Color3.fromRGB(255, 80, 160),
+		Material = Enum.Material.Neon,
+		Transparency = 0.3,
+		CanCollide = false,
+		Name = "PortalPad",
+	}, lobby)
+	for _, side in { -1, 1 } do
+		Util.Part({
+			Size = Vector3.new(3, 22, 3),
+			CFrame = CFrame.new(c + Vector3.new(side * 15, 11, 10)),
+			Color = Color3.fromRGB(80, 60, 120),
+			Material = Enum.Material.Slate,
+			Name = "PortalPillar",
+		}, lobby)
+	end
+	local top = Util.Part({
+		Size = Vector3.new(33, 3, 3),
+		CFrame = CFrame.new(c + Vector3.new(0, 23.5, 10)),
+		Color = Color3.fromRGB(80, 60, 120),
+		Material = Enum.Material.Slate,
+		Name = "PortalTop",
+	}, lobby)
+	local status = Util.Label(top, "Stand here to race!", 6, Color3.fromRGB(255, 230, 255))
+	status.Name = "PortalStatus"
+	status.MaxDistance = 250
+	local swirl = Util.Part({
+		Size = Vector3.new(27, 20, 0.5),
+		CFrame = CFrame.new(c + Vector3.new(0, 11, 10.5)),
+		Color = Color3.fromRGB(200, 100, 255),
+		Material = Enum.Material.ForceField,
+		CanCollide = false,
+		Name = "PortalSwirl",
+	}, lobby)
+	swirl.Transparency = 0.2
+end
+
+local function buildLeaderboard()
+	local board = Util.Part({
+		Size = Vector3.new(18, 22, 1),
+		CFrame = CFrame.new(-45, 12, 60) * CFrame.Angles(0, math.rad(35), 0),
+		Color = Color3.fromRGB(40, 40, 60),
+		Name = "Leaderboard",
+	}, lobby)
+	Util.Part({
+		Size = Vector3.new(18, 1, 3),
+		CFrame = board.CFrame * CFrame.new(0, -11.5, 0),
+		Color = Color3.fromRGB(80, 60, 50),
+		Name = "LeaderboardBase",
+	}, lobby)
+	WorldService.Leaderboard = board
+end
+
+local function buildLighting()
+	Lighting.ClockTime = 14
+	Lighting.Brightness = 2.5
+	Lighting.OutdoorAmbient = Color3.fromRGB(150, 150, 160)
+	Lighting.GlobalShadows = true
+	if not Lighting:FindFirstChildOfClass("Atmosphere") then
+		local a = Instance.new("Atmosphere")
+		a.Density = 0.25
+		a.Haze = 1
+		a.Color = Color3.fromRGB(200, 225, 255)
+		a.Parent = Lighting
+	end
+	if not Lighting:FindFirstChildOfClass("Sky") then
+		Instance.new("Sky").Parent = Lighting
+	end
+end
+
+function WorldService.Init(ctx)
+	Util = ctx.Util
+	lobby = Instance.new("Folder")
+	lobby.Name = "Lobby"
+	lobby.Parent = workspace
+	buildLighting()
+	buildGround()
+	buildEggs()
+	buildTraining()
+	buildPortal()
+	buildLeaderboard()
+end
+
+function WorldService.SetPortalText(text: string)
+	local top = lobby:FindFirstChild("PortalTop")
+	local gui = top and top:FindFirstChild("PortalStatus")
+	local label = gui and gui:FindFirstChild("Text") :: TextLabel?
+	if label then
+		label.Text = text
+	end
+end
+
+function WorldService.InBox(pos: Vector3, center: Vector3, size: Vector3): boolean
+	local d = pos - center
+	return math.abs(d.X) <= size.X / 2 and math.abs(d.Z) <= size.Z / 2 and d.Y >= -2 and d.Y <= size.Y + 12
+end
+
+return WorldService
+]]></string>
+          </Properties>
+        </Item>
+      </Item>
+    </Item>
+  </Item>
+  <Item class="StarterPlayer" referent="29">
+    <Properties>
+      <string name="Name">StarterPlayer</string>
+      <float name="CameraMaxZoomDistance">60</float>
+      <float name="CharacterJumpPower">42</float>
+      <bool name="CharacterUseJumpPower">true</bool>
+      <float name="CharacterWalkSpeed">16</float>
+      <bool name="EnableMouseLockOption">false</bool>
+    </Properties>
+    <Item class="StarterPlayerScripts" referent="30">
+      <Properties>
+        <string name="Name">StarterPlayerScripts</string>
+      </Properties>
+      <Item class="Folder" referent="31">
+        <Properties>
+          <string name="Name">Client</string>
+        </Properties>
+        <Item class="Folder" referent="32">
+          <Properties>
+            <string name="Name">Controllers</string>
+          </Properties>
+          <Item class="ModuleScript" referent="33">
+            <Properties>
+              <string name="Name">HatchView</string>
+              <string name="Source"><![CDATA[-- Hatch reveal: the egg wobbles, cracks with a flash, and the new pet spins in.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local Shared = ReplicatedStorage.Shared
+local Pets = require(Shared.Pets)
+local Eggs = require(Shared.Eggs)
+local Net = require(Shared.Net)
+local PetModel = require(Shared.PetModel)
+local UI = require(script.Parent.Parent.UI)
+local Notify = require(script.Parent.Notify)
+
+local HatchView = {}
+
+local overlay: Frame
+local busy = false
+
+local function show(species: string, eggId: string, uid: string)
+	busy = true
+	overlay:ClearAllChildren()
+	overlay.Visible = true
+	overlay.BackgroundTransparency = 0.35
+	local egg = Eggs.ById[eggId]
+	local s = Pets.ById[species]
+	local rar = Pets.Rarities[s.Rarity]
+
+	local eggFrame = UI.Frame({
+		Size = UDim2.fromOffset(160, 210),
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.45),
+		BackgroundColor3 = if egg then UI.Rgb(egg.Color) else Color3.new(1, 1, 1),
+		ZIndex = 41,
+	}, overlay)
+	UI.Corner(eggFrame, 80)
+	UI.Stroke(eggFrame, Color3.fromRGB(255, 255, 255), 4)
+	for i = 1, 3 do
+		local t = TweenService:Create(eggFrame, TweenInfo.new(0.12, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, 3, true), { Rotation = if i % 2 == 0 then -14 - i * 4 else 14 + i * 4 })
+		t:Play()
+		t.Completed:Wait()
+		task.wait(0.25)
+	end
+	local flash = UI.Frame({ Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), ZIndex = 45 }, overlay)
+	eggFrame:Destroy()
+	TweenService:Create(flash, TweenInfo.new(0.6), { BackgroundTransparency = 1 }):Play()
+
+	local holder = UI.Frame({ Size = UDim2.fromOffset(320, 320), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), BackgroundTransparency = 1, ZIndex = 41 }, overlay)
+	local rays = UI.Frame({ Size = UDim2.fromScale(1, 1), BackgroundColor3 = UI.Rgb(rar.Color), BackgroundTransparency = 0.6, ZIndex = 41 }, holder)
+	UI.Corner(rays, 160)
+	local built = PetModel.Build(species, 1)
+	for _, d in built.Model:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.Anchored = true
+		end
+	end
+	UI.Viewport(holder, built.Model, { ZIndex = 42 })
+	local spin = 0
+	local conn = RunService.RenderStepped:Connect(function(dt)
+		spin += dt * 1.5
+		built.Model:PivotTo(CFrame.Angles(0, spin, 0))
+	end)
+	UI.Text({ Text = s.Name, Size = UDim2.fromOffset(400, 56), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.42, 165), ZIndex = 42, TextStrokeTransparency = 0 }, overlay)
+	UI.Text({ Text = string.upper(s.Rarity), Size = UDim2.fromOffset(300, 34), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.42, 220), TextColor3 = UI.Rgb(rar.Color), ZIndex = 42, TextStrokeTransparency = 0 }, overlay)
+
+	local function close()
+		conn:Disconnect()
+		overlay.Visible = false
+		overlay:ClearAllChildren()
+		busy = false
+	end
+	local bar = UI.Frame({ Size = UDim2.fromOffset(420, 56), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -20), BackgroundTransparency = 1, ZIndex = 42 }, overlay)
+	UI.Button({ Text = "Ride it!", Size = UDim2.new(1 / 3, -6, 1, 0), BackgroundColor3 = UI.Colors.Green, ZIndex = 43 }, bar, function()
+		Net.Event("Equip"):FireServer(uid)
+		close()
+	end)
+	UI.Button({ Text = "OK", Size = UDim2.new(1 / 3, -6, 1, 0), Position = UDim2.new(1 / 3, 3, 0, 0), ZIndex = 43 }, bar, close)
+	UI.Button({ Text = "Again", Size = UDim2.new(1 / 3, -6, 1, 0), Position = UDim2.new(2 / 3, 6, 0, 0), BackgroundColor3 = UI.Colors.Gold, ZIndex = 43 }, bar, function()
+		close()
+		local ok, res = Net.Function("Hatch"):InvokeServer(eggId)
+		if not ok then
+			Notify.Show(res or "Can't hatch right now.", "Error")
+		end
+	end)
+end
+
+function HatchView.Start()
+	overlay = UI.Frame({ Name = "Hatch", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), Visible = false, ZIndex = 40 }, UI.Screen())
+	local queue = {}
+	Net.Event("Hatched").OnClientEvent:Connect(function(species, eggId, uid)
+		table.insert(queue, { species, eggId, uid })
+		if busy then
+			return
+		end
+		while #queue > 0 do
+			local q = table.remove(queue, 1)
+			show(q[1], q[2], q[3])
+			while busy do
+				task.wait(0.1)
+			end
+		end
+	end)
+end
+
+return HatchView
+]]></string>
+            </Properties>
+          </Item>
+          <Item class="ModuleScript" referent="34">
+            <Properties>
+              <string name="Name">Hud</string>
+              <string name="Source"><![CDATA[-- Always-on HUD: coins, trophies, league, and the main buttons (Pets, Shop,
+-- Ride/Walk, Dash). Keyboard: Shift or Q = dash, R = ride/walk.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local ContextActionService = game:GetService("ContextActionService")
+
+local Shared = ReplicatedStorage.Shared
+local Net = require(Shared.Net)
+local RaceRules = require(Shared.Logic.RaceRules)
+local UI = require(script.Parent.Parent.UI)
+local State = require(script.Parent.Parent.State)
+
+local Hud = {}
+
+local player = Players.LocalPlayer
+Hud.Buttons = {} :: { [string]: TextButton }
+local openers: { [string]: () -> () } = {}
+
+-- Other controllers register their menus here so the buttons can open them.
+function Hud.SetOpener(name: string, fn: () -> ())
+	openers[name] = fn
+end
+
+local function stat(parent: Instance, order: number, icon: string, color: Color3): TextLabel
+	local f = UI.Frame({ Size = UDim2.fromOffset(170, 40), BackgroundColor3 = UI.Colors.Panel, BackgroundTransparency = 0.15, LayoutOrder = order }, parent)
+	UI.Corner(f, 20)
+	UI.Stroke(f, Color3.fromRGB(15, 15, 25), 2)
+	UI.Text({ Text = icon, Size = UDim2.fromOffset(34, 34), Position = UDim2.fromOffset(4, 3), TextColor3 = color }, f)
+	return UI.Text({ Text = "0", Size = UDim2.new(1, -46, 1, -8), Position = UDim2.fromOffset(40, 4), TextXAlignment = Enum.TextXAlignment.Left }, f)
+end
+
+local function fmt(n: number): string
+	local s = tostring(math.floor(n))
+	local out = s:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+	if out:sub(1, 1) == "," then
+		out = out:sub(2)
+	end
+	return out
+end
+
+local function dash()
+	Net.Event("Dash"):FireServer()
+end
+
+local function toggleRide()
+	Net.Event("Ride"):FireServer(not player:GetAttribute("Riding"))
+end
+
+function Hud.Start()
+	local screen = UI.Screen()
+
+	-- Top-left stats
+	local stats = UI.Frame({ Size = UDim2.fromOffset(180, 140), Position = UDim2.fromOffset(10, 10), BackgroundTransparency = 1 }, screen)
+	local l = Instance.new("UIListLayout")
+	l.Padding = UDim.new(0, 6)
+	l.SortOrder = Enum.SortOrder.LayoutOrder
+	l.Parent = stats
+	local coins = stat(stats, 1, "$", UI.Colors.Gold)
+	local trophies = stat(stats, 2, "T", Color3.fromRGB(255, 170, 60))
+	local league = stat(stats, 3, "L", UI.Colors.Blue)
+
+	State.OnChange(function(d)
+		coins.Text = fmt(d.Coins)
+		trophies.Text = fmt(d.Trophies)
+		local idx, lg = RaceRules.League(d.Trophies)
+		local nextL = require(Shared.Config).Leagues[idx + 1]
+		league.Text = lg.Name .. if nextL then string.format(" (%d)", nextL.Min - d.Trophies) else ""
+		league.TextColor3 = UI.Rgb(lg.Color)
+	end)
+
+	-- Bottom-right buttons (thumb reach on phones)
+	local pad = UI.Frame({ Size = UDim2.fromOffset(250, 250), Position = UDim2.new(1, -10, 1, -10), AnchorPoint = Vector2.new(1, 1), BackgroundTransparency = 1 }, screen)
+	local isTouch = UserInputService.TouchEnabled
+	if isTouch then
+		-- leave room for Roblox's jump button
+		pad.Position = UDim2.new(1, -150, 1, -10)
+	end
+
+	local dashBtn = UI.Button({ Text = "DASH", Size = UDim2.fromOffset(110, 110), Position = UDim2.new(1, 0, 1, 0), AnchorPoint = Vector2.new(1, 1), BackgroundColor3 = UI.Colors.Pink }, pad, dash)
+	UI.Corner(dashBtn, 55)
+	local charges = UI.Text({ Text = "", Size = UDim2.new(1, 0, 0, 22), Position = UDim2.new(0, 0, 1, -28), TextColor3 = UI.Colors.Gold }, dashBtn)
+	local rideBtn = UI.Button({ Text = "WALK", Size = UDim2.fromOffset(110, 56), Position = UDim2.new(1, -120, 1, 0), AnchorPoint = Vector2.new(1, 1), BackgroundColor3 = UI.Colors.Green }, pad, toggleRide)
+	local petsBtn = UI.Button({ Text = "PETS", Size = UDim2.fromOffset(110, 56), Position = UDim2.new(1, -120, 1, -64), AnchorPoint = Vector2.new(1, 1), BackgroundColor3 = UI.Colors.Blue }, pad, function()
+		if openers.Pets then
+			openers.Pets()
+		end
+	end)
+	local shopBtn = UI.Button({ Text = "SHOP", Size = UDim2.fromOffset(110, 56), Position = UDim2.new(1, 0, 1, -120), AnchorPoint = Vector2.new(1, 1), BackgroundColor3 = UI.Colors.Gold }, pad, function()
+		if openers.Shop then
+			openers.Shop()
+		end
+	end)
+	Hud.Buttons = { Dash = dashBtn, Ride = rideBtn, Pets = petsBtn, Shop = shopBtn }
+
+	local function refreshAttrs()
+		local riding = player:GetAttribute("Riding")
+		rideBtn.Text = if riding then "WALK" else "RIDE"
+		rideBtn.BackgroundColor3 = if riding then UI.Colors.PanelLight else UI.Colors.Green
+		local c = player:GetAttribute("DashCharges") or 0
+		local m = player:GetAttribute("DashMax") or 0
+		charges.Text = string.rep("o", c) .. string.rep(".", math.max(0, m - c))
+		dashBtn.BackgroundTransparency = if riding and c > 0 then 0 else 0.5
+		local inRace = player:GetAttribute("InRace") == true
+		rideBtn.Visible = not inRace
+		petsBtn.Visible = not inRace
+		shopBtn.Visible = not inRace
+	end
+	for _, a in { "Riding", "DashCharges", "DashMax", "InRace" } do
+		player:GetAttributeChangedSignal(a):Connect(refreshAttrs)
+	end
+	refreshAttrs()
+
+	ContextActionService:BindAction("PetDash", function(_, st)
+		if st == Enum.UserInputState.Begin then
+			dash()
+		end
+		return Enum.ContextActionResult.Pass
+	end, false, Enum.KeyCode.LeftShift, Enum.KeyCode.Q, Enum.KeyCode.ButtonX)
+	ContextActionService:BindAction("PetRide", function(_, st)
+		if st == Enum.UserInputState.Begin and not player:GetAttribute("InRace") then
+			toggleRide()
+		end
+		return Enum.ContextActionResult.Pass
+	end, false, Enum.KeyCode.R, Enum.KeyCode.ButtonY)
+end
+
+return Hud
+]]></string>
+            </Properties>
+          </Item>
+          <Item class="ModuleScript" referent="35">
+            <Properties>
+              <string name="Name">Notify</string>
+              <string name="Source"><![CDATA[-- Toasts: short messages from the server. "Xp" pops small above the buttons,
+-- "Rare" is a big gold banner, everything else stacks at the top.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local Net = require(ReplicatedStorage.Shared.Net)
+local UI = require(script.Parent.Parent.UI)
+
+local Notify = {}
+
+local stack: Frame
+local xpArea: Frame
+
+local KIND_COLORS = {
+	Info = UI.Colors.PanelLight,
+	Error = UI.Colors.Red,
+	Coins = Color3.fromRGB(220, 160, 30),
+	Level = UI.Colors.Green,
+	Rare = UI.Colors.Pink,
+}
+
+function Notify.Show(text: string, kind: string?)
+	kind = kind or "Info"
+	if kind == "Xp" then
+		local t = UI.Text({
+			Text = text,
+			Size = UDim2.fromOffset(160, 30),
+			Position = UDim2.new(0.5, math.random(-60, 60), 1, -10),
+			AnchorPoint = Vector2.new(0.5, 1),
+			TextColor3 = UI.Colors.Gold,
+			TextStrokeTransparency = 0.2,
+		}, xpArea)
+		TweenService:Create(t, TweenInfo.new(1.1), { Position = t.Position - UDim2.fromOffset(0, 80), TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+		task.delay(1.2, function()
+			t:Destroy()
+		end)
+		return
+	end
+	local big = kind == "Rare"
+	local f = UI.Frame({
+		Size = UDim2.new(1, 0, 0, if big then 54 else 40),
+		BackgroundColor3 = KIND_COLORS[kind :: string] or KIND_COLORS.Info,
+		BackgroundTransparency = 0.05,
+	}, stack)
+	UI.Corner(f, 10)
+	UI.Stroke(f, Color3.fromRGB(20, 20, 30), 2)
+	UI.Pad(f, 6)
+	UI.Text({ Text = text, Size = UDim2.fromScale(1, 1) }, f)
+	task.delay(if big then 5 else 3, function()
+		TweenService:Create(f, TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
+		task.wait(0.3)
+		f:Destroy()
+	end)
+end
+
+function Notify.Start()
+	stack = UI.Frame({
+		Name = "Toasts",
+		Size = UDim2.new(0.5, 0, 0, 300),
+		Position = UDim2.new(0.5, 0, 0, 70),
+		AnchorPoint = Vector2.new(0.5, 0),
+		BackgroundTransparency = 1,
+		ZIndex = 30,
+	}, UI.Screen())
+	local c = Instance.new("UISizeConstraint")
+	c.MinSize = Vector2.new(260, 0)
+	c.MaxSize = Vector2.new(520, 300)
+	c.Parent = stack
+	local list = Instance.new("UIListLayout")
+	list.Padding = UDim.new(0, 6)
+	list.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	list.Parent = stack
+	xpArea = UI.Frame({
+		Name = "XpArea",
+		Size = UDim2.fromOffset(300, 200),
+		Position = UDim2.new(0.5, 0, 1, -110),
+		AnchorPoint = Vector2.new(0.5, 1),
+		BackgroundTransparency = 1,
+	}, UI.Screen())
+	Net.Event("Notify").OnClientEvent:Connect(Notify.Show)
+end
+
+return Notify
+]]></string>
+            </Properties>
+          </Item>
+          <Item class="ModuleScript" referent="36">
+            <Properties>
+              <string name="Name">PetMenu</string>
+              <string name="Source"><![CDATA[-- The Pets menu: every pet you own, its stats, and Ride / Rename / Release.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage.Shared
+local Config = require(Shared.Config)
+local Pets = require(Shared.Pets)
+local Net = require(Shared.Net)
+local PetModel = require(Shared.PetModel)
+local PetStats = require(Shared.Logic.PetStats)
+local Profile = require(Shared.Logic.Profile)
+local UI = require(script.Parent.Parent.UI)
+local State = require(script.Parent.Parent.State)
+local Hud = require(script.Parent.Hud)
+
+local PetMenu = {}
+
+local panel: Frame
+local grid: ScrollingFrame
+local detail: Frame
+local countLabel: TextLabel
+local selected: string? = nil
+local confirmRelease: string? = nil
+
+local STAT_COLORS = { Speed = UI.Colors.Blue, Jump = Color3.fromRGB(255, 120, 60), Stamina = UI.Colors.Green }
+
+local function petName(p: any): string
+	local s = Pets.ById[p.Species]
+	return p.Nick or (s and s.Name) or p.Species
+end
+
+local function preview(parent: Instance, p: any)
+	local built = PetModel.Build(p.Species, 1, p.Paint)
+	for _, d in built.Model:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.Anchored = true
+		end
+	end
+	UI.Viewport(parent, built.Model)
+end
+
+local function renderDetail()
+	detail:ClearAllChildren()
+	local d = State.Data
+	local p = d and selected and Profile.FindPet(d, selected)
+	if not p then
+		UI.Text({ Text = "Tap a pet", Size = UDim2.new(1, 0, 0, 40), TextColor3 = UI.Colors.Muted }, detail)
+		return
+	end
+	local s = Pets.ById[p.Species]
+	local rar = Pets.Rarities[s.Rarity]
+	local view = UI.Frame({ Size = UDim2.new(1, 0, 0.36, 0), BackgroundColor3 = UI.Colors.PanelLight }, detail)
+	UI.Corner(view, 12)
+	preview(view, p)
+	UI.Text({ Text = petName(p), Size = UDim2.new(1, 0, 0, 30), Position = UDim2.new(0, 0, 0.37, 0) }, detail)
+	UI.Text({ Text = s.Rarity .. " " .. s.Name, Size = UDim2.new(1, 0, 0, 20), Position = UDim2.new(0, 0, 0.37, 30), TextColor3 = UI.Rgb(rar.Color), Font = UI.Body }, detail)
+	local ride = PetStats.Ride(p)
+	local y = 0.37
+	for i, stat in Config.Stats.Names do
+		local lvl = p.Levels[stat] or 1
+		local xp = p.Xp[stat] or 0
+		local need = PetStats.XpToNext(lvl)
+		local row = UI.Frame({ Size = UDim2.new(1, 0, 0, 26), Position = UDim2.new(0, 0, y, 54 + (i - 1) * 30), BackgroundTransparency = 1 }, detail)
+		UI.Text({ Text = stat .. " " .. lvl, Size = UDim2.new(0.4, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Left, Font = UI.Body }, row)
+		local bar = UI.Frame({ Size = UDim2.new(0.58, 0, 0.6, 0), Position = UDim2.new(0.42, 0, 0.2, 0), BackgroundColor3 = Color3.fromRGB(20, 20, 30) }, row)
+		UI.Corner(bar, 6)
+		local fill = UI.Frame({ Size = UDim2.new(if lvl >= Config.Stats.MaxLevel then 1 else math.clamp(xp / need, 0, 1), 0, 1, 0), BackgroundColor3 = STAT_COLORS[stat] }, bar)
+		UI.Corner(fill, 6)
+	end
+	UI.Text({
+		Text = string.format("Speed %.0f  Jump %.0f  Dashes %d", ride.WalkSpeed, ride.JumpPower, ride.DashCharges),
+		Size = UDim2.new(1, 0, 0, 20),
+		Position = UDim2.new(0, 0, y, 146),
+		TextColor3 = UI.Colors.Muted,
+		Font = UI.Body,
+	}, detail)
+
+	local by = UDim2.new(0, 0, 1, -44)
+	if d.Equipped == p.Uid then
+		UI.Text({ Text = "RIDING", Size = UDim2.new(0.48, 0, 0, 40), Position = by, TextColor3 = UI.Colors.Green }, detail)
+	else
+		UI.Button({ Text = "Ride", Size = UDim2.new(0.48, 0, 0, 40), Position = by, BackgroundColor3 = UI.Colors.Green }, detail, function()
+			Net.Event("Equip"):FireServer(p.Uid)
+		end)
+		local refund = rar.Refund
+		UI.Button({
+			Text = if confirmRelease == p.Uid then "Sure? +" .. refund else "Release",
+			Size = UDim2.new(0.48, 0, 0, 40),
+			Position = UDim2.new(0.52, 0, 1, -44),
+			BackgroundColor3 = UI.Colors.Red,
+		}, detail, function()
+			if confirmRelease == p.Uid then
+				confirmRelease = nil
+				selected = d.Equipped
+				Net.Event("Release"):FireServer(p.Uid)
+			else
+				confirmRelease = p.Uid
+				renderDetail()
+			end
+		end)
+	end
+	local box = Instance.new("TextBox")
+	box.Size = UDim2.new(0.66, 0, 0, 34)
+	box.Position = UDim2.new(0, 0, 1, -86)
+	box.PlaceholderText = "Nickname..."
+	box.Text = ""
+	box.Font = UI.Body
+	box.TextScaled = true
+	box.TextColor3 = Color3.new(1, 1, 1)
+	box.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+	box.ClearTextOnFocus = false
+	UI.Corner(box, 8)
+	box.Parent = detail
+	UI.Button({ Text = "Name", Size = UDim2.new(0.3, 0, 0, 34), Position = UDim2.new(0.7, 0, 1, -86), BackgroundColor3 = UI.Colors.Purple }, detail, function()
+		Net.Event("Rename"):FireServer(p.Uid, string.sub(box.Text, 1, 20))
+	end)
+end
+
+local function renderGrid()
+	for _, c in grid:GetChildren() do
+		if c:IsA("GuiObject") then
+			c:Destroy()
+		end
+	end
+	local d = State.Data
+	if not d then
+		return
+	end
+	countLabel.Text = #d.Pets .. "/" .. Profile.Capacity(d) .. " pets"
+	local sorted = table.clone(d.Pets)
+	table.sort(sorted, function(a, b)
+		if (a.Uid == d.Equipped) ~= (b.Uid == d.Equipped) then
+			return a.Uid == d.Equipped
+		end
+		local ra, rb = Pets.Rank(a.Species), Pets.Rank(b.Species)
+		if ra ~= rb then
+			return ra > rb
+		end
+		return PetStats.Power(a) > PetStats.Power(b)
+	end)
+	for i, p in sorted do
+		local s = Pets.ById[p.Species]
+		local card = UI.Button({
+			Text = "",
+			LayoutOrder = i,
+			BackgroundColor3 = if p.Uid == selected then UI.Colors.Blue else UI.Colors.PanelLight,
+		}, grid, function()
+			selected = p.Uid
+			confirmRelease = nil
+			renderGrid()
+			renderDetail()
+		end)
+		local stroke = card:FindFirstChildOfClass("UIStroke")
+		if stroke then
+			stroke.Color = UI.Rgb(Pets.Rarities[s.Rarity].Color)
+			stroke.Thickness = 3
+		end
+		local vp = UI.Frame({ Size = UDim2.new(1, 0, 0.72, 0), BackgroundTransparency = 1 }, card)
+		preview(vp, p)
+		UI.Text({ Text = petName(p), Size = UDim2.new(1, -6, 0.16, 0), Position = UDim2.new(0, 3, 0.7, 0), Font = UI.Body }, card)
+		UI.Text({ Text = "Lv " .. PetStats.Power(p), Size = UDim2.new(1, -6, 0.13, 0), Position = UDim2.new(0, 3, 0.86, 0), TextColor3 = UI.Colors.Muted, Font = UI.Body }, card)
+		if p.Uid == d.Equipped then
+			UI.Text({ Text = "RIDING", Size = UDim2.new(1, 0, 0.16, 0), TextColor3 = UI.Colors.Green, Rotation = -8 }, card)
+		end
+	end
+end
+
+function PetMenu.Open()
+	panel.Visible = true
+	if not selected and State.Data then
+		selected = State.Data.Equipped
+	end
+	renderGrid()
+	renderDetail()
+end
+
+function PetMenu.Start()
+	local body
+	panel, body = UI.Modal("My Pets", UDim2.fromScale(0.9, 0.85))
+	countLabel = UI.Text({ Text = "", Size = UDim2.fromOffset(160, 30), Position = UDim2.new(1, -230, 0, 14), TextColor3 = UI.Colors.Muted, ZIndex = 11, Font = UI.Body }, panel)
+	grid = Instance.new("ScrollingFrame")
+	grid.Size = UDim2.new(0.6, -6, 1, 0)
+	grid.BackgroundTransparency = 1
+	grid.BorderSizePixel = 0
+	grid.ScrollBarThickness = 8
+	grid.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	grid.CanvasSize = UDim2.new()
+	grid.Parent = body
+	local layout = Instance.new("UIGridLayout")
+	layout.CellSize = UDim2.fromOffset(104, 124)
+	layout.CellPadding = UDim2.fromOffset(8, 8)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Parent = grid
+	UI.Pad(grid, 4)
+	detail = UI.Frame({ Size = UDim2.new(0.4, -6, 1, 0), Position = UDim2.new(0.6, 6, 0, 0), BackgroundTransparency = 1 }, body)
+	Hud.SetOpener("Pets", PetMenu.Open)
+	State.OnChange(function()
+		if panel.Visible then
+			renderGrid()
+			renderDetail()
+		end
+	end)
+end
+
+return PetMenu
+]]></string>
+            </Properties>
+          </Item>
+          <Item class="ModuleScript" referent="37">
+            <Properties>
+              <string name="Name">RaceHud</string>
+              <string name="Source"><![CDATA[-- Race screens: queue banner, countdown, live place/timer/progress, checkpoint
+-- flashes, finish feed and the results board.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+
+local Shared = ReplicatedStorage.Shared
+local Net = require(Shared.Net)
+local RaceRules = require(Shared.Logic.RaceRules)
+local UI = require(script.Parent.Parent.UI)
+local Notify = require(script.Parent.Notify)
+
+local RaceHud = {}
+
+local player = Players.LocalPlayer
+local MEDAL_COLORS = { Gold = Color3.fromRGB(255, 205, 50), Silver = Color3.fromRGB(205, 210, 220), Bronze = Color3.fromRGB(215, 140, 80) }
+
+local queueBanner: Frame
+local queueText: TextLabel
+local lastQueue = 0
+local race: Frame
+local placeText: TextLabel
+local timeText: TextLabel
+local trackText: TextLabel
+local medalText: TextLabel
+local progressFill: Frame
+local big: TextLabel
+local results: Frame
+local leaveBtn: TextButton
+
+local function flash(text: string, color: Color3?, hold: number?)
+	big.Text = text
+	big.TextColor3 = color or Color3.new(1, 1, 1)
+	big.TextTransparency = 0
+	big.TextStrokeTransparency = 0
+	big.Visible = true
+	big.Size = UDim2.fromOffset(260, 110)
+	TweenService:Create(big, TweenInfo.new(0.15, Enum.EasingStyle.Back), { Size = UDim2.fromOffset(340, 140) }):Play()
+	local token = {}
+	big:SetAttribute("Token", tostring(token))
+	task.delay(hold or 0.8, function()
+		if big:GetAttribute("Token") == tostring(token) then
+			TweenService:Create(big, TweenInfo.new(0.3), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+		end
+	end)
+end
+
+local function showResults(data: any)
+	results:ClearAllChildren()
+	results.Visible = true
+	UI.Corner(results, 16)
+	UI.Stroke(results, Color3.fromRGB(15, 15, 25), 3)
+	UI.Text({ Text = data.Track .. " - Results", Size = UDim2.new(1, -20, 0, 40), Position = UDim2.fromOffset(10, 8) }, results)
+	for i, r in data.Rows do
+		local y = 52 + (i - 1) * 30
+		local line = string.format("%s  %s", RaceRules.PlaceText(r.Place), r.Name)
+		UI.Text({ Text = line, Size = UDim2.new(0.6, -10, 0, 26), Position = UDim2.fromOffset(16, y), TextXAlignment = Enum.TextXAlignment.Left, Font = UI.Body }, results)
+		UI.Text({
+			Text = if r.Finished and r.Time then RaceRules.FormatTime(r.Time) else "DNF",
+			Size = UDim2.new(0.25, 0, 0, 26),
+			Position = UDim2.new(0.6, 0, 0, y),
+			Font = UI.Body,
+			TextColor3 = if r.Medal then MEDAL_COLORS[r.Medal] else UI.Colors.Muted,
+		}, results)
+	end
+	local m = data.Mine
+	if m then
+		local parts = { "+" .. m.Coins .. " coins" }
+		if m.Trophies > 0 then
+			table.insert(parts, "+" .. m.Trophies .. " trophies")
+		end
+		if m.Medal then
+			table.insert(parts, m.Medal .. " medal!")
+		end
+		if m.NewBest then
+			table.insert(parts, "New best time!")
+		end
+		UI.Text({ Text = table.concat(parts, "   "), Size = UDim2.new(1, -20, 0, 34), Position = UDim2.new(0, 10, 1, -44), TextColor3 = UI.Colors.Gold }, results)
+		flash(RaceRules.PlaceText(m.Place), if m.Place == 1 then UI.Colors.Gold else Color3.new(1, 1, 1), 2)
+	end
+	results.Size = UDim2.fromOffset(420, 110 + #data.Rows * 30)
+end
+
+local function onRace(kind: string, data: any)
+	if kind == "Queue" then
+		lastQueue = os.clock()
+		queueBanner.Visible = true
+		queueText.Text = string.format("Race starts in %d  -  %d racer%s ready", data.In, data.Count, if data.Count == 1 then "" else "s")
+	elseif kind == "Start" then
+		queueBanner.Visible = false
+		results.Visible = false
+		race.Visible = true
+		trackText.Text = data.Track
+		medalText.Text = string.format("Gold %s   Silver %s   Bronze %s", RaceRules.FormatTime(data.Medals.Gold), RaceRules.FormatTime(data.Medals.Silver), RaceRules.FormatTime(data.Medals.Bronze))
+		placeText.Text = ""
+		timeText.Text = "0:00.00"
+		progressFill.Size = UDim2.fromScale(0, 1)
+	elseif kind == "Count" then
+		flash(tostring(data), UI.Colors.Gold, 0.7)
+	elseif kind == "Go" then
+		flash("GO!", UI.Colors.Green, 0.8)
+	elseif kind == "Standing" then
+		placeText.Text = RaceRules.PlaceText(data.Place) .. " / " .. data.Of
+		timeText.Text = RaceRules.FormatTime(math.max(0, data.Time))
+		progressFill.Size = UDim2.fromScale(math.clamp(data.Progress, 0, 1), 1)
+		if data.EndsIn < 15 then
+			timeText.TextColor3 = UI.Colors.Red
+		else
+			timeText.TextColor3 = Color3.new(1, 1, 1)
+		end
+	elseif kind == "Checkpoint" then
+		Notify.Show("Checkpoint " .. data.Index .. "/" .. data.Total, "Xp")
+	elseif kind == "Fell" then
+		flash("Oops!", UI.Colors.Red, 0.8)
+	elseif kind == "Hurry" then
+		Notify.Show(string.format("Someone finished! %d seconds left!", math.floor(data.EndsIn)), "Info")
+	elseif kind == "Finished" then
+		Notify.Show(string.format("%s finished %s (%s)", data.Name, RaceRules.PlaceText(data.Place), RaceRules.FormatTime(data.Time)), "Level")
+	elseif kind == "Results" then
+		race.Visible = false
+		showResults(data)
+	end
+end
+
+function RaceHud.Start()
+	local screen = UI.Screen()
+	queueBanner = UI.Frame({ Size = UDim2.fromOffset(460, 50), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 12), BackgroundColor3 = UI.Colors.Pink, Visible = false }, screen)
+	UI.Corner(queueBanner, 14)
+	UI.Stroke(queueBanner, Color3.fromRGB(20, 20, 30), 2)
+	UI.Pad(queueBanner, 6)
+	queueText = UI.Text({ Size = UDim2.fromScale(1, 1) }, queueBanner)
+
+	race = UI.Frame({ Size = UDim2.fromOffset(420, 110), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 10), BackgroundColor3 = UI.Colors.Panel, BackgroundTransparency = 0.15, Visible = false }, screen)
+	UI.Corner(race, 14)
+	trackText = UI.Text({ Size = UDim2.new(0.5, -10, 0, 26), Position = UDim2.fromOffset(10, 6), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = UI.Colors.Muted }, race)
+	placeText = UI.Text({ Size = UDim2.new(0.5, -10, 0, 44), Position = UDim2.fromOffset(10, 32), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = UI.Colors.Gold }, race)
+	timeText = UI.Text({ Size = UDim2.new(0.5, -10, 0, 44), Position = UDim2.new(0.5, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Right }, race)
+	medalText = UI.Text({ Size = UDim2.new(1, -20, 0, 16), Position = UDim2.new(0, 10, 1, -40), TextColor3 = UI.Colors.Muted, Font = UI.Body }, race)
+	local bar = UI.Frame({ Size = UDim2.new(1, -20, 0, 10), Position = UDim2.new(0, 10, 1, -18), BackgroundColor3 = Color3.fromRGB(20, 20, 30) }, race)
+	UI.Corner(bar, 5)
+	progressFill = UI.Frame({ Size = UDim2.fromScale(0, 1), BackgroundColor3 = UI.Colors.Green }, bar)
+	UI.Corner(progressFill, 5)
+
+	big = UI.Text({ Size = UDim2.fromOffset(340, 140), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.35), Visible = false, TextStrokeTransparency = 0, ZIndex = 20 }, screen)
+
+	results = UI.Frame({ Size = UDim2.fromOffset(420, 300), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Visible = false, ZIndex = 15 }, screen)
+
+	leaveBtn = UI.Button({ Text = "Leave race", Size = UDim2.fromOffset(130, 40), Position = UDim2.new(0, 10, 0, 160), BackgroundColor3 = UI.Colors.Red, Visible = false }, screen, function()
+		Net.Event("LeaveRace"):FireServer()
+	end)
+
+	Net.Event("Race").OnClientEvent:Connect(onRace)
+	player:GetAttributeChangedSignal("InRace"):Connect(function()
+		local inRace = player:GetAttribute("InRace") == true
+		leaveBtn.Visible = inRace
+		if not inRace then
+			race.Visible = false
+			results.Visible = false
+		end
+	end)
+	task.spawn(function()
+		while true do
+			task.wait(0.5)
+			if queueBanner.Visible and os.clock() - lastQueue > 1.5 then
+				queueBanner.Visible = false
+			end
+		end
+	end)
+end
+
+return RaceHud
+]]></string>
+            </Properties>
+          </Item>
+          <Item class="ModuleScript" referent="38">
+            <Properties>
+              <string name="Name">ShopMenu</string>
+              <string name="Source"><![CDATA[-- Shop: trails and paint for your ridden pet (coins), plus the Robux tab.
+local Players = game:GetService("Players")
+local MarketplaceService = game:GetService("MarketplaceService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage.Shared
+local Cosmetics = require(Shared.Cosmetics)
+local Products = require(Shared.Products)
+local Net = require(Shared.Net)
+local UI = require(script.Parent.Parent.UI)
+local State = require(script.Parent.Parent.State)
+local Hud = require(script.Parent.Hud)
+
+local ShopMenu = {}
+
+local panel: Frame
+local list: ScrollingFrame
+local tab = "Trail"
+local tabButtons: { [string]: TextButton } = {}
+
+local function productFor(cosmeticId: string)
+	for _, p in Products.Dev do
+		if p.Cosmetic == cosmeticId then
+			return p
+		end
+	end
+	return nil
+end
+
+local function row(order: number, height: number?): Frame
+	local f = UI.Frame({ Size = UDim2.new(1, -10, 0, height or 64), BackgroundColor3 = UI.Colors.PanelLight, LayoutOrder = order }, list)
+	UI.Corner(f, 10)
+	return f
+end
+
+local function render()
+	for _, c in list:GetChildren() do
+		if c:IsA("GuiObject") then
+			c:Destroy()
+		end
+	end
+	for name, b in tabButtons do
+		b.BackgroundColor3 = if name == tab then UI.Colors.Blue else UI.Colors.PanelLight
+	end
+	local d = State.Data
+	if not d then
+		return
+	end
+	local pet = State.Equipped()
+	if tab == "Robux" then
+		local any = false
+		for i, p in Products.Dev do
+			if p.Id then
+				any = true
+				local f = row(i)
+				UI.Text({ Text = p.Name, Size = UDim2.new(0.6, 0, 0.6, 0), Position = UDim2.new(0, 12, 0.2, 0), TextXAlignment = Enum.TextXAlignment.Left }, f)
+				UI.Button({ Text = "R$ " .. p.Robux, Size = UDim2.new(0.3, 0, 0.7, 0), Position = UDim2.new(0.68, 0, 0.15, 0), BackgroundColor3 = UI.Colors.Green }, f, function()
+					MarketplaceService:PromptProductPurchase(Players.LocalPlayer, p.Id :: number)
+				end)
+			end
+		end
+		for i, pass in Products.Passes do
+			if pass.Id then
+				any = true
+				local f = row(100 + i)
+				UI.Text({ Text = pass.Name, Size = UDim2.new(0.6, 0, 0.6, 0), Position = UDim2.new(0, 12, 0.2, 0), TextXAlignment = Enum.TextXAlignment.Left }, f)
+				if pass.Key == "BigBarn" and d.BigBarn then
+					UI.Text({ Text = "Owned", Size = UDim2.new(0.3, 0, 0.6, 0), Position = UDim2.new(0.68, 0, 0.2, 0), TextColor3 = UI.Colors.Green }, f)
+				else
+					UI.Button({ Text = "R$ " .. pass.Robux, Size = UDim2.new(0.3, 0, 0.7, 0), Position = UDim2.new(0.68, 0, 0.15, 0), BackgroundColor3 = UI.Colors.Green }, f, function()
+						MarketplaceService:PromptGamePassPurchase(Players.LocalPlayer, pass.Id :: number)
+					end)
+				end
+			end
+		end
+		if not any then
+			UI.Text({ Text = "Robux shop opens soon!", Size = UDim2.new(1, 0, 0, 40), TextColor3 = UI.Colors.Muted }, list)
+		end
+		return
+	end
+	local current = pet and (if tab == "Trail" then pet.Trail else pet.Paint)
+	local f0 = row(0, 50)
+	UI.Text({ Text = "None", Size = UDim2.new(0.5, 0, 0.6, 0), Position = UDim2.new(0, 12, 0.2, 0), TextXAlignment = Enum.TextXAlignment.Left }, f0)
+	if current then
+		UI.Button({ Text = "Use", Size = UDim2.new(0.3, 0, 0.7, 0), Position = UDim2.new(0.68, 0, 0.15, 0) }, f0, function()
+			Net.Event("SetCosmetic"):FireServer(tab, nil)
+		end)
+	end
+	for i, c in Cosmetics.List do
+		if c.Kind == tab then
+			local f = row(i)
+			local sw = UI.Frame({ Size = UDim2.fromOffset(44, 44), Position = UDim2.new(0, 10, 0.5, -22), BackgroundColor3 = UI.Rgb(c.Colors[1]) }, f)
+			UI.Corner(sw, 22)
+			if #c.Colors > 1 then
+				local g = Instance.new("UIGradient")
+				local keys = {}
+				for k, col in c.Colors do
+					table.insert(keys, ColorSequenceKeypoint.new((k - 1) / (#c.Colors - 1), UI.Rgb(col)))
+				end
+				g.Color = ColorSequence.new(keys)
+				g.Parent = sw
+				sw.BackgroundColor3 = Color3.new(1, 1, 1)
+			end
+			UI.Text({ Text = c.Name, Size = UDim2.new(0.5, -60, 0.6, 0), Position = UDim2.new(0, 64, 0.2, 0), TextXAlignment = Enum.TextXAlignment.Left }, f)
+			local btnSize, btnPos = UDim2.new(0.3, 0, 0.7, 0), UDim2.new(0.68, 0, 0.15, 0)
+			if d.Owned[c.Id] then
+				if current == c.Id then
+					UI.Text({ Text = "Using", Size = btnSize, Position = btnPos, TextColor3 = UI.Colors.Green }, f)
+				else
+					UI.Button({ Text = "Use", Size = btnSize, Position = btnPos }, f, function()
+						Net.Event("SetCosmetic"):FireServer(tab, c.Id)
+					end)
+				end
+			elseif c.Price then
+				UI.Button({ Text = "$ " .. c.Price, Size = btnSize, Position = btnPos, BackgroundColor3 = if d.Coins >= c.Price then UI.Colors.Gold else UI.Colors.PanelLight }, f, function()
+					Net.Event("BuyCosmetic"):FireServer(c.Id)
+				end)
+			else
+				local prod = productFor(c.Id)
+				if prod and prod.Id then
+					UI.Button({ Text = "R$ " .. prod.Robux, Size = btnSize, Position = btnPos, BackgroundColor3 = UI.Colors.Green }, f, function()
+						MarketplaceService:PromptProductPurchase(Players.LocalPlayer, prod.Id :: number)
+					end)
+				else
+					UI.Text({ Text = "Soon", Size = btnSize, Position = btnPos, TextColor3 = UI.Colors.Muted }, f)
+				end
+			end
+		end
+	end
+end
+
+function ShopMenu.Open()
+	panel.Visible = true
+	render()
+end
+
+function ShopMenu.Start()
+	local body
+	panel, body = UI.Modal("Shop", UDim2.fromScale(0.8, 0.8))
+	local tabs = UI.Frame({ Size = UDim2.new(1, 0, 0, 44), BackgroundTransparency = 1 }, body)
+	for i, name in { "Trail", "Paint", "Robux" } do
+		tabButtons[name] = UI.Button({ Text = if name == "Trail" then "Trails" else name, Size = UDim2.new(1 / 3, -6, 1, 0), Position = UDim2.new((i - 1) / 3, 3, 0, 0) }, tabs, function()
+			tab = name
+			render()
+		end)
+	end
+	list = Instance.new("ScrollingFrame")
+	list.Size = UDim2.new(1, 0, 1, -52)
+	list.Position = UDim2.fromOffset(0, 52)
+	list.BackgroundTransparency = 1
+	list.BorderSizePixel = 0
+	list.ScrollBarThickness = 8
+	list.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	list.CanvasSize = UDim2.new()
+	list.Parent = body
+	local layout = Instance.new("UIListLayout")
+	layout.Padding = UDim.new(0, 8)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Parent = list
+	Hud.SetOpener("Shop", ShopMenu.Open)
+	State.OnChange(function()
+		if panel.Visible then
+			render()
+		end
+	end)
+end
+
+return ShopMenu
+]]></string>
+            </Properties>
+          </Item>
+          <Item class="ModuleScript" referent="39">
+            <Properties>
+              <string name="Name">Tutorial</string>
+              <string name="Source"><![CDATA[-- First-time tips: four short cards, shown once per player.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Net = require(ReplicatedStorage.Shared.Net)
+local UI = require(script.Parent.Parent.UI)
+local State = require(script.Parent.Parent.State)
+
+local Tutorial = {}
+
+local STEPS = {
+	{ "Welcome to Pet Race League!", "You're riding your first pet, a Pup. Ride it around!" },
+	{ "Train your pet", "SPEED RING: ride through the gates in order.\nJUMP HURDLES: jump over the walls.\nSTAMINA TREADMILL: keep running on the belt." },
+	{ "Race!", "Stand on the pink RACE PORTAL. Finish fast for coins, trophies and medals.\nTap DASH for a burst of speed." },
+	{ "Hatch new pets", "Spend coins at the EGGS. Rare pets get a small bonus, but training matters most!" },
+}
+
+local shown = false
+
+local function show()
+	shown = true
+	local step = 1
+	local card = UI.Frame({ Size = UDim2.fromOffset(440, 220), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), ZIndex = 50 }, UI.Screen())
+	UI.Corner(card, 18)
+	UI.Stroke(card, UI.Colors.Gold, 3)
+	local title = UI.Text({ Size = UDim2.new(1, -24, 0, 40), Position = UDim2.fromOffset(12, 10), TextColor3 = UI.Colors.Gold, ZIndex = 51 }, card)
+	local body = UI.Text({ Size = UDim2.new(1, -24, 0, 100), Position = UDim2.fromOffset(12, 54), Font = UI.Body, TextScaled = false, TextSize = 18, TextWrapped = true, ZIndex = 51 }, card)
+	local nextBtn: TextButton
+	local function render()
+		title.Text = STEPS[step][1]
+		body.Text = STEPS[step][2]
+		nextBtn.Text = if step == #STEPS then "Let's go!" else "Next"
+	end
+	nextBtn = UI.Button({ Text = "Next", Size = UDim2.fromOffset(160, 46), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12), BackgroundColor3 = UI.Colors.Green, ZIndex = 51 }, card, function()
+		if step < #STEPS then
+			step += 1
+			render()
+		else
+			card:Destroy()
+			Net.Event("TutorialDone"):FireServer()
+		end
+	end)
+	render()
+end
+
+function Tutorial.Start()
+	State.OnChange(function(d)
+		if not shown and not d.Tutorial then
+			show()
+		end
+	end)
+end
+
+return Tutorial
+]]></string>
+            </Properties>
+          </Item>
+        </Item>
+        <Item class="LocalScript" referent="40">
+          <Properties>
+            <string name="Name">Main</string>
+            <string name="Source"><![CDATA[-- Client entry: connects remotes and starts each controller.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Net = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Net"))
+
+Net.Init()
+
+local State = require(script.Parent:WaitForChild("State"))
+Net.Event("State").OnClientEvent:Connect(function(data)
+	State.Set(data)
+end)
+
+local Controllers = script.Parent:WaitForChild("Controllers")
+for _, name in { "Notify", "Hud", "PetMenu", "ShopMenu", "HatchView", "RaceHud", "Tutorial" } do
+	local ok, err = pcall(function()
+		local c = require(Controllers:WaitForChild(name)) :: any
+		c.Start()
+	end)
+	if not ok then
+		warn("[Client] " .. name .. " failed: " .. tostring(err))
+	end
+end
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="41">
+          <Properties>
+            <string name="Name">State</string>
+            <string name="Source"><![CDATA[-- Holds the latest profile snapshot from the server and tells listeners when it changes.
+local State = {}
+
+State.Data = nil :: any
+local listeners: { (any) -> () } = {}
+
+function State.Set(data: any)
+	State.Data = data
+	for _, fn in listeners do
+		task.spawn(fn, data)
+	end
+end
+
+function State.OnChange(fn: (any) -> ())
+	table.insert(listeners, fn)
+	if State.Data then
+		task.spawn(fn, State.Data)
+	end
+end
+
+-- The pet the player is riding, or nil.
+function State.Equipped(): any
+	local d = State.Data
+	if not d then
+		return nil
+	end
+	for _, p in d.Pets do
+		if p.Uid == d.Equipped then
+			return p
+		end
+	end
+	return nil
+end
+
+return State
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="42">
+          <Properties>
+            <string name="Name">UI</string>
+            <string name="Source"><![CDATA[-- Tiny UI kit: everything is built in code with big, phone-friendly buttons.
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+
+local UI = {}
+
+UI.Colors = {
+	Panel = Color3.fromRGB(34, 36, 56),
+	PanelLight = Color3.fromRGB(52, 55, 84),
+	Text = Color3.fromRGB(255, 255, 255),
+	Muted = Color3.fromRGB(180, 185, 210),
+	Gold = Color3.fromRGB(255, 205, 60),
+	Green = Color3.fromRGB(80, 200, 110),
+	Red = Color3.fromRGB(235, 80, 80),
+	Blue = Color3.fromRGB(70, 150, 255),
+	Pink = Color3.fromRGB(255, 90, 170),
+	Purple = Color3.fromRGB(150, 90, 255),
+}
+
+UI.Font = Enum.Font.FredokaOne
+UI.Body = Enum.Font.GothamBold
+
+local screen: ScreenGui? = nil
+
+function UI.Screen(): ScreenGui
+	if screen then
+		return screen
+	end
+	local g = Instance.new("ScreenGui")
+	g.Name = "PetRaceUI"
+	g.ResetOnSpawn = false
+	g.IgnoreGuiInset = false
+	g.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	g.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+	screen = g
+	return g
+end
+
+function UI.Corner(parent: Instance, r: number?)
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, r or 12)
+	c.Parent = parent
+end
+
+function UI.Stroke(parent: Instance, color: Color3?, thick: number?)
+	local s = Instance.new("UIStroke")
+	s.Color = color or Color3.new(0, 0, 0)
+	s.Thickness = thick or 2
+	s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	s.Parent = parent
+end
+
+function UI.Pad(parent: Instance, px: number)
+	local p = Instance.new("UIPadding")
+	p.PaddingLeft = UDim.new(0, px)
+	p.PaddingRight = UDim.new(0, px)
+	p.PaddingTop = UDim.new(0, px)
+	p.PaddingBottom = UDim.new(0, px)
+	p.Parent = parent
+end
+
+function UI.Frame(props: { [string]: any }, parent: Instance?): Frame
+	local f = Instance.new("Frame")
+	f.BackgroundColor3 = UI.Colors.Panel
+	f.BorderSizePixel = 0
+	for k, v in props do
+		(f :: any)[k] = v
+	end
+	f.Parent = parent
+	return f
+end
+
+function UI.Text(props: { [string]: any }, parent: Instance?): TextLabel
+	local t = Instance.new("TextLabel")
+	t.BackgroundTransparency = 1
+	t.Font = UI.Font
+	t.TextColor3 = UI.Colors.Text
+	t.TextScaled = true
+	t.BorderSizePixel = 0
+	for k, v in props do
+		(t :: any)[k] = v
+	end
+	t.Parent = parent
+	return t
+end
+
+function UI.Button(props: { [string]: any }, parent: Instance?, onClick: (() -> ())?): TextButton
+	local b = Instance.new("TextButton")
+	b.Font = UI.Font
+	b.TextColor3 = UI.Colors.Text
+	b.TextScaled = true
+	b.AutoButtonColor = true
+	b.BackgroundColor3 = UI.Colors.Blue
+	b.BorderSizePixel = 0
+	for k, v in props do
+		(b :: any)[k] = v
+	end
+	UI.Corner(b, 10)
+	UI.Stroke(b, Color3.fromRGB(20, 20, 30), 2)
+	local c = Instance.new("UITextSizeConstraint")
+	c.MaxTextSize = 30
+	c.Parent = b
+	b.Parent = parent
+	if onClick then
+		b.Activated:Connect(function()
+			local s = b.Size
+			local t = TweenService:Create(b, TweenInfo.new(0.06), { Size = UDim2.new(s.X.Scale * 0.94, s.X.Offset * 0.94, s.Y.Scale * 0.94, s.Y.Offset * 0.94) })
+			t:Play()
+			t.Completed:Once(function()
+				TweenService:Create(b, TweenInfo.new(0.08), { Size = s }):Play()
+			end)
+			onClick()
+		end)
+	end
+	return b
+end
+
+-- A centered modal panel with a title and a close button. Returns panel, body.
+function UI.Modal(title: string, size: UDim2, onClose: (() -> ())?): (Frame, Frame)
+	local panel = UI.Frame({
+		Name = title .. "Modal",
+		Size = size,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Visible = false,
+		ZIndex = 10,
+	}, UI.Screen())
+	UI.Corner(panel, 18)
+	UI.Stroke(panel, Color3.fromRGB(15, 15, 25), 3)
+	local ar = Instance.new("UISizeConstraint")
+	ar.MaxSize = Vector2.new(760, 560)
+	ar.Parent = panel
+	UI.Text({ Text = title, Size = UDim2.new(1, -80, 0, 44), Position = UDim2.fromOffset(16, 8), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 11 }, panel)
+	UI.Button({ Text = "X", Size = UDim2.fromOffset(44, 44), Position = UDim2.new(1, -54, 0, 8), BackgroundColor3 = UI.Colors.Red, ZIndex = 11 }, panel, function()
+		panel.Visible = false
+		if onClose then
+			onClose()
+		end
+	end)
+	local body = UI.Frame({ Size = UDim2.new(1, -24, 1, -68), Position = UDim2.fromOffset(12, 58), BackgroundTransparency = 1, ZIndex = 11 }, panel)
+	return panel, body
+end
+
+function UI.Rgb(c: { number }): Color3
+	return Color3.fromRGB(c[1], c[2], c[3])
+end
+
+-- Spinning 3D preview of a model inside a ViewportFrame.
+function UI.Viewport(parent: Instance, model: Model, props: { [string]: any }?): ViewportFrame
+	local vp = Instance.new("ViewportFrame")
+	vp.BackgroundTransparency = 1
+	vp.Size = UDim2.fromScale(1, 1)
+	vp.Ambient = Color3.fromRGB(200, 200, 200)
+	vp.LightColor = Color3.fromRGB(255, 255, 255)
+	if props then
+		for k, v in props do
+			(vp :: any)[k] = v
+		end
+	end
+	local world = Instance.new("WorldModel")
+	world.Parent = vp
+	model.Parent = world
+	local cam = Instance.new("Camera")
+	local _, size = model:GetBoundingBox()
+	local dist = size.Magnitude * 1.1
+	local center = Vector3.new(0, size.Y / 2, 0)
+	cam.CFrame = CFrame.lookAt(center + Vector3.new(-dist * 0.75, dist * 0.35, -dist * 0.75), center)
+	cam.FieldOfView = 40
+	cam.Parent = vp
+	vp.CurrentCamera = cam
+	vp.Parent = parent
+	return vp
+end
+
+return UI
+]]></string>
+          </Properties>
+        </Item>
+      </Item>
+    </Item>
+  </Item>
+</roblox>
