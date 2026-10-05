@@ -158,6 +158,7 @@ def material(col, code, tr):
 class Scene:
     def __init__(self, res=384, samples=20):
         bpy.ops.wm.read_factory_settings(use_empty=True)
+        _mats.clear()  # materials from a previous scene were freed
         s = bpy.context.scene
         self.s = s
         s.render.engine = "CYCLES"
