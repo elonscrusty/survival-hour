@@ -452,6 +452,12 @@ function TradeService.OfferedSet(player: Player): { [string]: boolean }
 	return set
 end
 
+-- True while the player has an open trade.
+function TradeService.InTrade(player: Player): boolean
+	local t = trades[player]
+	return t ~= nil and Trade.IsActive(t)
+end
+
 -- Sends the current trade window (or nil) to one player.
 function TradeService.PushView(player: Player)
 	sendView(player, trades[player])

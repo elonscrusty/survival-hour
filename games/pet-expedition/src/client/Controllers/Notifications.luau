@@ -51,6 +51,10 @@ local function onNotify(kind: string, data: { [string]: any })
 		Sounds.Play("Rare")
 		Toasts.Show("🎉 Thank you! You got <b>" .. tostring(data.Name or "your item") .. "</b>", "gold", { Duration = 5 })
 	elseif kind == "ServerLuck" then
+		local d = State.Data
+		if not d or not d.CanBuyGemEggs then
+			return
+		end
 		Sounds.Play("Reward")
 		Toasts.Banner(
 			Theme.Icons.Luck .. " Server Luck x" .. tostring(Config.ServerLuckMult) .. "!",

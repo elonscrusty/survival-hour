@@ -49,10 +49,19 @@ local function journalKey(tradeId: string): string
 	return "t_" .. tradeId
 end
 
+-- Studio uses its own DataStore so test saves (dev panel, test purchases,
+-- "reset my data") can never touch real players' live data.
+function DataService.StoreName(): string
+	if ctx and ctx.IsStudio then
+		return Config.DataStoreName .. "_Studio"
+	end
+	return Config.DataStoreName
+end
+
 function DataService.Init(c)
 	ctx = c
 	local ok, result = pcall(function()
-		return DataStoreService:GetDataStore(Config.DataStoreName)
+		return DataStoreService:GetDataStore(DataService.StoreName())
 	end)
 	if ok then
 		store = result

@@ -14,6 +14,9 @@ export type MultContext = {
 	Premium: boolean?,
 	InGroup: boolean?,
 	ServerLuckUntil: number?,
+	-- PolicyService restricts paid random items for this player: luck from the
+	-- Lucky pass, luck boosts and server luck doesn't apply to them.
+	NoPaidLuck: boolean?,
 }
 
 local Economy = {}
@@ -45,6 +48,9 @@ function Economy.CoinMult(p: Profile, c: MultContext): number
 end
 
 function Economy.LuckMult(p: Profile, c: MultContext): number
+	if c.NoPaidLuck then
+		return 1
+	end
 	local mult = 1
 	if Economy.HasPass(p, "Lucky") then
 		mult *= Config.LuckyPassMult

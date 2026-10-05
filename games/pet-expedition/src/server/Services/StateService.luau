@@ -95,6 +95,7 @@ local function fetchPolicy(player: Player, s)
 		if ok and type(info) == "table" then
 			s.CanBuyGemEggs = info.ArePaidRandomItemsRestricted ~= true
 			s.CanTrade = info.IsPaidItemTradingAllowed ~= false
+			s.PolicyKnown = true
 			return
 		end
 		task.wait(attempt)
@@ -104,11 +105,13 @@ local function fetchPolicy(player: Player, s)
 		-- everything so every flow can be tested.
 		s.CanBuyGemEggs = true
 		s.CanTrade = true
+		s.PolicyKnown = true
 		return
 	end
 	-- Unknown policy: stay on the safe side for paid random items and trading.
 	s.CanBuyGemEggs = false
 	s.CanTrade = false
+	s.PolicyKnown = true
 	warn("[StateService] PolicyService failed for", player.UserId, "- gem eggs and trading disabled")
 end
 
@@ -146,7 +149,16 @@ function StateService.MultContext(s): Economy.MultContext
 		Premium = s.Premium,
 		InGroup = s.InGroup,
 		ServerLuckUntil = ctx.BoostService.ServerLuckUntil(),
+		NoPaidLuck = StateService.PaidRandomRestricted(s),
 	}
+end
+
+-- True while paid random items are (or may be) restricted for this player:
+-- PolicyService said so, failed, or hasn't answered yet. Such players can't
+-- buy luck products, and paid luck (Lucky pass, Luck boost, server luck)
+-- doesn't apply to their hatches.
+function StateService.PaidRandomRestricted(s): boolean
+	return s.CanBuyGemEggs ~= true
 end
 
 function StateService.CoinMult(s): number
@@ -207,6 +219,7 @@ function StateService.Push(player: Player)
 		Premium = s.Premium,
 		InGroup = s.InGroup,
 		ServerLuckUntil = ctx.BoostService.ServerLuckUntil(),
+		NoPaidLuck = StateService.PaidRandomRestricted(s),
 		CanBuyGemEggs = s.CanBuyGemEggs,
 		CanTrade = s.CanTrade,
 	})

@@ -354,7 +354,8 @@ local function refreshTimers()
 	local seen: { [string]: boolean } = {}
 	for key, _ in d.Boosts do
 		local left = State.BoostLeft(key)
-		if left > 0 then
+		-- paid luck doesn't apply when the policy restricts paid random items
+		if left > 0 and (d.CanBuyGemEggs or not string.find(key, "Luck")) then
 			seen[key] = true
 			local def = Config.Boosts[key]
 			local name = if def then def.Name else key
@@ -370,8 +371,8 @@ local function refreshTimers()
 		end
 	end
 	local luck = State.ServerLuckLeft()
-	luckBanner.Visible = luck > 0
-	if luck > 0 then
+	luckBanner.Visible = luck > 0 and d.CanBuyGemEggs == true
+	if luckBanner.Visible then
 		Kit.setPill(luckBanner, Theme.Icons.Luck .. " Server Luck x" .. tostring(Config.ServerLuckMult) .. "  " .. Format.time(luck))
 	end
 end

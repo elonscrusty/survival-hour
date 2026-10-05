@@ -24,6 +24,7 @@ export type StateContext = {
 	ServerLuckUntil: number?,
 	CanBuyGemEggs: boolean?,
 	CanTrade: boolean?,
+	NoPaidLuck: boolean?,
 }
 
 local Profile = {}
@@ -356,7 +357,7 @@ end
 -- The snapshot sent to the owning client.
 function Profile.BuildState(p: Profile, c: StateContext): Types.PlayerState
 	local now = c.Now
-	local mult: Economy.MultContext = { Now = now, Premium = c.Premium, InGroup = c.InGroup, ServerLuckUntil = c.ServerLuckUntil }
+	local mult: Economy.MultContext = { Now = now, Premium = c.Premium, InGroup = c.InGroup, ServerLuckUntil = c.ServerLuckUntil, NoPaidLuck = c.NoPaidLuck }
 	local day = Rewards.DayNumber(now)
 	local pets: { PetInstance } = {}
 	for _, pet in p.Pets do

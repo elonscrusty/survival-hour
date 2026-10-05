@@ -49,6 +49,12 @@ return {
 		t.ok(m <= Config.MaxLuckMult, "capped")
 		t.ok(near(Economy.LuckMult(p, { Now = NOW, ServerLuckUntil = NOW - 1 }), Config.LuckyPassMult * Config.LuckBoostMult), "server luck expired")
 	end,
+	["no paid luck for restricted players"] = function(t)
+		local p = Profile.Default()
+		p.Passes.Lucky = true
+		p.Boosts.Luck2x = NOW + 100
+		t.ok(near(Economy.LuckMult(p, { Now = NOW, ServerLuckUntil = NOW + 100, NoPaidLuck = true }), 1), "restricted")
+	end,
 	["capacity from passes and index"] = function(t)
 		local p = Profile.Default()
 		t.eq(Economy.MaxEquip(p), Config.BaseEquip, "base equip")

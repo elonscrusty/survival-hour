@@ -27,6 +27,7 @@ local ORDER = {
 	"RebirthService",
 	"PurchaseService",
 	"TradeService",
+	"DevService", -- Studio-only test shortcuts; refuses everything on live servers
 }
 
 local ctx: any = {
