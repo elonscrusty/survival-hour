@@ -4,18 +4,29 @@ local TweenService = game:GetService("TweenService")
 
 local UI = {}
 
+-- Bright candy colours with dark outlines, in the style of popular pet games.
 UI.Colors = {
-	Panel = Color3.fromRGB(34, 36, 56),
-	PanelLight = Color3.fromRGB(52, 55, 84),
+	Panel = Color3.fromRGB(60, 120, 230),
+	PanelLight = Color3.fromRGB(95, 155, 250),
 	Text = Color3.fromRGB(255, 255, 255),
-	Muted = Color3.fromRGB(180, 185, 210),
-	Gold = Color3.fromRGB(255, 205, 60),
-	Green = Color3.fromRGB(80, 200, 110),
-	Red = Color3.fromRGB(235, 80, 80),
-	Blue = Color3.fromRGB(70, 150, 255),
-	Pink = Color3.fromRGB(255, 90, 170),
-	Purple = Color3.fromRGB(150, 90, 255),
+	Muted = Color3.fromRGB(215, 230, 255),
+	Gold = Color3.fromRGB(255, 200, 40),
+	Green = Color3.fromRGB(75, 215, 85),
+	Red = Color3.fromRGB(255, 75, 85),
+	Blue = Color3.fromRGB(50, 165, 255),
+	Pink = Color3.fromRGB(255, 85, 175),
+	Purple = Color3.fromRGB(160, 95, 255),
+	Outline = Color3.fromRGB(25, 30, 70),
 }
+
+-- Light-to-dark vertical shine used on buttons and panels.
+function UI.Shine(parent: GuiObject, strength: number?)
+	local g = Instance.new("UIGradient")
+	local k = strength or 0.25
+	g.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.new(1 - k, 1 - k, 1 - k))
+	g.Rotation = 90
+	g.Parent = parent
+end
 
 UI.Font = Enum.Font.FredokaOne
 UI.Body = Enum.Font.GothamBold
@@ -80,6 +91,8 @@ function UI.Text(props: { [string]: any }, parent: Instance?): TextLabel
 	t.TextColor3 = UI.Colors.Text
 	t.TextScaled = true
 	t.BorderSizePixel = 0
+	t.TextStrokeColor3 = UI.Colors.Outline
+	t.TextStrokeTransparency = 0.35
 	for k, v in props do
 		(t :: any)[k] = v
 	end
@@ -98,8 +111,11 @@ function UI.Button(props: { [string]: any }, parent: Instance?, onClick: (() -> 
 	for k, v in props do
 		(b :: any)[k] = v
 	end
-	UI.Corner(b, 10)
-	UI.Stroke(b, Color3.fromRGB(20, 20, 30), 2)
+	b.TextStrokeColor3 = UI.Colors.Outline
+	b.TextStrokeTransparency = 0
+	UI.Corner(b, 14)
+	UI.Stroke(b, UI.Colors.Outline, 3)
+	UI.Shine(b)
 	local c = Instance.new("UITextSizeConstraint")
 	c.MaxTextSize = 30
 	c.Parent = b
@@ -131,13 +147,14 @@ function UI.Modal(title: string, size: UDim2, onClose: (() -> ())?): (Frame, Fra
 		Visible = false,
 		ZIndex = 10,
 	}, UI.Screen())
-	UI.Corner(panel, 18)
-	UI.Stroke(panel, Color3.fromRGB(15, 15, 25), 3)
+	UI.Corner(panel, 22)
+	UI.Stroke(panel, UI.Colors.Outline, 4)
+	UI.Shine(panel, 0.18)
 	local ar = Instance.new("UISizeConstraint")
 	ar.MaxSize = Vector2.new(760, 560)
 	ar.Parent = panel
 	UI.Text({ Text = title, Size = UDim2.new(1, -80, 0, 44), Position = UDim2.fromOffset(16, 8), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 11 }, panel)
-	UI.Button({ Text = "X", Size = UDim2.fromOffset(44, 44), Position = UDim2.new(1, -54, 0, 8), BackgroundColor3 = UI.Colors.Red, ZIndex = 11 }, panel, function()
+	UI.Button({ Text = "X", Size = UDim2.fromOffset(48, 48), Position = UDim2.new(1, -40, 0, -8), BackgroundColor3 = UI.Colors.Red, ZIndex = 12 }, panel, function()
 		panel.Visible = false
 		if onClose then
 			onClose()

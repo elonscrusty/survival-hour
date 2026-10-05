@@ -220,7 +220,7 @@ local list: { Egg } = {
 		Id = "Meadow",
 		Name = "Meadow Egg",
 		Price = 100,
-		Color = { 140, 220, 110 },
+		Color = { 120, 235, 95 },
 		Odds = {
 			{ Pet = "Pup", W = 30 },
 			{ Pet = "Kitty", W = 30 },
@@ -234,7 +234,7 @@ local list: { Egg } = {
 		Id = "Forest",
 		Name = "Forest Egg",
 		Price = 450,
-		Color = { 60, 140, 70 },
+		Color = { 255, 150, 60 },
 		Odds = {
 			{ Pet = "Fox", W = 30 },
 			{ Pet = "Penguin", W = 26 },
@@ -248,7 +248,7 @@ local list: { Egg } = {
 		Id = "Sky",
 		Name = "Sky Egg",
 		Price = 1500,
-		Color = { 120, 190, 255 },
+		Color = { 95, 185, 255 },
 		Odds = {
 			{ Pet = "Wolf", W = 30 },
 			{ Pet = "Tiger", W = 28 },
@@ -1167,21 +1167,21 @@ local Models: { [string]: Entry } = {
 	["Flowers"] = { Id = nil, Category = "Lobby", Size = { 3.844, 1.537, 4.388 }, Offset = { -0.021, -0.768, 0.139 } },
 	["LampPost"] = { Id = nil, Category = "Lobby", Size = { 2, 11.1, 2 }, Offset = { 0, -5.55, 0 } },
 	["Pedestal"] = { Id = nil, Category = "Lobby", Size = { 10.8, 2.8, 10.8 }, Offset = { 0, -1.4, 0 } },
-	["Pet_Bunny"] = { Id = nil, Category = "Pets", Size = { 2.079, 4.509, 5.06 }, Offset = { 0, -2.235, -0.11 } },
-	["Pet_CosmicCat"] = { Id = nil, Category = "Pets", Size = { 2.494, 4.682, 7.252 }, Offset = { 0, -2.317, -0.546 } },
-	["Pet_Deer"] = { Id = nil, Category = "Pets", Size = { 2.079, 5.52, 5.08 }, Offset = { 0, -2.74, 0.3 } },
-	["Pet_Dragon"] = { Id = nil, Category = "Pets", Size = { 7.31, 5.594, 10.7 }, Offset = { 0, -2.767, -1.43 } },
-	["Pet_Fox"] = { Id = nil, Category = "Pets", Size = { 2.079, 3.842, 6.18 }, Offset = { 0, -1.901, -0.27 } },
-	["Pet_Griffin"] = { Id = nil, Category = "Pets", Size = { 6.337, 5.169, 8.818 }, Offset = { 0, -2.558, -0.785 } },
-	["Pet_Kitty"] = { Id = nil, Category = "Pets", Size = { 2.079, 3.642, 6.096 }, Offset = { 0, -1.801, -0.428 } },
-	["Pet_Panda"] = { Id = nil, Category = "Pets", Size = { 2.91, 4.28, 5.456 }, Offset = { 0, -2.112, 0.412 } },
-	["Pet_Penguin"] = { Id = nil, Category = "Pets", Size = { 3.104, 3.752, 4.113 }, Offset = { 0, -1.854, 0.472 } },
-	["Pet_Phoenix"] = { Id = nil, Category = "Pets", Size = { 6.339, 5.432, 8.179 }, Offset = { 0, -2.69, -0.666 } },
-	["Pet_Piggy"] = { Id = nil, Category = "Pets", Size = { 2.702, 3.675, 5.004 }, Offset = { 0, -1.811, 0.33 } },
-	["Pet_Pup"] = { Id = nil, Category = "Pets", Size = { 2.343, 3.627, 4.884 }, Offset = { -0.028, -1.791, 0.358 } },
-	["Pet_Tiger"] = { Id = nil, Category = "Pets", Size = { 2.746, 4.655, 8.299 }, Offset = { 0, -2.302, -0.69 } },
-	["Pet_Unicorn"] = { Id = nil, Category = "Pets", Size = { 2.494, 6.157, 8.191 }, Offset = { 0, -3.054, -0.716 } },
-	["Pet_Wolf"] = { Id = nil, Category = "Pets", Size = { 2.39, 4.508, 6.865 }, Offset = { 0, -2.231, -0.332 } },
+	["Pet_Bunny"] = { Id = nil, Category = "Pets", Size = { 3.432, 7.937, 6.877 }, Offset = { 0, -3.937, -0.12 } },
+	["Pet_CosmicCat"] = { Id = nil, Category = "Pets", Size = { 3.948, 7.472, 9.128 }, Offset = { 0.002, -3.698, -0.602 } },
+	["Pet_Deer"] = { Id = nil, Category = "Pets", Size = { 3.317, 8.104, 6.521 }, Offset = { 0, -4.02, 0.349 } },
+	["Pet_Dragon"] = { Id = nil, Category = "Pets", Size = { 10.765, 8.037, 12.291 }, Offset = { 0, -3.974, -1.674 } },
+	["Pet_Fox"] = { Id = nil, Category = "Pets", Size = { 3.328, 6.292, 7.79 }, Offset = { 0, -3.114, -0.311 } },
+	["Pet_Griffin"] = { Id = nil, Category = "Pets", Size = { 9.786, 7.653, 10.586 }, Offset = { 0, -3.786, -0.749 } },
+	["Pet_Kitty"] = { Id = nil, Category = "Pets", Size = { 3.441, 6.283, 7.819 }, Offset = { 0, -3.109, -0.431 } },
+	["Pet_Panda"] = { Id = nil, Category = "Pets", Size = { 4, 6.454, 6.77 }, Offset = { 0, -3.187, 0.417 } },
+	["Pet_Penguin"] = { Id = nil, Category = "Pets", Size = { 4.392, 6, 5.642 }, Offset = { 0, -2.966, 0.639 } },
+	["Pet_Phoenix"] = { Id = nil, Category = "Pets", Size = { 9.786, 8.042, 9.79 }, Offset = { 0, -3.981, -0.511 } },
+	["Pet_Piggy"] = { Id = nil, Category = "Pets", Size = { 3.8, 5.934, 6.549 }, Offset = { 0, -2.929, 0.441 } },
+	["Pet_Pup"] = { Id = nil, Category = "Pets", Size = { 3.536, 5.96, 6.195 }, Offset = { 0, -2.946, 0.436 } },
+	["Pet_Tiger"] = { Id = nil, Category = "Pets", Size = { 3.862, 6.752, 9.396 }, Offset = { 0, -3.338, -0.656 } },
+	["Pet_Unicorn"] = { Id = nil, Category = "Pets", Size = { 3.6, 8.535, 9.263 }, Offset = { 0, -4.232, -0.699 } },
+	["Pet_Wolf"] = { Id = nil, Category = "Pets", Size = { 3.6, 7.018, 8.443 }, Offset = { 0, -3.473, -0.369 } },
 	["Pillar"] = { Id = nil, Category = "Track", Size = { 4, 12, 18 }, Offset = { 0, -6, 0 } },
 	["PortalArch"] = { Id = nil, Category = "Lobby", Size = { 34.4, 28.75, 4.4 }, Offset = { 0, -14.375, 0 } },
 	["RaceArch"] = { Id = nil, Category = "Track", Size = { 30.283, 20, 2.4 }, Offset = { 0, -10, 0 } },
@@ -1357,17 +1357,38 @@ local function fromMesh(s: any, scale: number, paint: string?): Built?
 		Root = mesh,
 		Height = (s.Legs + s.Body[2]) * scale,
 		Legs = {},
-		Footprint = Vector2.new(s.Body[1] * scale, (s.Body[3] + s.Head) * scale),
+		Footprint = Vector2.new(s.Body[1] * scale, (s.Body[3] + s.Head * 0.3) * scale),
 	}
+end
+
+-- Legendary and Mythic pets glitter.
+local function sparkle(built: Built, s: any)
+	if Pets.Rarities[s.Rarity].Rank < 5 then
+		return
+	end
+	local e = Instance.new("ParticleEmitter")
+	e.Name = "Sparkles"
+	e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	e.Color = ColorSequence.new(rgb(s.Accent), Color3.new(1, 1, 1))
+	e.LightEmission = 1
+	e.Rate = if Pets.Rarities[s.Rarity].Rank >= 6 then 10 else 5
+	e.Lifetime = NumberRange.new(0.8, 1.4)
+	e.Speed = NumberRange.new(1, 2.5)
+	e.SpreadAngle = Vector2.new(180, 180)
+	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.3, 0.7), NumberSequenceKeypoint.new(1, 0) })
+	e.Parent = built.Root
 end
 
 -- scale: overall size (grows with level). paint: cosmetic id or nil.
 function PetModel.Build(speciesId: string, scale: number, paint: string?): Built
 	local s = Pets.ById[speciesId] or Pets.ById.Pup
-	local meshed = fromMesh(s, scale, paint)
-	if meshed then
-		return meshed
-	end
+	local built = fromMesh(s, scale, paint) or PetModel.BuildParts(s, scale, paint)
+	sparkle(built, s)
+	return built
+end
+
+-- The part-built look (used until the 3D models are uploaded).
+function PetModel.BuildParts(s: any, scale: number, paint: string?): Built
 	local model = Instance.new("Model")
 	model.Name = s.Name
 	local k = scale
@@ -1377,82 +1398,98 @@ function PetModel.Build(speciesId: string, scale: number, paint: string?): Built
 		color = rgb(paintDef.Colors[1])
 	end
 	local accent = rgb(s.Accent)
+	local dark = Color3.fromRGB(25, 20, 35)
+	local white = Color3.new(1, 1, 1)
+	local blush = Color3.fromRGB(255, 120, 150)
 	local bx, by, bz = s.Body[1] * k, s.Body[2] * k, s.Body[3] * k
 	local legH = s.Legs * k
-	local headS = s.Head * k
+	local hs = s.Head * k
 	local bodyY = legH + by / 2
 
-	local body = part(model, "Body", Vector3.new(bx, by, bz), CFrame.new(0, bodyY, 0), color, "Round")
+	-- Chibi layout (same as blender/build.py): bean body, big head over the front.
+	local body = part(model, "Body", Vector3.new(bx, by, bz), CFrame.new(0, bodyY, 0), color, "Ball")
 	model.PrimaryPart = body
+	part(model, "Back", Vector3.new(bx * 0.96, by * 0.96, bz * 0.6), CFrame.new(0, bodyY + by * 0.06, bz * 0.18), color, "Ball")
+	part(model, "Belly", Vector3.new(bx * 0.8, by * 0.8, bz * 0.78), CFrame.new(0, bodyY - by * 0.14, -bz * 0.1), accent, "Ball")
 
-	-- Belly patch
-	part(model, "Belly", Vector3.new(bx * 0.7, by * 0.5, bz * 0.7), CFrame.new(0, bodyY - by * 0.28, 0), accent, "Ball")
-
-	-- Head and face
-	local headCf = CFrame.new(0, legH + by * 0.95, -bz / 2 - headS * 0.15)
-	local head = part(model, "Head", Vector3.new(headS, headS, headS), headCf, color, "Round")
-	part(model, "Snout", Vector3.new(headS * 0.5, headS * 0.35, headS * 0.4), headCf * CFrame.new(0, -headS * 0.15, -headS * 0.48), accent, "Ball")
-	part(model, "Nose", Vector3.new(headS * 0.18, headS * 0.13, headS * 0.12), headCf * CFrame.new(0, -headS * 0.05, -headS * 0.68), Color3.fromRGB(40, 30, 30), "Ball")
+	local headCf = CFrame.new(0, legH + by * 0.85 + hs * 0.2, -bz * 0.4)
+	local head = part(model, "Head", Vector3.new(hs * 1.04, hs * 0.96, hs), headCf, color, "Ball")
+	part(model, "Snout", Vector3.new(hs * 0.42, hs * 0.28, hs * 0.26), headCf * CFrame.new(0, -hs * 0.17, -hs * 0.38), accent, "Ball")
+	part(model, "Nose", Vector3.new(hs * 0.13, hs * 0.09, hs * 0.07), headCf * CFrame.new(0, -hs * 0.09, -hs * 0.51), dark, "Ball")
 	for _, side in { -1, 1 } do
-		part(model, "Eye", Vector3.new(headS * 0.2, headS * 0.24, headS * 0.1), headCf * CFrame.new(side * headS * 0.24, headS * 0.12, -headS * 0.52), Color3.fromRGB(20, 20, 25), "Ball")
-		part(model, "Shine", Vector3.new(headS * 0.07, headS * 0.07, headS * 0.04), headCf * CFrame.new(side * headS * 0.21, headS * 0.17, -headS * 0.57), Color3.new(1, 1, 1), "Ball")
+		local eye = headCf * CFrame.new(side * hs * 0.2, hs * 0.05, -hs * 0.455)
+		part(model, "Eye", Vector3.new(hs * 0.19, hs * 0.26, hs * 0.1), eye, dark, "Ball")
+		part(model, "Shine", Vector3.new(hs * 0.08, hs * 0.08, hs * 0.04), eye * CFrame.new(-side * hs * 0.03, hs * 0.06, -hs * 0.045), white, "Ball")
+		part(model, "Shine2", Vector3.new(hs * 0.035, hs * 0.035, hs * 0.02), eye * CFrame.new(side * hs * 0.035, -hs * 0.06, -hs * 0.04), white, "Ball")
+		part(model, "Blush", Vector3.new(hs * 0.14, hs * 0.08, hs * 0.06), headCf * CFrame.new(side * hs * 0.33, -hs * 0.12, -hs * 0.36), blush, "Ball")
 	end
 
 	-- Ears
 	if s.Ears then
 		for _, side in { -1, 1 } do
-			local size, offset, tilt
 			if s.Ears == "Long" then
-				size = Vector3.new(headS * 0.22, headS * 0.9, headS * 0.12)
-				offset = CFrame.new(side * headS * 0.22, headS * 0.85, 0)
-				tilt = CFrame.Angles(0, 0, side * -0.15)
+				local cf = headCf * CFrame.new(side * hs * 0.18, hs * 0.78, hs * 0.04) * CFrame.Angles(0, 0, side * -0.2)
+				part(model, "Ear", Vector3.new(hs * 0.24, hs * 0.8, hs * 0.14), cf, color, "Ball")
+				part(model, "EarIn", Vector3.new(hs * 0.13, hs * 0.6, hs * 0.06), cf * CFrame.new(0, 0, -hs * 0.055), accent, "Ball")
 			elseif s.Ears == "Round" then
-				size = Vector3.new(headS * 0.32, headS * 0.32, headS * 0.12)
-				offset = CFrame.new(side * headS * 0.38, headS * 0.5, 0)
-				tilt = CFrame.new()
+				local cf = headCf * CFrame.new(side * hs * 0.34, hs * 0.38, hs * 0.03)
+				part(model, "Ear", Vector3.new(hs * 0.32, hs * 0.32, hs * 0.16), cf, color, "Ball")
+				part(model, "EarIn", Vector3.new(hs * 0.18, hs * 0.18, hs * 0.07), cf * CFrame.new(0, 0, -hs * 0.06), Color3.fromRGB(255, 170, 190), "Ball")
 			else
-				size = Vector3.new(headS * 0.28, headS * 0.42, headS * 0.12)
-				offset = CFrame.new(side * headS * 0.3, headS * 0.58, 0)
-				tilt = CFrame.Angles(0, 0, side * -0.25)
+				local cf = headCf * CFrame.new(side * hs * 0.3, hs * 0.5, hs * 0.02) * CFrame.Angles(0, 0, side * -0.25)
+				part(model, "Ear", Vector3.new(hs * 0.3, hs * 0.42, hs * 0.14), cf, color, "Ball")
+				part(model, "EarIn", Vector3.new(hs * 0.16, hs * 0.28, hs * 0.06), cf * CFrame.new(0, -hs * 0.03, -hs * 0.05), Color3.fromRGB(255, 170, 190), "Ball")
 			end
-			part(model, "Ear", size, headCf * offset * tilt, if s.Ears == "Long" then color else accent, "Ball")
 		end
 	end
 
-	-- Horn
 	if s.Horn then
-		local horn = part(model, "Horn", Vector3.new(headS * 0.14, headS * 0.7, headS * 0.14), headCf * CFrame.new(0, headS * 0.75, -headS * 0.15) * CFrame.Angles(-0.35, 0, 0), accent)
+		local horn = part(model, "Horn", Vector3.new(hs * 0.14, hs * 0.55, hs * 0.14), headCf * CFrame.new(0, hs * 0.68, -hs * 0.24) * CFrame.Angles(-0.3, 0, 0), Color3.fromRGB(255, 205, 80))
 		if s.Neon then
 			horn.Material = Enum.Material.Neon
 		end
 	end
 
-	-- Legs
+	-- Stubby legs on hip joints (Welds, so the client can swing them while running).
 	local legs = {}
+	local legLen = legH + by * 0.35
 	for _, lx in { -1, 1 } do
 		for _, lz in { -1, 1 } do
-			local leg = part(model, "Leg", Vector3.new(bx * 0.26, legH + by * 0.2, bx * 0.26), CFrame.new(lx * bx * 0.3, (legH + by * 0.2) / 2, lz * bz * 0.32), color)
+			local x, z = lx * bx * 0.27, lz * bz * 0.28
+			local leg = part(model, "Leg", Vector3.new(bx * 0.3, legLen, bx * 0.3), CFrame.new(x, legLen / 2, z), color, "Ball")
+			local foot = part(model, "Paw", Vector3.new(bx * 0.36, bx * 0.24, bx * 0.42), CFrame.new(x, bx * 0.11, z - bx * 0.05), accent, "Ball")
+			local fw = Instance.new("WeldConstraint")
+			fw.Part0 = leg
+			fw.Part1 = foot
+			fw.Parent = foot
+			local hip = Instance.new("Weld")
+			hip.Name = "LegJoint"
+			hip.Part0 = body
+			hip.Part1 = leg
+			hip.C0 = body.CFrame:ToObjectSpace(CFrame.new(x, legLen, z))
+			hip.C1 = CFrame.new(0, legLen / 2, 0)
+			hip:SetAttribute("Phase", if lx * lz > 0 then 0 else math.pi)
+			hip.Parent = leg
 			table.insert(legs, leg)
-			part(model, "Paw", Vector3.new(bx * 0.3, bx * 0.14, bx * 0.34), CFrame.new(lx * bx * 0.3, bx * 0.07, lz * bz * 0.32 - bx * 0.03), accent, "Ball")
 		end
 	end
 
 	-- Tail
 	if s.Tail then
-		local tailCf = CFrame.new(0, bodyY + by * 0.2, bz / 2)
+		local tailCf = CFrame.new(0, bodyY + by * 0.15, bz * 0.48)
 		if s.Tail == "Short" then
-			part(model, "Tail", Vector3.new(bx * 0.25, bx * 0.25, bx * 0.25), tailCf, accent, "Ball")
+			part(model, "Tail", Vector3.new(bx * 0.3, bx * 0.3, bx * 0.3), tailCf, accent, "Ball")
 		elseif s.Tail == "Fluffy" then
-			part(model, "Tail", Vector3.new(bx * 0.45, bx * 0.45, bz * 0.4), tailCf * CFrame.new(0, by * 0.2, bz * 0.15) * CFrame.Angles(0.6, 0, 0), accent, "Ball")
+			part(model, "Tail", Vector3.new(bx * 0.42, bx * 0.42, bz * 0.48), tailCf * CFrame.new(0, by * 0.35, bz * 0.16) * CFrame.Angles(0.7, 0, 0), color, "Ball")
 		else
-			part(model, "Tail", Vector3.new(bx * 0.14, bx * 0.14, bz * 0.55), tailCf * CFrame.new(0, by * 0.15, bz * 0.22) * CFrame.Angles(0.5, 0, 0), color)
+			part(model, "Tail", Vector3.new(bx * 0.16, bx * 0.16, bz * 0.55), tailCf * CFrame.new(0, by * 0.2, bz * 0.22) * CFrame.Angles(0.6, 0, 0), color, "Ball")
 		end
 	end
 
 	-- Wings
 	if s.Wings then
 		for _, side in { -1, 1 } do
-			local w = part(model, "Wing", Vector3.new(bx * 1.1, by * 0.12, bz * 0.6), CFrame.new(side * bx * 0.85, bodyY + by * 0.35, -bz * 0.05) * CFrame.Angles(0, 0, side * 0.35), accent, "Ball")
+			local w = part(model, "Wing", Vector3.new(bx * 0.9, by * 0.1, bz * 0.42), CFrame.new(side * bx * 0.85, bodyY + by * 0.38, 0) * CFrame.Angles(0, side * -0.2, side * 0.55), accent, "Ball")
 			if s.Neon then
 				w.Material = Enum.Material.Neon
 			end
@@ -1462,14 +1499,14 @@ function PetModel.Build(speciesId: string, scale: number, paint: string?): Built
 	if s.Neon then
 		local light = Instance.new("PointLight")
 		light.Color = accent
-		light.Range = 10 * k
+		light.Range = 12 * k
 		light.Brightness = 1.5
 		light.Parent = body
 	end
 
-	-- Weld everything to the body.
+	-- Weld everything else to the body (legs and paws are already jointed).
 	for _, p in model:GetChildren() do
-		if p:IsA("BasePart") and p ~= body then
+		if p:IsA("BasePart") and p ~= body and p.Name ~= "Leg" and p.Name ~= "Paw" then
 			local w = Instance.new("WeldConstraint")
 			w.Part0 = body
 			w.Part1 = p
@@ -1480,7 +1517,7 @@ function PetModel.Build(speciesId: string, scale: number, paint: string?): Built
 	-- Pivot at the feet so callers can place the pet on the ground. A model with a
 	-- PrimaryPart pivots on that part, so the offset goes on the body.
 	body.PivotOffset = CFrame.new(0, -bodyY, 0)
-	return { Model = model, Root = body, Height = legH + by, Legs = legs, Footprint = Vector2.new(bx, bz + headS) }
+	return { Model = model, Root = body, Height = legH + by, Legs = legs, Footprint = Vector2.new(bx, bz + hs * 0.3) }
 end
 
 -- Adds or replaces a trail behind the pet.
@@ -1564,21 +1601,21 @@ Pets.Rarities = {
 }
 
 local list: { Species } = {
-	{ Id = "Pup", Name = "Pup", Rarity = "Common", Body = { 2.2, 1.6, 3.2 }, Head = 1.5, Legs = 1.2, Color = { 196, 150, 100 }, Accent = { 120, 80, 50 }, Ears = "Round", Tail = "Short" },
-	{ Id = "Kitty", Name = "Kitty", Rarity = "Common", Body = { 2, 1.5, 3 }, Head = 1.4, Legs = 1.1, Color = { 255, 170, 80 }, Accent = { 255, 240, 220 }, Ears = "Point", Tail = "Long" },
-	{ Id = "Bunny", Name = "Bunny", Rarity = "Common", Body = { 2, 1.8, 2.6 }, Head = 1.4, Legs = 0.9, Color = { 245, 245, 245 }, Accent = { 255, 180, 200 }, Ears = "Long", Tail = "Fluffy" },
-	{ Id = "Piggy", Name = "Piggy", Rarity = "Uncommon", Body = { 2.6, 1.9, 3.2 }, Head = 1.6, Legs = 0.9, Color = { 255, 175, 190 }, Accent = { 230, 120, 140 }, Ears = "Round", Tail = "Short" },
-	{ Id = "Fox", Name = "Fox", Rarity = "Uncommon", Body = { 2, 1.5, 3.4 }, Head = 1.4, Legs = 1.3, Color = { 235, 110, 40 }, Accent = { 255, 255, 255 }, Ears = "Point", Tail = "Fluffy" },
-	{ Id = "Penguin", Name = "Penguin", Rarity = "Uncommon", Body = { 2.2, 2.4, 2.2 }, Head = 1.5, Legs = 0.7, Color = { 40, 40, 50 }, Accent = { 250, 250, 250 }, Tail = "Short" },
-	{ Id = "Panda", Name = "Panda", Rarity = "Rare", Body = { 2.8, 2.2, 3.4 }, Head = 1.8, Legs = 1.1, Color = { 245, 245, 245 }, Accent = { 30, 30, 30 }, Ears = "Round", Tail = "Short" },
-	{ Id = "Deer", Name = "Deer", Rarity = "Rare", Body = { 2, 1.7, 3.6 }, Head = 1.3, Legs = 2, Color = { 170, 110, 60 }, Accent = { 240, 220, 190 }, Ears = "Point", Tail = "Short", Horn = true },
-	{ Id = "Wolf", Name = "Wolf", Rarity = "Rare", Body = { 2.3, 1.8, 3.8 }, Head = 1.5, Legs = 1.6, Color = { 120, 125, 140 }, Accent = { 220, 220, 230 }, Ears = "Point", Tail = "Fluffy" },
-	{ Id = "Tiger", Name = "Tiger", Rarity = "Epic", Body = { 2.6, 2, 4.2 }, Head = 1.7, Legs = 1.6, Color = { 255, 140, 30 }, Accent = { 30, 20, 20 }, Ears = "Round", Tail = "Long" },
-	{ Id = "Unicorn", Name = "Unicorn", Rarity = "Epic", Body = { 2.4, 2.2, 4.2 }, Head = 1.6, Legs = 2.2, Color = { 255, 240, 255 }, Accent = { 255, 140, 230 }, Ears = "Point", Tail = "Long", Horn = true },
-	{ Id = "Griffin", Name = "Griffin", Rarity = "Legendary", Body = { 2.6, 2.2, 4.2 }, Head = 1.6, Legs = 1.8, Color = { 230, 190, 110 }, Accent = { 255, 255, 255 }, Ears = "Point", Tail = "Long", Wings = true },
-	{ Id = "Dragon", Name = "Dragon", Rarity = "Legendary", Body = { 3, 2.4, 4.8 }, Head = 1.9, Legs = 1.7, Color = { 60, 180, 90 }, Accent = { 255, 220, 80 }, Tail = "Long", Horn = true, Wings = true },
-	{ Id = "Phoenix", Name = "Phoenix", Rarity = "Mythic", Body = { 2.6, 2.4, 3.8 }, Head = 1.6, Legs = 1.6, Color = { 255, 90, 30 }, Accent = { 255, 230, 60 }, Tail = "Fluffy", Wings = true, Neon = true },
-	{ Id = "Cosmic Cat", Name = "Cosmic Cat", Rarity = "Mythic", Body = { 2.4, 1.9, 3.6 }, Head = 1.6, Legs = 1.6, Color = { 60, 30, 140 }, Accent = { 120, 255, 255 }, Ears = "Point", Tail = "Long", Neon = true },
+	{ Id = "Pup", Name = "Pup", Rarity = "Common", Body = { 3.4, 2.6, 4.2 }, Head = 3.4, Legs = 1.2, Color = { 205, 140, 80 }, Accent = { 255, 228, 190 }, Ears = "Round", Tail = "Short" },
+	{ Id = "Kitty", Name = "Kitty", Rarity = "Common", Body = { 3.2, 2.4, 4.2 }, Head = 3.3, Legs = 1.2, Color = { 255, 160, 60 }, Accent = { 255, 242, 225 }, Ears = "Point", Tail = "Long" },
+	{ Id = "Bunny", Name = "Bunny", Rarity = "Common", Body = { 3.2, 2.8, 3.8 }, Head = 3.3, Legs = 1, Color = { 250, 250, 255 }, Accent = { 255, 160, 205 }, Ears = "Long", Tail = "Fluffy" },
+	{ Id = "Piggy", Name = "Piggy", Rarity = "Uncommon", Body = { 3.8, 2.8, 4.4 }, Head = 3.4, Legs = 1, Color = { 255, 160, 190 }, Accent = { 255, 105, 150 }, Ears = "Round", Tail = "Short" },
+	{ Id = "Fox", Name = "Fox", Rarity = "Uncommon", Body = { 3.2, 2.4, 4.6 }, Head = 3.2, Legs = 1.3, Color = { 255, 115, 30 }, Accent = { 255, 255, 255 }, Ears = "Point", Tail = "Fluffy" },
+	{ Id = "Penguin", Name = "Penguin", Rarity = "Uncommon", Body = { 3.4, 3.4, 3.2 }, Head = 3.2, Legs = 0.9, Color = { 45, 60, 105 }, Accent = { 255, 255, 255 }, Tail = "Short" },
+	{ Id = "Panda", Name = "Panda", Rarity = "Rare", Body = { 4, 3, 4.6 }, Head = 3.6, Legs = 1.2, Color = { 255, 255, 255 }, Accent = { 35, 35, 45 }, Ears = "Round", Tail = "Short" },
+	{ Id = "Deer", Name = "Deer", Rarity = "Rare", Body = { 3.2, 2.6, 4.8 }, Head = 3.1, Legs = 1.8, Color = { 205, 125, 65 }, Accent = { 255, 238, 205 }, Ears = "Point", Tail = "Short", Horn = true },
+	{ Id = "Wolf", Name = "Wolf", Rarity = "Rare", Body = { 3.6, 2.8, 5 }, Head = 3.4, Legs = 1.5, Color = { 125, 150, 205 }, Accent = { 240, 246, 255 }, Ears = "Point", Tail = "Fluffy" },
+	{ Id = "Tiger", Name = "Tiger", Rarity = "Epic", Body = { 3.8, 3, 5.2 }, Head = 3.6, Legs = 1.5, Color = { 255, 145, 20 }, Accent = { 40, 25, 30 }, Ears = "Round", Tail = "Long" },
+	{ Id = "Unicorn", Name = "Unicorn", Rarity = "Epic", Body = { 3.6, 3, 5.2 }, Head = 3.4, Legs = 1.9, Color = { 255, 246, 255 }, Accent = { 255, 115, 215 }, Ears = "Point", Tail = "Long", Horn = true },
+	{ Id = "Griffin", Name = "Griffin", Rarity = "Legendary", Body = { 4, 3.2, 5.4 }, Head = 3.5, Legs = 1.7, Color = { 245, 190, 90 }, Accent = { 255, 255, 255 }, Ears = "Point", Tail = "Long", Wings = true },
+	{ Id = "Dragon", Name = "Dragon", Rarity = "Legendary", Body = { 4.4, 3.4, 6 }, Head = 3.8, Legs = 1.6, Color = { 70, 210, 110 }, Accent = { 255, 215, 60 }, Tail = "Long", Horn = true, Wings = true },
+	{ Id = "Phoenix", Name = "Phoenix", Rarity = "Mythic", Body = { 4, 3.2, 5 }, Head = 3.5, Legs = 1.6, Color = { 255, 80, 40 }, Accent = { 255, 225, 50 }, Tail = "Fluffy", Wings = true, Neon = true },
+	{ Id = "Cosmic Cat", Name = "Cosmic Cat", Rarity = "Mythic", Body = { 3.8, 3, 5 }, Head = 3.6, Legs = 1.6, Color = { 95, 55, 210 }, Accent = { 110, 255, 255 }, Ears = "Point", Tail = "Long", Neon = true },
 }
 
 Pets.List = list
@@ -2551,9 +2588,27 @@ local function state(p: Player): State
 	return s
 end
 
+-- The rider sits (sit animation) instead of standing, so the hips go lower than a
+-- standing hip height: this share of the normal hip height stays above the back.
+local SEAT = 0.3
+
+local function rideHip(s: State): number
+	return (s.DefaultHip :: number) * SEAT + (s.Built :: PetModel.Built).Height
+end
+
 local function equippedPet(p: Player): PetStats.Pet?
 	local d = Data.Get(p)
 	return d and Profile.EquippedPet(d)
+end
+
+-- Cartoon outline around a pet in the world (Highlights don't show in viewports).
+local function outline(built: PetModel.Built)
+	local hl = Instance.new("Highlight")
+	hl.FillTransparency = 1
+	hl.OutlineColor = Color3.fromRGB(30, 22, 45)
+	hl.OutlineTransparency = 0.15
+	hl.DepthMode = Enum.HighlightDepthMode.Occluded
+	hl.Parent = built.Model
 end
 
 local function destroyModel(s: State)
@@ -2580,7 +2635,7 @@ function PetService.Apply(p: Player)
 	if s.Riding and pet and s.Built then
 		local ride = PetStats.Ride(pet)
 		speed, jump = ride.WalkSpeed, ride.JumpPower
-		hum.HipHeight = (s.DefaultHip :: number) + s.Built.Height
+		hum.HipHeight = rideHip(s)
 		if os.clock() < s.DashUntil then
 			speed *= Config.Ride.DashBoost
 		end
@@ -2611,16 +2666,22 @@ local function mount(p: Player)
 	local ride = PetStats.Ride(pet)
 	local built = PetModel.Build(pet.Species, ride.Size, pet.Paint)
 	PetModel.SetTrail(built, pet.Trail)
+	outline(built)
 	if s.DefaultHip == nil then
 		s.DefaultHip = hum.HipHeight
 	end
-	local hip = s.DefaultHip :: number
-	-- Rider stands on the pet's back: the pet's feet go where the rider's feet were.
-	local feetY = -(hip + root.Size.Y / 2) - built.Height
-	built.Model:PivotTo(root.CFrame * CFrame.new(0, feetY, 0))
-	local weld = Instance.new("WeldConstraint")
+	s.Built = built
+	-- Rider sits on the pet's back, a little behind the middle (the big head is in
+	-- front). A Weld (not WeldConstraint) so clients can bob the pet as it runs.
+	local feetY = -(rideHip(s) + root.Size.Y / 2)
+	local seat = CFrame.new(0, feetY, -built.Footprint.Y * 0.12)
+	built.Model:PivotTo(root.CFrame * seat)
+	local weld = Instance.new("Weld")
+	weld.Name = "RideWeld"
 	weld.Part0 = root
 	weld.Part1 = built.Root
+	weld.C0 = root.CFrame:ToObjectSpace(built.Root.CFrame)
+	weld.C1 = CFrame.new()
 	weld.Parent = built.Root
 	-- Invisible box around the pet's body that collides with the world, so hurdles,
 	-- steps and pillars block the pet (the visible parts don't collide). It starts
@@ -2667,6 +2728,7 @@ local function spawnFollower(p: Player)
 	local ride = PetStats.Ride(pet)
 	local built = PetModel.Build(pet.Species, ride.Size * 0.8, pet.Paint)
 	PetModel.SetTrail(built, pet.Trail)
+	outline(built)
 	for _, d in built.Model:GetDescendants() do
 		if d:IsA("BasePart") then
 			d.Anchored = true
@@ -3618,9 +3680,9 @@ local Util: any
 local current: Folder? = nil
 
 local THEMES = {
-	Meadow = { Floor = Color3.fromRGB(120, 205, 95), FloorMat = Enum.Material.Grass, Wall = Color3.fromRGB(255, 255, 255), Prop = Color3.fromRGB(255, 120, 80) },
-	Canyon = { Floor = Color3.fromRGB(215, 150, 90), FloorMat = Enum.Material.Sandstone, Wall = Color3.fromRGB(150, 85, 50), Prop = Color3.fromRGB(110, 70, 45) },
-	Sky = { Floor = Color3.fromRGB(240, 245, 255), FloorMat = Enum.Material.SmoothPlastic, Wall = Color3.fromRGB(140, 200, 255), Prop = Color3.fromRGB(255, 170, 230) },
+	Meadow = { Floor = Color3.fromRGB(110, 225, 85), FloorMat = Enum.Material.SmoothPlastic, Wall = Color3.fromRGB(255, 255, 255), Prop = Color3.fromRGB(255, 95, 120) },
+	Canyon = { Floor = Color3.fromRGB(255, 175, 90), FloorMat = Enum.Material.SmoothPlastic, Wall = Color3.fromRGB(205, 110, 60), Prop = Color3.fromRGB(150, 90, 210) },
+	Sky = { Floor = Color3.fromRGB(245, 250, 255), FloorMat = Enum.Material.SmoothPlastic, Wall = Color3.fromRGB(120, 200, 255), Prop = Color3.fromRGB(255, 150, 230) },
 }
 
 export type Built = {
@@ -3688,7 +3750,7 @@ function TrackBuilder.Build(track: any): Built
 				arrow.CanQuery = false
 			end
 		elseif p.Kind == "Mud" then
-			floor(p.X0, p.X1, p.Y0, Color3.fromRGB(100, 70, 45), Enum.Material.Mud, "Mud")
+			floor(p.X0, p.X1, p.Y0, Color3.fromRGB(100, 70, 45), Enum.Material.SmoothPlastic, "Mud")
 		elseif p.Kind == "Ramp" then
 			local rise = p.Y1 - p.Y0
 			local len = math.sqrt(L * L + rise * rise)
@@ -4229,7 +4291,7 @@ WorldService.Leaderboard = nil :: BasePart?
 
 local lobby: Folder
 
-local GRASS = Color3.fromRGB(110, 200, 90)
+local GRASS = Color3.fromRGB(95, 215, 70)
 
 local TREES = { "Tree_Round", "Tree_Pine", "Tree_Blossom" }
 
@@ -4241,15 +4303,15 @@ local function tree(pos: Vector3, scale: number, rng: Random)
 		Size = Vector3.new(8, 1.6, 1.6) * scale,
 		CFrame = CFrame.new(pos + Vector3.new(0, 4 * scale, 0)),
 		Color = Color3.fromRGB(120, 80, 50),
-		Material = Enum.Material.Wood,
+		Material = Enum.Material.SmoothPlastic,
 		Shape = Enum.PartType.Cylinder,
 		Name = "Trunk",
 	}, lobby).CFrame = CFrame.new(pos + Vector3.new(0, 4 * scale, 0)) * CFrame.Angles(0, 0, math.rad(90))
 	Util.Part({
 		Size = Vector3.new(9, 9, 9) * scale,
 		CFrame = CFrame.new(pos + Vector3.new(0, 10 * scale, 0)),
-		Color = Color3.fromRGB(70, 170, 70),
-		Material = Enum.Material.Grass,
+		Color = Color3.fromRGB(80, 200, 75),
+		Material = Enum.Material.SmoothPlastic,
 		Shape = Enum.PartType.Ball,
 		Name = "Leaves",
 	}, lobby)
@@ -4292,7 +4354,7 @@ local function buildGround()
 		Size = Vector3.new(500, 2, 500),
 		CFrame = CFrame.new(0, -1, 0),
 		Color = GRASS,
-		Material = Enum.Material.Grass,
+		Material = Enum.Material.SmoothPlastic,
 		Name = "Ground",
 	}, lobby)
 	-- Invisible walls so nobody wanders off the edge.
@@ -4318,8 +4380,8 @@ local function buildGround()
 		Util.Part({
 			Size = p[2],
 			CFrame = CFrame.new(p[1]),
-			Color = Color3.fromRGB(210, 180, 130),
-			Material = Enum.Material.Sand,
+			Color = Color3.fromRGB(255, 220, 150),
+			Material = Enum.Material.SmoothPlastic,
 			CanCollide = false,
 			Name = "Path",
 		}, lobby)
@@ -4369,7 +4431,7 @@ local function buildEggs()
 			Size = Vector3.new(3, 10, 10),
 			CFrame = CFrame.new(pos + Vector3.new(0, 1.5, 0)),
 			Color = Color3.fromRGB(240, 240, 240),
-			Material = Enum.Material.Marble,
+			Material = Enum.Material.SmoothPlastic,
 			Shape = Enum.PartType.Cylinder,
 			Name = "Pedestal",
 		}, lobby)
@@ -4465,7 +4527,7 @@ local function buildTraining()
 		Size = Vector3.new(0.2, radius * 2 + 16, radius * 2 + 16),
 		CFrame = CFrame.new(center + Vector3.new(0, 0.06, 0)) * CFrame.Angles(0, 0, math.rad(90)),
 		Color = Color3.fromRGB(210, 180, 130),
-		Material = Enum.Material.Sand,
+		Material = Enum.Material.SmoothPlastic,
 		Shape = Enum.PartType.Cylinder,
 		CanCollide = false,
 		Name = "RingTrack",
@@ -4474,7 +4536,7 @@ local function buildTraining()
 		Size = Vector3.new(0.4, radius * 2 - 16, radius * 2 - 16),
 		CFrame = CFrame.new(center + Vector3.new(0, 0.1, 0)) * CFrame.Angles(0, 0, math.rad(90)),
 		Color = GRASS,
-		Material = Enum.Material.Grass,
+		Material = Enum.Material.SmoothPlastic,
 		Shape = Enum.PartType.Cylinder,
 		CanCollide = false,
 		Name = "RingInfield",
@@ -4520,7 +4582,7 @@ local function buildTraining()
 		Size = Vector3.new(hx1 - hx0 + 6, 0.2, 170),
 		CFrame = CFrame.new((hx0 + hx1) / 2, 0.06, 10),
 		Color = Color3.fromRGB(210, 180, 130),
-		Material = Enum.Material.Sand,
+		Material = Enum.Material.SmoothPlastic,
 		CanCollide = false,
 		Name = "HurdleLane",
 	}, lobby)
@@ -4587,7 +4649,7 @@ local function buildPortal()
 			Size = Vector3.new(3, 22, 3),
 			CFrame = CFrame.new(c + Vector3.new(side * 15, 11, 10)),
 			Color = Color3.fromRGB(80, 60, 120),
-			Material = Enum.Material.Slate,
+			Material = Enum.Material.SmoothPlastic,
 			Name = "PortalPillar",
 		}, lobby)
 	end
@@ -4595,7 +4657,7 @@ local function buildPortal()
 		Size = Vector3.new(33, 3, 3),
 		CFrame = CFrame.new(c + Vector3.new(0, 23.5, 10)),
 		Color = Color3.fromRGB(80, 60, 120),
-		Material = Enum.Material.Slate,
+		Material = Enum.Material.SmoothPlastic,
 		Name = "PortalTop",
 	}, lobby)
 	if portalMesh then
@@ -4632,21 +4694,31 @@ local function buildLeaderboard()
 	WorldService.Leaderboard = board
 end
 
+local function effect(className: string, props: { [string]: any })
+	local e = Lighting:FindFirstChildOfClass(className :: any) or Instance.new(className :: any)
+	for k, v in props do
+		(e :: any)[k] = v
+	end
+	e.Parent = Lighting
+end
+
+-- Bright, saturated cartoon look: sunny sky, soft colourful ambient light, a little
+-- bloom on the sparkles and neon, and punchier colours.
 local function buildLighting()
-	Lighting.ClockTime = 14
-	Lighting.Brightness = 2.5
-	Lighting.OutdoorAmbient = Color3.fromRGB(150, 150, 160)
+	Lighting.ClockTime = 14.2
+	Lighting.GeographicLatitude = 30
+	Lighting.Brightness = 3
+	Lighting.Ambient = Color3.fromRGB(120, 110, 140)
+	Lighting.OutdoorAmbient = Color3.fromRGB(165, 170, 200)
+	Lighting.EnvironmentDiffuseScale = 1
+	Lighting.EnvironmentSpecularScale = 0.6
 	Lighting.GlobalShadows = true
-	if not Lighting:FindFirstChildOfClass("Atmosphere") then
-		local a = Instance.new("Atmosphere")
-		a.Density = 0.25
-		a.Haze = 1
-		a.Color = Color3.fromRGB(200, 225, 255)
-		a.Parent = Lighting
-	end
-	if not Lighting:FindFirstChildOfClass("Sky") then
-		Instance.new("Sky").Parent = Lighting
-	end
+	Lighting.ShadowSoftness = 0.35
+	effect("Atmosphere", { Density = 0.28, Offset = 0.15, Haze = 0.6, Glare = 0.2, Color = Color3.fromRGB(205, 230, 255), Decay = Color3.fromRGB(120, 170, 255) })
+	effect("Sky", { CelestialBodiesShown = true, SunAngularSize = 14, StarCount = 0 })
+	effect("ColorCorrectionEffect", { Saturation = 0.28, Contrast = 0.1, Brightness = 0.03, TintColor = Color3.fromRGB(255, 252, 245) })
+	effect("BloomEffect", { Intensity = 0.45, Size = 26, Threshold = 0.92 })
+	effect("SunRaysEffect", { Intensity = 0.05, Spread = 0.6 })
 end
 
 function WorldService.Init(ctx)
@@ -4772,7 +4844,7 @@ local function render()
 			dynamic(row)
 			UI.Corner(row, 10)
 			UI.Text({ Text = q.Text, Size = UDim2.new(0.62, 0, 0, 26), Position = UDim2.fromOffset(12, 6), TextXAlignment = Enum.TextXAlignment.Left }, row)
-			local bar = UI.Frame({ Size = UDim2.new(0.5, 0, 0, 12), Position = UDim2.fromOffset(12, 40), BackgroundColor3 = Color3.fromRGB(20, 20, 30) }, row)
+			local bar = UI.Frame({ Size = UDim2.new(0.5, 0, 0, 12), Position = UDim2.fromOffset(12, 40), BackgroundColor3 = Color3.fromRGB(28, 45, 110) }, row)
 			UI.Corner(bar, 6)
 			local fill = UI.Frame({ Size = UDim2.fromScale(prog / q.Need, 1), BackgroundColor3 = UI.Colors.Gold }, bar)
 			UI.Corner(fill, 6)
@@ -4821,7 +4893,7 @@ function DailyMenu.Start()
 	box.Font = UI.Body
 	box.TextScaled = true
 	box.TextColor3 = Color3.new(1, 1, 1)
-	box.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+	box.BackgroundColor3 = Color3.fromRGB(28, 45, 110)
 	box.ClearTextOnFocus = false
 	UI.Corner(box, 10)
 	UI.Pad(box, 8)
@@ -5007,7 +5079,7 @@ end
 local function stat(parent: Instance, order: number, icon: string, color: Color3): TextLabel
 	local f = UI.Frame({ Size = UDim2.fromOffset(170, 40), BackgroundColor3 = UI.Colors.Panel, BackgroundTransparency = 0.15, LayoutOrder = order }, parent)
 	UI.Corner(f, 20)
-	UI.Stroke(f, Color3.fromRGB(15, 15, 25), 2)
+	UI.Stroke(f, UI.Colors.Outline, 2)
 	UI.Text({ Text = icon, Size = UDim2.fromOffset(34, 34), Position = UDim2.fromOffset(4, 3), TextColor3 = color }, f)
 	return UI.Text({ Text = "0", Size = UDim2.new(1, -46, 1, -8), Position = UDim2.fromOffset(40, 4), TextXAlignment = Enum.TextXAlignment.Left }, f)
 end
@@ -5167,7 +5239,7 @@ function Notify.Show(text: string, kind: string?)
 		BackgroundTransparency = 0.05,
 	}, stack)
 	UI.Corner(f, 10)
-	UI.Stroke(f, Color3.fromRGB(20, 20, 30), 2)
+	UI.Stroke(f, Color3.fromRGB(28, 45, 110), 2)
 	UI.Pad(f, 6)
 	UI.Text({ Text = text, Size = UDim2.fromScale(1, 1) }, f)
 	task.delay(if big then 5 else 3, function()
@@ -5274,7 +5346,7 @@ local function renderDetail()
 		local need = PetStats.XpToNext(lvl)
 		local row = UI.Frame({ Size = UDim2.new(1, 0, 0, 26), Position = UDim2.new(0, 0, y, 54 + (i - 1) * 30), BackgroundTransparency = 1 }, detail)
 		UI.Text({ Text = stat .. " " .. lvl, Size = UDim2.new(0.4, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Left, Font = UI.Body }, row)
-		local bar = UI.Frame({ Size = UDim2.new(0.58, 0, 0.6, 0), Position = UDim2.new(0.42, 0, 0.2, 0), BackgroundColor3 = Color3.fromRGB(20, 20, 30) }, row)
+		local bar = UI.Frame({ Size = UDim2.new(0.58, 0, 0.6, 0), Position = UDim2.new(0.42, 0, 0.2, 0), BackgroundColor3 = Color3.fromRGB(28, 45, 110) }, row)
 		UI.Corner(bar, 6)
 		local fill = UI.Frame({ Size = UDim2.new(if lvl >= Config.Stats.MaxLevel then 1 else math.clamp(xp / need, 0, 1), 0, 1, 0), BackgroundColor3 = STAT_COLORS[stat] }, bar)
 		UI.Corner(fill, 6)
@@ -5319,7 +5391,7 @@ local function renderDetail()
 	box.Font = UI.Body
 	box.TextScaled = true
 	box.TextColor3 = Color3.new(1, 1, 1)
-	box.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+	box.BackgroundColor3 = Color3.fromRGB(28, 45, 110)
 	box.ClearTextOnFocus = false
 	UI.Corner(box, 8)
 	box.Parent = detail
@@ -5472,7 +5544,7 @@ local function showResults(data: any)
 	results:ClearAllChildren()
 	results.Visible = true
 	UI.Corner(results, 16)
-	UI.Stroke(results, Color3.fromRGB(15, 15, 25), 3)
+	UI.Stroke(results, UI.Colors.Outline, 3)
 	UI.Text({ Text = data.Track .. " - Results", Size = UDim2.new(1, -20, 0, 40), Position = UDim2.fromOffset(10, 8) }, results)
 	for i, r in data.Rows do
 		local y = 52 + (i - 1) * 30
@@ -5549,7 +5621,7 @@ function RaceHud.Start()
 	local screen = UI.Screen()
 	queueBanner = UI.Frame({ Size = UDim2.fromOffset(460, 50), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 12), BackgroundColor3 = UI.Colors.Pink, Visible = false }, screen)
 	UI.Corner(queueBanner, 14)
-	UI.Stroke(queueBanner, Color3.fromRGB(20, 20, 30), 2)
+	UI.Stroke(queueBanner, Color3.fromRGB(28, 45, 110), 2)
 	UI.Pad(queueBanner, 6)
 	queueText = UI.Text({ Size = UDim2.fromScale(1, 1) }, queueBanner)
 
@@ -5559,7 +5631,7 @@ function RaceHud.Start()
 	placeText = UI.Text({ Size = UDim2.new(0.5, -10, 0, 44), Position = UDim2.fromOffset(10, 32), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = UI.Colors.Gold }, race)
 	timeText = UI.Text({ Size = UDim2.new(0.5, -10, 0, 44), Position = UDim2.new(0.5, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Right }, race)
 	medalText = UI.Text({ Size = UDim2.new(1, -20, 0, 16), Position = UDim2.new(0, 10, 1, -40), TextColor3 = UI.Colors.Muted, Font = UI.Body }, race)
-	local bar = UI.Frame({ Size = UDim2.new(1, -20, 0, 10), Position = UDim2.new(0, 10, 1, -18), BackgroundColor3 = Color3.fromRGB(20, 20, 30) }, race)
+	local bar = UI.Frame({ Size = UDim2.new(1, -20, 0, 10), Position = UDim2.new(0, 10, 1, -18), BackgroundColor3 = Color3.fromRGB(28, 45, 110) }, race)
 	UI.Corner(bar, 5)
 	progressFill = UI.Frame({ Size = UDim2.fromScale(0, 1), BackgroundColor3 = UI.Colors.Green }, bar)
 	UI.Corner(progressFill, 5)
@@ -5596,6 +5668,120 @@ return RaceHud
             </Properties>
           </Item>
           <Item class="ModuleScript" referent="47">
+            <Properties>
+              <string name="Name">RideFx</string>
+              <string name="Source"><![CDATA[-- Riding feel, all visual and local:
+--   * the local player sits on their pet (the default sit pose; played by the owner,
+--     so other players see it too)
+--   * every ridden pet bounces and leans while it runs, and part-built pets swing
+--     their legs (each client animates the pets it can see)
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local RideFx = {}
+
+local player = Players.LocalPlayer
+local sitTrack: AnimationTrack? = nil
+
+local function stopSit()
+	if sitTrack then
+		sitTrack:Stop(0.2)
+		sitTrack = nil
+	end
+end
+
+local function updateSit()
+	local char = player.Character
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	local animator = hum and hum:FindFirstChildOfClass("Animator")
+	if not player:GetAttribute("Riding") or not animator or not char then
+		stopSit()
+		return
+	end
+	if sitTrack then
+		return
+	end
+	-- The sit animation from the character's default Animate script.
+	local animate = char:FindFirstChild("Animate")
+	local sit = animate and animate:FindFirstChild("sit")
+	local anim = sit and sit:FindFirstChildOfClass("Animation")
+	if not anim then
+		return
+	end
+	local track = (animator :: Animator):LoadAnimation(anim)
+	track.Priority = Enum.AnimationPriority.Action
+	track.Looped = true
+	track:Play(0.2)
+	sitTrack = track
+end
+
+-- Per pet: the rest pose of its ride weld and leg joints, and its run phase.
+type Rig = { Weld: Weld?, Base: CFrame?, Joints: { { Weld: Weld, Base: CFrame, Phase: number } }, T: number }
+local rigs: { [Model]: Rig } = {}
+
+local function rigFor(model: Model): Rig
+	local r = rigs[model]
+	if r then
+		return r
+	end
+	local joints = {}
+	local rideWeld: Weld? = nil
+	for _, d in model:GetDescendants() do
+		if d:IsA("Weld") then
+			if d.Name == "LegJoint" then
+				table.insert(joints, { Weld = d, Base = d.C0, Phase = d:GetAttribute("Phase") or 0 })
+			elseif d.Name == "RideWeld" then
+				rideWeld = d
+			end
+		end
+	end
+	r = { Weld = rideWeld, Base = rideWeld and rideWeld.C0, Joints = joints, T = 0 }
+	rigs[model] = r
+	model.Destroying:Once(function()
+		rigs[model] = nil
+	end)
+	return r
+end
+
+function RideFx.Start()
+	player:GetAttributeChangedSignal("Riding"):Connect(updateSit)
+	player.CharacterAdded:Connect(function()
+		sitTrack = nil
+		task.wait(0.5)
+		updateSit()
+	end)
+	updateSit()
+
+	RunService.RenderStepped:Connect(function(dt)
+		for _, p in Players:GetPlayers() do
+			local char = p.Character
+			local pet = char and char:FindFirstChild("RiddenPet")
+			local root = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+			if pet and pet:IsA("Model") and root then
+				local r = rigFor(pet)
+				local v = root.AssemblyLinearVelocity
+				local speed = Vector3.new(v.X, 0, v.Z).Magnitude
+				local run = math.clamp(speed / 20, 0, 1)
+				r.T += dt * (6 + speed * 0.35)
+				local swing = math.sin(r.T) * 0.7 * run
+				for _, j in r.Joints do
+					j.Weld.C0 = j.Base * CFrame.Angles(math.sin(r.T + j.Phase) * 0.7 * run, 0, 0)
+				end
+				if r.Weld and r.Base then
+					local bob = math.abs(math.sin(r.T)) * 0.35 * run
+					local lean = -0.06 * run + swing * 0.04
+					r.Weld.C0 = r.Base * CFrame.new(0, bob, 0) * CFrame.Angles(lean, 0, 0)
+				end
+			end
+		end
+	end)
+end
+
+return RideFx
+]]></string>
+            </Properties>
+          </Item>
+          <Item class="ModuleScript" referent="48">
             <Properties>
               <string name="Name">ShopMenu</string>
               <string name="Source"><![CDATA[-- Shop: trails and paint for your ridden pet (coins), plus the Robux tab.
@@ -5769,7 +5955,7 @@ return ShopMenu
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="48">
+          <Item class="ModuleScript" referent="49">
             <Properties>
               <string name="Name">Sound</string>
               <string name="Source"><![CDATA[-- Plays sound effects (and music, if one is set) on this client. Muting is saved
@@ -5877,7 +6063,7 @@ return Sound
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="49">
+          <Item class="ModuleScript" referent="50">
             <Properties>
               <string name="Name">Tutorial</string>
               <string name="Source"><![CDATA[-- First-time tips: four short cards, shown once per player.
@@ -5937,7 +6123,7 @@ return Tutorial
             </Properties>
           </Item>
         </Item>
-        <Item class="LocalScript" referent="50">
+        <Item class="LocalScript" referent="51">
           <Properties>
             <string name="Name">Main</string>
             <string name="Source"><![CDATA[-- Client entry: connects remotes and starts each controller.
@@ -5952,7 +6138,7 @@ Net.Event("State").OnClientEvent:Connect(function(data)
 end)
 
 local Controllers = script.Parent:WaitForChild("Controllers")
-for _, name in { "Sound", "Notify", "Hud", "DailyMenu", "PetMenu", "ShopMenu", "HatchView", "RaceHud", "Tutorial" } do
+for _, name in { "Sound", "Notify", "RideFx", "Hud", "DailyMenu", "PetMenu", "ShopMenu", "HatchView", "RaceHud", "Tutorial" } do
 	local ok, err = pcall(function()
 		local c = require(Controllers:WaitForChild(name)) :: any
 		c.Start()
@@ -5964,7 +6150,7 @@ end
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="51">
+        <Item class="ModuleScript" referent="52">
           <Properties>
             <string name="Name">State</string>
             <string name="Source"><![CDATA[-- Holds the latest profile snapshot from the server and tells listeners when it changes.
@@ -6005,7 +6191,7 @@ return State
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="52">
+        <Item class="ModuleScript" referent="53">
           <Properties>
             <string name="Name">UI</string>
             <string name="Source"><![CDATA[-- Tiny UI kit: everything is built in code with big, phone-friendly buttons.
@@ -6014,18 +6200,29 @@ local TweenService = game:GetService("TweenService")
 
 local UI = {}
 
+-- Bright candy colours with dark outlines, in the style of popular pet games.
 UI.Colors = {
-	Panel = Color3.fromRGB(34, 36, 56),
-	PanelLight = Color3.fromRGB(52, 55, 84),
+	Panel = Color3.fromRGB(60, 120, 230),
+	PanelLight = Color3.fromRGB(95, 155, 250),
 	Text = Color3.fromRGB(255, 255, 255),
-	Muted = Color3.fromRGB(180, 185, 210),
-	Gold = Color3.fromRGB(255, 205, 60),
-	Green = Color3.fromRGB(80, 200, 110),
-	Red = Color3.fromRGB(235, 80, 80),
-	Blue = Color3.fromRGB(70, 150, 255),
-	Pink = Color3.fromRGB(255, 90, 170),
-	Purple = Color3.fromRGB(150, 90, 255),
+	Muted = Color3.fromRGB(215, 230, 255),
+	Gold = Color3.fromRGB(255, 200, 40),
+	Green = Color3.fromRGB(75, 215, 85),
+	Red = Color3.fromRGB(255, 75, 85),
+	Blue = Color3.fromRGB(50, 165, 255),
+	Pink = Color3.fromRGB(255, 85, 175),
+	Purple = Color3.fromRGB(160, 95, 255),
+	Outline = Color3.fromRGB(25, 30, 70),
 }
+
+-- Light-to-dark vertical shine used on buttons and panels.
+function UI.Shine(parent: GuiObject, strength: number?)
+	local g = Instance.new("UIGradient")
+	local k = strength or 0.25
+	g.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.new(1 - k, 1 - k, 1 - k))
+	g.Rotation = 90
+	g.Parent = parent
+end
 
 UI.Font = Enum.Font.FredokaOne
 UI.Body = Enum.Font.GothamBold
@@ -6090,6 +6287,8 @@ function UI.Text(props: { [string]: any }, parent: Instance?): TextLabel
 	t.TextColor3 = UI.Colors.Text
 	t.TextScaled = true
 	t.BorderSizePixel = 0
+	t.TextStrokeColor3 = UI.Colors.Outline
+	t.TextStrokeTransparency = 0.35
 	for k, v in props do
 		(t :: any)[k] = v
 	end
@@ -6108,8 +6307,11 @@ function UI.Button(props: { [string]: any }, parent: Instance?, onClick: (() -> 
 	for k, v in props do
 		(b :: any)[k] = v
 	end
-	UI.Corner(b, 10)
-	UI.Stroke(b, Color3.fromRGB(20, 20, 30), 2)
+	b.TextStrokeColor3 = UI.Colors.Outline
+	b.TextStrokeTransparency = 0
+	UI.Corner(b, 14)
+	UI.Stroke(b, UI.Colors.Outline, 3)
+	UI.Shine(b)
 	local c = Instance.new("UITextSizeConstraint")
 	c.MaxTextSize = 30
 	c.Parent = b
@@ -6141,13 +6343,14 @@ function UI.Modal(title: string, size: UDim2, onClose: (() -> ())?): (Frame, Fra
 		Visible = false,
 		ZIndex = 10,
 	}, UI.Screen())
-	UI.Corner(panel, 18)
-	UI.Stroke(panel, Color3.fromRGB(15, 15, 25), 3)
+	UI.Corner(panel, 22)
+	UI.Stroke(panel, UI.Colors.Outline, 4)
+	UI.Shine(panel, 0.18)
 	local ar = Instance.new("UISizeConstraint")
 	ar.MaxSize = Vector2.new(760, 560)
 	ar.Parent = panel
 	UI.Text({ Text = title, Size = UDim2.new(1, -80, 0, 44), Position = UDim2.fromOffset(16, 8), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 11 }, panel)
-	UI.Button({ Text = "X", Size = UDim2.fromOffset(44, 44), Position = UDim2.new(1, -54, 0, 8), BackgroundColor3 = UI.Colors.Red, ZIndex = 11 }, panel, function()
+	UI.Button({ Text = "X", Size = UDim2.fromOffset(48, 48), Position = UDim2.new(1, -40, 0, -8), BackgroundColor3 = UI.Colors.Red, ZIndex = 12 }, panel, function()
 		panel.Visible = false
 		if onClose then
 			onClose()

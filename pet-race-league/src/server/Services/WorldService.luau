@@ -23,7 +23,7 @@ WorldService.Leaderboard = nil :: BasePart?
 
 local lobby: Folder
 
-local GRASS = Color3.fromRGB(110, 200, 90)
+local GRASS = Color3.fromRGB(95, 215, 70)
 
 local TREES = { "Tree_Round", "Tree_Pine", "Tree_Blossom" }
 
@@ -35,15 +35,15 @@ local function tree(pos: Vector3, scale: number, rng: Random)
 		Size = Vector3.new(8, 1.6, 1.6) * scale,
 		CFrame = CFrame.new(pos + Vector3.new(0, 4 * scale, 0)),
 		Color = Color3.fromRGB(120, 80, 50),
-		Material = Enum.Material.Wood,
+		Material = Enum.Material.SmoothPlastic,
 		Shape = Enum.PartType.Cylinder,
 		Name = "Trunk",
 	}, lobby).CFrame = CFrame.new(pos + Vector3.new(0, 4 * scale, 0)) * CFrame.Angles(0, 0, math.rad(90))
 	Util.Part({
 		Size = Vector3.new(9, 9, 9) * scale,
 		CFrame = CFrame.new(pos + Vector3.new(0, 10 * scale, 0)),
-		Color = Color3.fromRGB(70, 170, 70),
-		Material = Enum.Material.Grass,
+		Color = Color3.fromRGB(80, 200, 75),
+		Material = Enum.Material.SmoothPlastic,
 		Shape = Enum.PartType.Ball,
 		Name = "Leaves",
 	}, lobby)
@@ -86,7 +86,7 @@ local function buildGround()
 		Size = Vector3.new(500, 2, 500),
 		CFrame = CFrame.new(0, -1, 0),
 		Color = GRASS,
-		Material = Enum.Material.Grass,
+		Material = Enum.Material.SmoothPlastic,
 		Name = "Ground",
 	}, lobby)
 	-- Invisible walls so nobody wanders off the edge.
@@ -112,8 +112,8 @@ local function buildGround()
 		Util.Part({
 			Size = p[2],
 			CFrame = CFrame.new(p[1]),
-			Color = Color3.fromRGB(210, 180, 130),
-			Material = Enum.Material.Sand,
+			Color = Color3.fromRGB(255, 220, 150),
+			Material = Enum.Material.SmoothPlastic,
 			CanCollide = false,
 			Name = "Path",
 		}, lobby)
@@ -163,7 +163,7 @@ local function buildEggs()
 			Size = Vector3.new(3, 10, 10),
 			CFrame = CFrame.new(pos + Vector3.new(0, 1.5, 0)),
 			Color = Color3.fromRGB(240, 240, 240),
-			Material = Enum.Material.Marble,
+			Material = Enum.Material.SmoothPlastic,
 			Shape = Enum.PartType.Cylinder,
 			Name = "Pedestal",
 		}, lobby)
@@ -259,7 +259,7 @@ local function buildTraining()
 		Size = Vector3.new(0.2, radius * 2 + 16, radius * 2 + 16),
 		CFrame = CFrame.new(center + Vector3.new(0, 0.06, 0)) * CFrame.Angles(0, 0, math.rad(90)),
 		Color = Color3.fromRGB(210, 180, 130),
-		Material = Enum.Material.Sand,
+		Material = Enum.Material.SmoothPlastic,
 		Shape = Enum.PartType.Cylinder,
 		CanCollide = false,
 		Name = "RingTrack",
@@ -268,7 +268,7 @@ local function buildTraining()
 		Size = Vector3.new(0.4, radius * 2 - 16, radius * 2 - 16),
 		CFrame = CFrame.new(center + Vector3.new(0, 0.1, 0)) * CFrame.Angles(0, 0, math.rad(90)),
 		Color = GRASS,
-		Material = Enum.Material.Grass,
+		Material = Enum.Material.SmoothPlastic,
 		Shape = Enum.PartType.Cylinder,
 		CanCollide = false,
 		Name = "RingInfield",
@@ -314,7 +314,7 @@ local function buildTraining()
 		Size = Vector3.new(hx1 - hx0 + 6, 0.2, 170),
 		CFrame = CFrame.new((hx0 + hx1) / 2, 0.06, 10),
 		Color = Color3.fromRGB(210, 180, 130),
-		Material = Enum.Material.Sand,
+		Material = Enum.Material.SmoothPlastic,
 		CanCollide = false,
 		Name = "HurdleLane",
 	}, lobby)
@@ -381,7 +381,7 @@ local function buildPortal()
 			Size = Vector3.new(3, 22, 3),
 			CFrame = CFrame.new(c + Vector3.new(side * 15, 11, 10)),
 			Color = Color3.fromRGB(80, 60, 120),
-			Material = Enum.Material.Slate,
+			Material = Enum.Material.SmoothPlastic,
 			Name = "PortalPillar",
 		}, lobby)
 	end
@@ -389,7 +389,7 @@ local function buildPortal()
 		Size = Vector3.new(33, 3, 3),
 		CFrame = CFrame.new(c + Vector3.new(0, 23.5, 10)),
 		Color = Color3.fromRGB(80, 60, 120),
-		Material = Enum.Material.Slate,
+		Material = Enum.Material.SmoothPlastic,
 		Name = "PortalTop",
 	}, lobby)
 	if portalMesh then
@@ -426,21 +426,31 @@ local function buildLeaderboard()
 	WorldService.Leaderboard = board
 end
 
+local function effect(className: string, props: { [string]: any })
+	local e = Lighting:FindFirstChildOfClass(className :: any) or Instance.new(className :: any)
+	for k, v in props do
+		(e :: any)[k] = v
+	end
+	e.Parent = Lighting
+end
+
+-- Bright, saturated cartoon look: sunny sky, soft colourful ambient light, a little
+-- bloom on the sparkles and neon, and punchier colours.
 local function buildLighting()
-	Lighting.ClockTime = 14
-	Lighting.Brightness = 2.5
-	Lighting.OutdoorAmbient = Color3.fromRGB(150, 150, 160)
+	Lighting.ClockTime = 14.2
+	Lighting.GeographicLatitude = 30
+	Lighting.Brightness = 3
+	Lighting.Ambient = Color3.fromRGB(120, 110, 140)
+	Lighting.OutdoorAmbient = Color3.fromRGB(165, 170, 200)
+	Lighting.EnvironmentDiffuseScale = 1
+	Lighting.EnvironmentSpecularScale = 0.6
 	Lighting.GlobalShadows = true
-	if not Lighting:FindFirstChildOfClass("Atmosphere") then
-		local a = Instance.new("Atmosphere")
-		a.Density = 0.25
-		a.Haze = 1
-		a.Color = Color3.fromRGB(200, 225, 255)
-		a.Parent = Lighting
-	end
-	if not Lighting:FindFirstChildOfClass("Sky") then
-		Instance.new("Sky").Parent = Lighting
-	end
+	Lighting.ShadowSoftness = 0.35
+	effect("Atmosphere", { Density = 0.28, Offset = 0.15, Haze = 0.6, Glare = 0.2, Color = Color3.fromRGB(205, 230, 255), Decay = Color3.fromRGB(120, 170, 255) })
+	effect("Sky", { CelestialBodiesShown = true, SunAngularSize = 14, StarCount = 0 })
+	effect("ColorCorrectionEffect", { Saturation = 0.28, Contrast = 0.1, Brightness = 0.03, TintColor = Color3.fromRGB(255, 252, 245) })
+	effect("BloomEffect", { Intensity = 0.45, Size = 26, Threshold = 0.92 })
+	effect("SunRaysEffect", { Intensity = 0.05, Spread = 0.6 })
 end
 
 function WorldService.Init(ctx)

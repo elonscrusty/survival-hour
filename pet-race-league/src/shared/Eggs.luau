@@ -14,7 +14,7 @@ local list: { Egg } = {
 		Id = "Meadow",
 		Name = "Meadow Egg",
 		Price = 100,
-		Color = { 140, 220, 110 },
+		Color = { 120, 235, 95 },
 		Odds = {
 			{ Pet = "Pup", W = 30 },
 			{ Pet = "Kitty", W = 30 },
@@ -28,7 +28,7 @@ local list: { Egg } = {
 		Id = "Forest",
 		Name = "Forest Egg",
 		Price = 450,
-		Color = { 60, 140, 70 },
+		Color = { 255, 150, 60 },
 		Odds = {
 			{ Pet = "Fox", W = 30 },
 			{ Pet = "Penguin", W = 26 },
@@ -42,7 +42,7 @@ local list: { Egg } = {
 		Id = "Sky",
 		Name = "Sky Egg",
 		Price = 1500,
-		Color = { 120, 190, 255 },
+		Color = { 95, 185, 255 },
 		Odds = {
 			{ Pet = "Wolf", W = 30 },
 			{ Pet = "Tiger", W = 28 },

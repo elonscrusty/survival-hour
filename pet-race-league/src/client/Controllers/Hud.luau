@@ -35,7 +35,7 @@ end
 local function stat(parent: Instance, order: number, icon: string, color: Color3): TextLabel
 	local f = UI.Frame({ Size = UDim2.fromOffset(170, 40), BackgroundColor3 = UI.Colors.Panel, BackgroundTransparency = 0.15, LayoutOrder = order }, parent)
 	UI.Corner(f, 20)
-	UI.Stroke(f, Color3.fromRGB(15, 15, 25), 2)
+	UI.Stroke(f, UI.Colors.Outline, 2)
 	UI.Text({ Text = icon, Size = UDim2.fromOffset(34, 34), Position = UDim2.fromOffset(4, 3), TextColor3 = color }, f)
 	return UI.Text({ Text = "0", Size = UDim2.new(1, -46, 1, -8), Position = UDim2.fromOffset(40, 4), TextXAlignment = Enum.TextXAlignment.Left }, f)
 end

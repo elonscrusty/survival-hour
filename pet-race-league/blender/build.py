@@ -243,7 +243,15 @@ def model_name(pid):
     return "Pet_" + pid.replace(" ", "")
 
 
+def head_center(sp):
+    """Chibi layout shared with src/shared/PetModel.luau: a big head over the front of the body."""
+    bx, by, bz = sp["Body"]
+    legH, hs = sp["Legs"], sp["Head"]
+    return Vector((0, legH + by * 0.85 + hs * 0.2, -bz * 0.4))
+
+
 def build_pet(sp):
+    """Chibi pet: round bean body, oversized head, big glossy eyes, stubby legs."""
     pid = sp["Id"]
     m = Mesh(model_name(pid), "Pets")
     bx, by, bz = sp["Body"]
@@ -251,172 +259,185 @@ def build_pet(sp):
     col, acc = tuple(sp["Color"]), tuple(sp["Accent"])
     rng = random.Random(pid)
     bodyY = legH + by / 2
-    ear_col, leg_col, paw_col = col, col, acc
+    ear_col, leg_col, foot_col = col, col, acc
     if pid == "Panda":
-        ear_col = leg_col = acc
-        paw_col = acc
+        ear_col = leg_col = foot_col = acc
     elif pid == "Fox":
-        leg_col = (90, 50, 35)
-        paw_col = (60, 35, 25)
+        leg_col, foot_col = (70, 40, 35), (55, 30, 28)
     elif pid == "Penguin":
-        paw_col = ORANGE
+        foot_col = ORANGE
     elif pid == "Tiger":
-        paw_col = (255, 235, 210)
+        foot_col = (255, 240, 220)
+    elif pid == "Cosmic Cat":
+        foot_col = acc
 
-    # Body: an egg-ish ellipsoid, slightly fuller at the chest.
-    m.sphere(col, T(0, bodyY, 0) @ S(bx * 1.05, by * 1.05, bz * 1.02), 22, 14)
-    m.sphere(col, T(0, bodyY + by * 0.05, -bz * 0.25) @ S(bx * 0.95, by * 1.0, bz * 0.6), 18, 12)
-    # Belly / chest patch
-    belly = (255, 250, 245) if pid == "Penguin" else acc
-    if pid not in ("Panda", "Tiger"):
-        m.sphere(belly, T(0, bodyY - by * 0.12, -bz * 0.12) @ S(bx * 0.82, by * 0.85, bz * 0.82), 18, 12)
-    if pid == "Wolf":
-        m.sphere(acc, T(0, bodyY, -bz * 0.42) @ S(bx * 0.7, by * 0.8, bz * 0.3), 14, 10)
-
-    # Markings
+    # Body: a round bean, a little higher at the back.
+    m.sphere(col, T(0, bodyY, 0) @ S(bx, by, bz), 28, 18)
+    m.sphere(col, T(0, bodyY + by * 0.06, bz * 0.18) @ S(bx * 0.96, by * 0.96, bz * 0.6), 22, 14)
+    belly = (255, 255, 255) if pid in ("Penguin", "Panda") else acc
+    if pid not in ("Tiger", "Cosmic Cat", "Panda"):
+        m.sphere(belly, T(0, bodyY - by * 0.14, -bz * 0.1) @ S(bx * 0.8, by * 0.8, bz * 0.78), 22, 14)
     if pid == "Tiger":
         for i in range(6):
-            z = -bz * 0.32 + i * bz * 0.13
-            f = math.sqrt(max(0.0, 1 - (2 * z / (bz * 1.02)) ** 2))
-            m.sphere(DARK, T(0, bodyY + by * 0.05, z) @ S(bx * 1.08 * f, by * 1.08 * f, bz * 0.05), 18, 8)
+            z = -bz * 0.3 + i * bz * 0.13
+            f = math.sqrt(max(0.0, 1 - (2 * z / bz) ** 2))
+            m.sphere((45, 25, 30), T(0, bodyY + by * 0.06, z) @ S(bx * 1.03 * f, by * 1.03 * f, bz * 0.045), 22, 8)
     if pid == "Pup":
-        m.sphere((150, 105, 65), T(bx * 0.25, bodyY + by * 0.2, bz * 0.1) @ S(bx * 0.6, by * 0.6, bz * 0.5))
+        m.sphere((160, 100, 55), T(bx * 0.22, bodyY + by * 0.25, bz * 0.12) @ S(bx * 0.6, by * 0.55, bz * 0.45), 16, 10)
     if pid == "Deer":
-        for _ in range(7):
-            a = rng.uniform(-0.5, 0.5)
-            m.sphere(acc, T(bx * 0.45 * math.sin(a), bodyY + by * 0.45, rng.uniform(-bz * 0.3, bz * 0.35)) @ S(0.28, 0.12, 0.28), 8, 6)
+        for _ in range(8):
+            a = rng.uniform(-0.6, 0.6)
+            m.sphere(WHITE, T(bx * 0.48 * math.sin(a), bodyY + by * 0.44, rng.uniform(-bz * 0.15, bz * 0.38)) @ S(0.42, 0.18, 0.42), 10, 6)
     if pid == "Cosmic Cat":
-        for _ in range(16):
+        for _ in range(22):
             th = rng.uniform(0, math.pi * 2)
-            ph = rng.uniform(0.2, 1.4)
-            p = Vector((math.cos(th) * math.sin(ph) * bx * 0.52, math.cos(ph) * by * 0.52, math.sin(th) * math.sin(ph) * bz * 0.5))
-            m.sphere(acc if rng.random() < 0.7 else WHITE, T(0, bodyY, 0) @ T(p) @ S(0.22), 6, 4)
+            ph = rng.uniform(0.15, 1.5)
+            p = Vector((math.cos(th) * math.sin(ph) * bx * 0.5, math.cos(ph) * by * 0.5, math.sin(th) * math.sin(ph) * bz * 0.5))
+            m.sphere(acc if rng.random() < 0.6 else (255, 240, 120), T(0, bodyY, 0) @ T(p) @ S(rng.uniform(0.22, 0.4)), 8, 6)
     if pid == "Dragon":
         for i in range(6):
-            z = -bz * 0.3 + i * bz * 0.13
-            m.rod(acc, (0, bodyY + by * 0.48 - abs(z) * 0.1, z), (0, bodyY + by * 0.48 + 0.7 - abs(z) * 0.1, z + 0.25), 0.28, 0.0, 6, False)
+            z = -bz * 0.1 + i * bz * 0.1
+            yy = bodyY + by * 0.5 - (z / bz) ** 2 * by * 0.6
+            m.rod(acc, (0, yy - 0.2, z), (0, yy + 0.75, z + 0.3), 0.38, 0.0, 8, False)
+    if pid == "Wolf":
+        m.sphere(acc, T(0, bodyY + by * 0.05, -bz * 0.42) @ S(bx * 0.75, by * 0.75, bz * 0.3), 16, 10)
 
-    # Legs with paws
-    lh = legH + by * 0.25
+    # Stubby legs with round feet
+    top = legH + by * 0.35
     for lx in (-1, 1):
         for lz in (-1, 1):
-            x, z = lx * bx * 0.3, lz * bz * 0.3
-            m.cyl(leg_col, T(x, lh / 2, z) @ S(1, lh, 1), bx * 0.14, bx * 0.12, 12)
-            m.sphere(paw_col, T(x, bx * 0.06, z - bx * 0.04) @ S(bx * 0.32, bx * 0.14, bx * 0.38), 12, 8)
-    if pid == "Bunny":  # big back feet
-        for lx in (-1, 1):
-            m.sphere(acc, T(lx * bx * 0.3, bx * 0.08, bz * 0.18) @ S(bx * 0.3, bx * 0.16, bx * 0.7), 12, 8)
-
-    # Head
-    hc = Vector((0, legH + by * 0.95, -bz / 2 - hs * 0.15))
-    head_col = acc if pid == "Griffin" else col
-    m.sphere(head_col, T(hc) @ S(hs * 1.06, hs, hs), 22, 14)
-    beak = pid in ("Penguin", "Griffin", "Phoenix")
-    if beak:
-        bc = ORANGE if pid != "Griffin" else GOLD
-        m.rod(bc, hc + Vector((0, -hs * 0.08, -hs * 0.38)), hc + Vector((0, -hs * 0.16, -hs * 0.8)), hs * 0.16, 0.02, 10)
-    elif pid == "Piggy":
-        m.cyl(acc, T(hc + Vector((0, -hs * 0.12, -hs * 0.5))) @ Rx(90) @ S(1, hs * 0.18, 1), hs * 0.2, hs * 0.2, 14)
-        for side in (-1, 1):
-            m.sphere(DARK, T(hc + Vector((side * hs * 0.07, -hs * 0.12, -hs * 0.6))) @ S(hs * 0.06, hs * 0.09, hs * 0.04), 8, 6)
-    else:
-        snout = (255, 250, 240) if pid in ("Panda", "Tiger", "Wolf", "Fox") else acc
-        m.sphere(snout, T(hc + Vector((0, -hs * 0.18, -hs * 0.4))) @ S(hs * 0.56, hs * 0.38, hs * 0.42), 16, 10)
-        m.sphere(DARK, T(hc + Vector((0, -hs * 0.08, -hs * 0.6))) @ S(hs * 0.17, hs * 0.12, hs * 0.1), 10, 8)
+            x, z = lx * bx * 0.27, lz * bz * 0.28
+            m.cyl(leg_col, T(x, (top + bx * 0.1) / 2, z) @ S(1, top - bx * 0.1, 1), bx * 0.15, bx * 0.15, 16)
+            m.sphere(foot_col, T(x, bx * 0.11, z - bx * 0.05) @ S(bx * 0.36, bx * 0.24, bx * 0.42), 14, 10)
     if pid == "Bunny":
-        m.box(WHITE, T(hc + Vector((0, -hs * 0.33, -hs * 0.55))) @ S(hs * 0.14, hs * 0.1, hs * 0.04))
+        for lx in (-1, 1):
+            m.sphere(acc, T(lx * bx * 0.28, bx * 0.1, bz * 0.2) @ S(bx * 0.34, bx * 0.2, bx * 0.75), 14, 10)
+
+    # Big head
+    hc = head_center(sp)
+    head_col = WHITE if pid == "Griffin" else col
+    m.sphere(head_col, T(hc) @ S(hs * 1.04, hs * 0.96, hs), 28, 18)
+    if pid == "Panda":
+        for side in (-1, 1):
+            ep = hc + Vector((side * hs * 0.21, hs * 0.02, -hs * 0.42))
+            m.sphere(acc, T(ep) @ Rz(side * -30) @ S(hs * 0.3, hs * 0.38, hs * 0.14), 14, 10)
+    # Muzzle / beak
+    if pid in ("Penguin", "Griffin", "Phoenix"):
+        bc = GOLD if pid == "Griffin" else ORANGE
+        m.rod(bc, hc + Vector((0, -hs * 0.1, -hs * 0.4)), hc + Vector((0, -hs * 0.16, -hs * 0.68)), hs * 0.13, 0.02, 12)
+    elif pid == "Piggy":
+        m.cyl(acc, T(hc + Vector((0, -hs * 0.14, -hs * 0.48))) @ Rx(90) @ S(1, hs * 0.14, 1), hs * 0.17, hs * 0.17, 18)
+        for side in (-1, 1):
+            m.sphere((150, 50, 80), T(hc + Vector((side * hs * 0.06, -hs * 0.14, -hs * 0.56))) @ S(hs * 0.05, hs * 0.08, hs * 0.03), 8, 6)
+    else:
+        snout = WHITE if pid in ("Panda", "Tiger", "Wolf", "Fox", "Kitty", "Cosmic Cat") else acc
+        m.sphere(snout, T(hc + Vector((0, -hs * 0.17, -hs * 0.38))) @ S(hs * 0.42, hs * 0.28, hs * 0.26), 18, 12)
+        m.sphere(DARK, T(hc + Vector((0, -hs * 0.09, -hs * 0.51))) @ S(hs * 0.13, hs * 0.09, hs * 0.07), 10, 8)
+        for side in (-1, 1):  # little "w" smile
+            a = hc + Vector((0, -hs * 0.2, -hs * 0.5))
+            m.rod(DARK, a, a + Vector((side * hs * 0.07, -hs * 0.035, hs * 0.01)), hs * 0.012, hs * 0.012, 5)
+    if pid == "Bunny":
+        m.box(WHITE, T(hc + Vector((0, -hs * 0.3, -hs * 0.48))) @ S(hs * 0.12, hs * 0.09, hs * 0.03))
     if pid in ("Kitty", "Cosmic Cat", "Tiger"):
         for side in (-1, 1):
-            for dy in (-0.04, 0.04):
-                a = hc + Vector((side * hs * 0.22, -hs * 0.15 + dy * hs, -hs * 0.5))
-                m.rod(WHITE, a, a + Vector((side * hs * 0.45, dy * hs * 2, hs * 0.05)), 0.03, 0.02, 4)
-    # Eyes (with panda patches)
+            for dy in (-0.035, 0.035):
+                a = hc + Vector((side * hs * 0.2, -hs * 0.15 + dy * hs, -hs * 0.44))
+                m.rod(DARK if pid != "Cosmic Cat" else WHITE, a, a + Vector((side * hs * 0.32, dy * hs * 1.5, hs * 0.04)), 0.035, 0.025, 4)
+    # Big glossy eyes with two highlights, and blush
     for side in (-1, 1):
-        ep = hc + Vector((side * hs * 0.24, hs * 0.1, -hs * 0.44))
-        if pid == "Panda":
-            m.sphere(DARK, T(ep + Vector((0, -hs * 0.02, hs * 0.03))) @ Rz(side * -25) @ S(hs * 0.3, hs * 0.36, hs * 0.12), 12, 8)
-        m.sphere(DARK if pid != "Panda" else (60, 50, 60), T(ep) @ S(hs * 0.19, hs * 0.25, hs * 0.12), 12, 8)
-        m.sphere(WHITE, T(ep + Vector((-side * hs * 0.03, hs * 0.06, -hs * 0.05))) @ S(hs * 0.07), 8, 6)
-        if pid not in ("Panda", "Penguin"):  # rosy cheeks
-            m.sphere(mix(col, (255, 120, 140), 0.45), T(hc + Vector((side * hs * 0.36, -hs * 0.14, -hs * 0.32))) @ S(hs * 0.16, hs * 0.1, hs * 0.08), 8, 6)
+        ep = hc + Vector((side * hs * 0.2, hs * 0.05, -hs * 0.455))
+        iris = (25, 20, 35) if pid != "Cosmic Cat" else (20, 60, 90)
+        m.sphere(iris, T(ep) @ S(hs * 0.19, hs * 0.26, hs * 0.1), 16, 12)
+        m.sphere(WHITE, T(ep + Vector((-side * hs * 0.03, hs * 0.06, -hs * 0.045))) @ S(hs * 0.08), 10, 8)
+        m.sphere(WHITE, T(ep + Vector((side * hs * 0.035, -hs * 0.06, -hs * 0.04))) @ S(hs * 0.035), 8, 6)
+        if pid not in ("Panda",):
+            m.sphere((255, 120, 150), T(hc + Vector((side * hs * 0.33, -hs * 0.12, -hs * 0.36))) @ S(hs * 0.14, hs * 0.08, hs * 0.06), 10, 6)
 
     # Ears
     ears = sp["Ears"]
     for side in (-1, 1):
         if ears == "Point":
-            base = hc + Vector((side * hs * 0.28, hs * 0.36, 0))
-            tip = base + Vector((side * hs * 0.1, hs * 0.42, 0.02))
-            m.rod(ear_col, base, tip, hs * 0.17, 0.02, 10)
-            m.rod(acc if pid != "Wolf" else (240, 200, 200), base + Vector((0, 0.02, -hs * 0.07)), tip + Vector((-side * hs * 0.03, -hs * 0.1, -hs * 0.06)), hs * 0.09, 0.01, 8)
+            base = hc + Vector((side * hs * 0.27, hs * 0.33, hs * 0.02))
+            tip = base + Vector((side * hs * 0.1, hs * 0.38, 0.0))
+            m.rod(ear_col, base, tip, hs * 0.16, 0.03, 12)
+            inner = (255, 170, 190) if pid not in ("Cosmic Cat",) else acc
+            m.rod(inner, base + Vector((0, 0.05, -hs * 0.07)), tip + Vector((-side * hs * 0.03, -hs * 0.1, -hs * 0.06)), hs * 0.08, 0.02, 8)
         elif ears == "Round":
-            p = hc + Vector((side * hs * 0.36, hs * 0.42, 0.02))
-            m.sphere(ear_col, T(p) @ S(hs * 0.34, hs * 0.34, hs * 0.15), 14, 8)
+            p = hc + Vector((side * hs * 0.34, hs * 0.38, hs * 0.03))
+            m.sphere(ear_col, T(p) @ S(hs * 0.32, hs * 0.32, hs * 0.16), 16, 10)
             if pid != "Panda":
-                m.sphere(acc, T(p + Vector((0, 0, -hs * 0.05))) @ S(hs * 0.2, hs * 0.2, hs * 0.08), 10, 6)
+                m.sphere((255, 170, 190) if pid != "Piggy" else acc, T(p + Vector((0, 0, -hs * 0.06))) @ S(hs * 0.18, hs * 0.18, hs * 0.07), 12, 8)
         elif ears == "Long":
-            p = hc + Vector((side * hs * 0.2, hs * 0.85, 0.05))
-            m.sphere(ear_col, T(p) @ Rz(side * -10) @ S(hs * 0.26, hs * 1.0, hs * 0.15), 14, 10)
-            m.sphere(acc, T(p + Vector((0, 0, -hs * 0.06))) @ Rz(side * -10) @ S(hs * 0.14, hs * 0.75, hs * 0.06), 10, 8)
+            p = hc + Vector((side * hs * 0.18, hs * 0.78, hs * 0.04))
+            m.sphere(ear_col, T(p) @ Rz(side * -12) @ S(hs * 0.24, hs * 0.8, hs * 0.14), 16, 12)
+            m.sphere(acc, T(p + Vector((0, 0, -hs * 0.055))) @ Rz(side * -12) @ S(hs * 0.13, hs * 0.6, hs * 0.06), 12, 10)
 
-    # Horns / antlers / crests
+    # Horns, antlers, crests, manes
     if sp["Horn"]:
         if pid == "Deer":
+            antler = (170, 115, 70)
             for side in (-1, 1):
-                a = hc + Vector((side * hs * 0.22, hs * 0.42, hs * 0.05))
-                b = a + Vector((side * hs * 0.35, hs * 0.9, hs * 0.15))
-                m.rod((150, 110, 70), a, b, hs * 0.06, hs * 0.04, 8)
-                m.rod((150, 110, 70), a + (b - a) * 0.5, a + (b - a) * 0.5 + Vector((side * hs * 0.05, hs * 0.35, -hs * 0.2)), hs * 0.04, hs * 0.02, 6)
-                m.rod((150, 110, 70), a + (b - a) * 0.8, a + (b - a) * 0.8 + Vector((-side * hs * 0.15, hs * 0.3, -hs * 0.1)), hs * 0.035, hs * 0.02, 6)
+                a = hc + Vector((side * hs * 0.2, hs * 0.4, hs * 0.05))
+                b = a + Vector((side * hs * 0.3, hs * 0.6, hs * 0.1))
+                m.rod(antler, a, b, hs * 0.05, hs * 0.035, 8)
+                for t, d in ((0.45, Vector((side * hs * 0.04, hs * 0.25, -hs * 0.15))), (0.8, Vector((-side * hs * 0.12, hs * 0.22, -hs * 0.06)))):
+                    q = a + (b - a) * t
+                    m.rod(antler, q, q + d, hs * 0.035, hs * 0.02, 6)
+                m.sphere(antler, T(b) @ S(hs * 0.07), 8, 6)
         elif pid == "Dragon":
             for side in (-1, 1):
-                a = hc + Vector((side * hs * 0.25, hs * 0.38, hs * 0.1))
-                m.rod(acc, a, a + Vector((side * hs * 0.12, hs * 0.45, hs * 0.45)), hs * 0.1, 0.01, 8)
+                a = hc + Vector((side * hs * 0.24, hs * 0.36, hs * 0.1))
+                m.rod(acc, a, a + Vector((side * hs * 0.1, hs * 0.36, hs * 0.32)), hs * 0.09, 0.01, 10)
         else:
-            a = hc + Vector((0, hs * 0.45, -hs * 0.18))
-            b = a + Vector((0, hs * 0.7, -hs * 0.22))
-            m.rod(GOLD if pid == "Unicorn" else acc, a, b, hs * 0.09, 0.01, 10)
-            for i in range(3):  # spiral ridges
-                p = a + (b - a) * (0.2 + i * 0.25)
-                m.sphere(mix(GOLD, WHITE, 0.4), T(p) @ S(hs * (0.15 - i * 0.03), hs * 0.04, hs * (0.15 - i * 0.03)), 10, 4)
+            a = hc + Vector((0, hs * 0.44, -hs * 0.16))
+            b = a + Vector((0, hs * 0.55, -hs * 0.18))
+            m.rod(GOLD, a, b, hs * 0.08, 0.01, 12)
+            for i in range(3):
+                q = a + (b - a) * (0.18 + i * 0.25)
+                r = hs * (0.13 - i * 0.03)
+                m.sphere(mix(GOLD, WHITE, 0.45), T(q) @ S(r, hs * 0.035, r), 12, 4)
     if pid == "Phoenix":
-        for i, dz in enumerate((-0.1, 0.05, 0.2)):
+        for i, dz in enumerate((-0.12, 0.04, 0.2)):
             a = hc + Vector((0, hs * 0.4, hs * dz))
-            m.rod(acc if i != 1 else col, a, a + Vector((0, hs * 0.55, hs * (0.2 + dz))), hs * 0.08, 0.01, 6)
+            m.rod(acc if i != 1 else (255, 150, 40), a, a + Vector((0, hs * 0.45, hs * (0.2 + dz))), hs * 0.07, 0.01, 8)
     if pid == "Unicorn":
-        for i in range(6):
-            t = i / 5
-            p = Vector((0, legH + by * (0.75 + 0.55 * (1 - t)), -bz * 0.5 + t * bz * 0.4 - hs * 0.1))
-            m.sphere(acc if i % 2 == 0 else (190, 140, 255), T(p) @ S(hs * 0.34, hs * 0.34, hs * 0.3), 10, 8)
+        mane = [acc, (180, 130, 255), (120, 210, 255)]
+        for i in range(7):
+            t = i / 6
+            p = Vector((0, legH + by * (0.7 + 0.45 * (1 - t)) + hs * 0.25 * (1 - t), -bz * 0.15 + t * bz * 0.35))
+            m.sphere(mane[i % 3], T(p) @ S(hs * 0.3, hs * 0.3, hs * 0.26), 12, 8)
 
     # Tail
-    tb = Vector((0, bodyY + by * 0.15, bz / 2))
+    tb = Vector((0, bodyY + by * 0.15, bz * 0.48))
     tail = sp["Tail"]
     if tail == "Short":
-        m.sphere(WHITE if pid == "Bunny" else acc, T(tb + Vector((0, 0, bx * 0.05))) @ S(bx * 0.34), 12, 8)
+        m.sphere(WHITE if pid == "Bunny" else acc if pid != "Panda" else acc, T(tb + Vector((0, 0, bx * 0.04))) @ S(bx * 0.3), 14, 10)
     elif tail == "Fluffy":
-        c = tb + Vector((0, by * 0.3, bz * 0.2))
-        m.sphere(col if pid != "Bunny" else WHITE, T(c) @ Rx(-35) @ S(bx * 0.45, bx * 0.45, bz * 0.5), 14, 10)
-        m.sphere(WHITE if pid == "Fox" else acc, T(c + Vector((0, by * 0.18, bz * 0.2))) @ S(bx * 0.3), 10, 8)
+        c = tb + Vector((0, by * 0.35, bz * 0.16))
+        tcol = WHITE if pid == "Bunny" else col
+        m.sphere(tcol, T(c) @ Rx(-40) @ S(bx * 0.42, bx * 0.42, bz * 0.48), 16, 12)
+        m.sphere(WHITE if pid == "Fox" else acc, T(c + Vector((0, by * 0.2, bz * 0.17))) @ S(bx * 0.3), 12, 8)
         if pid == "Phoenix":
             for side in (-1, 0, 1):
-                a = tb + Vector((side * bx * 0.15, 0, 0))
-                m.rod(acc if side == 0 else col, a, a + Vector((side * bx * 0.3, by * 0.6, bz * 0.75)), bx * 0.07, 0.01, 6)
+                a = tb + Vector((side * bx * 0.12, 0, 0))
+                m.rod(acc if side == 0 else (255, 150, 40), a, a + Vector((side * bx * 0.28, by * 0.55, bz * 0.6)), bx * 0.07, 0.01, 8)
     elif tail == "Long":
-        d = Vector((0, 0.5, 0.87)) if pid not in ("Dragon", "Griffin") else Vector((0, 0.15, 1))
-        L = bz * (0.65 if pid != "Dragon" else 0.85)
-        m.rod(col, tb, tb + d * L, bx * 0.1, bx * 0.04, 10)
-        tip_col = acc if pid in ("Unicorn", "Griffin", "Dragon", "Cosmic Cat") else col
-        m.sphere(tip_col, T(tb + d * L) @ S(bx * (0.28 if pid != "Dragon" else 0.2)), 10, 8)
+        d = Vector((0, 0.55, 0.84)) if pid not in ("Dragon", "Griffin") else Vector((0, 0.2, 1))
+        L = bz * (0.55 if pid != "Dragon" else 0.75)
+        m.rod(col, tb, tb + d * L, bx * 0.09, bx * 0.05, 12)
+        tip = acc if pid in ("Unicorn", "Griffin", "Dragon", "Cosmic Cat") else col
+        m.sphere(tip, T(tb + d * L) @ S(bx * (0.24 if pid != "Dragon" else 0.2)), 12, 8)
 
-    # Wings / flippers
+    # Wings: three layered feathers per side, swept up and back
     if sp["Wings"]:
         for side in (-1, 1):
-            base = Vector((side * bx * 0.75, bodyY + by * 0.35, -bz * 0.05))
-            for i, (sc, dy, c2) in enumerate(((1.0, 0.0, acc), (0.8, 0.08, col), (0.6, 0.16, acc))):
-                m.sphere(c2, T(base + Vector((side * bx * 0.08 * i, dy, bz * 0.08 * i))) @ Rz(side * 25) @ S(bx * 1.05 * sc, by * 0.12, bz * 0.6 * sc), 14, 8)
+            base = Vector((side * bx * 0.5, bodyY + by * 0.38, bz * 0.02))
+            for i, (sc, c2) in enumerate(((1.0, acc), (0.82, col), (0.62, WHITE if pid != "Dragon" else acc))):
+                ctr = base + Vector((side * bx * 0.35 * sc, by * 0.12 * i, bz * 0.05 * i))
+                m.sphere(c2, T(ctr) @ Ry(side * -12) @ Rz(side * 32) @ S(bx * 0.9 * sc, by * 0.1, bz * 0.42 * sc), 16, 8)
     if pid == "Penguin":
         for side in (-1, 1):
-            m.sphere(col, T(side * bx * 0.55, bodyY, 0) @ Rz(side * 20) @ S(bx * 0.18, by * 0.7, bz * 0.4), 12, 8)
+            m.sphere(col, T(side * bx * 0.5, bodyY, 0) @ Rz(side * 22) @ S(bx * 0.18, by * 0.65, bz * 0.42), 14, 10)
     return m
 
 
@@ -455,11 +476,11 @@ def build_egg(eid, color):
 
 # ----------------------------------------------------------------- props
 
-GREEN = (80, 175, 80)
-GREEN_D = (50, 130, 60)
-BARK = (125, 85, 55)
-STONE = (150, 150, 160)
-WOOD = (170, 120, 75)
+GREEN = (95, 215, 75)
+GREEN_D = (55, 170, 65)
+BARK = (160, 100, 60)
+STONE = (175, 180, 205)
+WOOD = (215, 150, 90)
 
 
 def build_props():
@@ -604,7 +625,7 @@ def make_material(palette_path):
     tex.image = bpy.data.images.load(palette_path)
     tex.interpolation = "Closest"
     nt.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
-    bsdf.inputs["Roughness"].default_value = 0.55
+    bsdf.inputs["Roughness"].default_value = 0.42
     return mat
 
 
@@ -621,7 +642,8 @@ def export_fbx(obj, path):
         path_mode="COPY", embed_textures=True)
 
 
-def setup_render(samples):
+def setup_render(samples, outline=1.4):
+    """Bright toon look: true colours (no filmic wash-out), blue sky, black outlines."""
     sc = bpy.context.scene
     sc.render.engine = "CYCLES"
     sc.cycles.device = "CPU"
@@ -629,13 +651,43 @@ def setup_render(samples):
     sc.cycles.use_denoising = False
     sc.render.resolution_x = sc.render.resolution_y = 320
     sc.render.film_transparent = False
+    sc.view_settings.view_transform = "Standard"
+    sc.view_settings.look = "None"
+    sc.view_settings.exposure = 0.25
+    try:
+        sc.render.use_freestyle = True
+        sc.render.line_thickness_mode = "ABSOLUTE"
+        sc.render.line_thickness = outline
+        ls = sc.view_layers[0].freestyle_settings.linesets[0]
+        ls.select_by_visibility = True
+        ls.select_silhouette = True
+        ls.select_border = True
+        ls.select_crease = False
+        if ls.linestyle is None:
+            ls.linestyle = bpy.data.linestyles.new("Toon")
+        ls.linestyle.color = (0.08, 0.06, 0.12)
+    except Exception as e:  # Freestyle missing in this build: no outlines
+        print("no outlines:", e)
     world = bpy.data.worlds.new("W")
     world.use_nodes = True
-    world.node_tree.nodes["Background"].inputs[0].default_value = (0.78, 0.86, 0.98, 1)
-    world.node_tree.nodes["Background"].inputs[1].default_value = 0.9
+    nt = world.node_tree
+    bg = nt.nodes["Background"]
+    coord = nt.nodes.new("ShaderNodeTexCoord")
+    sep = nt.nodes.new("ShaderNodeSeparateXYZ")
+    ramp = nt.nodes.new("ShaderNodeValToRGB")
+    ramp.color_ramp.elements[0].position = 0.0
+    ramp.color_ramp.elements[0].color = (0.62, 0.86, 1.0, 1)
+    ramp.color_ramp.elements[1].position = 0.6
+    ramp.color_ramp.elements[1].color = (0.18, 0.52, 1.0, 1)
+    nt.links.new(coord.outputs["Generated"], sep.inputs[0])
+    nt.links.new(sep.outputs["Z"], ramp.inputs["Fac"])
+    nt.links.new(ramp.outputs["Color"], bg.inputs[0])
+    bg.inputs[1].default_value = 0.85
     sc.world = world
     sun = bpy.data.objects.new("Sun", bpy.data.lights.new("Sun", "SUN"))
-    sun.data.energy = 3.5
+    sun.data.energy = 4.0
+    sun.data.color = (1.0, 0.96, 0.88)
+    sun.data.angle = math.radians(8)
     sun.rotation_euler = (math.radians(50), math.radians(10), math.radians(-35))
     sc.collection.objects.link(sun)
     cam = bpy.data.objects.new("Cam", bpy.data.cameras.new("Cam"))

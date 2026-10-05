@@ -42,7 +42,7 @@ function Notify.Show(text: string, kind: string?)
 		BackgroundTransparency = 0.05,
 	}, stack)
 	UI.Corner(f, 10)
-	UI.Stroke(f, Color3.fromRGB(20, 20, 30), 2)
+	UI.Stroke(f, Color3.fromRGB(28, 45, 110), 2)
 	UI.Pad(f, 6)
 	UI.Text({ Text = text, Size = UDim2.fromScale(1, 1) }, f)
 	task.delay(if big then 5 else 3, function()

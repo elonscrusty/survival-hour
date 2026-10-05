@@ -28,21 +28,21 @@ Pets.Rarities = {
 }
 
 local list: { Species } = {
-	{ Id = "Pup", Name = "Pup", Rarity = "Common", Body = { 2.2, 1.6, 3.2 }, Head = 1.5, Legs = 1.2, Color = { 196, 150, 100 }, Accent = { 120, 80, 50 }, Ears = "Round", Tail = "Short" },
-	{ Id = "Kitty", Name = "Kitty", Rarity = "Common", Body = { 2, 1.5, 3 }, Head = 1.4, Legs = 1.1, Color = { 255, 170, 80 }, Accent = { 255, 240, 220 }, Ears = "Point", Tail = "Long" },
-	{ Id = "Bunny", Name = "Bunny", Rarity = "Common", Body = { 2, 1.8, 2.6 }, Head = 1.4, Legs = 0.9, Color = { 245, 245, 245 }, Accent = { 255, 180, 200 }, Ears = "Long", Tail = "Fluffy" },
-	{ Id = "Piggy", Name = "Piggy", Rarity = "Uncommon", Body = { 2.6, 1.9, 3.2 }, Head = 1.6, Legs = 0.9, Color = { 255, 175, 190 }, Accent = { 230, 120, 140 }, Ears = "Round", Tail = "Short" },
-	{ Id = "Fox", Name = "Fox", Rarity = "Uncommon", Body = { 2, 1.5, 3.4 }, Head = 1.4, Legs = 1.3, Color = { 235, 110, 40 }, Accent = { 255, 255, 255 }, Ears = "Point", Tail = "Fluffy" },
-	{ Id = "Penguin", Name = "Penguin", Rarity = "Uncommon", Body = { 2.2, 2.4, 2.2 }, Head = 1.5, Legs = 0.7, Color = { 40, 40, 50 }, Accent = { 250, 250, 250 }, Tail = "Short" },
-	{ Id = "Panda", Name = "Panda", Rarity = "Rare", Body = { 2.8, 2.2, 3.4 }, Head = 1.8, Legs = 1.1, Color = { 245, 245, 245 }, Accent = { 30, 30, 30 }, Ears = "Round", Tail = "Short" },
-	{ Id = "Deer", Name = "Deer", Rarity = "Rare", Body = { 2, 1.7, 3.6 }, Head = 1.3, Legs = 2, Color = { 170, 110, 60 }, Accent = { 240, 220, 190 }, Ears = "Point", Tail = "Short", Horn = true },
-	{ Id = "Wolf", Name = "Wolf", Rarity = "Rare", Body = { 2.3, 1.8, 3.8 }, Head = 1.5, Legs = 1.6, Color = { 120, 125, 140 }, Accent = { 220, 220, 230 }, Ears = "Point", Tail = "Fluffy" },
-	{ Id = "Tiger", Name = "Tiger", Rarity = "Epic", Body = { 2.6, 2, 4.2 }, Head = 1.7, Legs = 1.6, Color = { 255, 140, 30 }, Accent = { 30, 20, 20 }, Ears = "Round", Tail = "Long" },
-	{ Id = "Unicorn", Name = "Unicorn", Rarity = "Epic", Body = { 2.4, 2.2, 4.2 }, Head = 1.6, Legs = 2.2, Color = { 255, 240, 255 }, Accent = { 255, 140, 230 }, Ears = "Point", Tail = "Long", Horn = true },
-	{ Id = "Griffin", Name = "Griffin", Rarity = "Legendary", Body = { 2.6, 2.2, 4.2 }, Head = 1.6, Legs = 1.8, Color = { 230, 190, 110 }, Accent = { 255, 255, 255 }, Ears = "Point", Tail = "Long", Wings = true },
-	{ Id = "Dragon", Name = "Dragon", Rarity = "Legendary", Body = { 3, 2.4, 4.8 }, Head = 1.9, Legs = 1.7, Color = { 60, 180, 90 }, Accent = { 255, 220, 80 }, Tail = "Long", Horn = true, Wings = true },
-	{ Id = "Phoenix", Name = "Phoenix", Rarity = "Mythic", Body = { 2.6, 2.4, 3.8 }, Head = 1.6, Legs = 1.6, Color = { 255, 90, 30 }, Accent = { 255, 230, 60 }, Tail = "Fluffy", Wings = true, Neon = true },
-	{ Id = "Cosmic Cat", Name = "Cosmic Cat", Rarity = "Mythic", Body = { 2.4, 1.9, 3.6 }, Head = 1.6, Legs = 1.6, Color = { 60, 30, 140 }, Accent = { 120, 255, 255 }, Ears = "Point", Tail = "Long", Neon = true },
+	{ Id = "Pup", Name = "Pup", Rarity = "Common", Body = { 3.4, 2.6, 4.2 }, Head = 3.4, Legs = 1.2, Color = { 205, 140, 80 }, Accent = { 255, 228, 190 }, Ears = "Round", Tail = "Short" },
+	{ Id = "Kitty", Name = "Kitty", Rarity = "Common", Body = { 3.2, 2.4, 4.2 }, Head = 3.3, Legs = 1.2, Color = { 255, 160, 60 }, Accent = { 255, 242, 225 }, Ears = "Point", Tail = "Long" },
+	{ Id = "Bunny", Name = "Bunny", Rarity = "Common", Body = { 3.2, 2.8, 3.8 }, Head = 3.3, Legs = 1, Color = { 250, 250, 255 }, Accent = { 255, 160, 205 }, Ears = "Long", Tail = "Fluffy" },
+	{ Id = "Piggy", Name = "Piggy", Rarity = "Uncommon", Body = { 3.8, 2.8, 4.4 }, Head = 3.4, Legs = 1, Color = { 255, 160, 190 }, Accent = { 255, 105, 150 }, Ears = "Round", Tail = "Short" },
+	{ Id = "Fox", Name = "Fox", Rarity = "Uncommon", Body = { 3.2, 2.4, 4.6 }, Head = 3.2, Legs = 1.3, Color = { 255, 115, 30 }, Accent = { 255, 255, 255 }, Ears = "Point", Tail = "Fluffy" },
+	{ Id = "Penguin", Name = "Penguin", Rarity = "Uncommon", Body = { 3.4, 3.4, 3.2 }, Head = 3.2, Legs = 0.9, Color = { 45, 60, 105 }, Accent = { 255, 255, 255 }, Tail = "Short" },
+	{ Id = "Panda", Name = "Panda", Rarity = "Rare", Body = { 4, 3, 4.6 }, Head = 3.6, Legs = 1.2, Color = { 255, 255, 255 }, Accent = { 35, 35, 45 }, Ears = "Round", Tail = "Short" },
+	{ Id = "Deer", Name = "Deer", Rarity = "Rare", Body = { 3.2, 2.6, 4.8 }, Head = 3.1, Legs = 1.8, Color = { 205, 125, 65 }, Accent = { 255, 238, 205 }, Ears = "Point", Tail = "Short", Horn = true },
+	{ Id = "Wolf", Name = "Wolf", Rarity = "Rare", Body = { 3.6, 2.8, 5 }, Head = 3.4, Legs = 1.5, Color = { 125, 150, 205 }, Accent = { 240, 246, 255 }, Ears = "Point", Tail = "Fluffy" },
+	{ Id = "Tiger", Name = "Tiger", Rarity = "Epic", Body = { 3.8, 3, 5.2 }, Head = 3.6, Legs = 1.5, Color = { 255, 145, 20 }, Accent = { 40, 25, 30 }, Ears = "Round", Tail = "Long" },
+	{ Id = "Unicorn", Name = "Unicorn", Rarity = "Epic", Body = { 3.6, 3, 5.2 }, Head = 3.4, Legs = 1.9, Color = { 255, 246, 255 }, Accent = { 255, 115, 215 }, Ears = "Point", Tail = "Long", Horn = true },
+	{ Id = "Griffin", Name = "Griffin", Rarity = "Legendary", Body = { 4, 3.2, 5.4 }, Head = 3.5, Legs = 1.7, Color = { 245, 190, 90 }, Accent = { 255, 255, 255 }, Ears = "Point", Tail = "Long", Wings = true },
+	{ Id = "Dragon", Name = "Dragon", Rarity = "Legendary", Body = { 4.4, 3.4, 6 }, Head = 3.8, Legs = 1.6, Color = { 70, 210, 110 }, Accent = { 255, 215, 60 }, Tail = "Long", Horn = true, Wings = true },
+	{ Id = "Phoenix", Name = "Phoenix", Rarity = "Mythic", Body = { 4, 3.2, 5 }, Head = 3.5, Legs = 1.6, Color = { 255, 80, 40 }, Accent = { 255, 225, 50 }, Tail = "Fluffy", Wings = true, Neon = true },
+	{ Id = "Cosmic Cat", Name = "Cosmic Cat", Rarity = "Mythic", Body = { 3.8, 3, 5 }, Head = 3.6, Legs = 1.6, Color = { 95, 55, 210 }, Accent = { 110, 255, 255 }, Ears = "Point", Tail = "Long", Neon = true },
 }
 
 Pets.List = list

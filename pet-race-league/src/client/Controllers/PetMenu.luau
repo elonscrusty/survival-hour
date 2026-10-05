@@ -61,7 +61,7 @@ local function renderDetail()
 		local need = PetStats.XpToNext(lvl)
 		local row = UI.Frame({ Size = UDim2.new(1, 0, 0, 26), Position = UDim2.new(0, 0, y, 54 + (i - 1) * 30), BackgroundTransparency = 1 }, detail)
 		UI.Text({ Text = stat .. " " .. lvl, Size = UDim2.new(0.4, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Left, Font = UI.Body }, row)
-		local bar = UI.Frame({ Size = UDim2.new(0.58, 0, 0.6, 0), Position = UDim2.new(0.42, 0, 0.2, 0), BackgroundColor3 = Color3.fromRGB(20, 20, 30) }, row)
+		local bar = UI.Frame({ Size = UDim2.new(0.58, 0, 0.6, 0), Position = UDim2.new(0.42, 0, 0.2, 0), BackgroundColor3 = Color3.fromRGB(28, 45, 110) }, row)
 		UI.Corner(bar, 6)
 		local fill = UI.Frame({ Size = UDim2.new(if lvl >= Config.Stats.MaxLevel then 1 else math.clamp(xp / need, 0, 1), 0, 1, 0), BackgroundColor3 = STAT_COLORS[stat] }, bar)
 		UI.Corner(fill, 6)
@@ -106,7 +106,7 @@ local function renderDetail()
 	box.Font = UI.Body
 	box.TextScaled = true
 	box.TextColor3 = Color3.new(1, 1, 1)
-	box.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+	box.BackgroundColor3 = Color3.fromRGB(28, 45, 110)
 	box.ClearTextOnFocus = false
 	UI.Corner(box, 8)
 	box.Parent = detail

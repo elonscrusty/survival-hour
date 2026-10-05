@@ -63,7 +63,7 @@ local function render()
 			dynamic(row)
 			UI.Corner(row, 10)
 			UI.Text({ Text = q.Text, Size = UDim2.new(0.62, 0, 0, 26), Position = UDim2.fromOffset(12, 6), TextXAlignment = Enum.TextXAlignment.Left }, row)
-			local bar = UI.Frame({ Size = UDim2.new(0.5, 0, 0, 12), Position = UDim2.fromOffset(12, 40), BackgroundColor3 = Color3.fromRGB(20, 20, 30) }, row)
+			local bar = UI.Frame({ Size = UDim2.new(0.5, 0, 0, 12), Position = UDim2.fromOffset(12, 40), BackgroundColor3 = Color3.fromRGB(28, 45, 110) }, row)
 			UI.Corner(bar, 6)
 			local fill = UI.Frame({ Size = UDim2.fromScale(prog / q.Need, 1), BackgroundColor3 = UI.Colors.Gold }, bar)
 			UI.Corner(fill, 6)
@@ -112,7 +112,7 @@ function DailyMenu.Start()
 	box.Font = UI.Body
 	box.TextScaled = true
 	box.TextColor3 = Color3.new(1, 1, 1)
-	box.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+	box.BackgroundColor3 = Color3.fromRGB(28, 45, 110)
 	box.ClearTextOnFocus = false
 	UI.Corner(box, 10)
 	UI.Pad(box, 8)

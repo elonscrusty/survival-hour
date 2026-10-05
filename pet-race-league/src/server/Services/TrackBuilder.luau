@@ -15,9 +15,9 @@ local Util: any
 local current: Folder? = nil
 
 local THEMES = {
-	Meadow = { Floor = Color3.fromRGB(120, 205, 95), FloorMat = Enum.Material.Grass, Wall = Color3.fromRGB(255, 255, 255), Prop = Color3.fromRGB(255, 120, 80) },
-	Canyon = { Floor = Color3.fromRGB(215, 150, 90), FloorMat = Enum.Material.Sandstone, Wall = Color3.fromRGB(150, 85, 50), Prop = Color3.fromRGB(110, 70, 45) },
-	Sky = { Floor = Color3.fromRGB(240, 245, 255), FloorMat = Enum.Material.SmoothPlastic, Wall = Color3.fromRGB(140, 200, 255), Prop = Color3.fromRGB(255, 170, 230) },
+	Meadow = { Floor = Color3.fromRGB(110, 225, 85), FloorMat = Enum.Material.SmoothPlastic, Wall = Color3.fromRGB(255, 255, 255), Prop = Color3.fromRGB(255, 95, 120) },
+	Canyon = { Floor = Color3.fromRGB(255, 175, 90), FloorMat = Enum.Material.SmoothPlastic, Wall = Color3.fromRGB(205, 110, 60), Prop = Color3.fromRGB(150, 90, 210) },
+	Sky = { Floor = Color3.fromRGB(245, 250, 255), FloorMat = Enum.Material.SmoothPlastic, Wall = Color3.fromRGB(120, 200, 255), Prop = Color3.fromRGB(255, 150, 230) },
 }
 
 export type Built = {
@@ -85,7 +85,7 @@ function TrackBuilder.Build(track: any): Built
 				arrow.CanQuery = false
 			end
 		elseif p.Kind == "Mud" then
-			floor(p.X0, p.X1, p.Y0, Color3.fromRGB(100, 70, 45), Enum.Material.Mud, "Mud")
+			floor(p.X0, p.X1, p.Y0, Color3.fromRGB(100, 70, 45), Enum.Material.SmoothPlastic, "Mud")
 		elseif p.Kind == "Ramp" then
 			local rise = p.Y1 - p.Y0
 			local len = math.sqrt(L * L + rise * rise)

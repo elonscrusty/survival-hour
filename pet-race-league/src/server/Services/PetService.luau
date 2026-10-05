@@ -57,9 +57,27 @@ local function state(p: Player): State
 	return s
 end
 
+-- The rider sits (sit animation) instead of standing, so the hips go lower than a
+-- standing hip height: this share of the normal hip height stays above the back.
+local SEAT = 0.3
+
+local function rideHip(s: State): number
+	return (s.DefaultHip :: number) * SEAT + (s.Built :: PetModel.Built).Height
+end
+
 local function equippedPet(p: Player): PetStats.Pet?
 	local d = Data.Get(p)
 	return d and Profile.EquippedPet(d)
+end
+
+-- Cartoon outline around a pet in the world (Highlights don't show in viewports).
+local function outline(built: PetModel.Built)
+	local hl = Instance.new("Highlight")
+	hl.FillTransparency = 1
+	hl.OutlineColor = Color3.fromRGB(30, 22, 45)
+	hl.OutlineTransparency = 0.15
+	hl.DepthMode = Enum.HighlightDepthMode.Occluded
+	hl.Parent = built.Model
 end
 
 local function destroyModel(s: State)
@@ -86,7 +104,7 @@ function PetService.Apply(p: Player)
 	if s.Riding and pet and s.Built then
 		local ride = PetStats.Ride(pet)
 		speed, jump = ride.WalkSpeed, ride.JumpPower
-		hum.HipHeight = (s.DefaultHip :: number) + s.Built.Height
+		hum.HipHeight = rideHip(s)
 		if os.clock() < s.DashUntil then
 			speed *= Config.Ride.DashBoost
 		end
@@ -117,16 +135,22 @@ local function mount(p: Player)
 	local ride = PetStats.Ride(pet)
 	local built = PetModel.Build(pet.Species, ride.Size, pet.Paint)
 	PetModel.SetTrail(built, pet.Trail)
+	outline(built)
 	if s.DefaultHip == nil then
 		s.DefaultHip = hum.HipHeight
 	end
-	local hip = s.DefaultHip :: number
-	-- Rider stands on the pet's back: the pet's feet go where the rider's feet were.
-	local feetY = -(hip + root.Size.Y / 2) - built.Height
-	built.Model:PivotTo(root.CFrame * CFrame.new(0, feetY, 0))
-	local weld = Instance.new("WeldConstraint")
+	s.Built = built
+	-- Rider sits on the pet's back, a little behind the middle (the big head is in
+	-- front). A Weld (not WeldConstraint) so clients can bob the pet as it runs.
+	local feetY = -(rideHip(s) + root.Size.Y / 2)
+	local seat = CFrame.new(0, feetY, -built.Footprint.Y * 0.12)
+	built.Model:PivotTo(root.CFrame * seat)
+	local weld = Instance.new("Weld")
+	weld.Name = "RideWeld"
 	weld.Part0 = root
 	weld.Part1 = built.Root
+	weld.C0 = root.CFrame:ToObjectSpace(built.Root.CFrame)
+	weld.C1 = CFrame.new()
 	weld.Parent = built.Root
 	-- Invisible box around the pet's body that collides with the world, so hurdles,
 	-- steps and pillars block the pet (the visible parts don't collide). It starts
@@ -173,6 +197,7 @@ local function spawnFollower(p: Player)
 	local ride = PetStats.Ride(pet)
 	local built = PetModel.Build(pet.Species, ride.Size * 0.8, pet.Paint)
 	PetModel.SetTrail(built, pet.Trail)
+	outline(built)
 	for _, d in built.Model:GetDescendants() do
 		if d:IsA("BasePart") then
 			d.Anchored = true
