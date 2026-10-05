@@ -33,6 +33,9 @@ export type Profile = {
 	ExtraEquip: number, -- from Index rewards
 	ExtraStorage: number, -- from Index rewards
 	Receipts: { [string]: number }, -- PurchaseId -> os.time granted
+	ExpeditionMult: { [string]: number }, -- slot -> coin multiplier snapshotted at start
+	PendingTrade: string?, -- trade id whose journal may still need applying (see Logic/Trade)
+	AppliedTrades: { string }, -- newest trade ids already applied (journal replay guard)
 }
 
 local Schema = {}
@@ -44,6 +47,8 @@ Schema.MaxGems = 1e12
 Schema.MaxStat = 1e15
 Schema.MaxReceipts = 100 -- newest purchase ids kept for dedupe
 Schema.MaxUidLength = 24
+Schema.MaxAppliedTrades = 30
+Schema.MaxCoinMult = 1e6 -- sanity cap for snapshotted multipliers
 
 -- Settings the client may change (SetSetting) and their defaults. All booleans.
 Schema.SettingDefaults = {

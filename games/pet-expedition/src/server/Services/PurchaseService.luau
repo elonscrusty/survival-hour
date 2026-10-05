@@ -4,8 +4,9 @@
 --     is granted once (stored in the profile) and only reported as granted
 --     after the profile is saved, so a failed save means Roblox retries
 --     instead of the player losing the purchase.
---   * Game passes: checked with UserOwnsGamePassAsync on join and granted
---     right away from PromptGamePassPurchaseFinished.
+--   * Game passes: checked with UserOwnsGamePassAsync on join; after
+--     PromptGamePassPurchaseFinished the purchase is confirmed with
+--     UserOwnsGamePassAsync (retried) before granting.
 --   * DevPurchase: Studio only, for items whose Id is still 0.
 
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -33,10 +34,24 @@ function PurchaseService.Init(c)
 			return
 		end
 		local pass = Products.PassById[passId]
-		local s = ctx.DataService.Get(player)
-		if pass and s then
-			PurchaseService.GrantPass(player, s, pass.Key)
+		if not pass then
+			return
 		end
+		-- Don't trust the event alone: confirm ownership with Roblox.
+		for attempt = 1, 4 do
+			local ok, owns = pcall(function()
+				return MarketplaceService:UserOwnsGamePassAsync(player.UserId, pass.Id)
+			end)
+			if ok then
+				local s = ctx.DataService.Get(player)
+				if owns and s then
+					PurchaseService.GrantPass(player, s, pass.Key)
+				end
+				return
+			end
+			task.wait(attempt * 2)
+		end
+		warn("[PurchaseService] couldn't confirm pass", pass.Key, "for", player.UserId, "- it will be checked on next join")
 	end)
 
 	ctx.Util.Function("DevPurchase", function(player, s, key)
@@ -76,6 +91,7 @@ function PurchaseService._onLoaded(player: Player, s)
 				end)
 				if ok and owns then
 					s.Profile.Passes[pass.Key] = true
+					ctx.DataService.Touch(s)
 					changed = true
 				end
 			end
@@ -91,6 +107,7 @@ function PurchaseService.GrantPass(player: Player, s, key: string)
 		return
 	end
 	s.Profile.Passes[key] = true
+	ctx.DataService.Touch(s)
 	local pass = Products.PassByKey[key]
 	ctx.Util.Notify(player, "Purchased", { Name = if pass then pass.Name else key })
 	ctx.StateService.Dirty(player)
@@ -125,7 +142,7 @@ function PurchaseService._processReceipt(receipt)
 		return NotYet -- granted when they next join
 	end
 	local s = ctx.DataService.WaitFor(player, 30)
-	if not s or s.State == "Failed" or s.LockLost then
+	if not s or ctx.DataService.ReadOnly(s) then
 		return NotYet
 	end
 	local purchaseId = tostring(receipt.PurchaseId)
@@ -138,11 +155,13 @@ function PurchaseService._processReceipt(receipt)
 		if not Profile.HasReceipt(s.Profile, purchaseId) then
 			PurchaseService.GrantProduct(player, s, product)
 			Profile.RecordReceipt(s.Profile, purchaseId, os.time())
+			ctx.DataService.Touch(s)
 		end
 		if s.State == "Memory" then
 			return Granted
 		end
-		return if ctx.DataService.SaveNow(player) then Granted else NotYet
+		-- True only if a completed write includes this receipt.
+		return if ctx.DataService.SaveSession(s) then Granted else NotYet
 	end)
 	granting[purchaseId] = nil
 	if not ok then

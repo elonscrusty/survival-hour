@@ -277,32 +277,37 @@ end
 function BreakableService._break(b)
 	breakables[b.Id] = nil
 	countByArea[b.Area] = math.max(0, (countByArea[b.Area] or 1) - 1)
-	local total = 0
-	for _, dmg in b.Damage do
-		total += dmg
-	end
-	local now = os.time()
+	-- Split by damage among contributors still here (Logic/Economy.SplitBreak:
+	-- exact gem total, credit only for >= 5% of the damage).
+	local who: { Player } = {}
+	local damage: { number } = {}
 	for player, dmg in b.Damage do
-		local s = player.Parent ~= nil and ctx.DataService.Get(player)
-		if not s or total <= 0 then
-			continue
+		if player.Parent ~= nil and ctx.DataService.Get(player) then
+			table.insert(who, player)
+			table.insert(damage, dmg)
 		end
-		local share = dmg / total
+	end
+	local shares = Economy.SplitBreak(damage, b.Coins, b.Gems)
+	local now = os.time()
+	for i, player in who do
+		local s = ctx.DataService.Get(player)
+		local share = shares[i]
 		local p = s.Profile
-		local coins = Economy.AddCoins(p, math.max(1, b.Coins * share * ctx.StateService.CoinMult(s)), true)
-		local gems = 0
-		if b.Gems > 0 then
-			gems = Economy.AddGems(p, math.floor(b.Gems * share + 0.5))
+		local coins = Economy.AddCoins(p, share.Coins * ctx.StateService.CoinMult(s), true)
+		local gems = Economy.AddGems(p, share.Gems)
+		if share.Credit then
+			p.Stats.Broken = math.min(Schema.MaxStat, p.Stats.Broken + 1)
+			Rewards.AddQuestProgress(p, "Break", 1, now)
+			ctx.PetService.GiveXp(player, s, Config.XpPerBreak)
 		end
-		p.Stats.Broken = math.min(Schema.MaxStat, p.Stats.Broken + 1)
-		Rewards.AddQuestProgress(p, "Break", 1, now)
 		Rewards.AddQuestProgress(p, "Coins", coins, now)
-		ctx.PetService.GiveXp(player, s, Config.XpPerBreak)
-		ctx.Util.Notify(player, "Reward", {
-			Coins = if coins > 0 then coins else nil,
-			Gems = if gems > 0 then gems else nil,
-			Position = b.Position,
-		})
+		if coins > 0 or gems > 0 then
+			ctx.Util.Notify(player, "Reward", {
+				Coins = if coins > 0 then coins else nil,
+				Gems = if gems > 0 then gems else nil,
+				Position = b.Position,
+			})
+		end
 		ctx.StateService.Dirty(player)
 	end
 	local info = { Id = b.Id, Kind = b.Kind, Position = b.Position }

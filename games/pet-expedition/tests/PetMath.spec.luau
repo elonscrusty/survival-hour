@@ -87,4 +87,28 @@ return {
 		c.Uid = "3"
 		t.ok(PetMath.Stronger(a, c), "uid tiebreak")
 	end,
+	["gem pets scale with the given island, Meadow by default"] = function(t)
+		t.ok(PetMath.IsScaling("CrystalPup"), "prism pet scales")
+		t.no(PetMath.IsScaling("Puppy"), "egg pet doesn't")
+		local rare = Config.RarityPower.Rare
+		t.eq(PetMath.BasePower("CrystalPup"), rare * Areas.ById.Meadow.PowerMult, "meadow default")
+		t.eq(PetMath.BasePower("CrystalPup", "Frost"), rare * Areas.ById.Frost.PowerMult, "frost")
+		t.eq(PetMath.BasePower("CrystalPup", "Nowhere"), rare * Areas.ById.Meadow.PowerMult, "unknown area -> meadow")
+		t.eq(PetMath.BasePower("Puppy", "Starfall"), PetMath.BasePower("Puppy"), "egg pets fixed")
+		t.ok(near(PetMath.Power(pet("CrystalPup"), "Grove"), rare * Areas.ById.Grove.PowerMult), "power uses scale")
+	end,
+	["gem pets refund at Meadow level"] = function(t)
+		local p = pet("DiamondDragon", "Rainbow", true, 25)
+		local expect = math.max(1, math.floor(PetMath.Power(p, "Meadow") * Areas.ById.Meadow.CoinMult * Config.DeleteRefund))
+		t.eq(PetMath.DeleteRefund(p), expect, "meadow refund")
+		t.ok(PetMath.DeleteRefund(p) < Areas.ById.Grove.GateCost, "can't buy the second gate with one gem pet")
+	end,
+	["StrongerAt ranks gem pets by the scale island"] = function(t)
+		local gem = pet("CrystalPup")
+		gem.Uid = "1"
+		local owl = pet("Owl")
+		owl.Uid = "2"
+		t.ok(PetMath.StrongerAt("Meadow")(owl, gem), "owl beats a meadow-scaled pup")
+		t.ok(PetMath.StrongerAt("Starfall")(gem, owl), "starfall-scaled pup beats owl")
+	end,
 }

@@ -169,6 +169,63 @@ function Economy.ExtendServerLuck(currentUntil: number, now: number): number
 	return math.min(from + Config.ServerLuckSeconds, now + Config.MaxBoostSeconds)
 end
 
+export type Share = { Coins: number, Gems: number, Credit: boolean }
+
+Economy.MinCreditShare = 0.05 -- damage share needed for credit (quests, XP, min 1 coin)
+
+-- Splits a broken breakable's loot by damage dealt. `damage` is a list (one
+-- entry per contributor). Coins are returned unrounded (the caller applies
+-- each player's coin multiplier, then rounds). Gems use a largest-remainder
+-- split, so they always add up to exactly `gems` and never more. Contributors
+-- with at least MinCreditShare of the damage get Credit (and >= 1 coin).
+function Economy.SplitBreak(damage: { number }, coins: number, gems: number): { Share }
+	local out: { Share } = {}
+	local total = 0
+	for _, d in damage do
+		if Schema.IsFinite(d) and d > 0 then
+			total += d
+		end
+	end
+	local gemTotal = if Schema.IsFinite(gems) and gems > 0 then math.floor(gems) else 0
+	local coinTotal = if Schema.IsFinite(coins) and coins > 0 then coins else 0
+	local rema: { { I: number, R: number, D: number } } = {}
+	local given = 0
+	for i, d in damage do
+		local dmg = if Schema.IsFinite(d) and d > 0 then d else 0
+		local share = if total > 0 then dmg / total else 0
+		local credit = share >= Economy.MinCreditShare
+		local c = coinTotal * share
+		if credit then
+			c = math.max(1, c)
+		end
+		local exact = gemTotal * share
+		local g = math.floor(exact)
+		given += g
+		out[i] = { Coins = c, Gems = g, Credit = credit }
+		table.insert(rema, { I = i, R = exact - g, D = dmg })
+	end
+	table.sort(rema, function(a, b)
+		if a.R ~= b.R then
+			return a.R > b.R
+		end
+		if a.D ~= b.D then
+			return a.D > b.D
+		end
+		return a.I < b.I
+	end)
+	local left = gemTotal - given
+	for _, r in rema do
+		if left <= 0 or total <= 0 then
+			break
+		end
+		if r.D > 0 then
+			out[r.I].Gems += 1
+			left -= 1
+		end
+	end
+	return out
+end
+
 -- Opens the next island's gate. Islands open in order.
 function Economy.OpenGate(p: Profile, areaId: string): (boolean, string?)
 	local area = Areas.ById[areaId]

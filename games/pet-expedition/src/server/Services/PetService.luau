@@ -53,6 +53,9 @@ function PetService.Init(c)
 		if not list then
 			return U.Fail(err or "Bad pet list")
 		end
+		if s.Profile.PendingTrade then
+			return U.Fail("A trade is still being settled - rejoin to finish it")
+		end
 		local coins, err2 = Inventory.Delete(s.Profile, list, ctx.TradeService.OfferedSet(player))
 		if not coins then
 			return U.Fail(err2 or "Can't delete those pets")
@@ -76,6 +79,9 @@ function PetService.Init(c)
 	U.Function("CraftPet", function(player, s, uid)
 		if not U.IsStr(uid, Schema.MaxUidLength) then
 			return U.Fail("Bad request")
+		end
+		if s.Profile.PendingTrade then
+			return U.Fail("A trade is still being settled - rejoin to finish it")
 		end
 		local made, err = Inventory.Craft(s.Profile, uid, ctx.TradeService.OfferedSet(player))
 		if not made then

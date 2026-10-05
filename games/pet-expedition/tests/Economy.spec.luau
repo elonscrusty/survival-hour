@@ -153,4 +153,48 @@ return {
 		p.Coins = Schema.MaxCoins
 		t.no(Economy.Rebirth(p), "max rebirths")
 	end,
+	["break split: gems add up exactly"] = function(t)
+		for _, case in { { 1, 1, 1 }, { 5, 3, 2 }, { 1, 1, 1, 1, 1, 1, 1 }, { 100 }, { 0.3, 0.3, 0.4 } } do
+			for gems = 0, 7 do
+				local out = Economy.SplitBreak(case, 100, gems)
+				local sum = 0
+				for _, s in out do
+					t.ok(s.Gems >= 0 and s.Gems == math.floor(s.Gems), "whole gems")
+					sum += s.Gems
+				end
+				t.eq(sum, gems, "sum for " .. #case .. " players, " .. gems .. " gems")
+			end
+		end
+	end,
+	["break split: three equal players share 5 gems as 2/2/1"] = function(t)
+		local out = Economy.SplitBreak({ 10, 10, 10 }, 0, 5)
+		local counts = {}
+		for _, s in out do
+			counts[s.Gems] = (counts[s.Gems] or 0) + 1
+		end
+		t.eq(counts[2], 2, "two get 2")
+		t.eq(counts[1], 1, "one gets 1")
+	end,
+	["break split: coins by share, credit needs 5%"] = function(t)
+		local out = Economy.SplitBreak({ 96, 4 }, 1000, 0)
+		t.ok(math.abs(out[1].Coins - 960) < 1e-9, "big share")
+		t.ok(out[1].Credit, "credited")
+		t.no(out[2].Credit, "4% gets no credit")
+		t.ok(math.abs(out[2].Coins - 40) < 1e-9, "but still its coins")
+		local tiny = Economy.SplitBreak({ 999999, 1 }, 10, 0)
+		t.ok(tiny[2].Coins < 1, "no free minimum coin for a tiny hit")
+		local small = Economy.SplitBreak({ 95, 5 }, 1, 0)
+		t.ok(small[2].Credit, "exactly 5% is credited")
+		t.eq(small[2].Coins, 1, "credited players get at least 1 coin")
+	end,
+	["break split: bad input"] = function(t)
+		local out = Economy.SplitBreak({ 0 / 0, -5, 10 }, 0 / 0, -3)
+		t.eq(out[1].Gems + out[2].Gems + out[3].Gems, 0, "no gems from bad totals")
+		t.no(out[1].Credit, "nan damage")
+		t.no(out[2].Credit, "negative damage")
+		t.ok(out[3].Credit, "real damage")
+		local none = Economy.SplitBreak({ 0, 0 }, 100, 5)
+		t.eq(none[1].Gems + none[2].Gems, 0, "nobody hit it")
+		t.eq(#Economy.SplitBreak({}, 100, 5), 0, "empty")
+	end,
 }

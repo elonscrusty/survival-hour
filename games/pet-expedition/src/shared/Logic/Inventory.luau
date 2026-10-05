@@ -164,7 +164,7 @@ function Inventory.EquipBest(p: Profile)
 			table.insert(list, pet)
 		end
 	end
-	table.sort(list, PetMath.Stronger)
+	table.sort(list, PetMath.StrongerAt(Economy.HighestArea(p)))
 	local eq: { string } = {}
 	for i = 1, math.min(#list, Economy.MaxEquip(p)) do
 		table.insert(eq, list[i].Uid)
@@ -185,8 +185,9 @@ end
 
 function Inventory.EquippedPower(p: Profile): number
 	local total = 0
+	local scale = Economy.HighestArea(p)
 	for _, pet in Inventory.EquippedPets(p) do
-		total += PetMath.Power(pet)
+		total += PetMath.Power(pet, scale)
 	end
 	return total
 end
