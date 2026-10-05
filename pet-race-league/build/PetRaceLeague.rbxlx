@@ -150,6 +150,17 @@ Config.Leagues = {
 
 Config.AutosaveEvery = 120
 
+-- Badge ids from the Creator Dashboard (Badges). nil = not created yet (skipped).
+Config.Badges = {
+	FirstRace = nil :: number?, -- finish your first race
+	FirstWin = nil :: number?, -- win a race against other players
+	GoldMedal = nil :: number?, -- get a Gold medal
+	Legendary = nil :: number?, -- hatch a Legendary or Mythic pet
+	Gold = nil :: number?, -- reach Gold league
+	Champion = nil :: number?, -- reach Champion league
+	MaxLevel = nil :: number?, -- get any pet stat to level 50
+}
+
 return Config
 ]]></string>
         </Properties>
@@ -348,6 +359,135 @@ return AssetFit
         </Item>
         <Item class="ModuleScript" referent="8">
           <Properties>
+            <string name="Name">Daily</string>
+            <string name="Source"><![CDATA[-- Daily login streak and daily quests (tested by tests/Daily.spec.luau).
+-- Quest progress needs no per-event tracking: when a day starts the profile snapshots
+-- the lifetime Stats, and progress is "stat now - stat then". Everyone gets the same
+-- three quests each day (picked from the day number), so they can't be rerolled.
+-- Rewards are Coins only.
+local Daily = {}
+
+export type QuestDef = { Id: string, Stat: string, Need: number, Coins: number, Text: string }
+export type State = {
+	Day: number,
+	Streak: number,
+	LoginClaimed: boolean,
+	Quests: { string }, -- quest ids for today
+	Base: { [string]: number }, -- Stats snapshot at the start of the day
+	Claimed: { [string]: boolean },
+}
+
+-- Login rewards for streak days 1..7; after day 7 it stays at the last value.
+Daily.LoginCoins = { 50, 75, 100, 150, 200, 250, 400 }
+
+Daily.Quests = {
+	{ Id = "Race3", Stat = "Races", Need = 3, Coins = 150, Text = "Finish 3 races" },
+	{ Id = "Race5", Stat = "Races", Need = 5, Coins = 250, Text = "Finish 5 races" },
+	{ Id = "Medal2", Stat = "Medals", Need = 2, Coins = 200, Text = "Win 2 medals" },
+	{ Id = "Gold1", Stat = "Golds", Need = 1, Coins = 250, Text = "Win a Gold medal" },
+	{ Id = "Hatch2", Stat = "Hatches", Need = 2, Coins = 120, Text = "Hatch 2 eggs" },
+	{ Id = "Gates20", Stat = "Gates", Need = 20, Coins = 120, Text = "Ride through 20 speed gates" },
+	{ Id = "Hurdles12", Stat = "Hurdles", Need = 12, Coins = 120, Text = "Jump 12 training hurdles" },
+	{ Id = "Train150", Stat = "TrainXp", Need = 150, Coins = 150, Text = "Earn 150 training XP" },
+} :: { QuestDef }
+
+Daily.ById = {} :: { [string]: QuestDef }
+for _, q in Daily.Quests do
+	Daily.ById[q.Id] = q
+end
+
+Daily.PerDay = 3
+
+function Daily.Today(now: number): number
+	return math.floor(now / 86400)
+end
+
+-- Today's quest ids: PerDay different quests, chosen from the day number.
+function Daily.Pick(day: number): { string }
+	local n = #Daily.Quests
+	local out = {}
+	local i = (day * 7) % n
+	local step = 3 -- co-prime with 8, so it walks all quests without repeating
+	while #out < Daily.PerDay do
+		local id = Daily.Quests[i + 1].Id
+		if not table.find(out, id) then
+			table.insert(out, id)
+		end
+		i = (i + step) % n
+	end
+	return out
+end
+
+function Daily.New(): State
+	return { Day = -1, Streak = 0, LoginClaimed = false, Quests = {}, Base = {}, Claimed = {} }
+end
+
+-- Starts a new day if needed. Returns true if the day changed.
+function Daily.Rollover(s: State, today: number, stats: { [string]: number }): boolean
+	if s.Day == today then
+		return false
+	end
+	s.Streak = if s.Day == today - 1 then s.Streak + 1 else 1
+	s.Day = today
+	s.LoginClaimed = false
+	s.Quests = Daily.Pick(today)
+	s.Base = table.clone(stats)
+	s.Claimed = {}
+	return true
+end
+
+function Daily.LoginReward(streak: number): number
+	return Daily.LoginCoins[math.clamp(streak, 1, #Daily.LoginCoins)]
+end
+
+function Daily.Progress(s: State, stats: { [string]: number }, id: string): number
+	local q = Daily.ById[id]
+	if not q then
+		return 0
+	end
+	return math.clamp((stats[q.Stat] or 0) - (s.Base[q.Stat] or 0), 0, q.Need)
+end
+
+-- Claims a reward. what = "Login" or a quest id. Returns coins (0 if not claimable).
+function Daily.Claim(s: State, stats: { [string]: number }, what: string): number
+	if what == "Login" then
+		if s.LoginClaimed or s.Day < 0 then
+			return 0
+		end
+		s.LoginClaimed = true
+		return Daily.LoginReward(s.Streak)
+	end
+	local q = Daily.ById[what]
+	if not q or not table.find(s.Quests, what) or s.Claimed[what] then
+		return 0
+	end
+	if Daily.Progress(s, stats, what) < q.Need then
+		return 0
+	end
+	s.Claimed[what] = true
+	return q.Coins
+end
+
+-- Anything waiting to be claimed? (for the red dot on the DAILY button)
+function Daily.HasClaimable(s: State, stats: { [string]: number }): boolean
+	if s.Day >= 0 and not s.LoginClaimed then
+		return true
+	end
+	for _, id in s.Quests do
+		local q = Daily.ById[id]
+		if q and not s.Claimed[id] and Daily.Progress(s, stats, id) >= q.Need then
+			return true
+		end
+	end
+	return false
+end
+
+return Daily
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="9">
+          <Properties>
             <string name="Name">Hatch</string>
             <string name="Source"><![CDATA[-- Egg rolls with a pity counter: every Config.Hatch.PityEvery-th hatch of the same
 -- egg is guaranteed Rare or better.
@@ -402,7 +542,7 @@ return Hatch
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="9">
+        <Item class="ModuleScript" referent="10">
           <Properties>
             <string name="Name">PetStats</string>
             <string name="Source"><![CDATA[-- Pet levels, xp and the riding numbers they give.
@@ -514,7 +654,7 @@ return PetStats
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="10">
+        <Item class="ModuleScript" referent="11">
           <Properties>
             <string name="Name">Profile</string>
             <string name="Source"><![CDATA[-- Player save data: defaults, cleaning up loaded data, and pet inventory rules.
@@ -522,6 +662,7 @@ local Config = require("../Config")
 local Pets = require("../Pets")
 local Cosmetics = require("../Cosmetics")
 local PetStats = require("./PetStats")
+local Daily = require("./Daily")
 
 local Profile = {}
 
@@ -539,6 +680,10 @@ export type Data = {
 	BigBarn: boolean,
 	Receipts: { string }, -- recent purchase ids (duplicate guard)
 	Tutorial: boolean,
+	Daily: Daily.State,
+	Codes: { [string]: boolean }, -- redeemed promo codes
+	Badges: { [string]: boolean }, -- badges already awarded
+	Muted: boolean, -- sound effects off
 }
 
 function Profile.Default(): Data
@@ -552,10 +697,14 @@ function Profile.Default(): Data
 		Owned = {},
 		Pity = {},
 		BestTimes = {},
-		Stats = { Races = 0, Wins = 0, Hatches = 0, Golds = 0 },
+		Stats = { Races = 0, Wins = 0, Hatches = 0, Golds = 0, Medals = 0, Gates = 0, Hurdles = 0, TrainXp = 0 },
 		BigBarn = false,
 		Receipts = {},
 		Tutorial = false,
+		Daily = Daily.New(),
+		Codes = {},
+		Badges = {},
+		Muted = false,
 	}
 	-- Everyone starts with a Pup so they can ride and race straight away.
 	local pup = Profile.AddPet(d, "Pup")
@@ -583,6 +732,44 @@ function Profile.Sanitize(raw: any): Data
 	d.NextUid = math.floor(num(raw.NextUid, 1, 1, 1e12))
 	d.BigBarn = raw.BigBarn == true
 	d.Tutorial = raw.Tutorial == true
+	d.Muted = raw.Muted == true
+	for _, key in { "Codes", "Badges" } do
+		if type(raw[key]) == "table" then
+			for k, v in raw[key] do
+				if type(k) == "string" and v == true then
+					(d :: any)[key][k] = true
+				end
+			end
+		end
+	end
+	local rd = raw.Daily
+	if type(rd) == "table" and type(rd.Day) == "number" then
+		local s = d.Daily
+		s.Day = math.floor(rd.Day)
+		s.Streak = math.floor(num(rd.Streak, 0, 0, 1e6))
+		s.LoginClaimed = rd.LoginClaimed == true
+		if type(rd.Quests) == "table" then
+			for _, id in rd.Quests do
+				if type(id) == "string" and Daily.ById[id] then
+					table.insert(s.Quests, id)
+				end
+			end
+		end
+		if type(rd.Base) == "table" then
+			for k, v in rd.Base do
+				if type(k) == "string" and type(v) == "number" and v == v then
+					s.Base[k] = v
+				end
+			end
+		end
+		if type(rd.Claimed) == "table" then
+			for k, v in rd.Claimed do
+				if type(k) == "string" and v == true then
+					s.Claimed[k] = true
+				end
+			end
+		end
+	end
 	if type(raw.Pets) == "table" then
 		local seen = {}
 		for _, p in raw.Pets do
@@ -689,6 +876,26 @@ function Profile.Release(d: Data, uid: string): (boolean, string?)
 	return false, "Pet not found."
 end
 
+-- Adds to a lifetime stat (used by daily quests).
+function Profile.Bump(d: Data, stat: string, n: number?)
+	d.Stats[stat] = (d.Stats[stat] or 0) + (n or 1)
+end
+
+-- Redeems a promo code. Returns coins given, or nil and a reason.
+function Profile.Redeem(d: Data, code: string, codes: { [string]: { Coins: number } }): (number?, string?)
+	local key = string.upper((string.gsub(code, "%s", "")))
+	local def = codes[key]
+	if not def then
+		return nil, "That code doesn't exist."
+	end
+	if d.Codes[key] then
+		return nil, "You already used that code."
+	end
+	d.Codes[key] = true
+	d.Coins += def.Coins
+	return def.Coins, nil
+end
+
 -- Records a purchase id. Returns false if it was already handled.
 function Profile.TakeReceipt(d: Data, id: string): boolean
 	if table.find(d.Receipts, id) then
@@ -705,7 +912,7 @@ return Profile
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="11">
+        <Item class="ModuleScript" referent="12">
           <Properties>
             <string name="Name">RaceRules</string>
             <string name="Source"><![CDATA[-- Race results, rewards, medals and leagues.
@@ -827,7 +1034,7 @@ return RaceRules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="12">
+        <Item class="ModuleScript" referent="13">
           <Properties>
             <string name="Name">TrackLayout</string>
             <string name="Source"><![CDATA[-- Pure track maths: turns a track's segment list into positioned pieces and
@@ -939,7 +1146,7 @@ return TrackLayout
           </Properties>
         </Item>
       </Item>
-      <Item class="ModuleScript" referent="13">
+      <Item class="ModuleScript" referent="14">
         <Properties>
           <string name="Name">Models</string>
           <string name="Source"><![CDATA[--!strict
@@ -990,7 +1197,7 @@ return Models
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="14">
+      <Item class="ModuleScript" referent="15">
         <Properties>
           <string name="Name">Net</string>
           <string name="Source"><![CDATA[-- Remote names in one place. The server creates them; clients wait for them.
@@ -1013,10 +1220,13 @@ Net.Events = {
 	"Rename", -- client -> server: uid, name
 	"LeaveRace", -- client -> server: give up the current race
 	"TutorialDone", -- client -> server
+	"ClaimDaily", -- client -> server: "Login" or a quest id
+	"SetMuted", -- client -> server: true/false
 }
 
 Net.Functions = {
 	"Hatch", -- client -> server: egg id -> ok, species | error
+	"Redeem", -- client -> server: code -> ok, message
 }
 
 local folder: Folder
@@ -1053,7 +1263,7 @@ return Net
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="15">
+      <Item class="ModuleScript" referent="16">
         <Properties>
           <string name="Name">PetModel</string>
           <string name="Source"><![CDATA[-- Builds a pet out of simple parts. Shared so the server (riding, following) and the
@@ -1321,7 +1531,7 @@ return PetModel
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="16">
+      <Item class="ModuleScript" referent="17">
         <Properties>
           <string name="Name">Pets</string>
           <string name="Source"><![CDATA[-- Pet species. Models are built from simple parts (see server PetModel), so no
@@ -1390,7 +1600,7 @@ return Pets
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="17">
+      <Item class="ModuleScript" referent="18">
         <Properties>
           <string name="Name">Products</string>
           <string name="Source"><![CDATA[-- Robux products. Robux buys Coins, cosmetics and storage only, never race speed.
@@ -1416,7 +1626,39 @@ return Products
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="18">
+      <Item class="ModuleScript" referent="19">
+        <Properties>
+          <string name="Name">Sounds</string>
+          <string name="Source"><![CDATA[-- Sound effects. Ids are Roblox's built-in engine sounds (always available, no
+-- licensing needed), retuned with Pitch. Music is off until the owner picks a track
+-- they have the rights to use (their own upload or a Creator Store track licensed
+-- for experiences) and puts its id in Music.
+local Sounds = {}
+
+Sounds.Effects = {
+	Click = { Id = "rbxasset://sounds/volume_slider.ogg", Volume = 0.4, Pitch = 1.2 },
+	Coin = { Id = "rbxasset://sounds/volume_slider.ogg", Volume = 0.6, Pitch = 1.8 },
+	Level = { Id = "rbxasset://sounds/volume_slider.ogg", Volume = 0.7, Pitch = 2.2 },
+	Error = { Id = "rbxasset://sounds/volume_slider.ogg", Volume = 0.5, Pitch = 0.6 },
+	Xp = { Id = "rbxasset://sounds/volume_slider.ogg", Volume = 0.2, Pitch = 2.6 },
+	Beep = { Id = "rbxasset://sounds/volume_slider.ogg", Volume = 0.8, Pitch = 1.0 },
+	Go = { Id = "rbxasset://sounds/volume_slider.ogg", Volume = 0.9, Pitch = 1.6 },
+	Dash = { Id = "rbxasset://sounds/action_jump.mp3", Volume = 0.6, Pitch = 1.4 },
+	Fall = { Id = "rbxasset://sounds/action_falling.ogg", Volume = 0.6, Pitch = 1.0 },
+	Land = { Id = "rbxasset://sounds/action_jump_land.mp3", Volume = 0.6, Pitch = 1.0 },
+	Hatch = { Id = "rbxasset://sounds/impact_explosion_03.mp3", Volume = 0.35, Pitch = 1.6 },
+	Wobble = { Id = "rbxasset://sounds/action_get_up.mp3", Volume = 0.5, Pitch = 1.3 },
+}
+
+-- Background music: put a licensed audio asset id here, e.g. "rbxassetid://123".
+Sounds.Music = nil :: string?
+Sounds.MusicVolume = 0.25
+
+return Sounds
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="20">
         <Properties>
           <string name="Name">Tracks</string>
           <string name="Source"><![CDATA[-- Race tracks. Each track is a straight run along +X made of segments, laid out by
@@ -1524,15 +1766,29 @@ return Tracks
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="19">
+  <Item class="ServerScriptService" referent="21">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="20">
+    <Item class="Folder" referent="22">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="Script" referent="21">
+      <Item class="ModuleScript" referent="23">
+        <Properties>
+          <string name="Name">Codes</string>
+          <string name="Source"><![CDATA[-- Promo codes (typed in the DAILY menu). Server-only, so players can't read
+-- unannounced codes from the game files. Each works once per player; not case
+-- sensitive. Add new ones for updates and remove old ones.
+return {
+	LAUNCH = { Coins = 300 },
+	ZOOM = { Coins = 150 },
+	PETRACE = { Coins = 200 },
+}
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="Script" referent="24">
         <Properties>
           <string name="Name">Main</string>
           <token name="RunContext">0</token>
@@ -1555,6 +1811,7 @@ local order = {
 	"TrackBuilder",
 	"RaceService",
 	"ShopService",
+	"DailyService",
 	"LeaderboardService",
 }
 
@@ -1577,11 +1834,11 @@ end
 ]]></string>
         </Properties>
       </Item>
-      <Item class="Folder" referent="22">
+      <Item class="Folder" referent="25">
         <Properties>
           <string name="Name">Services</string>
         </Properties>
-        <Item class="ModuleScript" referent="23">
+        <Item class="ModuleScript" referent="26">
           <Properties>
             <string name="Name">AssetLoader</string>
             <string name="Source"><![CDATA[-- Loads the uploaded 3D models (Shared/Models with an Id) with InsertService into
@@ -1604,6 +1861,8 @@ local WORKERS = 6
 local BLOCK_FOR = 15
 
 -- Props players can bump into. Everything else is decoration (no collisions).
+-- Arches and gates stay non-solid: mesh collision is approximate and could fill
+-- the opening players ride through.
 local SOLID = {
 	Tree_Round = true,
 	Tree_Pine = true,
@@ -1611,12 +1870,9 @@ local SOLID = {
 	Rock = true,
 	Fence = true,
 	Pedestal = true,
-	PortalArch = true,
-	RaceArch = true,
 	Pillar = true,
 	TrophyStatue = true,
 	LampPost = true,
-	SpeedGate = true,
 }
 
 AssetLoader.Loaded = 0
@@ -1714,7 +1970,127 @@ return AssetLoader
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="24">
+        <Item class="ModuleScript" referent="27">
+          <Properties>
+            <string name="Name">DailyService</string>
+            <string name="Source"><![CDATA[-- Daily login streak, daily quests, promo codes, badges and the sound setting.
+local Players = game:GetService("Players")
+local BadgeService = game:GetService("BadgeService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage.Shared
+local Config = require(Shared.Config)
+local Daily = require(Shared.Logic.Daily)
+local Profile = require(Shared.Logic.Profile)
+local RaceRules = require(Shared.Logic.RaceRules)
+
+local Codes = require(script.Parent.Parent.Codes)
+
+local DailyService = {}
+
+local ctx: any
+
+local function rollover(p: Player)
+	local d = ctx.DataService.Get(p)
+	if d and Daily.Rollover(d.Daily, Daily.Today(os.time()), d.Stats) then
+		ctx.DataService.Changed(p)
+	end
+end
+
+-- Awards a badge once (skipped while its id isn't set in Config.Badges).
+function DailyService.Badge(p: Player, key: string)
+	local id = (Config.Badges :: any)[key]
+	local d = ctx.DataService.Get(p)
+	if not id or not d or d.Badges[key] then
+		return
+	end
+	task.spawn(function()
+		local ok, awarded = pcall(BadgeService.AwardBadge, BadgeService, p.UserId, id)
+		if ok and awarded and p.Parent then
+			d.Badges[key] = true
+			ctx.DataService.Changed(p)
+		end
+	end)
+end
+
+-- Checks the badges that depend on profile state (league, pet levels).
+function DailyService.CheckBadges(p: Player)
+	local d = ctx.DataService.Get(p)
+	if not d then
+		return
+	end
+	local idx = RaceRules.League(d.Trophies)
+	if idx >= 3 then
+		DailyService.Badge(p, "Gold")
+	end
+	if idx >= #Config.Leagues then
+		DailyService.Badge(p, "Champion")
+	end
+	for _, pet in d.Pets do
+		for _, lvl in pet.Levels do
+			if lvl >= Config.Stats.MaxLevel then
+				DailyService.Badge(p, "MaxLevel")
+				return
+			end
+		end
+	end
+end
+
+function DailyService.Init(c)
+	ctx = c
+end
+
+function DailyService.Start()
+	ctx.DataService.OnLoaded(function(p: Player)
+		rollover(p)
+		DailyService.CheckBadges(p)
+	end)
+	ctx.Util.Connect("ClaimDaily", 0.3, function(p: Player, what)
+		local d = ctx.DataService.Get(p)
+		if not d or type(what) ~= "string" then
+			return
+		end
+		rollover(p)
+		local coins = Daily.Claim(d.Daily, d.Stats, what)
+		if coins > 0 then
+			d.Coins += coins
+			ctx.DataService.Changed(p)
+			ctx.Util.Notify(p, "+" .. coins .. " coins!", "Coins")
+		end
+	end)
+	ctx.Util.Invoke("Redeem", 1, function(p: Player, code)
+		local d = ctx.DataService.Get(p)
+		if not d or type(code) ~= "string" or #code > 30 then
+			return false, "That code doesn't exist."
+		end
+		local coins, err = Profile.Redeem(d, code, Codes)
+		if not coins then
+			return false, err
+		end
+		ctx.DataService.Changed(p)
+		return true, "+" .. coins .. " coins!"
+	end)
+	ctx.Util.Connect("SetMuted", 0.3, function(p: Player, on)
+		local d = ctx.DataService.Get(p)
+		if d then
+			d.Muted = on == true
+			ctx.DataService.Changed(p)
+		end
+	end)
+	-- New day while playing (the day starts at midnight UTC).
+	while true do
+		task.wait(60)
+		for _, p in Players:GetPlayers() do
+			pcall(rollover, p)
+		end
+	end
+end
+
+return DailyService
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="28">
           <Properties>
             <string name="Name">DataService</string>
             <string name="Source"><![CDATA[-- Loads and saves player profiles (DataStore), keeps leaderstats in sync and
@@ -1811,7 +2187,7 @@ local function load(p: Player)
 			end
 			task.wait(if locked then 5 else attempt)
 			if not p.Parent then
-				return
+				return -- we never took the lock on this attempt
 			end
 		end
 		if not got then
@@ -1824,6 +2200,17 @@ local function load(p: Player)
 		data = Profile.Default()
 	end
 	if not p.Parent then
+		-- Left while loading: let go of the lock so they can rejoin straight away.
+		if store then
+			pcall(function()
+				(store :: DataStore):UpdateAsync(key(p), function(old)
+					if type(old) == "table" and type(old.Lock) == "table" and old.Lock.Job == JOB then
+						return { Data = old.Data, Lock = nil }
+					end
+					return nil
+				end)
+			end)
+		end
 		return
 	end
 	profiles[p] = data
@@ -1857,6 +2244,9 @@ local function save(p: Player, release: boolean?): boolean
 	if lost then
 		warn("Save skipped for " .. p.Name .. ": another server owns this save")
 		loaded[p] = nil
+		if p.Parent then
+			p:Kick("Your save was opened on another server. Please rejoin.")
+		end
 		return false
 	end
 	if not ok then
@@ -1971,7 +2361,7 @@ return DataService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="25">
+        <Item class="ModuleScript" referent="29">
           <Properties>
             <string name="Name">LeaderboardService</string>
             <string name="Source"><![CDATA[-- Global top-10 trophies board in the lobby (OrderedDataStore). Falls back to the
@@ -2099,7 +2489,7 @@ return LeaderboardService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="26">
+        <Item class="ModuleScript" referent="30">
           <Properties>
             <string name="Name">PetService</string>
             <string name="Source"><![CDATA[-- Pets in the world: hatching, equipping, riding, following, dashing and the
@@ -2413,11 +2803,12 @@ function PetService.Hatch(p: Player, eggId: any): (boolean, string)
 	end
 	d.Coins -= egg.Price
 	d.Pity[egg.Id] = count
-	d.Stats.Hatches = (d.Stats.Hatches or 0) + 1
+	Profile.Bump(d, "Hatches")
 	Data.Changed(p)
 	Net.Event("Hatched"):FireClient(p, species, egg.Id, pet.Uid)
 	local rank = Pets.Rank(species)
 	if rank >= 5 then
+		ctx.DailyService.Badge(p, "Legendary")
 		Util.NotifyAll(p.DisplayName .. " hatched a " .. Pets.RarityOf(species) .. " " .. Pets.ById[species].Name .. "!", "Rare")
 	end
 	return true, species
@@ -2593,7 +2984,7 @@ return PetService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="27">
+        <Item class="ModuleScript" referent="31">
           <Properties>
             <string name="Name">RaceService</string>
             <string name="Source"><![CDATA[-- Races: players standing on the lobby portal are queued; after a short wait they're
@@ -2799,13 +3190,23 @@ local function finishRace()
 		if d then
 			d.Coins += coins
 			d.Trophies += trophies
-			d.Stats.Races = (d.Stats.Races or 0) + 1
+			local B = ctx.DailyService
+			if r.Finished then
+				Profile.Bump(d, "Races")
+				B.Badge(r.Player, "FirstRace")
+			end
 			if place == 1 and count > 1 and r.Finished then
-				d.Stats.Wins = (d.Stats.Wins or 0) + 1
+				Profile.Bump(d, "Wins")
+				B.Badge(r.Player, "FirstWin")
+			end
+			if medal then
+				Profile.Bump(d, "Medals")
 			end
 			if medal == "Gold" then
-				d.Stats.Golds = (d.Stats.Golds or 0) + 1
+				Profile.Bump(d, "Golds")
+				B.Badge(r.Player, "GoldMedal")
 			end
+			B.CheckBadges(r.Player)
 			local best = d.BestTimes[built.Track.Id]
 			local newBest = false
 			if r.Time and (not best or r.Time < best) then
@@ -3061,7 +3462,7 @@ return RaceService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="28">
+        <Item class="ModuleScript" referent="32">
           <Properties>
             <string name="Name">ShopService</string>
             <string name="Source"><![CDATA[-- Coin shop (cosmetics) and Robux purchases. Robux buys Coins, cosmetics and
@@ -3197,7 +3598,7 @@ return ShopService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="29">
+        <Item class="ModuleScript" referent="33">
           <Properties>
             <string name="Name">TrackBuilder</string>
             <string name="Source"><![CDATA[-- Builds a race track from parts using Logic/TrackLayout. The track sits high in the
@@ -3495,7 +3896,7 @@ return TrackBuilder
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="30">
+        <Item class="ModuleScript" referent="34">
           <Properties>
             <string name="Name">TrainingService</string>
             <string name="Source"><![CDATA[-- Lobby training: ride through the Speed Ring gates, jump the hurdles, run on the
@@ -3531,6 +3932,7 @@ local function award(p: Player, stat: string, xp: number)
 	end
 	local before = PetStats.Ride(pet)
 	local gained = PetStats.AddXp(pet, stat, xp)
+	Profile.Bump(d, "TrainXp", xp)
 	ctx.DataService.Changed(p)
 	ctx.Util.Notify(p, "+" .. xp .. " " .. stat, "Xp")
 	if gained > 0 then
@@ -3540,6 +3942,7 @@ local function award(p: Player, stat: string, xp: number)
 			ctx.PetService.ResetCharges(p)
 		end
 		ctx.PetService.Apply(p)
+		ctx.DailyService.CheckBadges(p)
 	end
 end
 
@@ -3592,6 +3995,7 @@ local function tick(p: Player, dt: number)
 				t.Gate = i
 				t.GateAt = now
 				t.GateCount += 1
+				Profile.Bump(ctx.DataService.Get(p), "Gates")
 				award(p, "Speed", T.GateXp)
 				if t.GateCount % n == 0 then
 					award(p, "Speed", T.LapBonusXp)
@@ -3616,6 +4020,7 @@ local function tick(p: Player, dt: number)
 			if pos.X >= h.X0 and pos.X <= h.X1 and (t.LastZ - h.Z) * (pos.Z - h.Z) < 0 then
 				if now - (t.HurdleAt[i] or 0) > 1.5 then
 					t.HurdleAt[i] = now
+					Profile.Bump(ctx.DataService.Get(p), "Hurdles")
 					award(p, "Jump", math.max(2, math.floor(T.GateXp * h.H / 4 + 0.5)))
 				end
 				break
@@ -3660,7 +4065,7 @@ return TrainingService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="31">
+        <Item class="ModuleScript" referent="35">
           <Properties>
             <string name="Name">Util</string>
             <string name="Source"><![CDATA[-- Small server helpers: rate-limited remote handlers, part building, notifications.
@@ -3796,7 +4201,7 @@ return Util
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="32">
+        <Item class="ModuleScript" referent="36">
           <Properties>
             <string name="Name">WorldService</string>
             <string name="Source"><![CDATA[-- Builds the lobby from parts at server start: spawn, egg stands, training area,
@@ -4079,7 +4484,8 @@ local function buildTraining()
 		local a = (i - 1) / n * math.pi * 2
 		local pos = center + Vector3.new(math.cos(a) * radius, 0, math.sin(a) * radius)
 		table.insert(WorldService.SpeedGates, pos)
-		local facing = CFrame.lookAt(pos, center)
+		-- the opening faces along the ring, so riders go straight through it
+		local facing = CFrame.lookAt(pos, center) * CFrame.Angles(0, math.rad(90), 0)
 		local gateMesh = Assets.Place("SpeedGate", facing, lobby)
 		for _, side in { -1, 1 } do
 			if gateMesh then
@@ -4277,7 +4683,7 @@ return WorldService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="33">
+  <Item class="StarterPlayer" referent="37">
     <Properties>
       <string name="Name">StarterPlayer</string>
       <float name="CameraMaxZoomDistance">60</float>
@@ -4286,19 +4692,169 @@ return WorldService
       <float name="CharacterWalkSpeed">16</float>
       <bool name="EnableMouseLockOption">false</bool>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="34">
+    <Item class="StarterPlayerScripts" referent="38">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="35">
+      <Item class="Folder" referent="39">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="Folder" referent="36">
+        <Item class="Folder" referent="40">
           <Properties>
             <string name="Name">Controllers</string>
           </Properties>
-          <Item class="ModuleScript" referent="37">
+          <Item class="ModuleScript" referent="41">
+            <Properties>
+              <string name="Name">DailyMenu</string>
+              <string name="Source"><![CDATA[-- DAILY menu: login streak reward, today's quests, promo codes and the sound switch.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage.Shared
+local Net = require(Shared.Net)
+local Daily = require(Shared.Logic.Daily)
+local UI = require(script.Parent.Parent.UI)
+local State = require(script.Parent.Parent.State)
+local Hud = require(script.Parent.Hud)
+local Notify = require(script.Parent.Notify)
+
+local DailyMenu = {}
+
+local panel: Frame
+local body: ScrollingFrame
+local soundBtn: TextButton
+
+-- Rows rebuilt on every update (login + quests). The code box and the sound switch
+-- are built once, so a half-typed code isn't wiped when progress updates arrive.
+local function dynamic(f: GuiObject): GuiObject
+	f:SetAttribute("Dynamic", true)
+	return f
+end
+
+local function render()
+	for _, c in body:GetChildren() do
+		if c:GetAttribute("Dynamic") then
+			c:Destroy()
+		end
+	end
+	local d = State.Data
+	if not d then
+		return
+	end
+	local s = d.Daily
+	soundBtn.Text = if d.Muted then "Sound: OFF" else "Sound: ON"
+	soundBtn.BackgroundColor3 = if d.Muted then UI.Colors.PanelLight else UI.Colors.Blue
+
+	-- Login streak
+	local login = UI.Frame({ Size = UDim2.new(1, -10, 0, 60), BackgroundColor3 = UI.Colors.PanelLight, LayoutOrder = 1 }, body)
+	dynamic(login)
+	UI.Corner(login, 10)
+	UI.Text({
+		Text = string.format("Day %d streak: %d coins", math.max(1, s.Streak), Daily.LoginReward(math.max(1, s.Streak))),
+		Size = UDim2.new(0.62, 0, 0.6, 0),
+		Position = UDim2.new(0, 12, 0.2, 0),
+		TextXAlignment = Enum.TextXAlignment.Left,
+	}, login)
+	if s.LoginClaimed then
+		UI.Text({ Text = "Claimed", Size = UDim2.new(0.3, 0, 0.6, 0), Position = UDim2.new(0.68, 0, 0.2, 0), TextColor3 = UI.Colors.Muted }, login)
+	else
+		UI.Button({ Text = "Claim", Size = UDim2.new(0.3, 0, 0.7, 0), Position = UDim2.new(0.68, 0, 0.15, 0), BackgroundColor3 = UI.Colors.Green }, login, function()
+			Net.Event("ClaimDaily"):FireServer("Login")
+		end)
+	end
+
+	-- Quests
+	for i, id in s.Quests do
+		local q = Daily.ById[id]
+		if q then
+			local prog = Daily.Progress(s, d.Stats, id)
+			local row = UI.Frame({ Size = UDim2.new(1, -10, 0, 64), BackgroundColor3 = UI.Colors.PanelLight, LayoutOrder = 1 + i }, body)
+			dynamic(row)
+			UI.Corner(row, 10)
+			UI.Text({ Text = q.Text, Size = UDim2.new(0.62, 0, 0, 26), Position = UDim2.fromOffset(12, 6), TextXAlignment = Enum.TextXAlignment.Left }, row)
+			local bar = UI.Frame({ Size = UDim2.new(0.5, 0, 0, 12), Position = UDim2.fromOffset(12, 40), BackgroundColor3 = Color3.fromRGB(20, 20, 30) }, row)
+			UI.Corner(bar, 6)
+			local fill = UI.Frame({ Size = UDim2.fromScale(prog / q.Need, 1), BackgroundColor3 = UI.Colors.Gold }, bar)
+			UI.Corner(fill, 6)
+			UI.Text({ Text = prog .. "/" .. q.Need, Size = UDim2.new(0.1, 0, 0, 16), Position = UDim2.new(0.52, 10, 0, 38), TextColor3 = UI.Colors.Muted, Font = UI.Body }, row)
+			local btnSize, btnPos = UDim2.new(0.3, 0, 0.7, 0), UDim2.new(0.68, 0, 0.15, 0)
+			if s.Claimed[id] then
+				UI.Text({ Text = "Done!", Size = btnSize, Position = btnPos, TextColor3 = UI.Colors.Green }, row)
+			elseif prog >= q.Need then
+				UI.Button({ Text = "+" .. q.Coins, Size = btnSize, Position = btnPos, BackgroundColor3 = UI.Colors.Gold }, row, function()
+					Net.Event("ClaimDaily"):FireServer(id)
+				end)
+			else
+				UI.Text({ Text = "$ " .. q.Coins, Size = btnSize, Position = btnPos, TextColor3 = UI.Colors.Gold }, row)
+			end
+		end
+	end
+
+end
+
+function DailyMenu.Open()
+	panel.Visible = true
+	render()
+end
+
+function DailyMenu.Start()
+	local inner
+	panel, inner = UI.Modal("Daily", UDim2.fromScale(0.7, 0.85))
+	body = Instance.new("ScrollingFrame")
+	body.Size = UDim2.fromScale(1, 1)
+	body.BackgroundTransparency = 1
+	body.BorderSizePixel = 0
+	body.ScrollBarThickness = 8
+	body.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	body.CanvasSize = UDim2.new()
+	body.Parent = inner
+	local list = Instance.new("UIListLayout")
+	list.Padding = UDim.new(0, 8)
+	list.SortOrder = Enum.SortOrder.LayoutOrder
+	list.Parent = body
+	-- Codes
+	local codes = UI.Frame({ Size = UDim2.new(1, -10, 0, 52), BackgroundTransparency = 1, LayoutOrder = 10 }, body)
+	local box = Instance.new("TextBox")
+	box.Size = UDim2.new(0.64, 0, 1, 0)
+	box.PlaceholderText = "Enter a code..."
+	box.Text = ""
+	box.Font = UI.Body
+	box.TextScaled = true
+	box.TextColor3 = Color3.new(1, 1, 1)
+	box.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+	box.ClearTextOnFocus = false
+	UI.Corner(box, 10)
+	UI.Pad(box, 8)
+	box.Parent = codes
+	UI.Button({ Text = "Redeem", Size = UDim2.new(0.33, 0, 1, 0), Position = UDim2.new(0.67, 0, 0, 0), BackgroundColor3 = UI.Colors.Purple }, codes, function()
+		local ok, msg = Net.Function("Redeem"):InvokeServer(box.Text)
+		Notify.Show(msg or "", if ok then "Coins" else "Error")
+		if ok then
+			box.Text = ""
+		end
+	end)
+
+	-- Sound switch
+	soundBtn = UI.Button({ Text = "Sound: ON", Size = UDim2.new(1, -10, 0, 44), LayoutOrder = 11 }, body, function()
+		local d = State.Data
+		if d then
+			Net.Event("SetMuted"):FireServer(not d.Muted)
+		end
+	end)
+	Hud.SetOpener("Daily", DailyMenu.Open)
+	State.OnChange(function(d)
+		Hud.SetDot("Daily", Daily.HasClaimable(d.Daily, d.Stats))
+		if panel.Visible then
+			render()
+		end
+	end)
+end
+
+return DailyMenu
+]]></string>
+            </Properties>
+          </Item>
+          <Item class="ModuleScript" referent="42">
             <Properties>
               <string name="Name">HatchView</string>
               <string name="Source"><![CDATA[-- Hatch reveal: the egg wobbles, cracks with a flash, and the new pet spins in.
@@ -4313,6 +4869,7 @@ local Net = require(Shared.Net)
 local PetModel = require(Shared.PetModel)
 local UI = require(script.Parent.Parent.UI)
 local Notify = require(script.Parent.Notify)
+local Sound = require(script.Parent.Sound)
 
 local HatchView = {}
 
@@ -4338,6 +4895,7 @@ local function show(species: string, eggId: string, uid: string)
 	UI.Corner(eggFrame, 80)
 	UI.Stroke(eggFrame, Color3.fromRGB(255, 255, 255), 4)
 	for i = 1, 3 do
+		Sound.Play("Wobble")
 		local t = TweenService:Create(eggFrame, TweenInfo.new(0.12, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, 3, true), { Rotation = if i % 2 == 0 then -14 - i * 4 else 14 + i * 4 })
 		t:Play()
 		t.Completed:Wait()
@@ -4345,6 +4903,7 @@ local function show(species: string, eggId: string, uid: string)
 	end
 	local flash = UI.Frame({ Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), ZIndex = 45 }, overlay)
 	eggFrame:Destroy()
+	Sound.Play("Hatch")
 	TweenService:Create(flash, TweenInfo.new(0.6), { BackgroundTransparency = 1 }):Play()
 
 	local holder = UI.Frame({ Size = UDim2.fromOffset(320, 320), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), BackgroundTransparency = 1, ZIndex = 41 }, overlay)
@@ -4408,7 +4967,7 @@ return HatchView
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="38">
+          <Item class="ModuleScript" referent="43">
             <Properties>
               <string name="Name">Hud</string>
               <string name="Source"><![CDATA[-- Always-on HUD: coins, trophies, league, and the main buttons (Pets, Shop,
@@ -4429,6 +4988,16 @@ local Hud = {}
 local player = Players.LocalPlayer
 Hud.Buttons = {} :: { [string]: TextButton }
 local openers: { [string]: () -> () } = {}
+
+local dots: { [string]: Frame } = {}
+
+-- Shows or hides the red "something to claim" dot on a HUD button.
+function Hud.SetDot(name: string, on: boolean)
+	local d = dots[name]
+	if d then
+		d.Visible = on
+	end
+end
 
 -- Other controllers register their menus here so the buttons can open them.
 function Hud.SetOpener(name: string, fn: () -> ())
@@ -4504,7 +5073,15 @@ function Hud.Start()
 			openers.Shop()
 		end
 	end)
-	Hud.Buttons = { Dash = dashBtn, Ride = rideBtn, Pets = petsBtn, Shop = shopBtn }
+	local dailyBtn = UI.Button({ Text = "DAILY", Size = UDim2.fromOffset(120, 44), Position = UDim2.fromOffset(10, 152), BackgroundColor3 = UI.Colors.Purple }, screen, function()
+		if openers.Daily then
+			openers.Daily()
+		end
+	end)
+	local dot = UI.Frame({ Size = UDim2.fromOffset(16, 16), Position = UDim2.new(1, -10, 0, -6), BackgroundColor3 = UI.Colors.Red, Visible = false, ZIndex = 3 }, dailyBtn)
+	UI.Corner(dot, 8)
+	dots.Daily = dot
+	Hud.Buttons = { Dash = dashBtn, Ride = rideBtn, Pets = petsBtn, Shop = shopBtn, Daily = dailyBtn }
 
 	local function refreshAttrs()
 		local riding = player:GetAttribute("Riding")
@@ -4518,6 +5095,7 @@ function Hud.Start()
 		rideBtn.Visible = not inRace
 		petsBtn.Visible = not inRace
 		shopBtn.Visible = not inRace
+		dailyBtn.Visible = not inRace
 	end
 	for _, a in { "Riding", "DashCharges", "DashMax", "InRace" } do
 		player:GetAttributeChangedSignal(a):Connect(refreshAttrs)
@@ -4542,7 +5120,7 @@ return Hud
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="39">
+          <Item class="ModuleScript" referent="44">
             <Properties>
               <string name="Name">Notify</string>
               <string name="Source"><![CDATA[-- Toasts: short messages from the server. "Xp" pops small above the buttons,
@@ -4630,7 +5208,7 @@ return Notify
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="40">
+          <Item class="ModuleScript" referent="45">
             <Properties>
               <string name="Name">PetMenu</string>
               <string name="Source"><![CDATA[-- The Pets menu: every pet you own, its stats, and Ride / Rename / Release.
@@ -4840,7 +5418,7 @@ return PetMenu
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="41">
+          <Item class="ModuleScript" referent="46">
             <Properties>
               <string name="Name">RaceHud</string>
               <string name="Source"><![CDATA[-- Race screens: queue banner, countdown, live place/timer/progress, checkpoint
@@ -5017,7 +5595,7 @@ return RaceHud
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="42">
+          <Item class="ModuleScript" referent="47">
             <Properties>
               <string name="Name">ShopMenu</string>
               <string name="Source"><![CDATA[-- Shop: trails and paint for your ridden pet (coins), plus the Robux tab.
@@ -5191,7 +5769,115 @@ return ShopMenu
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="43">
+          <Item class="ModuleScript" referent="48">
+            <Properties>
+              <string name="Name">Sound</string>
+              <string name="Source"><![CDATA[-- Plays sound effects (and music, if one is set) on this client. Muting is saved
+-- in the profile so it sticks between visits.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SoundService = game:GetService("SoundService")
+
+local Shared = ReplicatedStorage.Shared
+local Sounds = require(Shared.Sounds)
+local Net = require(Shared.Net)
+local State = require(script.Parent.Parent.State)
+local UI = require(script.Parent.Parent.UI)
+
+local Sound = {}
+
+local pool: { [string]: Sound } = {}
+local music: Sound? = nil
+
+local function muted(): boolean
+	return State.Data ~= nil and State.Data.Muted == true
+end
+
+function Sound.Play(name: string)
+	if muted() then
+		return
+	end
+	local s = pool[name]
+	if not s then
+		local def = Sounds.Effects[name]
+		if not def then
+			return
+		end
+		s = Instance.new("Sound")
+		s.SoundId = def.Id
+		s.Volume = def.Volume
+		s.PlaybackSpeed = def.Pitch
+		s.Parent = SoundService
+		pool[name] = s
+	end
+	SoundService:PlayLocalSound(s)
+end
+
+function Sound.SetMuted(on: boolean)
+	Net.Event("SetMuted"):FireServer(on)
+end
+
+function Sound.Start()
+	UI.OnClick = function()
+		Sound.Play("Click")
+	end
+	if Sounds.Music then
+		local m = Instance.new("Sound")
+		m.SoundId = Sounds.Music
+		m.Looped = true
+		m.Volume = Sounds.MusicVolume
+		m.Parent = SoundService
+		music = m
+	end
+	State.OnChange(function()
+		if music then
+			if muted() then
+				music:Stop()
+			elseif not music.IsPlaying then
+				music:Play()
+			end
+		end
+	end)
+	Net.Event("Notify").OnClientEvent:Connect(function(_, kind)
+		if kind == "Coins" then
+			Sound.Play("Coin")
+		elseif kind == "Level" or kind == "Rare" then
+			Sound.Play("Level")
+		elseif kind == "Error" then
+			Sound.Play("Error")
+		elseif kind == "Xp" then
+			Sound.Play("Xp")
+		end
+	end)
+	Net.Event("Race").OnClientEvent:Connect(function(kind)
+		if kind == "Count" then
+			Sound.Play("Beep")
+		elseif kind == "Go" then
+			Sound.Play("Go")
+		elseif kind == "Fell" then
+			Sound.Play("Fall")
+		elseif kind == "Checkpoint" then
+			Sound.Play("Xp")
+		elseif kind == "Results" then
+			Sound.Play("Level")
+		end
+	end)
+	local player = Players.LocalPlayer
+	local lastCharges = player:GetAttribute("DashCharges") or 0
+	player:GetAttributeChangedSignal("DashCharges"):Connect(function()
+		local c = player:GetAttribute("DashCharges") or 0
+		if c < lastCharges then
+			Sound.Play("Dash")
+		end
+		lastCharges = c
+	end)
+end
+
+return Sound
+]]></string>
+            </Properties>
+          </Item>
+          <Item class="ModuleScript" referent="49">
             <Properties>
               <string name="Name">Tutorial</string>
               <string name="Source"><![CDATA[-- First-time tips: four short cards, shown once per player.
@@ -5207,6 +5893,7 @@ local STEPS = {
 	{ "Train your pet", "SPEED RING: ride through the gates in order.\nJUMP HURDLES: jump over the walls.\nSTAMINA TREADMILL: keep running on the belt." },
 	{ "Race!", "Stand on the pink RACE PORTAL. Finish fast for coins, trophies and medals.\nTap DASH for a burst of speed." },
 	{ "Hatch new pets", "Spend coins at the EGGS. Rare pets get a small bonus, but training matters most!" },
+	{ "Daily rewards", "Tap DAILY for your login reward, daily quests and codes. Come back tomorrow to grow your streak!" },
 }
 
 local shown = false
@@ -5250,7 +5937,7 @@ return Tutorial
             </Properties>
           </Item>
         </Item>
-        <Item class="LocalScript" referent="44">
+        <Item class="LocalScript" referent="50">
           <Properties>
             <string name="Name">Main</string>
             <string name="Source"><![CDATA[-- Client entry: connects remotes and starts each controller.
@@ -5265,7 +5952,7 @@ Net.Event("State").OnClientEvent:Connect(function(data)
 end)
 
 local Controllers = script.Parent:WaitForChild("Controllers")
-for _, name in { "Notify", "Hud", "PetMenu", "ShopMenu", "HatchView", "RaceHud", "Tutorial" } do
+for _, name in { "Sound", "Notify", "Hud", "DailyMenu", "PetMenu", "ShopMenu", "HatchView", "RaceHud", "Tutorial" } do
 	local ok, err = pcall(function()
 		local c = require(Controllers:WaitForChild(name)) :: any
 		c.Start()
@@ -5277,7 +5964,7 @@ end
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="45">
+        <Item class="ModuleScript" referent="51">
           <Properties>
             <string name="Name">State</string>
             <string name="Source"><![CDATA[-- Holds the latest profile snapshot from the server and tells listeners when it changes.
@@ -5318,7 +6005,7 @@ return State
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="46">
+        <Item class="ModuleScript" referent="52">
           <Properties>
             <string name="Name">UI</string>
             <string name="Source"><![CDATA[-- Tiny UI kit: everything is built in code with big, phone-friendly buttons.
@@ -5344,6 +6031,9 @@ UI.Font = Enum.Font.FredokaOne
 UI.Body = Enum.Font.GothamBold
 
 local screen: ScreenGui? = nil
+
+-- Set by the Sound controller: plays a click on every button press.
+UI.OnClick = nil :: (() -> ())?
 
 function UI.Screen(): ScreenGui
 	if screen then
@@ -5432,6 +6122,9 @@ function UI.Button(props: { [string]: any }, parent: Instance?, onClick: (() -> 
 			t.Completed:Once(function()
 				TweenService:Create(b, TweenInfo.new(0.08), { Size = s }):Play()
 			end)
+			if UI.OnClick then
+				UI.OnClick()
+			end
 			onClick()
 		end)
 	end

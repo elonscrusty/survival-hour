@@ -14,7 +14,12 @@
 - First-time tutorial cards.
 - 33 Blender models (pets, eggs, trees, rocks, flowers, fence, lamps, pedestal, speed gate, portal arch, race arch, pillar, cloud, trophy statue), an upload script and a loader with part fallbacks.
 - Review fixes: whole-race anti-cheat (no teleport wins), training teleport checks, pet collision box (hurdles must be jumped), pet pivot at feet, session-locked saves, Robux purchases confirmed only after saving, a race loop that recovers from errors.
-- 54 unit tests, a clean type check and a Rojo build.
+- Publish pass: daily login streak (7 tiers), 3 daily quests, promo codes (server-only list), 7 badges (ids to fill in), sound effects with a mute switch, tutorial step for DAILY, a game icon and 3 thumbnails (`models/storeart/`), and the publish guide `docs/PUBLISH.md`.
+- Second review fixes: DAILY menu scrolls on phones, speed gates face along the ring, arches and gates don't collide, save lock released if a player leaves while loading, a kick if another server takes the save, badges only marked once really awarded.
+- 62 unit tests, a clean type check and a Rojo build.
+
+## Owner steps left
+Follow `docs/PUBLISH.md`: publish from Studio, the store page, Robux products, badges (optional) and the model upload.
 
 ## Not tested yet
 - Nothing has run in Studio yet. Follow `docs/STUDIO_TESTS.md`.
@@ -23,7 +28,6 @@
 ## Ideas for next passes
 - Sounds and music.
 - More tracks (and a weekly featured track).
-- Daily rewards and quests.
 - Trading pets between players.
 - Animated pet legs (they don't move yet).
 - Leagues matchmaking (separate portals per league).

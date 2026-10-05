@@ -56,3 +56,10 @@ Open `build/PetRaceLeague.rbxlx`, set Avatar to R15, and turn on API access (Gam
 - [ ] The output says "[AssetLoader] 33 models loaded, 0 failed".
 - [ ] Pets, eggs, trees, gates, the portal and the race arches show as smooth models, sitting on the ground (not floating or sunk).
 - [ ] The ridden pet sits under you correctly. Gold Paint makes it solid gold.
+
+## 10. Daily, codes and sound
+- [ ] DAILY has a red dot. Opening it shows "Day 1 streak", and Claim gives 50 coins (the dot goes away).
+- [ ] Three quests show progress bars. Ride 20 speed gates or finish races and the bar fills, then "+coins" claims it.
+- [ ] Type LAUNCH and tap Redeem: +300 coins. Typing it again says "already used". You can type a code while riding the gates without it being wiped.
+- [ ] On a phone, the DAILY menu scrolls so the code box and the Sound button can be reached.
+- [ ] Buttons click, coins chime, the countdown beeps and a fall plays a sound. "Sound: OFF" silences everything and stays off after you rejoin.

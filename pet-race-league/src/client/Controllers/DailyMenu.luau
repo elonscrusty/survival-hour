@@ -12,22 +12,33 @@ local Notify = require(script.Parent.Notify)
 local DailyMenu = {}
 
 local panel: Frame
-local body: Frame
+local body: ScrollingFrame
+local soundBtn: TextButton
+
+-- Rows rebuilt on every update (login + quests). The code box and the sound switch
+-- are built once, so a half-typed code isn't wiped when progress updates arrive.
+local function dynamic(f: GuiObject): GuiObject
+	f:SetAttribute("Dynamic", true)
+	return f
+end
 
 local function render()
-	body:ClearAllChildren()
+	for _, c in body:GetChildren() do
+		if c:GetAttribute("Dynamic") then
+			c:Destroy()
+		end
+	end
 	local d = State.Data
 	if not d then
 		return
 	end
 	local s = d.Daily
-	local list = Instance.new("UIListLayout")
-	list.Padding = UDim.new(0, 8)
-	list.SortOrder = Enum.SortOrder.LayoutOrder
-	list.Parent = body
+	soundBtn.Text = if d.Muted then "Sound: OFF" else "Sound: ON"
+	soundBtn.BackgroundColor3 = if d.Muted then UI.Colors.PanelLight else UI.Colors.Blue
 
 	-- Login streak
-	local login = UI.Frame({ Size = UDim2.new(1, 0, 0, 60), BackgroundColor3 = UI.Colors.PanelLight, LayoutOrder = 1 }, body)
+	local login = UI.Frame({ Size = UDim2.new(1, -10, 0, 60), BackgroundColor3 = UI.Colors.PanelLight, LayoutOrder = 1 }, body)
+	dynamic(login)
 	UI.Corner(login, 10)
 	UI.Text({
 		Text = string.format("Day %d streak: %d coins", math.max(1, s.Streak), Daily.LoginReward(math.max(1, s.Streak))),
@@ -48,7 +59,8 @@ local function render()
 		local q = Daily.ById[id]
 		if q then
 			local prog = Daily.Progress(s, d.Stats, id)
-			local row = UI.Frame({ Size = UDim2.new(1, 0, 0, 64), BackgroundColor3 = UI.Colors.PanelLight, LayoutOrder = 1 + i }, body)
+			local row = UI.Frame({ Size = UDim2.new(1, -10, 0, 64), BackgroundColor3 = UI.Colors.PanelLight, LayoutOrder = 1 + i }, body)
+			dynamic(row)
 			UI.Corner(row, 10)
 			UI.Text({ Text = q.Text, Size = UDim2.new(0.62, 0, 0, 26), Position = UDim2.fromOffset(12, 6), TextXAlignment = Enum.TextXAlignment.Left }, row)
 			local bar = UI.Frame({ Size = UDim2.new(0.5, 0, 0, 12), Position = UDim2.fromOffset(12, 40), BackgroundColor3 = Color3.fromRGB(20, 20, 30) }, row)
@@ -69,8 +81,30 @@ local function render()
 		end
 	end
 
+end
+
+function DailyMenu.Open()
+	panel.Visible = true
+	render()
+end
+
+function DailyMenu.Start()
+	local inner
+	panel, inner = UI.Modal("Daily", UDim2.fromScale(0.7, 0.85))
+	body = Instance.new("ScrollingFrame")
+	body.Size = UDim2.fromScale(1, 1)
+	body.BackgroundTransparency = 1
+	body.BorderSizePixel = 0
+	body.ScrollBarThickness = 8
+	body.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	body.CanvasSize = UDim2.new()
+	body.Parent = inner
+	local list = Instance.new("UIListLayout")
+	list.Padding = UDim.new(0, 8)
+	list.SortOrder = Enum.SortOrder.LayoutOrder
+	list.Parent = body
 	-- Codes
-	local codes = UI.Frame({ Size = UDim2.new(1, 0, 0, 52), BackgroundTransparency = 1, LayoutOrder = 10 }, body)
+	local codes = UI.Frame({ Size = UDim2.new(1, -10, 0, 52), BackgroundTransparency = 1, LayoutOrder = 10 }, body)
 	local box = Instance.new("TextBox")
 	box.Size = UDim2.new(0.64, 0, 1, 0)
 	box.PlaceholderText = "Enter a code..."
@@ -92,23 +126,12 @@ local function render()
 	end)
 
 	-- Sound switch
-	UI.Button({
-		Text = if d.Muted then "Sound: OFF" else "Sound: ON",
-		Size = UDim2.new(1, 0, 0, 44),
-		LayoutOrder = 11,
-		BackgroundColor3 = if d.Muted then UI.Colors.PanelLight else UI.Colors.Blue,
-	}, body, function()
-		Net.Event("SetMuted"):FireServer(not d.Muted)
+	soundBtn = UI.Button({ Text = "Sound: ON", Size = UDim2.new(1, -10, 0, 44), LayoutOrder = 11 }, body, function()
+		local d = State.Data
+		if d then
+			Net.Event("SetMuted"):FireServer(not d.Muted)
+		end
 	end)
-end
-
-function DailyMenu.Open()
-	panel.Visible = true
-	render()
-end
-
-function DailyMenu.Start()
-	panel, body = UI.Modal("Daily", UDim2.fromScale(0.7, 0.85))
 	Hud.SetOpener("Daily", DailyMenu.Open)
 	State.OnChange(function(d)
 		Hud.SetDot("Daily", Daily.HasClaimable(d.Daily, d.Stats))

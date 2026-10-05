@@ -69,6 +69,6 @@ After filling in IDs (steps 3–5), ask Claude to rebuild `build/PetRaceLeague.r
 3. Experience page → set it to **Public**.
 
 ## 7. After launch
-- Add new codes in `Config.Codes` for updates (for example 1K visits) and remove old ones.
+- Add new codes in `src/server/Codes.luau` for updates (for example 1K visits) and remove old ones.
 - Music: put a licensed track id in `src/shared/Sounds.luau` (`Sounds.Music`). It must be your own upload or Creator Store audio licensed for experiences.
 - Check **Analytics → Retention** after a week. If day-1 retention is low, make the first race easier (`Config.Race.MedalSpeeds`).

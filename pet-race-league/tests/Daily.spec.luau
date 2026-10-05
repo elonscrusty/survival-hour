@@ -1,6 +1,6 @@
 local Daily = require("../src/shared/Logic/Daily")
 local Profile = require("../src/shared/Logic/Profile")
-local Config = require("../src/shared/Config")
+local CODES = require("../src/server/Codes")
 
 return {
 	pick_three_distinct_valid = function(t)
@@ -59,12 +59,12 @@ return {
 	end,
 	codes_once_and_case_insensitive = function(t)
 		local d = Profile.Default()
-		local coins = Profile.Redeem(d, " launch ", Config.Codes)
-		t.eq(coins, Config.Codes.LAUNCH.Coins)
-		local again, err = Profile.Redeem(d, "LAUNCH", Config.Codes)
+		local coins = Profile.Redeem(d, " launch ", CODES)
+		t.eq(coins, CODES.LAUNCH.Coins)
+		local again, err = Profile.Redeem(d, "LAUNCH", CODES)
 		t.eq(again, nil)
 		t.ok(err ~= nil)
-		t.eq(Profile.Redeem(d, "NOPE", Config.Codes), nil)
+		t.eq(Profile.Redeem(d, "NOPE", CODES), nil)
 	end,
 	daily_survives_save = function(t)
 		local d = Profile.Default()

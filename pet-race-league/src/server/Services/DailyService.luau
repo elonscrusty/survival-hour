@@ -9,6 +9,8 @@ local Daily = require(Shared.Logic.Daily)
 local Profile = require(Shared.Logic.Profile)
 local RaceRules = require(Shared.Logic.RaceRules)
 
+local Codes = require(script.Parent.Parent.Codes)
+
 local DailyService = {}
 
 local ctx: any
@@ -28,10 +30,8 @@ function DailyService.Badge(p: Player, key: string)
 		return
 	end
 	task.spawn(function()
-		local ok = pcall(function()
-			BadgeService:AwardBadge(p.UserId, id)
-		end)
-		if ok and p.Parent then
+		local ok, awarded = pcall(BadgeService.AwardBadge, BadgeService, p.UserId, id)
+		if ok and awarded and p.Parent then
 			d.Badges[key] = true
 			ctx.DataService.Changed(p)
 		end
@@ -88,7 +88,7 @@ function DailyService.Start()
 		if not d or type(code) ~= "string" or #code > 30 then
 			return false, "That code doesn't exist."
 		end
-		local coins, err = Profile.Redeem(d, code, Config.Codes)
+		local coins, err = Profile.Redeem(d, code, Codes)
 		if not coins then
 			return false, err
 		end

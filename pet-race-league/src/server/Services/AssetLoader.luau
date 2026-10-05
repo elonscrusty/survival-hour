@@ -18,6 +18,8 @@ local WORKERS = 6
 local BLOCK_FOR = 15
 
 -- Props players can bump into. Everything else is decoration (no collisions).
+-- Arches and gates stay non-solid: mesh collision is approximate and could fill
+-- the opening players ride through.
 local SOLID = {
 	Tree_Round = true,
 	Tree_Pine = true,
@@ -25,12 +27,9 @@ local SOLID = {
 	Rock = true,
 	Fence = true,
 	Pedestal = true,
-	PortalArch = true,
-	RaceArch = true,
 	Pillar = true,
 	TrophyStatue = true,
 	LampPost = true,
-	SpeedGate = true,
 }
 
 AssetLoader.Loaded = 0

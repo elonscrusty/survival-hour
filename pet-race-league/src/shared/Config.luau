@@ -90,14 +90,6 @@ Config.Leagues = {
 
 Config.AutosaveEvery = 120
 
--- Promo codes (typed in the DAILY menu). Each works once per player. Codes are not
--- case sensitive. Add new ones for updates and remove old ones.
-Config.Codes = {
-	LAUNCH = { Coins = 300 },
-	ZOOM = { Coins = 150 },
-	PETRACE = { Coins = 200 },
-}
-
 -- Badge ids from the Creator Dashboard (Badges). nil = not created yet (skipped).
 Config.Badges = {
 	FirstRace = nil :: number?, -- finish your first race

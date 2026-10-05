@@ -278,7 +278,8 @@ local function buildTraining()
 		local a = (i - 1) / n * math.pi * 2
 		local pos = center + Vector3.new(math.cos(a) * radius, 0, math.sin(a) * radius)
 		table.insert(WorldService.SpeedGates, pos)
-		local facing = CFrame.lookAt(pos, center)
+		-- the opening faces along the ring, so riders go straight through it
+		local facing = CFrame.lookAt(pos, center) * CFrame.Angles(0, math.rad(90), 0)
 		local gateMesh = Assets.Place("SpeedGate", facing, lobby)
 		for _, side in { -1, 1 } do
 			if gateMesh then

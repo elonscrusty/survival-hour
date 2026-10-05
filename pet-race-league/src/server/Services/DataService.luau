@@ -92,7 +92,7 @@ local function load(p: Player)
 			end
 			task.wait(if locked then 5 else attempt)
 			if not p.Parent then
-				return
+				return -- we never took the lock on this attempt
 			end
 		end
 		if not got then
@@ -105,6 +105,17 @@ local function load(p: Player)
 		data = Profile.Default()
 	end
 	if not p.Parent then
+		-- Left while loading: let go of the lock so they can rejoin straight away.
+		if store then
+			pcall(function()
+				(store :: DataStore):UpdateAsync(key(p), function(old)
+					if type(old) == "table" and type(old.Lock) == "table" and old.Lock.Job == JOB then
+						return { Data = old.Data, Lock = nil }
+					end
+					return nil
+				end)
+			end)
+		end
 		return
 	end
 	profiles[p] = data
@@ -138,6 +149,9 @@ local function save(p: Player, release: boolean?): boolean
 	if lost then
 		warn("Save skipped for " .. p.Name .. ": another server owns this save")
 		loaded[p] = nil
+		if p.Parent then
+			p:Kick("Your save was opened on another server. Please rejoin.")
+		end
 		return false
 	end
 	if not ok then
