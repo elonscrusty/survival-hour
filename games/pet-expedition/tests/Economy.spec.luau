@@ -197,4 +197,35 @@ return {
 		t.eq(none[1].Gems + none[2].Gems, 0, "nobody hit it")
 		t.eq(#Economy.SplitBreak({}, 100, 5), 0, "empty")
 	end,
+	["rolling cap limits gems per hour"] = function(t)
+		local log = {}
+		t.eq(Economy.CapRolling(log, 0, 10, 15, 3600), 10, "under cap")
+		t.eq(Economy.CapRolling(log, 100, 10, 15, 3600), 5, "partly")
+		t.eq(Economy.CapRolling(log, 200, 3, 15, 3600), 0, "full")
+		t.eq(Economy.CapRolling(log, 3599, 1, 15, 3600), 0, "still inside the hour")
+		t.eq(Economy.CapRolling(log, 3600, 20, 15, 3600), 10, "first grant expired")
+		t.eq(Economy.CapRolling(log, 3700, 20, 15, 3600), 5, "second expired too")
+		for _, bad in { -1, 0, 0 / 0, math.huge } do
+			t.eq(Economy.CapRolling({}, 0, bad, 15, 3600), 0, "bad amount " .. tostring(bad))
+		end
+		t.eq(Economy.CapRolling({}, 0, 2.9, 15, 3600), 2, "whole gems only")
+		t.eq(Economy.CapRolling({}, 0, 5, Config.BreakGemsPerHour, 3600), math.min(5, Config.BreakGemsPerHour), "config cap")
+	end,
+	["rebirth costs stay under the coin cap up to the max"] = function(t)
+		local p = Profile.Default()
+		for r = 0, Config.MaxRebirths - 1 do
+			local cost = Economy.RebirthCost(r)
+			t.ok(cost == cost and cost < math.huge, "finite cost " .. r)
+			t.ok(cost <= Schema.MaxCoins, "affordable under the coin cap at rebirth " .. r)
+			p.Coins = Schema.MaxCoins
+			t.ok(Economy.Rebirth(p), "rebirth " .. (r + 1))
+		end
+		t.eq(p.Rebirths, Config.MaxRebirths, "reached the max")
+		p.Coins = Schema.MaxCoins
+		t.no(Economy.Rebirth(p), "no rebirth past the max")
+		local s = Profile.BuildState(p, { Now = 0 })
+		t.eq(s.RebirthCost, 0, "state shows no further cost")
+		local mult = Economy.CoinMult(p, { Now = 0 })
+		t.eq(mult, 1 + Config.RebirthCoinBonus * Config.MaxRebirths, "bonus at max")
+	end,
 }

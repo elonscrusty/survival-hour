@@ -33,6 +33,7 @@ export type Profile = {
 	ExtraEquip: number, -- from Index rewards
 	ExtraStorage: number, -- from Index rewards
 	Receipts: { [string]: number }, -- PurchaseId -> os.time granted
+	Playtime: { Day: number, Minutes: number, Claimed: { [string]: boolean } }, -- minutes played on UTC day `Day`
 	ExpeditionMult: { [string]: number }, -- slot -> coin multiplier snapshotted at start
 	PendingTrade: string?, -- trade id whose journal may still need applying (see Logic/Trade)
 	AppliedTrades: { string }, -- newest trade ids already applied (journal replay guard)

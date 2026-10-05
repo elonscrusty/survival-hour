@@ -89,4 +89,21 @@ return {
 			end
 		end
 	end,
+	["luck boosts everything above the egg's lowest rarity"] = function(t)
+		local meadow = Eggs.ById.MeadowEgg
+		local base, lucky = Hatch.Odds(meadow, 1), Hatch.Odds(meadow, 2)
+		t.ok(lucky.Kitten > base.Kitten, "uncommon boosted on a common egg")
+		t.ok(lucky.Puppy < base.Puppy, "lowest rarity not boosted")
+		local prism = Eggs.ById.PrismEgg
+		local pb, pl = Hatch.Odds(prism, 1), Hatch.Odds(prism, 2)
+		t.ok(pl.CrystalPup < pb.CrystalPup, "prism: its lowest (Rare) is not boosted")
+		t.ok(pl.PrismFox > pb.PrismFox, "prism: epic boosted")
+		t.ok(pl.DiamondDragon > pb.DiamondDragon, "prism: mythic boosted")
+		t.ok(math.abs(pl.DiamondDragon / pl.PrismFox - pb.DiamondDragon / pb.PrismFox) < 1e-9, "boosted pets keep their ratio")
+		local sum = 0
+		for _, v in pl do
+			sum += v
+		end
+		t.ok(near(sum, 100), "renormalised")
+	end,
 }

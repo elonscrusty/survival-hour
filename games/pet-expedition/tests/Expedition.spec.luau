@@ -58,8 +58,8 @@ return {
 		for i = 1, #a.Pets do
 			t.eq(a.Pets[i].Id, b.Pets[i].Id, "pet " .. i)
 		end
-		local power = 3 * PetMath.Power(Inventory.Find(p, uids[1]))
-		t.eq(a.Coins, math.floor(power * Config.ExpeditionCoinsPerPower * Areas.ById.Meadow.CoinMult * 16), "coin formula")
+		local rel = 3 * math.min(PetMath.Power(Inventory.Find(p, uids[1])) / Areas.ById.Meadow.PowerMult, Config.ExpeditionMaxRelPower)
+		t.eq(a.Coins, math.floor(rel * Config.ExpeditionCoinsPerPower * Areas.ById.Meadow.CoinMult * 16), "coin formula")
 	end,
 	["reward rates roughly follow the config"] = function(t)
 		local p, uids = setup(1)
@@ -180,5 +180,27 @@ return {
 		p.Areas.Grove = true
 		local high = Expedition.RollReward(p, exp).Coins
 		t.ok(high > low, "scales with progress")
+	end,
+	["coins use power relative to the destination, capped"] = function(t)
+		local p = Profile.Default()
+		p.Areas.Grove = true
+		p.Areas.Frost = true
+		local owl = Inventory.Add(p, { Id = "Owl" }) -- Epic, Grove
+		local function coins(areaId, uid)
+			local exp = { Area = areaId, Duration = "Short", Pets = { uid }, StartAt = 0, EndAt = 0, Seed = 4 }
+			return Expedition.RollReward(p, exp).Coins
+		end
+		local relGrove = Config.RarityPower.Epic -- power / Grove PowerMult
+		t.eq(coins("Grove", owl.Uid), math.floor(relGrove * Config.ExpeditionCoinsPerPower * Areas.ById.Grove.CoinMult), "home island")
+		-- Sent to Meadow the owl is 27x a Meadow pet: capped at ExpeditionMaxRelPower.
+		t.eq(coins("Meadow", owl.Uid), math.floor(Config.ExpeditionMaxRelPower * Config.ExpeditionCoinsPerPower), "cap on cheap islands")
+		-- Sent to Frost it is weak there: relative power below 1.
+		local relFrost = PetMath.Power(owl) / Areas.ById.Frost.PowerMult
+		t.ok(relFrost < 1, "weak abroad")
+		t.eq(coins("Frost", owl.Uid), math.floor(relFrost * Config.ExpeditionCoinsPerPower * Areas.ById.Frost.CoinMult), "scaled down")
+		-- No double scaling: a native Common pet earns CoinsPerPower * CoinMult on its island.
+		local cat = Inventory.Add(p, { Id = "CometCat" })
+		local exp = { Area = "Starfall", Duration = "Short", Pets = { cat.Uid }, StartAt = 0, EndAt = 0, Seed = 4 }
+		t.eq(Expedition.RollReward(p, exp).Coins, math.floor(Config.ExpeditionCoinsPerPower * Areas.ById.Starfall.CoinMult), "native common")
 	end,
 }

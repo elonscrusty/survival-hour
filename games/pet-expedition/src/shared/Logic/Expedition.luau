@@ -116,6 +116,24 @@ function Expedition.Start(
 	return slot, exp, nil
 end
 
+-- Sum over the expedition's pets of min(power / destination PowerMult,
+-- Config.ExpeditionMaxRelPower).
+function Expedition.RelativePower(p: Profile, exp: Expedition): number
+	local area = Areas.ById[exp.Area]
+	if not area then
+		return 0
+	end
+	local scale = Economy.HighestArea(p)
+	local total = 0
+	for _, uid in exp.Pets do
+		local pet = Inventory.Find(p, uid)
+		if pet then
+			total += math.min(PetMath.Power(pet, scale) / area.PowerMult, Config.ExpeditionMaxRelPower)
+		end
+	end
+	return total
+end
+
 -- The deterministic base reward (coins before the player's coin multiplier).
 function Expedition.RollReward(p: Profile, exp: Expedition): RewardRoll
 	local roll: RewardRoll = { Coins = 0, Gems = 0, Pets = {} }
@@ -124,16 +142,12 @@ function Expedition.RollReward(p: Profile, exp: Expedition): RewardRoll
 	if not area or not dur then
 		return roll
 	end
-	local power = 0
-	local scale = Economy.HighestArea(p)
-	for _, uid in exp.Pets do
-		local pet = Inventory.Find(p, uid)
-		if pet then
-			power += PetMath.Power(pet, scale)
-		end
-	end
+	-- Each pet counts with its power relative to the destination island
+	-- (pet power already includes its own island's PowerMult), capped so a
+	-- very strong pet sent to a cheap island can't farm it.
+	local rel = Expedition.RelativePower(p, exp)
 	local rng = Rng.New(exp.Seed)
-	roll.Coins = math.floor(power * Config.ExpeditionCoinsPerPower * area.CoinMult * dur.Mult)
+	roll.Coins = math.floor(rel * Config.ExpeditionCoinsPerPower * area.CoinMult * dur.Mult)
 	-- The same number of random draws happens whatever the outcomes, so a
 	-- reward never depends on anything but the inputs above.
 	local gemHit = rng:Chance(dur.GemChance)

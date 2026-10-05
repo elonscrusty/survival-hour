@@ -207,8 +207,6 @@ function StateService.Push(player: Player)
 		Premium = s.Premium,
 		InGroup = s.InGroup,
 		ServerLuckUntil = ctx.BoostService.ServerLuckUntil(),
-		SessionMinutes = (os.clock() - s.JoinClock) / 60,
-		PlaytimeClaimed = s.PlaytimeClaimed,
 		CanBuyGemEggs = s.CanBuyGemEggs,
 		CanTrade = s.CanTrade,
 	})

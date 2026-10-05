@@ -4,6 +4,7 @@
 
 local Config = require("../Config")
 local Pets = require("../Pets")
+local Areas = require("../Areas")
 local Economy = require("./Economy")
 local Rng = require("./Rng")
 local Schema = require("./Schema")
@@ -79,34 +80,60 @@ function Rewards.ClaimDaily(p: Profile, now: number): (Reward?, number?, string?
 	return Rewards.Apply(p, Rewards.DailySpec(streak), now), streak, nil
 end
 
--- Playtime gifts (per server session) ------------------------------------------
+-- Playtime gifts (once per UTC day, minutes played today) ------------------------
 
-function Rewards.ClaimPlaytime(
-	p: Profile,
-	sessionMinutes: number,
-	claimed: { [string]: boolean },
-	index: number,
-	now: number
-): (Reward?, string?)
+-- Starts a fresh playtime day when the day changed. Returns true if reset.
+function Rewards.EnsurePlaytimeDay(p: Profile, now: number): boolean
+	local day = Rewards.DayNumber(now)
+	if p.Playtime.Day == day then
+		return false
+	end
+	p.Playtime = { Day = day, Minutes = 0, Claimed = {} }
+	return true
+end
+
+-- Adds online time (seconds) to today's minutes. Time is credited to the day
+-- it is added on (a session over midnight starts the new day from zero).
+function Rewards.AddPlaytime(p: Profile, seconds: number, now: number)
+	Rewards.EnsurePlaytimeDay(p, now)
+	if not Schema.IsFinite(seconds) or seconds <= 0 then
+		return
+	end
+	-- One call can't add more than an hour (guards against clock jumps).
+	p.Playtime.Minutes = math.min(24 * 60, p.Playtime.Minutes + math.min(seconds, 3600) / 60)
+end
+
+function Rewards.PlaytimeMinutes(p: Profile, now: number): number
+	if p.Playtime.Day ~= Rewards.DayNumber(now) then
+		return 0
+	end
+	return p.Playtime.Minutes
+end
+
+function Rewards.ClaimPlaytime(p: Profile, index: number, now: number): (Reward?, string?)
 	if not Schema.IsInt(index, 1, #Config.PlaytimeGifts) then
 		return nil, "Unknown gift"
 	end
+	Rewards.EnsurePlaytimeDay(p, now)
 	local key = tostring(index)
-	if claimed[key] then
-		return nil, "Already claimed"
+	if p.Playtime.Claimed[key] then
+		return nil, "Already claimed today"
 	end
 	local gift = Config.PlaytimeGifts[index]
-	if not Schema.IsFinite(sessionMinutes) or sessionMinutes < (gift.Minutes or 0) then
+	if p.Playtime.Minutes < (gift.Minutes or 0) then
 		return nil, "Not ready yet"
 	end
-	claimed[key] = true
+	p.Playtime.Claimed[key] = true
 	return Rewards.Apply(p, gift, now), nil
 end
 
 -- Quests -----------------------------------------------------------------------
 
--- The same quests for everyone on a given day.
-function Rewards.GenerateQuests(day: number): { Quest }
+-- The same quests for everyone on a day. Coins goals are multiplied by
+-- `coinMult` (the CoinMult of the player's highest opened island), so they
+-- stay meaningful as the player progresses.
+function Rewards.GenerateQuests(day: number, coinMult: number?): { Quest }
+	local scale = if coinMult and Schema.IsFinite(coinMult) and coinMult > 0 then coinMult else 1
 	local rng = Rng.New(Rng.Hash("quests", day))
 	local pool = {}
 	for i = 1, #Config.QuestPool do
@@ -121,9 +148,13 @@ function Rewards.GenerateQuests(day: number): { Quest }
 	for i = 1, math.min(Config.QuestsPerDay, #pool) do
 		local def = Config.QuestPool[pool[i]]
 		local tier = rng:Int(1, #def.Goals)
+		local goal = def.Goals[tier]
+		if def.Kind == "Coins" then
+			goal = math.floor(goal * scale)
+		end
 		table.insert(out, {
 			Kind = def.Kind,
-			Goal = def.Goals[tier],
+			Goal = goal,
 			Progress = 0,
 			Gems = def.Gems[tier],
 			Claimed = false,
@@ -132,12 +163,32 @@ function Rewards.GenerateQuests(day: number): { Quest }
 	return out
 end
 
--- Replaces yesterday's quests. Returns true if they changed.
+-- CoinMult of the player's highest opened island (scales Coins quests).
+function Rewards.QuestCoinMult(p: Profile): number
+	local best = Areas.ById[Schema.StartArea]
+	for _, a in Areas.List do
+		if p.Areas[a.Id] then
+			best = a
+		end
+	end
+	return if best then best.CoinMult else 1
+end
+
+-- Today's quests for this player (fresh ones if the stored day is old).
+function Rewards.QuestsFor(p: Profile, day: number): { Quest }
+	if p.Quests.Day == day and #p.Quests.List > 0 then
+		return p.Quests.List
+	end
+	return Rewards.GenerateQuests(day, Rewards.QuestCoinMult(p))
+end
+
+-- Replaces yesterday's quests. Goals are fixed when generated. Returns true
+-- if they changed.
 function Rewards.EnsureQuests(p: Profile, day: number): boolean
 	if p.Quests.Day == day and #p.Quests.List > 0 then
 		return false
 	end
-	p.Quests = { Day = day, List = Rewards.GenerateQuests(day) }
+	p.Quests = { Day = day, List = Rewards.GenerateQuests(day, Rewards.QuestCoinMult(p)) }
 	return true
 end
 

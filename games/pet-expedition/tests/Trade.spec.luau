@@ -7,6 +7,20 @@ local Config = require("../src/shared/Config")
 
 local NOW = 1_800_000_000
 
+-- Trading is pets-only in the shipped Config (TradeMaxGems = 0). The gem
+-- paths stay supported by Logic/Trade, so these tests turn them on briefly.
+local function withGemTrading(fn)
+	return function(t)
+		local old = Config.TradeMaxGems
+		Config.TradeMaxGems = 100000
+		local ok, err = pcall(fn, t)
+		Config.TradeMaxGems = old
+		if not ok then
+			error(err, 0)
+		end
+	end
+end
+
 local function setup()
 	local a, b = Profile.Default(), Profile.Default()
 	a.Gems, b.Gems = 500, 100
@@ -37,7 +51,7 @@ local function snapshot(p)
 end
 
 return {
-	["happy path swaps pets and gems"] = function(t)
+	["happy path swaps pets and gems"] = withGemTrading(function(t)
 		local tr, a, b, ua, ub = setup()
 		t.ok(Trade.SetOffer(tr, 1, a, { ua[1], ua[2] }, 50), "offer a")
 		t.ok(Trade.SetOffer(tr, 2, b, { ub[1] }, 0), "offer b")
@@ -62,7 +76,7 @@ return {
 			seen[pet.Uid] = true
 		end
 		t.no(Trade.Execute(tr, a, b), "can't execute twice")
-	end,
+	end),
 	["any offer change resets ready"] = function(t)
 		local tr, a, b, ua = setup()
 		Trade.SetOffer(tr, 1, a, { ua[1] }, 0)
@@ -100,7 +114,7 @@ return {
 		t.no(Trade.SetOffer(tr, 1, a, "x", 0), "not a list")
 		t.no(Trade.SetOffer(tr, 3, a, {}, 0), "stranger")
 	end,
-	["gem offers are validated"] = function(t)
+	["gem offers are validated"] = withGemTrading(function(t)
 		local tr, a = setup()
 		t.no(Trade.SetOffer(tr, 1, a, {}, -1), "negative")
 		t.no(Trade.SetOffer(tr, 1, a, {}, 1.5), "fraction")
@@ -111,8 +125,8 @@ return {
 		a.Gems = Config.TradeMaxGems * 2
 		t.no(Trade.SetOffer(tr, 1, a, {}, Config.TradeMaxGems + 1), "over trade cap")
 		t.ok(Trade.SetOffer(tr, 1, a, {}, Config.TradeMaxGems), "at cap")
-	end,
-	["changes after ready make the swap fail without side effects"] = function(t)
+	end),
+	["changes after ready make the swap fail without side effects"] = withGemTrading(function(t)
 		local cases = {
 			function(a, ua)
 				Inventory.Delete(a, { ua[1] })
@@ -140,7 +154,7 @@ return {
 			t.eq(snapshot(a), beforeA, "a untouched " .. i)
 			t.eq(snapshot(b), beforeB, "b untouched " .. i)
 		end
-	end,
+	end),
 	["storage overflow blocks the swap"] = function(t)
 		local tr, a, b, ua, ub = setup()
 		while Inventory.FreeSpace(b) > 0 do
@@ -179,7 +193,7 @@ return {
 		t.no(Trade.SetOffer(tr, 1, a, {}, 0), "closed")
 		t.no(Trade.SetReady(tr, 1, true, NOW), "closed ready")
 	end,
-	["view shows each side from its own perspective"] = function(t)
+	["view shows each side from its own perspective"] = withGemTrading(function(t)
 		local tr, a, b, ua, _, profileOf = setup()
 		Trade.SetOffer(tr, 1, a, { ua[1] }, 5)
 		Trade.SetOffer(tr, 2, b, {}, 7)
@@ -195,8 +209,8 @@ return {
 		t.eq(va.Countdown, Config.TradeConfirmSeconds - 1, "countdown")
 		t.eq(va.Status, "Confirming", "status")
 		t.eq(Trade.View(tr, 3, NOW, profileOf), nil, "stranger")
-	end,
-	["journal replays each side exactly once"] = function(t)
+	end),
+	["journal replays each side exactly once"] = withGemTrading(function(t)
 		local tr, a, b, ua, ub = setup()
 		Trade.SetOffer(tr, 1, a, { ua[1] }, 20)
 		Trade.SetOffer(tr, 2, b, { ub[1], ub[2] }, 0)
@@ -230,7 +244,7 @@ return {
 		t.ok(Trade.ApplySide(storedB, Trade.SanitizeSide(j.Sides["2"]), tr.Id), "b replayed")
 		t.eq(#storedB.Pets, 3, "b: 4 - 2 + 1")
 		t.eq(storedB.Gems, 120, "b gems")
-	end,
+	end),
 	["journal replay re-uids collisions and never goes below 0 gems"] = function(t)
 		local p = Profile.Default()
 		local mine = Inventory.Add(p, { Id = "Puppy" })
@@ -248,7 +262,7 @@ return {
 		t.eq(p.Gems, 0, "clamped")
 		t.ok(p.Index.Fox, "indexed")
 	end,
-	["journal sides from storage are validated"] = function(t)
+	["journal sides from storage are validated"] = withGemTrading(function(t)
 		t.eq(Trade.SanitizeSide(nil), nil, "nil")
 		t.eq(Trade.SanitizeSide({ Give = "x", Get = {} }), nil, "bad give")
 		local s = Trade.SanitizeSide({
@@ -261,5 +275,19 @@ return {
 		t.eq(s.GiveGems, 0, "negative gems")
 		t.eq(#s.Get, 1, "unknown pets dropped")
 		t.eq(s.GetGems, Config.TradeMaxGems, "gem cap")
+	end),
+	["pets-only config rejects any gem offer"] = function(t)
+		local tr, a, b, ua, ub = setup()
+		t.eq(Config.TradeMaxGems, 0, "shipped config is pets only")
+		local ok, err = Trade.SetOffer(tr, 1, a, { ua[1] }, 1)
+		t.no(ok, "1 gem refused")
+		t.ok(err, "reason")
+		t.no(Trade.SetOffer(tr, 1, a, {}, 500), "any amount refused")
+		t.ok(Trade.SetOffer(tr, 1, a, { ua[1] }, 0), "pets with 0 gems ok")
+		t.ok(Trade.SetOffer(tr, 2, b, { ub[1] }, 0), "other side")
+		readyBoth(tr, NOW)
+		t.ok(Trade.Execute(tr, a, b), "pets-only swap works")
+		t.eq(a.Gems, 500, "gems untouched")
+		t.eq(Trade.SanitizeSide({ Give = {}, Get = {}, GetGems = 50, GiveGems = 50 }).GetGems, 0, "stored gem amounts clamp to 0")
 	end,
 }
