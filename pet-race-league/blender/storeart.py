@@ -126,7 +126,7 @@ def main():
     place(meshes, "Pillar", 18, 24, 90, 0.6)
     place(meshes, "Cloud", -20, 60, 0, 1.2, y=28)
     place(meshes, "Cloud", 25, 70, 0, 1.0, y=34)
-    camera(to_blender(6, 5, -26), to_blender(0, 4.5, 2), 32)
+    camera(to_blender(4, 9, -44), to_blender(0, 7, 4), 30)
     shot(os.path.join(OUT, "Thumb1.png"), 1920, 1080)
 
     # Thumb 2: egg stands with freshly hatched pets.
@@ -151,8 +151,8 @@ def main():
         row, col = divmod(i, 5)
         place(meshes, n, -16 + col * 8 + row * 2, row * 7, 0, 1.0)
     place(meshes, "PortalArch", 0, 30, 0, 1.0)
-    place(meshes, "TrophyStatue", 22, 18, -20, 1.0)
-    camera(to_blender(0, 16, -32), to_blender(0, 3, 12), 30)
+    place(meshes, "TrophyStatue", -30, 34, 20, 1.3)
+    camera(to_blender(0, 22, -48), to_blender(0, 8, 14), 30)
     shot(os.path.join(OUT, "Thumb3.png"), 1920, 1080)
     os.remove(pal)
 
