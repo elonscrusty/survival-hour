@@ -450,6 +450,8 @@ def job_world(sc, only_top=False):
         _shot(sc, os.path.join(OUT, "world", f"{a}.jpg"), bl(cx - 120, 150, 260), bl(cx + 5, 0, -10), lens=24)
     hx, _, hz = G.WORLD.HUB
     _shot(sc, os.path.join(OUT, "world", "MeadowHub.jpg"), bl(hx + 75, 38, 0), bl(hx - 10, 4, 0), lens=24)
+    ax, _, az = G.WORLD.ARENA
+    _shot(sc, os.path.join(OUT, "world", "PetRing.jpg"), bl(ax - 30, 34, az + 62), bl(ax, 2, az), lens=24)
 
 
 def sheet(files, out, cols=8, cell=256):
