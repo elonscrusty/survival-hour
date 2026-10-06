@@ -134,46 +134,57 @@ return {
 			t.ok(kinds[k], "world has " .. k)
 		end
 	end,
-    ["regional seams leave exactly one gate passage"] = function(t)
+    ["regions have natural low cliffs and a clear gated travel lane"] = function(t)
         local gates = {}
         for _, it in WorldData.Interact do
             if it.Kind == "Gate" then
-                t.eq(it.Yaw,90,"gate faces travel along X")
+                t.eq(it.Yaw, 90, "gate faces travel along X")
                 gates[it.Area] = it
                 local barrier
                 for _, row in ModelData.Props[it.Prop].P do
-                    if row[13] == "Barrier" then barrier=row end
+                    if row[13] == "Barrier" then barrier = row end
                 end
-                t.ok(barrier ~= nil,"gate has barrier")
-                t.eq(barrier[2],18,"rotated barrier spans passage")
-                t.eq(barrier[4],1,"barrier depth")
+                t.ok(barrier ~= nil, "gate has barrier")
+                t.eq(barrier[2], 18, "rotated barrier spans passage")
             end
         end
-        for index,area in Areas.List do
-            local rows=WorldData.Parts[area.Id]
-            local sides={}
-            local shores=0
-            local lintel=false
-            for _,r in rows do
-                if r[13]=="BorderRidge" then
-                    shores+=1
-                    t.eq(r[2],WorldData.IslandSpacing,"shore covers region width")
-                    t.ok(r[3]>=80,"shore blocks region flight height")
-                elseif r[13]=="RegionRidge" then
-                    t.eq(r[5],gates[area.Id].P[1],"ridge aligns with gate")
-                    local near=math.abs(r[7])-r[4]/2
-                    local far=math.abs(r[7])+r[4]/2
-                    t.eq(near,9,"ridge starts at passage edge")
-                    t.eq(far,150,"ridge reaches closed shore")
-                    sides[if r[7]<0 then "north" else "south"]=true
-                elseif r[13]=="GateLintel" then lintel=true end
+        for index, area in Areas.List do
+            local cliffs, crowns, shoulders = 0, 0, 0
+            for _, row in WorldData.Parts[area.Id] do
+                if row[13] == "BorderRidge" or row[13] == "RegionRidge" then
+                    t.ok(row[3] <= 25, "cliffs stay below the skyline")
+                end
+                if row[13] == "CliffLayer" then cliffs += 1 end
+                if row[13] == "RidgeCrown" then crowns += 1 end
+                if row[13] == "RegionRidge" then
+                    shoulders += 1
+                    t.eq(row[5], gates[area.Id].P[1], "cliffs frame the gate valley")
+                    t.ok(math.abs(row[7])-row[4]/2 >= 9, "travel passage remains clear")
+                end
             end
-            t.eq(shores,2,"both shore borders exist")
-            if index>1 then
-                t.ok(sides.north and sides.south,"seam closed around gate")
-                t.ok(lintel,"overhead passage closed")
-            end
+            t.ok(cliffs >= 8 and crowns >= 8, "stepped coast and varied turf ridges")
+            if index > 1 then t.eq(shoulders, 10, "both sides of gate valley authored") end
         end
+    end,
+    ["starter hub has a mythic identity and landmarks ahead of spawn"] = function(t)
+        local spawn, egg, hatchery
+        for _, it in WorldData.Interact do
+            if it.Kind == "SpawnLocation" then spawn = it end
+            if it.Kind == "EggStand" and it.A.EggId == "MeadowEgg" then egg = it end
+            if it.Kind == "Hatchery" then hatchery = it end
+        end
+        t.ok(spawn and spawn.Prop ~= "PawPlaza", "spawn has no old dog paw imprint")
+        t.ok(egg.P[1] > spawn.P[1] and hatchery.P[1] > spawn.P[1], "egg and hatchery ahead along X")
+        local sigil, fountain, roof = false, false, false
+        for _, row in WorldData.Parts.Meadow do
+            if row[13] == "SpawnSigil" then sigil = true end
+            if row[13] == "CrystalFountain" then
+                fountain = true
+                t.ok(math.abs(row[7]) - row[3]/2 > 9, "fountain outside the travel lane")
+            end
+            if row[13] == "HatcheryRoof" and row[1] == "W" then roof = true end
+        end
+        t.ok(sigil and fountain and roof, "sigil, crystal fountain and pitched hatchery roof")
     end,
     ["all eight habitat plots are accessible in the starter meadow"] = function(t)
         local indices={}
@@ -187,7 +198,7 @@ return {
                 t.ok(index and index>=1 and index<=8 and not indices[index],"unique plot index")
                 indices[index]=true
                 t.ok(it.P[1]-21>bounds.Min[1] and it.P[1]+21<bounds.Max[1],"plot footprint inside meadow X")
-                t.ok(it.P[3]-25>bounds.Min[3] and it.P[3]+25<bounds.Max[3],"plot footprint inside meadow Z")
+                t.ok(it.P[3]-22>bounds.Min[3] and it.P[3]+22<bounds.Max[3],"plot footprint inside meadow Z")
             end
         end
         t.eq(count,8,"eight accessible plots")

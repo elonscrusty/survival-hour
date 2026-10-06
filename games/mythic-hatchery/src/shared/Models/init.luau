@@ -212,9 +212,13 @@ end
 -- Public API ---------------------------------------------------------------
 
 export type CreatureOpts = { Neon: boolean?, Cosmetics: { [string]: string }? }
+-- Body, trim, shadow, cream patch, luminous detail: every element is complete.
 local palettes = {
- Fire = {0xFF6E32, 0xFFBE3C}, Ice = {0x78C8FF, 0xD2F5FF},
- Storm = {0xFAE146, 0xAA8CFF}, Nature = {0x64D25A, 0xC8FF8C}, Shadow = {0x7846BE, 0xDC5AFF},
+ Fire = {0xDF7652, 0xFFD18A, 0x793C46, 0xFFF0D3, 0xFFE6A4},
+ Ice = {0x79B9D5, 0xD9F0EA, 0x3E668B, 0xF3FAEE, 0xB9F7FF},
+ Storm = {0x8F87C9, 0xF6D67D, 0x49436C, 0xFFF0D9, 0xFFF1A7},
+ Nature = {0x73BCA0, 0xF9CD78, 0x386878, 0xFFF0D3, 0xD7FFA4},
+ Shadow = {0x9B81BC, 0xE3B5D9, 0x493E6C, 0xF2E8E9, 0xD7BEFF},
 }
 local rarityRanks = {Common=1, Rare=2, Epic=3, Legendary=4, Mythic=5}
 function Models.Cosmetic(id: string): Model
@@ -231,16 +235,31 @@ function Models.Creature(species: string, element: string, rarity: string, stage
  assert(palette, "Unknown element " .. element)
  local m = newModel(species, entry, 1, Models.Profiles.Pet)
  local root = m.PrimaryPart :: BasePart
+ local body: BasePart? = nil
+ local head: BasePart? = nil
  for _, p in m:GetChildren() do
-  if p:IsA("BasePart") then
-   if p.Name == "Body" then p.Color = hexColor(palette[1]) end
-   if p.Name == "Accent" or p.Name == "Glow" then
+  if p:IsA("BasePart") and p.Name ~= "Root" then
+   if p.Name == "Body" then
+    p.Color = hexColor(palette[1])
+    if not body or p.Size.Z > body.Size.Z then body = p end
+   elseif p.Name == "Head" then
+    p.Color = hexColor(palette[1])
+    if not head or p.Position.Y > head.Position.Y then head = p end
+   elseif p.Name == "Accent" then
     p.Color = hexColor(palette[2])
+    -- Neon highlights the small horn/crest tips, keeping the broad wings legible.
+    if opts and opts.Neon and p.Size.Magnitude <= 1.65 then p.Material = Enum.Material.Neon end
+   elseif p.Name == "Shade" then p.Color = hexColor(palette[3])
+   elseif p.Name == "Face" then p.Color = hexColor(palette[4])
+   elseif p.Name == "Glow" then
+    p.Color = hexColor(palette[5])
     if opts and opts.Neon then p.Material = Enum.Material.Neon end
    end
   end
  end
- local positions: {[string]: Vector3} = {Saddle=Vector3.new(0,3.85,0.5), Hat=Vector3.new(0,5.8,-2), Aura=Vector3.new(0,2.5,0)}
+ local saddlePos = if body then body.Position + Vector3.new(0,body.Size.Y/2,0) else Vector3.new(0,3.5,0)
+ local hatPos = if head then head.Position + Vector3.new(0,head.Size.Y/2,0) else Vector3.new(0,5.5,-2)
+ local positions: {[string]: Vector3} = {Saddle=saddlePos, Hat=hatPos, Aura=Vector3.new(0,2.5,0)}
  for name,pos in positions do
   local a = Instance.new("Attachment")
   a.Name = name
@@ -248,9 +267,17 @@ function Models.Creature(species: string, element: string, rarity: string, stage
   a.Parent = root
  end
  local rank = (rarityRanks :: any)[rarity] or 1
+ -- A small gemstone harness gains one gem at each rank, seated on the back.
  for i=2,rank do
-  local p = Models.MakePart({"B", .4, .6, .4, (i-3)*.7, 3.9, 1, 0,0,0,0xFFD56A,"M","RarityGem"}, CFrame.identity, 1, Models.Profiles.Pet)
+  local offset = Vector3.new((i-(rank+2)/2)*.5,.18,.5)
+  local pos = saddlePos + offset
+  local p = Models.MakePart({"B", .3, .3, .3, pos.X, pos.Y, pos.Z, 0,45,45,0xFFD56A,"M","RarityGem"}, CFrame.identity, 1, Models.Profiles.Pet)
   p.Parent=m
+ end
+ if opts and opts.Neon then
+  local pos = saddlePos + Vector3.new(0,.12,-.65)
+  local gem = Models.MakePart({"B", .4, .16, .4, pos.X,pos.Y,pos.Z,0,45,0,palette[5],"N","NeonGem"}, CFrame.identity, 1, Models.Profiles.Pet)
+  gem.Parent=m
  end
  if rank >= 4 then applyShiny(m) end
  if opts and opts.Cosmetics then

@@ -17,8 +17,16 @@ saved profiles, server services, phone UI and primitive world/creature models. T
 - Existing session locking, retry/backoff, receipt dedupe, autosave/close save and journaled atomic trades.
 - Studio tools and zero-id simulated purchases; policy restrictions on gem eggs/paid luck/trading.
 
+## Visual and onboarding repair
+- Rebuilt the eleven creature silhouettes with expressive faces, shaped wings and five restrained element palettes.
+- Replaced tall rectangular hub walls with natural ridges, garden plots, a roofed hatchery and visible arena.
+- World visible on entry; a single objective guides egg buying, incubation, habitat assignment and collection.
+- Creature viewport cards, hatch reveals, and validated attack/guard/heal/swap presentation.
+- Portrait battles retain visible creatures above commands; all egg odds precede purchasing.
+- `models/preview.py` and `models/ui_preview.py` generate geometry and layout previews; these are not Studio screenshots.
+
 ## Validation and review
-The current check suite runs strict Luau analysis, 133 Luau tests, two Python build-transform tests,
+The current check suite runs strict Luau analysis, 135 Luau tests, two Python build-transform tests,
 Rojo build and place-source verification. Reviews found and corrected slot-key/save bugs, paid-slot loss,
 gate collision with server-owned mounts, quest wiring, cosmetics transfer, boost expiry, Neon income,
 concurrent battle cameras and inaccessible retained menus. Generated data uses explicit strict table types.

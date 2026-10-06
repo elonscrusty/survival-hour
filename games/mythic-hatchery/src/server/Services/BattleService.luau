@@ -20,11 +20,11 @@ local function push(b:any)
  local models=visual[b.Id] or {}; visual[b.Id]=models
  for i,side in b.Sides do
   local active=side.Fighters[side.Active]
-  if models[i] and models[i]:GetAttribute("CreatureUid")~=active.Creature.Uid then models[i]:Destroy(); models[i]=nil end
+  if models[i] and models[i]:GetAttribute("CreatureUid")~=active.Creature.Uid then local outgoing=models[i]; task.delay(.6,function() outgoing:Destroy() end); models[i]=nil end
   if not models[i] and b.Status=="Running" then
    local v=active.Creature
    local model=Models.Creature(v.Species,v.Element,v.Rarity,"Adult",{Neon=v.Neon})
-   model:SetAttribute("CreatureUid",v.Uid); model:SetAttribute("OwnerUserId",side.UserId)
+   model:SetAttribute("BattleId",b.Id); model:SetAttribute("CreatureUid",v.Uid); model:SetAttribute("OwnerUserId",side.UserId)
    local slot=arenaSlots[b.Id] or 1
    local center=ctx.WorldService.Info.Arena.Center+Vector3.new(0,0,(slot-1)*30)
    model:PivotTo(CFrame.new(center+Vector3.new(if i==1 then -10 else 10,3,0),center+Vector3.new(0,3,0)))

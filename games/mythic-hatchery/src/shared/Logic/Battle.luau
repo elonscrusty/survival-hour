@@ -8,7 +8,8 @@ local Level = require("./Level")
 local Tuning = Gameplay.Battle
 export type Fighter = { Creature: Level.Creature, Hp: number, MaxHp: number, Shield: number, Entered: boolean, Contribution: number }
 export type Side = { UserId: number, Fighters: { Fighter }, Active: number, MoveAt: number, SwapAt: number }
-export type State = { Id: string, Sides: { Side }, Status: string, Winner: number?, StartedAt: number, Now: number }
+export type Action = { Sequence: number, ActorUid: string, TargetUid: string, MoveName: string, Element: string?, Kind: string, Amount: number, At: number }
+export type State = { Id: string, Sides: { Side }, Status: string, Winner: number?, StartedAt: number, Now: number, LastAction: Action? }
 export type Reward = { Coins: number, Points: number, Xp: { [string]: number } }
 local Battle = {}
 
@@ -74,6 +75,7 @@ function Battle.Move(b: State, userId: number, moveId: string, now: number): (bo
 	attacker.Entered = true
 	s.MoveAt = now + Tuning.MoveCooldown
 	b.Now = now
+	b.LastAction = { Sequence = if b.LastAction then b.LastAction.Sequence + 1 else 1, ActorUid = attacker.Creature.Uid, TargetUid = if move.Kind == "Damage" then defender.Creature.Uid else attacker.Creature.Uid, MoveName = move.Name, Element = move.Element or attacker.Creature.Element, Kind = move.Kind, Amount = amount, At = now }
 	replace(b, other, s)
 	return true, nil
 end
@@ -84,7 +86,9 @@ function Battle.Swap(b: State, userId: number, index: number, now: number): (boo
 	if now < s.SwapAt then return false, "Swap cooling down" end
 	local f = s.Fighters[index]
 	if not f or f.Hp <= 0 or s.Active == index then return false, "Choose a living reserve" end
+	local previous = s.Fighters[s.Active].Creature.Uid
 	s.Active = index; f.Entered = true; s.SwapAt = now + Tuning.SwapCooldown; b.Now = now
+	b.LastAction = { Sequence = if b.LastAction then b.LastAction.Sequence + 1 else 1, ActorUid = f.Creature.Uid, TargetUid = previous, MoveName = "Swap", Element = f.Creature.Element, Kind = "Swap", Amount = 0, At = now }
 	return true, nil
 end
 function Battle.Forfeit(b: State, userId: number, now: number): boolean

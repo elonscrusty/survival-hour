@@ -102,6 +102,10 @@ local function addSign(part: BasePart, title: string, sub: string?, color: Color
 	else
 		label(title, 0.08, 0.84, main)
 	end
+	local back = gui:Clone()
+	back.Name = "SignGuiBack"
+	back.Face = Enum.NormalId.Back
+	back.Parent = part
 end
 
 local function findPart(m: Model, name: string): BasePart?
@@ -248,7 +252,8 @@ function World.Build(): WorldInfo
 			local sp = Instance.new("SpawnLocation")
 			sp.Name = "SpawnLocation"
 			sp.Size = Vector3.new(12, 1, 12)
-			sp.CFrame = CFrame.new(pos + Vector3.new(0, 0.2, 0))
+			local spawnPos = pos + Vector3.new(0, 0.2, 0)
+			sp.CFrame = CFrame.lookAt(spawnPos, spawnPos + Vector3.xAxis)
 			sp.Anchored = true
 			sp.CanCollide = false
 			sp.CanQuery = false
@@ -315,10 +320,11 @@ function World.Build(): WorldInfo
                 for slot=1,8 do
                     local attachment=Instance.new("Attachment")
                     attachment.Name="Slot" .. slot
-                    attachment.Position=Vector3.new((slot-1)%4*10-15,1,(math.floor((slot-1)/4)-.5)*18)-(m.PrimaryPart :: BasePart).Position+pos
+                    local worldSlot = pos + Vector3.new((slot-1)%4*10-15,1,(math.floor((slot-1)/4)-.5)*18)
+                    attachment.Position=(m.PrimaryPart :: BasePart).CFrame:PointToObjectSpace(worldSlot)
                     attachment.Parent=m.PrimaryPart
                 end
-                t={"HABITAT " .. tostring(attrs.PlotIndex),"Manage","Creature Habitat"}
+                t={"HABITAT " .. tostring(attrs.PlotIndex),"Manage","Your creature garden"}
             elseif kind == "BattleArena" then
                 t={"TRAINER ARENA","Battle","Optional 3 creature PvP"}
             elseif kind == "Hatchery" then t={"HATCHERY","Incubate","Egg incubators"}
@@ -329,7 +335,7 @@ function World.Build(): WorldInfo
 			if face then
 				addSign(face, t[1])
 			end
-			local promptPart = findPart(m, "Prompt")
+			local promptPart = findPart(m, "Prompt") or m.PrimaryPart
 			if promptPart then
 				addPrompt(promptPart, t[2], t[3])
 			end

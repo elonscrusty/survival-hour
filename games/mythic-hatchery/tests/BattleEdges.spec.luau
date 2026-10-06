@@ -8,6 +8,18 @@ local function team(prefix: string, species: string?, level: number?): { Level.C
 	return result
 end
 return {
+	["battle presentation records only validated commands"] = function(t: any)
+		local b=Battle.New("fx",1,2,team("a"),team("b"),100)
+		t.no(Battle.Move(b,1,"unowned",100)); t.eq(b.LastAction,nil)
+		t.ok(Battle.Move(b,1,"Element:Fire",100))
+		local action=b.LastAction :: Battle.Action
+		t.eq(action.ActorUid,"a1"); t.eq(action.TargetUid,"b1"); t.eq(action.Kind,"Damage")
+		t.eq(action.Element,"Fire"); t.eq(action.Sequence,1); t.ok(action.Amount>0)
+		t.no(Battle.Move(b,1,"Dragon:1",101)); t.eq(b.LastAction.Sequence,1)
+		t.ok(Battle.Swap(b,1,2,101)); t.eq(b.LastAction.Kind,"Swap"); t.eq(b.LastAction.ActorUid,"a2")
+		t.eq(b.LastAction.Sequence,2)
+	end,
+
 	["knockout switches reserve and defeating all three ends battle"] = function(t: any)
 		local b = Battle.New("ko", 1, 2, team("a"), team("b"), 100)
 		for i = 1, 3 do

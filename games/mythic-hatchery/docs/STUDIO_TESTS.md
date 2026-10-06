@@ -1,6 +1,6 @@
 # Mythic Hatchery: Studio playtest
 
-Open the supplied `MythicHatchery.rbxlx` on a PC in Roblox Studio. Keep Output open.
+Open the supplied `MythicHatchery_Revised.rbxlx` on a PC in Roblox Studio. Keep Output open.
 The game builds its world and models at runtime. Source changes rebuild with `bash tools/check.sh`;
 Rojo live development uses `bash tools/serve.sh`, which stages Roblox-compatible module requires.
 
@@ -8,9 +8,10 @@ Rojo live development uses `bash tools/serve.sh`, which stages Roblox-compatible
 - Start Play. Confirm no red Output errors; six continuous regions, eight habitat plots and the arena appear.
 - New data: 250 coins, one level1 Common Nature Dragon with Ride/Fly; no repeated starter on rejoin.
 - Use Device Emulator for a narrow portrait phone and a landscape phone. Buttons remain readable/tappable.
-- Hide the menu, ride and fly the starter; move, ascend, descend, stop, land, dismount and respawn.
+- Confirm the world is visible on entry and the objective guides you to the egg stand. Open and close each dock menu.
+- Ride and fly the starter; move, ascend, descend, stop, land, dismount and respawn.
 - Buy two Meadow eggs at its stand, incubate them and wait or Studio-test gems to skip. All three odds tables
-  show before buying. Hatch two more creatures and select a team of three.
+  show before buying, including the objective shortcut. Incubate from the bag action. Hatch reveals show the new creature and close with Keep Creature or X. Hatch two more creatures and select a team of three.
 
 ## Habitats and saving
 - Assign a creature to a slot. Coins accumulate and cap; tap collect. Upgrade raises rate/cap, unlock adds a slot.
@@ -28,7 +29,7 @@ Use Studio's server test with at least two clients, giving each three similarly 
 - Useful contribution controls XP; creatures that never enter receive none. No habitat/expedition XP.
 - Win/loss/draw, immediate recovery, point changes, timeout, disconnect/forfeit and reward dedupe.
 - Repeated opponents and idle forfeits do not farm positive rewards. Test two simultaneous matches and cameras.
-- On portrait phone, creatures remain visible above battle commands; camera restores when the battle ends.
+- On portrait phone, creatures remain visible above battle commands. Queue and close the menu; commands reopen when matched. Check attack, guard, heal, swap and final knockout effects. Results retain the arena briefly; camera restores when the battle ends.
 
 ## World and retained systems
 - World prompts open eggs/hatchery/fusion/shop/arena menus. Purchased gates let walkers AND server-owned mounts
