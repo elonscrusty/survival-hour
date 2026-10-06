@@ -16,7 +16,7 @@ return {
 		local p = Profile.Default()
 		t.ok(p.Coins >= 100, "enough for the first egg")
 		t.ok(p.Areas.Meadow, "meadow open")
-		t.no(p.Areas.Grove, "grove closed")
+		t.no(p.Areas.Shadow, "shadow closed")
 	end,
 	["coin multiplier stacks every source"] = function(t)
 		local p = Profile.Default()
@@ -130,30 +130,30 @@ return {
 		local ok, err = Economy.OpenGate(p, "Frost")
 		t.no(ok, "skip a gate")
 		t.ok(err, "reason")
-		t.ok(Economy.OpenGate(p, "Grove"), "grove")
-		t.eq(p.Coins, 1e9 - Areas.ById.Grove.GateCost, "paid")
-		t.no(Economy.OpenGate(p, "Grove"), "twice")
+		t.ok(Economy.OpenGate(p, "Shadow"), "shadow")
+		t.eq(p.Coins, 1e9 - Areas.ById.Shadow.GateCost, "paid")
+		t.no(Economy.OpenGate(p, "Shadow"), "twice")
 		t.no(Economy.OpenGate(p, "Atlantis"), "unknown")
 		p.Coins = 0
 		t.no(Economy.OpenGate(p, "Frost"), "broke")
 		t.no(p.Areas.Frost, "still closed")
-		t.eq(Economy.HighestArea(p), "Grove", "highest")
+		t.eq(Economy.HighestArea(p), "Shadow", "highest")
 	end,
-	["rebirth resets coins and gates, keeps pets and gems"] = function(t)
+	["rebirth resets coins and gates, keeps creatures and gems"] = function(t)
 		local p = Profile.Default()
-		p.Areas.Grove = true
+		p.Areas.Shadow = true
 		p.Gems = 7
-		table.insert(p.Pets, { Uid = "1", Id = "Puppy", Variant = "Normal", Shiny = false, Level = 1, Xp = 0, Locked = false })
+		table.insert(p.Creatures, { Uid = "1", Species = "Dragon", Rarity = "Common", Element = "Nature", Variant = "Normal", Shiny = false, Level = 1, Xp = 0, Locked = false })
 		p.Coins = Economy.RebirthCost(0) - 1
 		t.no(Economy.Rebirth(p), "too poor")
 		p.Coins = Economy.RebirthCost(0)
 		t.ok(Economy.Rebirth(p), "rebirth")
 		t.eq(p.Coins, 0, "coins reset")
-		t.no(p.Areas.Grove, "gates reset")
+		t.no(p.Areas.Shadow, "gates reset")
 		t.ok(p.Areas.Meadow, "meadow kept")
 		t.eq(p.Rebirths, 1, "count")
 		t.eq(p.Gems, 7 + Config.RebirthGems, "gems")
-		t.eq(#p.Pets, 1, "pets kept")
+		t.eq(#p.Creatures, 2, "creatures kept")
 		t.eq(Economy.RebirthCost(1), Config.RebirthBaseCost * Config.RebirthCostGrowth, "cost grows")
 		p.Rebirths = Config.MaxRebirths
 		p.Coins = Schema.MaxCoins

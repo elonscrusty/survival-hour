@@ -61,23 +61,14 @@ Models.Profiles = {
 -- Parts with these names keep their colour for Golden/Rainbow variants.
 local KEEP_COLOUR = { Eye = true, Collar = true }
 -- Rainbow also keeps the cream face / chest patches (see reference/puppy_variants.jpg).
-local KEEP_RAINBOW = { Eye = true, Collar = true, Face = true }
 -- Invisible helper parts inside props (never collide or block clicks).
 local HELPER = { Prompt = true, SignFace = true, EggSpot = true, Root = true }
 
 local SPARKLE_TEXTURE = "rbxasset://textures/particles/sparkles_main.dds"
-local GOLD_DARK = Color3.fromRGB(166, 108, 10)
-local GOLD_LIGHT = Color3.fromRGB(255, 206, 74)
-local RAINBOW_HUES = { 0, 0.08, 0.15, 0.33, 0.58, 0.76 }
-local GOLD_NEON = Color3.fromRGB(255, 213, 74)
 local SHINY_TINT = Color3.fromRGB(255, 246, 224)
 
 local function hexColor(c: number): Color3
 	return Color3.fromRGB(bit32.rshift(c, 16), bit32.band(bit32.rshift(c, 8), 255), bit32.band(c, 255))
-end
-
-local function luminance(c: Color3): number
-	return 0.3 * c.R + 0.59 * c.G + 0.11 * c.B
 end
 
 -- Creates one part from a data row (see the header of ModelData.luau).
@@ -172,41 +163,6 @@ end
 
 -- Variants -----------------------------------------------------------------
 
-local function applyGolden(m: Model)
-	for _, d in m:GetDescendants() do
-		if d:IsA("BasePart") and d.Name ~= "Root" and not KEEP_COLOUR[d.Name] then
-			if d.Material == Enum.Material.Neon then
-				d.Color = GOLD_NEON
-			else
-				local t = math.clamp(luminance(d.Color) * 0.6 + 0.3, 0, 1)
-				d.Color = GOLD_DARK:Lerp(GOLD_LIGHT, t)
-				d.Material = Enum.Material.Foil
-				d.Reflectance = 0.08
-			end
-		end
-	end
-	m:SetAttribute("Golden", true)
-end
-
--- Static rainbow stripes by height. Each recoloured part carries a
--- RainbowHue attribute (0..1) so the client can animate the hues.
-local function applyRainbow(m: Model, height: number)
-	for _, d in m:GetDescendants() do
-		if d:IsA("BasePart") and d.Name ~= "Root" and not KEEP_RAINBOW[d.Name] then
-			-- Horizontal bands (each 15% of the pet height) cycling red, orange, yellow,
-			-- green, blue, purple from the top down.
-			local rel = 1 - math.clamp(d.Position.Y / math.max(height, 0.01), 0, 1)
-			local hue = RAINBOW_HUES[(math.floor(rel / 0.15) % 6) + 1]
-			d.Color = Color3.fromHSV(hue, 0.75, 0.97)
-			if d.Material ~= Enum.Material.Neon then
-				d.Material = Enum.Material.SmoothPlastic
-			end
-			d:SetAttribute("RainbowHue", hue)
-		end
-	end
-	m:SetAttribute("Rainbow", true)
-end
-
 local function applyShiny(m: Model)
 	for _, d in m:GetDescendants() do
 		if d:IsA("BasePart") and d.Name ~= "Root" and not KEEP_COLOUR[d.Name] then
@@ -255,47 +211,63 @@ end
 
 -- Public API ---------------------------------------------------------------
 
-function Models.Pet(petId: string, variant: string, shiny: boolean): Model
-	local key = "Pet|" .. petId .. "|" .. tostring(variant) .. "|" .. (if shiny then "1" else "0")
-	return cached(key, function()
-		local entry = ModelData.Pets[petId]
-		local m = if entry then newModel(petId, entry, 1, Models.Profiles.Pet) else placeholder(petId, Models.Profiles.Pet)
-		if variant == "Golden" then
-			applyGolden(m)
-		elseif variant == "Rainbow" then
-			applyRainbow(m, if entry then entry.B[2] else 2.5)
-		end
-		if shiny then
-			applyShiny(m)
-		end
-		m:SetAttribute("PetId", petId)
-		m:SetAttribute("Variant", variant)
-		return m
-	end)
-end
-
--- Creature (contract API; see docs/CONTRACTS.md). PLACEHOLDER until the models pass:
--- an element-coloured block sized by stage, with Saddle/Hat/Aura attachments.
 export type CreatureOpts = { Neon: boolean?, Cosmetics: { [string]: string }? }
-function Models.Creature(species: string, element: string, rarity: string, stage: string, opts: CreatureOpts?): Model
-	local m = placeholder(species, Models.Profiles.Pet)
-	local root = m.PrimaryPart :: BasePart
-	for _, name in { "Saddle", "Hat", "Aura" } do
-		local a = Instance.new("Attachment")
-		a.Name = name
-		a.Parent = root
-	end
-	m:SetAttribute("Species", species)
-	m:SetAttribute("Element", element)
-	m:SetAttribute("Rarity", rarity)
-	m:SetAttribute("Stage", stage)
-	m:SetAttribute("Neon", opts ~= nil and opts.Neon == true)
-	return m
-end
-
--- Cosmetic model (contract API). PLACEHOLDER until the models pass.
+local palettes = {
+ Fire = {0xFF6E32, 0xFFBE3C}, Ice = {0x78C8FF, 0xD2F5FF},
+ Storm = {0xFAE146, 0xAA8CFF}, Nature = {0x64D25A, 0xC8FF8C}, Shadow = {0x7846BE, 0xDC5AFF},
+}
+local rarityRanks = {Common=1, Rare=2, Epic=3, Legendary=4, Mythic=5}
 function Models.Cosmetic(id: string): Model
-	return placeholder(id, Models.Profiles.Pet)
+ local entry = ModelData.Cosmetics[id]
+ assert(entry, "Unknown cosmetic " .. id)
+ local m = newModel(id, entry, 1, Models.Profiles.Pet)
+ m:SetAttribute("CosmeticId", id)
+ return m
+end
+function Models.Creature(species: string, element: string, rarity: string, stage: string, opts: CreatureOpts?): Model
+ local entry = ModelData.Species[species]
+ assert(entry, "Unknown species " .. species)
+ local palette = (palettes :: any)[element]
+ assert(palette, "Unknown element " .. element)
+ local m = newModel(species, entry, 1, Models.Profiles.Pet)
+ local root = m.PrimaryPart :: BasePart
+ for _, p in m:GetChildren() do
+  if p:IsA("BasePart") then
+   if p.Name == "Body" then p.Color = hexColor(palette[1]) end
+   if p.Name == "Accent" or p.Name == "Glow" then
+    p.Color = hexColor(palette[2])
+    if opts and opts.Neon then p.Material = Enum.Material.Neon end
+   end
+  end
+ end
+ local positions: {[string]: Vector3} = {Saddle=Vector3.new(0,3.85,0.5), Hat=Vector3.new(0,5.8,-2), Aura=Vector3.new(0,2.5,0)}
+ for name,pos in positions do
+  local a = Instance.new("Attachment")
+  a.Name = name
+  a.Position = pos-root.Position
+  a.Parent = root
+ end
+ local rank = (rarityRanks :: any)[rarity] or 1
+ for i=2,rank do
+  local p = Models.MakePart({"B", .4, .6, .4, (i-3)*.7, 3.9, 1, 0,0,0,0xFFD56A,"M","RarityGem"}, CFrame.identity, 1, Models.Profiles.Pet)
+  p.Parent=m
+ end
+ if rank >= 4 then applyShiny(m) end
+ if opts and opts.Cosmetics then
+  for slot,id in opts.Cosmetics do
+   local attachment = root:FindFirstChild(slot)
+   if attachment and attachment:IsA("Attachment") then
+    local cosmetic = Models.Cosmetic(id)
+    cosmetic:PivotTo(attachment.WorldCFrame)
+    cosmetic.Parent=m
+   end
+  end
+ end
+ m:SetAttribute("Species",species)
+ m:SetAttribute("Element",element)
+ m:SetAttribute("Rarity",rarity)
+ m:SetAttribute("Neon",opts ~= nil and opts.Neon == true)
+ return m
 end
 
 function Models.Egg(eggId: string, scale: number?): Model
@@ -340,8 +312,8 @@ function Models.PropData(name: string): any
 end
 
 -- True when the generator produced data for this pet / egg / breakable.
-function Models.HasPet(petId: string): boolean
-	return ModelData.Pets[petId] ~= nil
+function Models.HasCreature(species: string): boolean
+	return ModelData.Species[species] ~= nil
 end
 
 function Models.HasEgg(eggId: string): boolean

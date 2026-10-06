@@ -13,7 +13,7 @@ Config.Version = 1 -- profile schema version (Logic/Profile migrates older saves
 -- Rarities, weakest first. Order matters (index used for sorting, colours and fusion upgrades).
 Config.Rarities = { "Common", "Rare", "Epic", "Legendary", "Mythic" }
 
--- Coin-farming power = RarityPower * StagePower * region TierPower (Areas) * bonuses.
+-- Creature strength = rarity power * level power * bonuses.
 Config.RarityPower = {
 	Common = 1,
 	Rare = 2,
@@ -24,25 +24,8 @@ Config.RarityPower = {
 
 -- Rarity colours live in client UI/Theme.luau (Config must stay Roblox-type free for CLI tests).
 
--- Growth: Baby -> Teen -> Adult -> Ancient. Care tasks give growth points; a stage is reached
--- when the creature's total growth reaches the threshold. Neglect only pauses growth.
-Config.Stages = { "Baby", "Teen", "Adult", "Ancient" }
-Config.StageGrowth = { Baby = 0, Teen = 6, Adult = 18, Ancient = 48 } :: { [string]: number }
-Config.StagePower = { Baby = 1, Teen = 1.6, Adult = 2.5, Ancient = 4 } :: { [string]: number }
-Config.StageScale = { Baby = 0.7, Teen = 0.85, Adult = 1, Ancient = 1.25 } :: { [string]: number } -- model size
-Config.RideStage = "Adult" -- minimum stage to ride or fly (with the matching potion)
-Config.FuseStage = "Adult" -- minimum stage for both fusion parents
-
--- Care tasks: each can be done once per Cooldown seconds per creature and gives Growth points.
--- Feed costs FeedCost coins x CoinMult of the owner's highest opened region.
-Config.Care = {
-	Feed = { Cooldown = 15 * 60, Growth = 1 },
-	Play = { Cooldown = 25 * 60, Growth = 1 },
-	Sleep = { Cooldown = 60 * 60, Growth = 2 },
-} :: { [string]: { Cooldown: number, Growth: number } }
-Config.CareOrder = { "Feed", "Play", "Sleep" }
-Config.FeedCost = 25
-Config.CareCooldownMin = 0.5 -- server rate limit between any two care actions (seconds)
+-- Visual scale presets only; gameplay progression uses Levels in Gameplay.luau.
+Config.StageScale = { Baby = 0.7, Teen = 0.85, Adult = 1, Ancient = 1.25 } :: { [string]: number }
 
 -- Inventory
 Config.BaseEquip = 3 -- creatures that follow you and farm coins
@@ -71,46 +54,29 @@ Config.MaxLuckMult = 6
 Config.HomeElementWeight = 60
 Config.ElementBonus = 1.25
 
--- Fusion: two Adult+ creatures (both consumed) -> one fused egg.
+-- Fusion: two available creatures (both consumed) -> one fused egg.
 Config.Fusion = {
 	CoinCost = 500, -- x CoinMult of the owner's highest opened region
 	UpgradeChance = 0.35, -- chance the egg's rarity is one tier above the better parent
 	SameRarityBonus = 0.1, -- added when both parents share a rarity
-	AncientBonus = 0.075, -- added per Ancient parent
 	MaxUpgradeChance = 0.75,
 	HybridChance = 0.08, -- cross-species pair with a hidden hybrid
 	RandomElementChance = 0.1, -- otherwise the egg takes one parent's element at random
 	IncubateSeconds = 15 * 60,
 }
 
--- Riding and flying (Adult+ with the Ride or Fly potion). Speeds in studs/second.
+-- Riding and flying (with the Ride or Fly potion). Speeds in studs/second.
 Config.Ride = {
 	WalkSpeed = 30,
 	FlySpeed = 44,
-	StageSpeed = { Adult = 0, Ancient = 6 } :: { [string]: number },
 	RaritySpeed = 1.5, -- per rarity tier above Common
 	NeonSpeed = 0,
 	MaxAltitude = 600,
 	SpeedTolerance = 1.35, -- server allows this much over the expected speed before correcting
 }
 
--- Sky race (arena floating above the Meadow hub).
-Config.Race = {
-	QueueSeconds = 15, -- lobby countdown once someone joins
-	MaxRacers = 8,
-	MinCheckpointSeconds = 0.6, -- fastest legal gap between checkpoints
-	TimeLimit = 180,
-	Coins = { 400, 250, 150, 100 }, -- by finishing place (then the last value), x CoinMult of highest region
-	Trophies = { 3, 2, 1 },
-	DailyRewardRaces = 15, -- races per UTC day that pay out (stops AFK farming)
-}
-
--- Breakables / farming
-Config.PetDamageInterval = 0.5 -- seconds between pet damage ticks
-Config.PetDamagePerPower = 10 -- damage per tick = power * this
-Config.MaxTargetDistance = 90 -- studs from player to the breakable they target
-Config.BreakableRespawn = { 6, 14 } -- seconds (random in range)
-Config.BreakGemsPerHour = 15 -- per-player cap on gems from breakables (rolling hour)
+-- Legacy save/test compatibility for the retired breakable gem limiter.
+Config.BreakGemsPerHour = 15
 
 -- Coins
 Config.VipCoinMult = 1.2
@@ -160,13 +126,11 @@ Config.PlaytimeGifts = { -- minutes played today (UTC day) -> reward, each once 
 } :: { RewardSpec }
 Config.QuestsPerDay = 3
 Config.QuestPool = {
-	{ Kind = "Break", Goals = { 150, 300, 600 }, Gems = { 15, 25, 40 } },
+	{ Kind = "Battle", Goals = { 2, 4, 8 }, Gems = { 15, 25, 40 } },
 	{ Kind = "Hatch", Goals = { 20, 50, 100 }, Gems = { 15, 25, 40 } },
 	{ Kind = "Expedition", Goals = { 2, 4, 8 }, Gems = { 15, 25, 40 } },
 	{ Kind = "Coins", Goals = { 5000, 12000, 25000 } --[[ x CoinMult of highest opened area ]], Gems = { 15, 25, 40 } },
 	{ Kind = "Fuse", Goals = { 1, 2, 3 }, Gems = { 20, 35, 55 } },
-	{ Kind = "Care", Goals = { 10, 25, 50 }, Gems = { 15, 25, 40 } },
-	{ Kind = "Race", Goals = { 1, 3, 5 }, Gems = { 15, 25, 40 } },
 }
 Config.IndexRewards = { -- fraction of Index entries (species x element) discovered -> reward
 	{ Fraction = 0.25, Gems = 50, Equip = 1 },
@@ -179,7 +143,7 @@ Config.IndexRewards = { -- fraction of Index entries (species x element) discove
 Config.Boosts = {
 	Coins2x = { Seconds = 30 * 60, Name = "2x Coins" },
 	Luck2x = { Seconds = 30 * 60, Name = "2x Luck" },
-	Growth2x = { Seconds = 30 * 60, Name = "2x Growth" },
+	Growth2x = { Seconds = 30 * 60, Name = "2x Battle XP" },
 } :: { [string]: { Seconds: number, Name: string } }
 Config.ServerLuckSeconds = 15 * 60
 Config.MaxBoostSeconds = 24 * 3600
@@ -193,40 +157,6 @@ Config.TradeConfirmSeconds = 4 -- countdown after both ready; any change cancels
 Config.TradeRequestTimeout = 20
 Config.TradeMinAccountAgeDays = 7
 Config.TradeCooldown = 10 -- seconds between trade requests from one player
-
--- Creature Ring (walk-in free-for-all next to the Meadow hub; see docs/CONTRACTS.md).
--- Ring strength = min(RarityFactor * NeonFactor, MaxGearFactor) * StageFactor * ElementEdge.
--- Island tiers are ignored, so growth (time spent caring) matters most and paid help
--- (rarer creatures, Growth boosts, an extra fighter) never exceeds ~2x.
-Config.Ring = {
-	TickSeconds = 0.2,
-	ReplicateSeconds = 0.1,
-	Fighters = 3,
-	PassFighters = 1, -- RingChampion pass
-	MoveSpeed = 18,
-	AttackRange = 4.5,
-	AttackInterval = 0.9,
-	BaseHp = 100,
-	BaseDamage = 11,
-	CritChance = 0.1,
-	CritMult = 1.75,
-	RarityFactor = { Common = 1, Rare = 1.15, Epic = 1.3, Legendary = 1.5, Mythic = 1.75 } :: { [string]: number },
-	StageFactor = { Baby = 1, Teen = 1.35, Adult = 1.8, Ancient = 2.4 } :: { [string]: number },
-	NeonFactor = 1.05,
-	MaxGearFactor = 2,
-	ElementEdge = 1.25, -- damage multiplier against the element yours beats (Elements.Beats)
-	EnterGraceSeconds = 2,
-	KoTrophies = 1,
-	KoCoins = 40,
-	GrowthPerKo = 0, -- KOs don't grow creatures (growth comes from care)
-	SameVictimLimit = 3,
-	SameVictimWindow = 600,
-	KingMinStreak = 3,
-	WildWhenAlone = true,
-	WildDelay = 3,
-	WildStrength = 0.9,
-	WildCoins = 0.25,
-}
 
 -- Saving
 Config.AutosaveSeconds = 300

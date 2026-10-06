@@ -81,6 +81,10 @@ function Economy.MaxStorage(p: Profile): number
 	return n
 end
 
+function Economy.HatchSlots(p: Profile): number
+ return Config.BaseHatchSlots + (if Economy.HasPass(p, "HatchSlots") then Config.PassHatchSlots else 0)
+end
+
 function Economy.ExpeditionSlots(p: Profile): number
 	local n = Config.BaseExpeditionSlots
 	if Economy.HasPass(p, "MoreExpeditions") then
@@ -210,7 +214,7 @@ function Economy.SplitBreak(damage: { number }, coins: number, gems: number): { 
 		out[i] = { Coins = c, Gems = g, Credit = credit }
 		table.insert(rema, { I = i, R = exact - g, D = dmg })
 	end
-	table.sort(rema, function(a, b)
+	table.sort(rema, function(a: {I:number,R:number,D:number}, b: {I:number,R:number,D:number})
 		if a.R ~= b.R then
 			return a.R > b.R
 		end

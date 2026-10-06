@@ -1,3 +1,5 @@
+> Historical handoff: implementation has changed. Read CONTRACTS.md, STATUS.md and STUDIO_TESTS.md for the current game.
+
 # Mythic Hatchery: handoff prompt for ChatGPT
 
 Paste everything below the line into ChatGPT, then attach `mythic-hatchery-src.zip` (or point it at the

@@ -1,4 +1,4 @@
---!nonstrict
+--!strict
 -- Daily streak, playtime gifts (per server session), daily quests and Index
 -- rewards. All checks live in Logic/Rewards; this file wires the remotes.
 
@@ -6,7 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
-local Pets = require(Shared:WaitForChild("Pets"))
+local Species = require(Shared:WaitForChild("Species"))
 local Logic = Shared:WaitForChild("Logic")
 local Rewards = require(Logic:WaitForChild("Rewards"))
 
@@ -100,9 +100,9 @@ function RewardService.Start()
 end
 
 -- Tells the player a species just entered their Index.
-function RewardService.Discovered(player: Player, petId: string)
-	if Pets.ById[petId] then
-		ctx.Util.Notify(player, "Discovered", { PetId = petId })
+function RewardService.Discovered(player: Player, petId: string, element: string?)
+	if Species.ById[petId] then
+		ctx.Util.Notify(player, "Discovered", { Species = petId, Element = element, PetId = petId })
 	end
 end
 

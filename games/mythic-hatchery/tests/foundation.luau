@@ -1,7 +1,7 @@
 --!strict
 -- Focused conversion checks. Whole-project checks still run through run.luau.
 local specs: { any } = {
-	require("./Hatch.spec"), require("./Gameplay.spec"), require("./Fusion.spec"), require("./BattleEdges.spec"),
+	require("./Hatch.spec"), require("./Incubation.spec"), require("./Gameplay.spec"), require("./Fusion.spec"), require("./BattleEdges.spec"),
 }
 local passed, failed = 0, 0
 local t: any = {}

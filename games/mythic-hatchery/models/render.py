@@ -4,7 +4,7 @@ Uses the exact same part specs as gen_models.py (so previews match the game)
 and writes PNG/JPG files to games/pet-expedition/renders/.
 
   python3 models/render.py                    # everything
-  python3 models/render.py --only pets --ids Puppy,Fox
+  python3 models/render.py --only pets --ids Dragon,Griffin
   python3 models/render.py --only eggs,breakables,props,world,sheet,marketing
   python3 models/render.py --samples 16 --res 320
 
@@ -330,14 +330,6 @@ def job_pets(sc, ids=None):
         info = G.PET_INFO[pid]
         render_one(sc, parts, os.path.join(OUT, "pets", f"{pid}.png"), label=info["Name"], bg=RARITY_BG[info["Rarity"]])
         print("pet", pid, len(parts))
-    # Variant examples
-    for pid, var, shiny in (("Puppy", "Golden", False), ("Puppy", "Rainbow", False), ("Fox", "Golden", False),
-                            ("Fox", "Rainbow", True), ("InfernoDragon", "Golden", False), ("CosmicUnicorn", "Rainbow", False)):
-        if ids and pid not in ids:
-            continue
-        parts = G.variant_parts(data["pets"][pid], var, shiny)
-        render_one(sc, parts, os.path.join(OUT, "pets", f"{pid}_{var}{'_Shiny' if shiny else ''}.png"),
-                   label=f"{var} {G.PET_INFO[pid]['Name']}{' (Shiny)' if shiny else ''}", bg=((40, 40, 70), (110, 80, 150)))
 
 
 def job_eggs(sc, ids=None):

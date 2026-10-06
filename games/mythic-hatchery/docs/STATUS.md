@@ -1,47 +1,40 @@
 # Mythic Hatchery status
 
-Updated October 6, 2026. This is an incomplete conversion, not a playable release.
+Updated October 6, 2026. The approved battle/habitat conversion is connected across shared logic,
+saved profiles, server services, phone UI and primitive world/creature models. The place builds for Studio.
 
-## Current design
-Read IMPLEMENTATION_PLAN.md and the revision at the top of CONTRACTS.md.
-The owner chose optional PvP, three-creature teams, real-time commands, battle-only XP,
-levels instead of growth stages, and a habitat that produces collectible coins online/offline.
-No racing. Starter mount can ride and fly immediately.
+## Implemented
+- Independent hatch rolls, incubation seed/luck snapshots, paid hatch slots, skips and fused eggs.
+- Battle-only levels/XP, species/element moves, real-time commands, teams3/oneactive, shared move cooldown,
+  separate swaps, strength matching, useful participation rewards, points, forfeit/timeout and dedupe.
+- Online/offline habitat income with storage caps, manual collection, slot upgrades/unlocks, busy rules,
+  prospective permanent multipliers and temporary boost expiry.
+- Persisted ride/fly starter; server-owned mounted movement with validated input, altitude/speed guards.
+- Fusion, potions, cosmetics, companion followers, eleven creature silhouettes and five element palettes.
+- Connected six-region world, natural gate barriers, eight habitat plots and separate simultaneous matches.
+- Phone menus and compact battle controls; odds, teams, habitats, riding/flying, fusion, shops, rewards,
+  Index, expeditions, purchases and creature-only trades.
+- Existing session locking, retry/backoff, receipt dedupe, autosave/close save and journaled atomic trades.
+- Studio tools and zero-id simulated purchases; policy restrictions on gem eggs/paid luck/trading.
 
-## Implemented shared foundation
-- Hatch: independent species/rarity/element rolls; capped rarity luck; fused parent odds and hybrids.
-- Level: battle XP, multiple level-ups, maximum-level cap, rarity/level strength.
-- Habitat: slot assignment/removal, stored income, offline accrual, caps, collection, upgrades.
-- Moves: species moves plus an elemental attack, two initial moves and four level unlocks.
-- Battle: team snapshots, one active creature, shared move cooldown, separate swap cooldown,
-  knockouts/forced replacements, healing/guard contributions, forfeit/timeout, strength matching,
-  participation-weighted XP, coin and arena-point reward calculations.
-- Fusion: validate available parents and payment/egg space; prepare two-parent consumption and an egg.
-- Net: removed stray pet-era remote declarations that made the module invalid Luau.
+## Validation and review
+The current check suite runs strict Luau analysis, 133 Luau tests, two Python build-transform tests,
+Rojo build and place-source verification. Reviews found and corrected slot-key/save bugs, paid-slot loss,
+gate collision with server-owned mounts, quest wiring, cosmetics transfer, boost expiry, Neon income,
+concurrent battle cameras and inaccessible retained menus. Generated data uses explicit strict table types.
 
-## Verification
-44 focused tests pass: /tmp/sh-tools/luau/luau tests/foundation.luau.
-Changed pure modules and new tests pass standalone Luau analysis with zero diagnostics.
-Net.luau passes Luau compilation. git diff --check passes.
-Whole-project tools/check.sh --quick still fails: 62 tests pass; eight legacy modules fail to load
-(PetMath, Economy, Inventory, Expedition, Rewards, Profile, Trade, Models) because Pets.luau was deleted.
-The old client/server also still have pet-era type/API diagnostics. No Studio playtest has occurred.
+No Roblox Studio playtest has been performed here. Physics, touch layout, multiplayer replication,
+live DataStore failure recovery and Marketplace receipt behaviour still require the checklist in STUDIO_TESTS.md.
+A successful build and CLI tests establish static/unit validation, not a released or playtested game.
 
-## Next integration pass
-Convert Schema/Profile/Inventory/Economy and persistence before connecting the foundation to services.
-Adapt Types/Config with the new fields and remove old race/care fields as clients/services migrate.
-Map saved creature fields to Level.Creature snapshots without allowing client-supplied stats.
-Create habitat unlock/assignment services with ownership, duplicate-assignment and busy-state checks.
-Grant the starter mount once per saved profile; prevent rerolling it by rejoining.
-Create opponent queues, session cleanup, server-owned clocks and reward settlement once per battle id.
-Add minimum participation/repeat-opponent protections before awarding arena income/XP.
-Convert incubation, purchases, rewards, trades and expeditions without weakening receipt/session/journal rules.
-Then build mobile controls and primitive models. Do not publish this branch yet.
+## Provisional settings
+Gameplay.luau: levelcap50, move cooldown2s, swap cooldown8s, prices/rates/rewards/matchratio awaiting balance.
+Fused hatchlings start at level1, no minimum fusion level. Product ids remain0. Map has eight plots;
+configure maximumplayers8 for the current map. The legacy MoreEquip pass adds followers, never a fourth PvP fighter.
+Growth2x/BoostGrowth save keys mean2xBattleXP. AutoFarm/RingChampion are removed from the unconfigured catalogue.
 
-## Provisional defaults and limitations
-Fused hatchlings start at level 1. No fusion level minimum has been chosen; the preparation module does not impose one.
-Max level 50, six total moves, 2-second command delay, 8-second swap delay, reward amounts and habitat prices/rates
-are temporary numbers in Gameplay.luau, pending balance work. Matchmaking currently exposes a comparison rule,
-not an integrated queue. Habitat slot unlock limits are tuning data awaiting service enforcement.
-Pure reward functions calculate values; they do not grant or persist anything.
-Review was performed by the author; an independent review remains pending.
+## Development
+Run `bash tools/check.sh --quick` while editing and `bash tools/check.sh` to generate
+`build/MythicHatchery.rbxlx`. `bash tools/serve.sh` serves the staged Roblox project.
+Pure source relative requires support CLI tests; runtime staging converts these to ModuleScript Instance requires.
+Read CONTRACTS.md for current behaviour; older architecture handoffs are marked historical.

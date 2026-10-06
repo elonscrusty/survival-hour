@@ -6,6 +6,8 @@ local Areas = require("../src/shared/Areas")
 local Potions = require("../src/shared/Potions")
 local Cosmetics = require("../src/shared/Cosmetics")
 local Config = require("../src/shared/Config")
+local Products = require("../src/shared/Products")
+local Gameplay = require("../src/shared/Gameplay")
 
 local function sum(t)
 	local s = 0
@@ -81,16 +83,15 @@ return {
 		end
 		t.eq(Species.Hybrid("Dragon", "Dragon"), nil)
 	end,
-	["stages, care and shop data are sane"] = function(t)
-		local last = -1
-		for _, st in Config.Stages do
-			t.ok(Config.StageGrowth[st] > last, st .. " growth grows")
-			last = Config.StageGrowth[st]
-			t.ok(Config.StagePower[st] and Config.StageScale[st] and Config.Ring.StageFactor[st], st)
+	["level gameplay and shop data are sane"] = function(t)
+		t.eq(Gameplay.Battle.TeamSize, 3)
+		t.ok(Gameplay.MaxLevel > 1)
+		for _, quest in Config.QuestPool do
+			t.no(quest.Kind == "Care" or quest.Kind == "Race" or quest.Kind == "Break", "removed task")
 		end
-		for _, task in Config.CareOrder do
-			t.ok(Config.Care[task].Cooldown > 0 and Config.Care[task].Growth > 0, task)
-		end
+		t.eq(Products.PassByKey.AutoFarm, nil)
+		t.eq(Products.PassByKey.RingChampion, nil)
+		t.eq(Config.Boosts.Growth2x.Name, "2x Battle XP")
 		for _, p in Potions.List do
 			t.ok(p.Gems > 0, p.Id)
 		end
@@ -98,7 +99,7 @@ return {
 			t.ok(table.find(Cosmetics.Slots, c.Slot) and c.Coins > 0, c.Id)
 		end
 		for _, r in Config.Rarities do
-			t.ok(Config.RarityPower[r] and Config.Ring.RarityFactor[r], r)
+			t.ok(Config.RarityPower[r], r)
 		end
 	end,
 }

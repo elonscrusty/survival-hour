@@ -6,7 +6,8 @@ local Moves = require("../src/shared/Moves")
 local Gameplay = require("../src/shared/Gameplay")
 
 local function creature(uid: string, level: number?): Level.Creature
-	return { Uid = uid, Species = "Dragon", Element = "Fire", Rarity = "Common", Level = level or 1, Xp = 0, Neon = false }
+	return {
+ Uid = uid, Species = "Dragon", Element = "Fire", Rarity = "Common", Level = level or 1, Xp = 0, Neon = false }
 end
 local function team(prefix: string): { Level.Creature }
 	return { creature(prefix .. "1"), creature(prefix .. "2"), creature(prefix .. "3") }
@@ -15,6 +16,22 @@ local function battle()
 	return Battle.New("test", 10, 20, team("a"), team("b"), 100)
 end
 return {
+	["Neon improves habitat income by ten percent"] = function(t: any)
+		local c=creature("neon"); c.Neon=true
+		local h=Habitat.New(100); Habitat.Assign(h,c,100); Habitat.Accrue(h,200)
+		t.ok(math.abs(h.Coins-11)<1e-6)
+	end,
+
+	["offline habitat boosts expire at their saved time"] = function(t: any)
+		local h = Habitat.New(100) :: any
+		Habitat.Assign(h, creature("income"), 100)
+		h.RateMult = 3; h.BoostUntil = 150; h.BoostMult = 2
+		Habitat.Accrue(h, 200)
+		t.ok(math.abs(h.Coins - 45) < 1e-6)
+		t.ok(math.abs(Habitat.Rate(h) - 0.3) < 1e-6)
+		Habitat.Accrue(h, 250)
+		t.ok(math.abs(h.Coins - 60) < 1e-6)
+	end,
 	["XP levels up repeatedly and caps without overflow"] = function(t: any)
 		local c = creature("x")
 		Level.AddXp(c, Level.XpToNext(1) + Level.XpToNext(2) + 7)

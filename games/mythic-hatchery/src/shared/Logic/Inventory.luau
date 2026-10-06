@@ -2,28 +2,30 @@
 -- Pet inventory rules: adding (capacity, unique uids), removing, equipping,
 -- locking, deleting with refunds and crafting 5 -> next variant.
 --
--- "Busy" pets are on an expedition: they can't be equipped, deleted,
+-- "Busy" creatures are on an expedition: they can't be equipped, deleted,
 -- crafted or traded until the expedition is claimed. Callers can pass an
--- extra `blocked` set (e.g. pets offered in an open trade) that is treated
+-- extra `blocked` set (e.g. creatures offered in an open trade) that is treated
 -- the same way for delete / craft.
 
 local Config = require("../Config")
-local Pets = require("../Pets")
+local Creatures = require("../Species")
+local Elements = require("../Elements")
+local Gameplay = require("../Gameplay")
 local Economy = require("./Economy")
 local PetMath = require("./PetMath")
 local Schema = require("./Schema")
 
 type Profile = Schema.Profile
-type PetInstance = Schema.PetInstance
+type Creature = Schema.Creature
 
-export type PetSpec = { Id: string, Variant: string?, Shiny: boolean?, Level: number?, Xp: number? }
+export type CreatureSpec = { Species: string, Rarity: string, Element: string, Tier: number?, Level: number?, Xp: number?, Potions: { [string]: boolean }?, Edition: string?, HatchedAt: number? }
 
 local Inventory = {}
 
-function Inventory.Find(p: Profile, uid: string): (PetInstance?, number?)
-	for i, pet in p.Pets do
-		if pet.Uid == uid then
-			return pet, i
+function Inventory.Find(p: Profile, uid: string): (Creature?, number?)
+	for i, creature in p.Creatures do
+		if creature.Uid == uid then
+			return creature, i
 		end
 	end
 	return nil, nil
@@ -33,9 +35,12 @@ end
 function Inventory.BusySet(p: Profile): { [string]: boolean }
 	local busy: { [string]: boolean } = {}
 	for _, e in p.Expeditions do
-		for _, uid in e.Pets do
+		for _, uid in e.Creatures do
 			busy[uid] = true
 		end
+	end
+	for _, slot in p.Habitats do
+		if slot.Creature then busy[slot.Creature] = true end
 	end
 	return busy
 end
@@ -49,14 +54,14 @@ function Inventory.IsEquipped(p: Profile, uid: string): boolean
 end
 
 function Inventory.FreeSpace(p: Profile): number
-	return math.max(0, Economy.MaxStorage(p) - #p.Pets)
+	return math.max(0, Economy.MaxStorage(p) - #p.Creatures)
 end
 
--- Returns a uid that no pet in this profile uses, and advances the counter.
+-- Returns a uid that no creature in this profile uses, and advances the counter.
 function Inventory.NewUid(p: Profile): string
 	local existing: { [string]: boolean } = {}
-	for _, pet in p.Pets do
-		existing[pet.Uid] = true
+	for _, creature in p.Creatures do
+		existing[creature.Uid] = true
 	end
 	local uid
 	repeat
@@ -66,57 +71,46 @@ function Inventory.NewUid(p: Profile): string
 	return uid
 end
 
--- Validates a pet spec and builds a fresh instance (not yet added).
-function Inventory.Make(p: Profile, spec: PetSpec): (PetInstance?, string?)
-	if type(spec) ~= "table" or type(spec.Id) ~= "string" or not Pets.ById[spec.Id] then
-		return nil, "Unknown pet"
-	end
-	local variant = spec.Variant or "Normal"
-	if not table.find(Config.Variants, variant) then
-		return nil, "Unknown variant"
-	end
-	local level = Schema.ClampInt(spec.Level or 1, 1, Config.PetMaxLevel)
-	local xp = if level >= Config.PetMaxLevel then 0 else Schema.ClampInt(spec.Xp or 0, 0, PetMath.XpToNext(level) - 1)
-	return {
-		Uid = Inventory.NewUid(p),
-		Id = spec.Id,
-		Variant = variant,
-		Shiny = spec.Shiny == true,
-		Level = level,
-		Xp = xp,
-		Locked = false,
-	}, nil
+-- Validates a creature spec and builds a fresh instance (not yet added).
+function Inventory.Make(p: Profile, spec: CreatureSpec): (Creature?, string?)
+ if type(spec) ~= "table" or not Creatures.ById[spec.Species] or not Elements.ById[spec.Element] or not table.find(Config.Rarities, spec.Rarity) then return nil, "Unknown creature" end
+ local level = Schema.ClampInt(spec.Level or 1, 1, Gameplay.MaxLevel)
+ local potions: { [string]: boolean } = {}
+ if spec.Potions then for _, key in { "Ride", "Fly", "Neon" } do if spec.Potions[key] == true then potions[key] = true end end end
+ return { Uid = Inventory.NewUid(p), Species = spec.Species, Rarity = spec.Rarity, Element = spec.Element,
+ Tier = Schema.ClampInt(spec.Tier or 1, 1, 6), Level = level, Xp = if level >= Gameplay.MaxLevel then 0 else Schema.ClampInt(spec.Xp or 0, 0, PetMath.XpToNext(level)-1),
+ Potions = potions, Neon = potions.Neon == true, Cosmetics = {}, Edition = spec.Edition, Locked = false, HatchedAt = Schema.ClampInt(spec.HatchedAt or 0, 0, 1e15) }, nil
 end
 
--- Adds one pet if there is room. Returns the pet and whether its species is
+-- Adds one creature if there is room. Returns the creature and whether its species is
 -- new to the player's Index.
-function Inventory.Add(p: Profile, spec: PetSpec): (PetInstance?, boolean, string?)
+function Inventory.Add(p: Profile, spec: CreatureSpec): (Creature?, boolean, string?)
 	if Inventory.FreeSpace(p) < 1 then
 		return nil, false, "Pet storage is full"
 	end
-	local pet, err = Inventory.Make(p, spec)
-	if not pet then
+	local creature, err = Inventory.Make(p, spec)
+	if not creature then
 		return nil, false, err
 	end
-	table.insert(p.Pets, pet)
-	local discovered = not p.Index[pet.Id]
-	p.Index[pet.Id] = true
-	return pet, discovered, nil
+	table.insert(p.Creatures, creature)
+	local discovered = not p.Index[creature.Species .. "|" .. creature.Element]
+	p.Index[creature.Species .. "|" .. creature.Element] = true
+	return creature, discovered, nil
 end
 
--- Removes pets by uid (no checks) and unequips them.
+-- Removes creatures by uid (no checks) and unequips them.
 function Inventory.RemoveUnchecked(p: Profile, uids: { string })
 	local drop: { [string]: boolean } = {}
 	for _, u in uids do
 		drop[u] = true
 	end
-	local kept: { PetInstance } = {}
-	for _, pet in p.Pets do
-		if not drop[pet.Uid] then
-			table.insert(kept, pet)
+	local kept: { Creature } = {}
+	for _, creature in p.Creatures do
+		if not drop[creature.Uid] then
+			table.insert(kept, creature)
 		end
 	end
-	p.Pets = kept
+	p.Creatures = kept
 	local eq: { string } = {}
 	for _, u in p.Equipped do
 		if not drop[u] then
@@ -124,12 +118,16 @@ function Inventory.RemoveUnchecked(p: Profile, uids: { string })
 		end
 	end
 	p.Equipped = eq
+ for _,slot in p.Habitats do if slot.Creature and drop[slot.Creature] then slot.Creature=nil; slot.Power=0 end end
+ local team: {string}={}
+ for _,uid in p.BattleTeam do if not drop[uid] then table.insert(team,uid) end end
+ p.BattleTeam=team
 end
 
 function Inventory.Equip(p: Profile, uid: string, equip: boolean): (boolean, string?)
-	local pet = Inventory.Find(p, uid)
-	if not pet then
-		return false, "You don't have that pet"
+	local creature = Inventory.Find(p, uid)
+	if not creature then
+		return false, "You don't have that creature"
 	end
 	local idx = table.find(p.Equipped, uid)
 	if not equip then
@@ -142,10 +140,10 @@ function Inventory.Equip(p: Profile, uid: string, equip: boolean): (boolean, str
 		return true, nil
 	end
 	if Inventory.IsBusy(p, uid) then
-		return false, "That pet is on an expedition"
+		return false, "That creature is on an expedition"
 	end
 	if #p.Equipped >= Economy.MaxEquip(p) then
-		return false, "No free pet slots"
+		return false, "No free creature slots"
 	end
 	table.insert(p.Equipped, uid)
 	return true, nil
@@ -155,13 +153,13 @@ function Inventory.UnequipAll(p: Profile)
 	p.Equipped = {}
 end
 
--- Equips the strongest pets that aren't busy.
+-- Equips the strongest creatures that aren't busy.
 function Inventory.EquipBest(p: Profile)
 	local busy = Inventory.BusySet(p)
-	local list: { PetInstance } = {}
-	for _, pet in p.Pets do
-		if not busy[pet.Uid] then
-			table.insert(list, pet)
+	local list: { Creature } = {}
+	for _, creature in p.Creatures do
+		if not busy[creature.Uid] then
+			table.insert(list, creature)
 		end
 	end
 	table.sort(list, PetMath.StrongerAt(Economy.HighestArea(p)))
@@ -172,12 +170,12 @@ function Inventory.EquipBest(p: Profile)
 	p.Equipped = eq
 end
 
-function Inventory.EquippedPets(p: Profile): { PetInstance }
-	local out: { PetInstance } = {}
+function Inventory.EquippedCreatures(p: Profile): { Creature }
+	local out: { Creature } = {}
 	for _, uid in p.Equipped do
-		local pet = Inventory.Find(p, uid)
-		if pet then
-			table.insert(out, pet)
+		local creature = Inventory.Find(p, uid)
+		if creature then
+			table.insert(out, creature)
 		end
 	end
 	return out
@@ -186,22 +184,22 @@ end
 function Inventory.EquippedPower(p: Profile): number
 	local total = 0
 	local scale = Economy.HighestArea(p)
-	for _, pet in Inventory.EquippedPets(p) do
-		total += PetMath.Power(pet, scale)
+	for _, creature in Inventory.EquippedCreatures(p) do
+		total += PetMath.Power(creature, scale)
 	end
 	return total
 end
 
 function Inventory.Lock(p: Profile, uid: string, locked: boolean): (boolean, string?)
-	local pet = Inventory.Find(p, uid)
-	if not pet then
-		return false, "You don't have that pet"
+	local creature = Inventory.Find(p, uid)
+	if not creature then
+		return false, "You don't have that creature"
 	end
-	pet.Locked = locked == true
+	creature.Locked = locked == true
 	return true, nil
 end
 
--- Deletes pets for a coin refund. All-or-nothing: any locked / busy / blocked
+-- Deletes creatures for a coin refund. All-or-nothing: any locked / busy / blocked
 -- / unknown uid rejects the whole request. Returns the refund.
 function Inventory.Delete(p: Profile, uids: { string }, blocked: { [string]: boolean }?): (number?, string?)
 	local busy = Inventory.BusySet(p)
@@ -209,99 +207,27 @@ function Inventory.Delete(p: Profile, uids: { string }, blocked: { [string]: boo
 	local refund = 0
 	for _, uid in uids do
 		if seen[uid] then
-			return nil, "Same pet chosen twice"
+			return nil, "Same creature chosen twice"
 		end
 		seen[uid] = true
-		local pet = Inventory.Find(p, uid)
-		if not pet then
-			return nil, "You don't have that pet"
+		local creature = Inventory.Find(p, uid)
+		if not creature then
+			return nil, "You don't have that creature"
 		end
-		if pet.Locked then
-			return nil, "Unlock a pet before deleting it"
+		if creature.Locked then
+			return nil, "Unlock a creature before deleting it"
 		end
 		if busy[uid] then
-			return nil, "That pet is on an expedition"
+			return nil, "That creature is on an expedition"
 		end
 		if blocked and blocked[uid] then
-			return nil, "That pet is in a trade"
+			return nil, "That creature is in a trade"
 		end
-		refund += PetMath.DeleteRefund(pet)
+		refund += PetMath.DeleteRefund(creature)
 	end
 	Inventory.RemoveUnchecked(p, uids)
 	local added = Economy.AddCoins(p, refund, false)
 	return added, nil
-end
-
--- Pets that could be crafted together with `pet` (same species, variant and
--- shininess, unlocked, not busy or blocked), the chosen pet first, then
--- unequipped pets before equipped ones, lowest level first.
-function Inventory.CraftGroup(p: Profile, pet: PetInstance, blocked: { [string]: boolean }?): { PetInstance }
-	local busy = Inventory.BusySet(p)
-	local group: { PetInstance } = {}
-	for _, other in p.Pets do
-		if other.Uid ~= pet.Uid and other.Id == pet.Id and other.Variant == pet.Variant
-			and other.Shiny == pet.Shiny and not other.Locked and not busy[other.Uid]
-			and not (blocked and blocked[other.Uid]) then
-			table.insert(group, other)
-		end
-	end
-	table.sort(group, function(a, b)
-		local ea, eb = Inventory.IsEquipped(p, a.Uid), Inventory.IsEquipped(p, b.Uid)
-		if ea ~= eb then
-			return not ea
-		end
-		if a.Level ~= b.Level then
-			return a.Level < b.Level
-		end
-		return a.Uid < b.Uid
-	end)
-	table.insert(group, 1, pet)
-	return group
-end
-
--- Combines Config.CraftCost copies of a pet into one of the next variant.
--- The new pet is equipped if any consumed pet was equipped.
-function Inventory.Craft(p: Profile, uid: string, blocked: { [string]: boolean }?): (PetInstance?, string?)
-	local pet = Inventory.Find(p, uid)
-	if not pet then
-		return nil, "You don't have that pet"
-	end
-	local nextVariant = PetMath.NextVariant(pet.Variant)
-	if not nextVariant then
-		return nil, "This pet can't be upgraded further"
-	end
-	if pet.Locked then
-		return nil, "Unlock the pet first"
-	end
-	if Inventory.IsBusy(p, uid) then
-		return nil, "That pet is on an expedition"
-	end
-	if blocked and blocked[uid] then
-		return nil, "That pet is in a trade"
-	end
-	local group = Inventory.CraftGroup(p, pet, blocked)
-	if #group < Config.CraftCost then
-		return nil, string.format("You need %d of this pet (unlocked, at home)", Config.CraftCost)
-	end
-	local used: { string } = {}
-	local wasEquipped = false
-	for i = 1, Config.CraftCost do
-		table.insert(used, group[i].Uid)
-		wasEquipped = wasEquipped or Inventory.IsEquipped(p, group[i].Uid)
-	end
-	local id, shiny = pet.Id, pet.Shiny
-	Inventory.RemoveUnchecked(p, used)
-	-- Room is guaranteed: we just freed Config.CraftCost slots.
-	local made = Inventory.Make(p, { Id = id, Variant = nextVariant, Shiny = shiny })
-	if not made then
-		return nil, "Craft failed"
-	end
-	table.insert(p.Pets, made)
-	if wasEquipped and #p.Equipped < Economy.MaxEquip(p) then
-		table.insert(p.Equipped, made.Uid)
-	end
-	p.Stats.Crafted = math.min(Schema.MaxStat, p.Stats.Crafted + 1)
-	return made, nil
 end
 
 return Inventory

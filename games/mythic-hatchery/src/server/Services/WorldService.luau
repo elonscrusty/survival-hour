@@ -1,4 +1,5 @@
---!nonstrict
+--!strict
+local protectedCall: any = pcall
 -- Builds the map (Models/World), tracks which island each player stands on,
 -- opens gates and teleports between opened islands. A player found inside an
 -- island they haven't opened (e.g. a client that removed the gate barrier) is
@@ -9,6 +10,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
 local Areas = require(Shared:WaitForChild("Areas"))
 local Models = Shared:WaitForChild("Models")
 local World = require(Models:WaitForChild("World"))
@@ -18,7 +20,7 @@ local Economy = require(Logic:WaitForChild("Economy"))
 local WorldService = {}
 
 local ctx: any
-WorldService.Info = { Spawns = {}, Zones = {}, Bounds = {} } :: World.WorldInfo
+WorldService.Info = { Spawns = {}, Zones = {}, Bounds = {}, Arena = { Center = Vector3.zero, Radius = 0 } } :: World.WorldInfo
 local currentArea: { [Player]: string } = {}
 
 local CHECK_INTERVAL = 1
@@ -27,11 +29,16 @@ local LOCKED_MARGIN = 12 -- studs inside a locked island before a player is sent
 
 function WorldService.Init(c)
 	ctx = c
-	local ok, result = pcall(World.Build)
+	local ok, result = protectedCall(World.Build)
 	if ok and type(result) == "table" then
 		WorldService.Info = result
+		-- Owned mounts use server physics; gates are enforced by region ownership.
+		for _, gate in CollectionService:GetTagged("Gate") do
+			local barrier = gate:FindFirstChild("Barrier", true)
+			if barrier and barrier:IsA("BasePart") then barrier.CanCollide = false end
+		end
 	else
-		warn("[WorldService] World.Build failed:", result)
+		error("[WorldService] World.Build failed: " .. tostring(result))
 	end
 
 	ctx.Util.OnPlayerRemoving(function(p)
@@ -74,7 +81,7 @@ function WorldService.Start()
 	while true do
 		task.wait(CHECK_INTERVAL)
 		for _, p in Players:GetPlayers() do
-			local ok, err = pcall(WorldService._check, p)
+			local ok, err = protectedCall(WorldService._check, p)
 			if not ok then
 				warn("[WorldService] area check failed:", err)
 			end
@@ -88,7 +95,7 @@ function WorldService.AreaAt(pos: Vector3, margin: number?): string?
 	local m = margin or 0
 	for id, b in WorldService.Info.Bounds do
 		local mn, mx = b.Min, b.Max
-		if pos.X >= mn.X + m and pos.X <= mx.X - m and pos.Y >= mn.Y and pos.Y <= mx.Y
+		if pos.X >= mn.X + m and pos.X <= mx.X - m and pos.Y >= mn.Y - 100 and pos.Y <= math.max(mx.Y, Config.Ride.MaxAltitude + 20)
 			and pos.Z >= mn.Z + m and pos.Z <= mx.Z - m then
 			return id
 		end
@@ -106,7 +113,7 @@ function WorldService.TeleportTo(player: Player, areaId: string): boolean
 	if not spawn or not char or not ctx.Util.Root(player) then
 		return false
 	end
-	ctx.BreakableService.ClearTarget(player)
+	if ctx.RideService then ctx.RideService.Stop(player) end
 	char:PivotTo(spawn + Vector3.new(math.random(-4, 4), 3, math.random(-4, 4)))
 	currentArea[player] = areaId
 	return true

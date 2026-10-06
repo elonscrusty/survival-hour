@@ -1,6 +1,6 @@
 --!strict
 -- Provisional tuning for the owner's October 6 battle/habitat design.
--- Keep this separate from the pet-era Config until the integration pass.
+-- Core combat, level and habitat tuning; legacy economy/content tuning lives in Config.
 return {
 	MaxLevel = 50,
 	XpBase = 40,

@@ -1,7 +1,7 @@
 --!strict
--- Expeditions: send up to Config.MaxPetsPerExpedition pets to an opened
+-- Expeditions: send up to Config.MaxPetsPerExpedition creatures to an opened
 -- island for a fixed time. The reward is computed only from the expedition's
--- Seed (fixed at start), its pets' power, the duration and the area, so it
+-- Seed (fixed at start), its creatures' power, the duration and the area, so it
 -- can't be re-rolled by claiming again or by rejoining.
 
 local Config = require("../Config")
@@ -16,10 +16,10 @@ local Schema = require("./Schema")
 
 type Profile = Schema.Profile
 type Expedition = Schema.Expedition
-type PetInstance = Schema.PetInstance
+type Creature = Schema.Creature
 
 export type Duration = { Key: string, Seconds: number, Mult: number, FindChance: number, GemChance: number }
-export type RewardRoll = { Coins: number, Gems: number, Pets: { Inventory.PetSpec } }
+export type RewardRoll = { Coins: number, Gems: number, Creatures: { Inventory.CreatureSpec } }
 
 local Expedition = {}
 
@@ -43,7 +43,7 @@ function Expedition.FreeSlot(p: Profile): string?
 	return nil
 end
 
--- Starts an expedition in the first free slot. Pets are unequipped. Returns
+-- Starts an expedition in the first free slot. Creatures are unequipped. Returns
 -- the slot key and the expedition, or nil and a reason.
 function Expedition.Start(
 	p: Profile,
@@ -67,10 +67,10 @@ function Expedition.Start(
 		return nil, nil, "Unknown duration"
 	end
 	if type(uids) ~= "table" or #uids < 1 then
-		return nil, nil, "Choose at least one pet"
+		return nil, nil, "Choose at least one creature"
 	end
 	if #uids > Config.MaxPetsPerExpedition then
-		return nil, nil, string.format("At most %d pets per expedition", Config.MaxPetsPerExpedition)
+		return nil, nil, string.format("At most %d creatures per expedition", Config.MaxPetsPerExpedition)
 	end
 	local slot = Expedition.FreeSlot(p)
 	if not slot then
@@ -80,17 +80,17 @@ function Expedition.Start(
 	local seen: { [string]: boolean } = {}
 	for _, uid in uids do
 		if seen[uid] then
-			return nil, nil, "Same pet chosen twice"
+			return nil, nil, "Same creature chosen twice"
 		end
 		seen[uid] = true
 		if not Inventory.Find(p, uid) then
-			return nil, nil, "You don't have that pet"
+			return nil, nil, "You don't have that creature"
 		end
 		if busy[uid] then
-			return nil, nil, "That pet is already on an expedition"
+			return nil, nil, "That creature is already on an expedition"
 		end
 		if blocked and blocked[uid] then
-			return nil, nil, "That pet is in a trade"
+			return nil, nil, "That creature is in a trade"
 		end
 	end
 	local list: { string } = table.clone(uids)
@@ -103,7 +103,7 @@ function Expedition.Start(
 	local exp: Expedition = {
 		Area = areaId,
 		Duration = dur.Key,
-		Pets = list,
+		Creatures = list,
 		StartAt = now,
 		EndAt = now + dur.Seconds,
 		Seed = Rng.New(seed).State,
@@ -116,7 +116,7 @@ function Expedition.Start(
 	return slot, exp, nil
 end
 
--- Sum over the expedition's pets of min(power / destination PowerMult,
+-- Sum over the expedition's creatures of min(power / destination PowerMult,
 -- Config.ExpeditionMaxRelPower).
 function Expedition.RelativePower(p: Profile, exp: Expedition): number
 	local area = Areas.ById[exp.Area]
@@ -125,10 +125,10 @@ function Expedition.RelativePower(p: Profile, exp: Expedition): number
 	end
 	local scale = Economy.HighestArea(p)
 	local total = 0
-	for _, uid in exp.Pets do
-		local pet = Inventory.Find(p, uid)
-		if pet then
-			total += math.min(PetMath.Power(pet, scale) / area.PowerMult, Config.ExpeditionMaxRelPower)
+	for _, uid in exp.Creatures do
+		local creature = Inventory.Find(p, uid)
+		if creature then
+			total += math.min(PetMath.Power(creature, scale) / area.PowerMult, Config.ExpeditionMaxRelPower)
 		end
 	end
 	return total
@@ -136,15 +136,15 @@ end
 
 -- The deterministic base reward (coins before the player's coin multiplier).
 function Expedition.RollReward(p: Profile, exp: Expedition): RewardRoll
-	local roll: RewardRoll = { Coins = 0, Gems = 0, Pets = {} }
+	local roll: RewardRoll = { Coins = 0, Gems = 0, Creatures = {} }
 	local area = Areas.ById[exp.Area]
 	local dur = Expedition.Duration(exp.Duration)
 	if not area or not dur then
 		return roll
 	end
-	-- Each pet counts with its power relative to the destination island
-	-- (pet power already includes its own island's PowerMult), capped so a
-	-- very strong pet sent to a cheap island can't farm it.
+	-- Each creature counts with its power relative to the destination island
+	-- (creature power already includes its own island's PowerMult), capped so a
+	-- very strong creature sent to a cheap island can't farm it.
 	local rel = Expedition.RelativePower(p, exp)
 	local rng = Rng.New(exp.Seed)
 	roll.Coins = math.floor(rel * Config.ExpeditionCoinsPerPower * area.CoinMult * dur.Mult)
@@ -154,7 +154,7 @@ function Expedition.RollReward(p: Profile, exp: Expedition): RewardRoll
 	local gemRoll = rng:Next()
 	local eggHit = rng:Chance(math.min(1, Config.ExpeditionEggChance * dur.Mult))
 	local findHit = rng:Chance(dur.FindChance)
-	local findShiny = rng:Next() < Config.ShinyChance
+	local _findRoll = rng:Next()
 	local lo, hi = Config.ExpeditionGems[1], Config.ExpeditionGems[2]
 	if gemHit then
 		local base = lo + math.floor(gemRoll * (hi - lo + 1))
@@ -163,12 +163,13 @@ function Expedition.RollReward(p: Profile, exp: Expedition): RewardRoll
 	if eggHit then
 		local egg = Eggs.ById[area.Egg]
 		if egg then
-			local id, shiny = Hatch.Roll(egg, 1, rng)
-			table.insert(roll.Pets, { Id = id, Shiny = shiny })
+			local result = Hatch.Roll(egg, 1, rng)
+			table.insert(roll.Creatures, { Species=result.Species, Rarity=result.Rarity, Element=result.Element, Tier=area.Index })
 		end
 	end
 	if findHit then
-		table.insert(roll.Pets, { Id = area.ExpeditionPet, Shiny = findShiny })
+		local result = Hatch.Roll(Eggs.ById[area.Egg], 1, rng)
+		table.insert(roll.Creatures, {Species=result.Species,Rarity=result.Rarity,Element=result.Element,Tier=area.Index})
 	end
 	return roll
 end
@@ -176,12 +177,12 @@ end
 export type Claimed = {
 	Coins: number,
 	Gems: number,
-	Pets: { PetInstance },
+	Creatures: { Creature },
 	Discovered: { string },
 }
 
--- Claims a finished expedition: frees its pets and grants the reward.
--- Refuses (and changes nothing) if the found pets would not fit. Coins use the
+-- Claims a finished expedition: frees its creatures and grants the reward.
+-- Refuses (and changes nothing) if the found creatures would not fit. Coins use the
 -- multiplier snapshotted at Start; `fallbackMult` is only for expeditions
 -- saved before snapshots existed.
 function Expedition.Claim(p: Profile, slot: string, now: number, fallbackMult: number?): (Claimed?, string?)
@@ -190,26 +191,26 @@ function Expedition.Claim(p: Profile, slot: string, now: number, fallbackMult: n
 		return nil, "No expedition in that slot"
 	end
 	if now < exp.EndAt then
-		return nil, "Your pets aren't back yet"
+		return nil, "Your creatures aren't back yet"
 	end
 	local roll = Expedition.RollReward(p, exp)
-	if #roll.Pets > Inventory.FreeSpace(p) then
-		return nil, string.format("Make room for %d pet(s) first", #roll.Pets)
+	if #roll.Creatures > Inventory.FreeSpace(p) then
+		return nil, string.format("Make room for %d creature(s) first", #roll.Creatures)
 	end
 	p.Expeditions[slot] = nil
 	local snap = p.ExpeditionMult[slot]
 	p.ExpeditionMult[slot] = nil
 	local m = snap or fallbackMult or 1
 	local mult = if Schema.IsFinite(m) and m > 0 then math.min(m, Schema.MaxCoinMult) else 1
-	local out: Claimed = { Coins = 0, Gems = 0, Pets = {}, Discovered = {} }
+	local out: Claimed = { Coins = 0, Gems = 0, Creatures = {}, Discovered = {} }
 	out.Coins = Economy.AddCoins(p, roll.Coins * mult, true)
 	out.Gems = Economy.AddGems(p, roll.Gems)
-	for _, spec in roll.Pets do
-		local pet, discovered = Inventory.Add(p, spec)
-		if pet then
-			table.insert(out.Pets, pet)
+	for _, spec in roll.Creatures do
+		local creature, discovered = Inventory.Add(p, spec)
+		if creature then
+			table.insert(out.Creatures, creature)
 			if discovered then
-				table.insert(out.Discovered, pet.Id)
+				table.insert(out.Discovered, creature.Species .. "|" .. creature.Element)
 			end
 		end
 	end

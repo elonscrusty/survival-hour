@@ -1,4 +1,5 @@
---!nonstrict
+--!strict
+local protectedCall: any = pcall
 -- Shared server helpers: player join / leave hooks, the remote wrapper
 -- (rate limit + loaded-profile check + pcall + uniform error results),
 -- argument validation, notifications and character queries.
@@ -23,6 +24,9 @@ local limiter = RateLimiter.New()
 -- not listed uses DEFAULT_LIMIT.
 local DEFAULT_LIMIT = { Rate = 4, Burst = 8 }
 Util.Limits = {
+ MountInput = { Rate = 15, Burst = 20 },
+ BattleMove = { Rate = 3, Burst = 5 },
+ BattleSwap = { Rate = 2, Burst = 3 },
 	HatchEgg = { Rate = 3, Burst = 4 },
 	EquipPet = { Rate = 10, Burst = 20 },
 	LockPet = { Rate = 10, Burst = 20 },
@@ -42,7 +46,7 @@ function Util.Init(c)
 	Players.PlayerAdded:Connect(Util.FirePlayerAdded)
 	Players.PlayerRemoving:Connect(function(p)
 		for _, fn in leaveHooks do
-			local ok, err = pcall(fn, p)
+			local ok, err = protectedCall(fn, p)
 			if not ok then
 				warn("[Util] leave hook error:", err)
 			end
@@ -79,7 +83,7 @@ function Util.FirePlayerAdded(p: Player)
 	joined[p] = true
 	for _, fn in joinHooks do
 		task.spawn(function()
-			local ok, err = pcall(fn, p)
+			local ok, err = protectedCall(fn, p)
 			if not ok then
 				warn("[Util] join hook error:", err)
 			end
@@ -107,11 +111,11 @@ function Util.Function(name: string, handler: (Player, any, ...any) -> any)
 		if not session then
 			return Util.Fail("Still loading your data")
 		end
-		if session.TradeBusy then
+		if session.TradeBusy or session.Profile.PendingTrade then
 			-- A trade swap is saving; nothing may change this profile meanwhile.
 			return Util.Fail("Finishing your trade, one moment")
 		end
-		local ok, result = pcall(handler, player, session, ...)
+		local ok, result = protectedCall(handler, player, session, ...)
 		if not ok then
 			warn(string.format("[%s] error from %s: %s", name, player.Name, tostring(result)))
 			return Util.Fail("Something went wrong")
@@ -133,7 +137,8 @@ function Util.Event(name: string, handler: (Player, any, ...any) -> ())
 		if not session then
 			return
 		end
-		local ok, err = pcall(handler, player, session, ...)
+		if session.TradeBusy or session.Profile.PendingTrade then return end
+		local ok, err = protectedCall(handler, player, session, ...)
 		if not ok then
 			warn(string.format("[%s] error from %s: %s", name, player.Name, tostring(err)))
 		end

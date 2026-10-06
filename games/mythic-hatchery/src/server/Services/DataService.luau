@@ -1,4 +1,5 @@
---!nonstrict
+--!strict
+local protectedCall: any = pcall
 -- Player profiles in a DataStore with session locking.
 --
 -- Stored record under key "p_<UserId>": { Profile = <Logic/Schema.Profile>, Lock = { JobId, Time } | nil }
@@ -58,9 +59,9 @@ function DataService.StoreName(): string
 	return Config.DataStoreName
 end
 
-function DataService.Init(c)
+function DataService.Init(c: any)
 	ctx = c
-	local ok, result = pcall(function()
+	local ok, result = protectedCall(function()
 		return DataStoreService:GetDataStore(DataService.StoreName())
 	end)
 	if ok then
@@ -71,7 +72,7 @@ function DataService.Init(c)
 	persistence = store ~= nil
 	if persistence and ctx.IsStudio then
 		-- Studio without "Enable Studio Access to API Services" throws here.
-		local okProbe = pcall(function()
+		local okProbe = protectedCall(function()
 			(store :: DataStore):GetAsync("__probe")
 		end)
 		if not okProbe then
@@ -130,14 +131,14 @@ function DataService.All(): { [Player]: any }
 end
 
 -- Marks the profile as changed (call for anything that must persist).
-function DataService.Touch(s)
+function DataService.Touch(s: any)
 	if s then
 		s.ChangeSeq += 1
 	end
 end
 
 -- True when this session can't keep changes (trading / purchases refuse).
-function DataService.ReadOnly(s): boolean
+function DataService.ReadOnly(s: any): boolean
 	return s == nil or s.State == "Failed" or s.LockLost == true
 end
 
@@ -155,7 +156,7 @@ function DataService.WriteJournal(tradeId: string, journal: any): string
 	end
 	for attempt = 1, JOURNAL_RETRIES do
 		local stored = nil
-		local ok, err = pcall(function()
+		local ok, err = protectedCall(function()
 			stored = (store :: DataStore):UpdateAsync(journalKey(tradeId), function(old)
 				if type(old) == "table" then
 					return nil -- keep whatever is already there
@@ -168,7 +169,7 @@ function DataService.WriteJournal(tradeId: string, journal: any): string
 				return "written"
 			end
 			-- UpdateAsync returns nil when the transform kept the old value: read it.
-			local okGet, existing = pcall(function()
+			local okGet, existing = protectedCall(function()
 				return (store :: DataStore):GetAsync(journalKey(tradeId))
 			end)
 			if okGet and type(existing) == "table" and existing.Id == tradeId then
@@ -188,7 +189,7 @@ function DataService.ReadJournal(tradeId: string): (boolean, any)
 		return ctx.IsStudio, memoryJournals[tradeId]
 	end
 	for attempt = 1, 3 do
-		local ok, result = pcall(function()
+		local ok, result = protectedCall(function()
 			return (store :: DataStore):GetAsync(journalKey(tradeId))
 		end)
 		if ok then
@@ -204,14 +205,14 @@ function DataService.RemoveJournal(tradeId: string)
 		memoryJournals[tradeId] = nil
 		return
 	end
-	pcall(function()
+	protectedCall(function()
 		(store :: DataStore):RemoveAsync(journalKey(tradeId))
 	end)
 end
 
 -- Replays (or clears) a pending trade on a freshly loaded profile.
 -- Returns false if the journal couldn't be read (session must not save).
-local function resolvePendingTrade(userId: number, s): boolean
+local function resolvePendingTrade(userId: number,s: any): boolean
 	local id = s.Profile.PendingTrade
 	if not id then
 		return true
@@ -239,7 +240,7 @@ local function tryLoad(userId: number): (string, any)
 	local now = os.time()
 	local lockedBy: string? = nil
 	local captured: any = nil
-	local ok, err = pcall(function()
+	local ok, err = protectedCall(function()
 		(store :: DataStore):UpdateAsync(key(userId), function(old)
 			-- The transform may run more than once; the last run is what commits.
 			lockedBy = nil
@@ -348,7 +349,7 @@ function DataService._onJoin(player: Player)
 		task.spawn(DataService._save, s, false)
 	end
 	for _, fn in loadedHooks do
-		local ok, err = pcall(fn, player, s)
+		local ok, err = protectedCall(fn, player, s)
 		if not ok then
 			warn("[DataService] loaded hook error:", err)
 		end
@@ -362,7 +363,7 @@ end
 
 -- One write. Returns true when a completed write captured ChangeSeq >= the
 -- value it had when this call started. `release` drops the lock.
-function DataService._save(s, release: boolean?): boolean
+function DataService._save(s: any, release: boolean?): boolean
 	if not s then
 		return false
 	end
@@ -394,7 +395,7 @@ function DataService._save(s, release: boolean?): boolean
 	local captured = s.ChangeSeq
 	local data = s.Profile
 	local lost = false
-	local ok, err = pcall(function()
+	local ok, err = protectedCall(function()
 		(store :: DataStore):UpdateAsync(key(s.UserId), function(old)
 			lost = false
 			local rec = if type(old) == "table" then old else {}
@@ -427,7 +428,7 @@ function DataService._save(s, release: boolean?): boolean
 end
 
 -- Final save that releases the lock, retried a few times.
-function DataService._release(s)
+function DataService._release(s: any)
 	for attempt = 1, RELEASE_RETRIES do
 		if DataService._save(s, true) or s.LockLost then
 			return
@@ -447,7 +448,7 @@ function DataService.SaveNow(player: Player): boolean
 	return DataService.SaveSession(sessions[player])
 end
 
-function DataService.SaveSession(s): boolean
+function DataService.SaveSession(s: any): boolean
 	if not s then
 		return false
 	end

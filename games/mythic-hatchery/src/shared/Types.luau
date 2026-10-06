@@ -7,9 +7,9 @@ export type Creature = {
 	Rarity: string, -- Config.Rarities
 	Element: string, -- Elements id
 	Tier: number, -- island index it hatched on (fused: the better parent's); sets farming power
-	Growth: number, -- growth points; stage derives from Config.StageGrowth
-	Stage: string, -- cached from Growth (Logic/Growth.StageFor), sent to clients for convenience
-	Care: { [string]: number }, -- care task -> os.time it was last done
+	Level: number, -- battle-earned levels, never passive habitat growth
+	Xp: number, -- progress toward the next battle level
+	Neon: boolean, -- mirrors Potions.Neon for pure battle/habitat snapshots
 	Potions: { [string]: boolean }, -- Ride / Fly / Neon
 	Cosmetics: { [string]: string }, -- slot -> cosmetic id (must be owned by the current owner)
 	Edition: string?, -- Limited egg edition tag (collectible, kept through trades)
@@ -38,6 +38,7 @@ export type Incubator = {
 	StartAt: number, -- os.time
 	EndAt: number,
 	Seed: number, -- hatch roll fixed when the egg goes in (no re-rolls)
+	Luck: number, -- captured when incubation starts, never recomputed at hatch
 }
 
 export type Expedition = {
@@ -67,6 +68,8 @@ export type Quest = {
 	Claimed: boolean,
 }
 
+export type HabitatSlot = { Level: number, Creature: string?, Power: number, Coins: number, UpdatedAt: number, BasePower: number?, RateMult: number?, BoostUntil: number?, BoostMult: number? }
+
 -- What the client receives (Net "State"). Server-only fields are stripped.
 export type PlayerState = {
 	Coins: number,
@@ -78,6 +81,10 @@ export type PlayerState = {
 	Creatures: { Creature },
 	Equipped: { string }, -- uids following the player (farming)
 	Riding: string?, -- uid of the creature being ridden, if any
+	Habitats: { [string]: HabitatSlot },
+	HabitatSlots: number,
+	ArenaPoints: number,
+	BattleTeam: { string },
 	MaxEquip: number,
 	MaxStorage: number,
 	EggBag: { EggItem },
@@ -94,7 +101,7 @@ export type PlayerState = {
 	Daily: { Streak: number, LastDay: number, CanClaim: boolean },
 	Quests: { Quest },
 	Playtime: { SessionMinutes: number, Claimed: { [string]: boolean } },
-	Stats: { Hatched: number, Broken: number, Expeditions: number, CoinsEarned: number, Fused: number, Cared: number, Races: number, RaceWins: number, BestLap: number, Trophies: number, RingKOs: number, BestStreak: number },
+	Stats: { Hatched: number, Broken: number, Expeditions: number, CoinsEarned: number, Fused: number, Battles: number?, BattleWins: number?, Trophies: number?, RingKOs: number?, BestStreak: number? },
 	Settings: { [string]: any },
 	RebirthCost: number,
 	CanBuyGemEggs: boolean, -- false when PolicyService restricts paid random items
@@ -110,14 +117,6 @@ export type TradeView = {
 	MaxCreatures: number, -- this player's own offer limit
 	Countdown: number?,
 	Status: string, -- "Open" | "Confirming" | "Done" | "Cancelled"
-}
-
-export type RaceView = {
-	Id: string,
-	Status: string, -- "Queue" | "Countdown" | "Running" | "Done"
-	StartsAt: number?, -- workspace:GetServerTimeNow() when the race starts
-	Racers: { { UserId: number, Name: string, Checkpoint: number, Finished: number? } },
-	Checkpoints: number,
 }
 
 return {}

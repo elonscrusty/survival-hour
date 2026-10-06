@@ -1,4 +1,5 @@
---!nonstrict
+--!strict
+local protectedCall: any = pcall
 -- Player-to-player trading.
 --   Request -> target accepts -> both edit offers -> both ready ->
 --   Config.TradeConfirmSeconds countdown -> journaled swap.
@@ -95,6 +96,8 @@ local function blockedReason(player: Player, s): string?
 	if ctx.DataService.ReadOnly(s) then
 		return "data didn't load, so trading is off"
 	end
+	if ctx.BattleService and ctx.BattleService.IsOccupied(player) then return "leave the battle queue first" end
+	if ctx.RideService and ctx.RideService.Uid(player) then return "dismount first" end
 	if s.TradeBusy or s.Profile.PendingTrade ~= nil then
 		return "a previous trade is still being saved - try again after rejoining"
 	end
@@ -109,7 +112,7 @@ function TradeService.Init(c)
 	local U = ctx.Util
 
 	U.OnPlayerRemoving(function(p)
-		local t = trades[p]
+		local t: Trade.TradeState? = trades[p]
 		if t and executing[t] then
 			-- The swap is already running; it finishes (or is settled from the
 			-- journal on next join). close() tidies up the mapping.
@@ -208,8 +211,11 @@ function TradeService.Init(c)
 		if not t then
 			return U.Fail("You're not trading")
 		end
-		if type(uids) ~= "table" or #uids > Config.TradeMaxPets then
-			return U.Fail(string.format("At most %d pets per trade", Config.TradeMaxPets))
+		if type(uids) ~= "table" or #uids > Config.TradeMaxCreatures then
+			return U.Fail(string.format("At most %d pets per trade", Config.TradeMaxCreatures))
+		end
+		for _, uid in uids do
+			if ctx.BattleService.IsBusy(player, uid) or ctx.RideService.Uid(player) == uid then return U.Fail("Creature is occupied") end
 		end
 		local ok, err = Trade.SetOffer(t, player.UserId, s.Profile, uids, gems)
 		if not ok then
@@ -233,7 +239,7 @@ function TradeService.Init(c)
 			local i = Trade.SideIndex(t, player.UserId)
 			local side = i and t.Sides[i]
 			if side then
-				local ok, err = Trade.ValidateOffer(s.Profile, side.Pets, side.Gems)
+				local ok, err = Trade.ValidateOffer(s.Profile, side.Creatures, side.Gems)
 				if not ok then
 					return U.Fail(err or "Your offer changed")
 				end
@@ -267,7 +273,7 @@ function TradeService.Start()
 				continue
 			end
 			seen[t] = true
-			local ok, err = pcall(TradeService._tickTrade, t)
+			local ok, err = protectedCall(TradeService._tickTrade, t)
 			if not ok then
 				warn("[TradeService] tick error:", err)
 				Trade.Cancel(t)
@@ -302,7 +308,7 @@ function TradeService._tickTrade(t: Trade.TradeState)
 	-- The swap yields (saves), so it runs on its own thread; the tick skips it.
 	executing[t] = true
 	task.spawn(function()
-		local ok, err = pcall(TradeService._execute, t)
+		local ok, err = protectedCall(TradeService._execute, t)
 		executing[t] = nil
 		if not ok then
 			warn("[TradeService] execute error:", err)
@@ -331,7 +337,7 @@ function TradeService._execute(t: Trade.TradeState)
 	end
 	sa.TradeBusy = true
 	sb.TradeBusy = true
-	local ok, result = pcall(TradeService._swap, t, pa, pb, sa, sb)
+	local ok, result = protectedCall(TradeService._swap, t, pa, pb, sa, sb)
 	sa.TradeBusy = false
 	sb.TradeBusy = false
 	if not ok then
@@ -345,7 +351,7 @@ end
 
 -- Steps 1-3 of the journaled swap. Returns a message when the trade did not
 -- happen (the caller cancels), nil when it is Done.
-function TradeService._swap(t: Trade.TradeState, pa: Player, pb: Player, sa, sb): string?
+function TradeService._swap(t: Trade.TradeState, pa: Player, pb: Player, sa: any, sb: any): string?
 	local D = ctx.DataService
 	local id = t.Id
 	local function clearPending()
@@ -390,8 +396,8 @@ function TradeService._swap(t: Trade.TradeState, pa: Player, pb: Player, sa, sb)
 		local receiver = if i == 1 then sb.Profile else sa.Profile
 		local list = {}
 		for _, pet in journal.Sides[tostring(t.Sides[3 - i].UserId)].Get do
-			if not receiver.Index[pet.Id] then
-				list[pet.Id] = true
+			if not receiver.Index[pet.Species .. "|" .. pet.Element] then
+				list[pet.Species .. "|" .. pet.Element] = { Species = pet.Species, Element = pet.Element }
 			end
 		end
 		newFor[3 - i] = list
@@ -404,8 +410,8 @@ function TradeService._swap(t: Trade.TradeState, pa: Player, pb: Player, sa, sb)
 	D.Touch(sb)
 	for i, p in { pa, pb } do
 		if p.Parent ~= nil then
-			for petId in newFor[i] do
-				ctx.RewardService.Discovered(p, petId)
+			for _, creature in newFor[i] do
+				ctx.RewardService.Discovered(p, creature.Species, creature.Element)
 			end
 			ctx.StateService.Dirty(p)
 		end
@@ -444,7 +450,7 @@ function TradeService.OfferedSet(player: Player): { [string]: boolean }
 	if t and Trade.IsActive(t) then
 		local i = Trade.SideIndex(t, player.UserId)
 		if i then
-			for _, uid in t.Sides[i].Pets do
+			for _, uid in t.Sides[i].Creatures do
 				set[uid] = true
 			end
 		end

@@ -17,7 +17,6 @@ Net.Functions = {
 	"Hatch", -- (slot) -> { ok, creature = Creature, new = boolean } when the timer is done
 	"SkipIncubation", -- (slot) -> { ok, gems } finish early with gems
 	-- creatures
-	"Care", -- (uid, task "Feed"|"Play"|"Sleep") -> { ok, growth, stage, stageUp = boolean }
 	"EquipCreature", -- (uid, equip: boolean)
 	"EquipBest", -- ()
 	"UnequipAll", -- ()
@@ -28,7 +27,7 @@ Net.Functions = {
 	"Fuse", -- (uidA, uidB) -> { ok, egg = EggItem }
 	"BuyCosmetic", -- (cosmeticId) -> { ok }
 	"WearCosmetic", -- (uid, slot, cosmeticId | "") -> { ok }
-	"Mount", -- (uid | nil) -> { ok } start/stop riding (Adult+ with Ride or Fly potion)
+	"Mount", -- (uid | nil) -> { ok } start/stop riding (Ride or Fly potion)
 	-- world and progression
 	"OpenGate", -- (areaId)
 	"Teleport", -- (areaId)
@@ -41,8 +40,17 @@ Net.Functions = {
 	"ClaimQuest", -- (index) -> { ok, reward }
 	"ClaimIndex", -- (tier) -> { ok, reward }
 	"SetSetting", -- (key, value) -> { ok }
-	"RaceJoin", -- () -> { ok } queue for the next sky race (must be flying)
-	"RaceLeave", -- () -> { ok }
+	-- habitats and optional trainer battles
+	"HabitatAssign", -- (uid, slot)
+	"HabitatRemove", -- (slot)
+	"HabitatCollect", -- (slot?) collect one or all slots
+	"HabitatUpgrade", -- (slot)
+	"HabitatUnlock", -- () buy the next habitat slot
+	"SetBattleTeam", -- ({uid}) select three available creatures
+	"BattleJoin", -- () queue against a team of similar strength
+	"BattleLeave", -- () leave queue or forfeit current battle
+	"BattleMove", -- (moveId) command active creature
+	"BattleSwap", -- (index) swap active creature
 	-- trading
 	"TradeRequest", -- (targetUserId) -> { ok }
 	"TradeRespond", -- (fromUserId, accept: boolean) -> { ok }
@@ -59,12 +67,10 @@ Net.Events = {
 	"State", -- (PlayerState) full snapshot of the local player's data
 	"Notify", -- (kind: string, data: table) toasts / effects, see CONTRACTS.md
 	"Trade", -- (TradeView | nil) current trade window state
-	"Race", -- (RaceView | nil) the sky race this player is queued in or running
+	"Battle", -- (Battle view | nil) server-owned battle/queue state
 	-- client -> server
-	"SetTarget", -- (breakableId: string?) send equipped creatures at a breakable (nil = recall)
-	"RaceCheckpoint", -- (index) client reports passing a checkpoint ring; server validates position and timing
+	"MountInput", -- (direction Vector3, flying boolean) validated movement intent
 	"ClientReady", -- () UI loaded; server replies with State
-	"RingFocus", -- (targetUserId: number?) in the Creature Ring, focus your creatures on that player's (nil = nearest)
 }
 
 local folder: Folder? = nil

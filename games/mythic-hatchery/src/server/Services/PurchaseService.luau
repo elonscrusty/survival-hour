@@ -1,4 +1,4 @@
---!nonstrict
+--!strict
 -- Robux purchases.
 --   * Developer products: MarketplaceService.ProcessReceipt. Each PurchaseId
 --     is granted once (stored in the profile) and only reported as granted

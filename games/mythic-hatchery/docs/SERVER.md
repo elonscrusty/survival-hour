@@ -1,3 +1,5 @@
+> Historical handoff: implementation has changed. Read CONTRACTS.md, STATUS.md and STUDIO_TESTS.md for the current game.
+
 # Pet Expedition: server notes
 
 Entry: `src/server/Main.server.luau` calls `Net.Init()`, requires every service in `ORDER`, runs each

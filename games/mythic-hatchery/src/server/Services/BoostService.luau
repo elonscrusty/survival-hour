@@ -1,4 +1,4 @@
---!nonstrict
+--!strict
 -- Personal boosts (2x Coins, 2x Luck) stored in the profile, and the
 -- server-wide luck boost (this server only), broadcast to everyone.
 

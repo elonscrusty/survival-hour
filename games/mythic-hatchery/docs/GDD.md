@@ -1,54 +1,39 @@
 # Mythic Hatchery: game design
 
-> Superseded in part by the owner's October 6 battle/habitat decisions in
-> [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md). No racing or growth stages.
-> Those decisions take precedence wherever this legacy design differs.
+Hatch mythical creatures, ride and fly through a connected world, and command them in optional PvP battles.
+A typical ten-minute session centres on riding, flying and battling. Habitat income funds better eggs and fusion.
 
-**Pitch:** Hatch mythical creatures, raise them from Baby to Ancient, fuse them into rarer eggs and hidden
-hybrids, then ride and fly them through a sky race. Trade with friends.
+## Loop
+1. Ride and fly immediately on the starter Dragon. Buy two Meadow eggs with starter coins to build a battle team.
+2. Incubate eggs with visible species, rarity and element odds. Discover five base species and six hidden hybrids.
+3. Place spare creatures in habitat slots. Coins accumulate online/offline to a storage cap; tap to collect.
+4. Remove three creatures from their other activities, select a team and queue for similarly strong opponents.
+5. Command one active creature in real time; use unlocked moves and swap with a separate cooldown.
+6. Battle participants earn XP in proportion to useful contribution. Levels unlock additional moves.
+7. Unlock/upgrade habitat slots, explore regions, fuse pairs for rarity/hybrid chances, trade and collect cosmetics.
 
-## Core loop
-1. **Buy an egg** (coins at an island stand, gems for the Mythic Egg and Limited eggs). It goes straight into an
-   incubator (3 slots, +2 with a pass).
-2. **Hatch** when the timer ends: a random species (Dragon, Griffin, Phoenix, Hydra, Unicorn), rarity (Common, Rare,
-   Epic, Legendary, Mythic) and element (Fire, Ice, Storm, Nature, Shadow). Odds are always shown.
-3. **Care**: Feed (every 15 min), Play (25 min), Sleep (60 min) to grow Baby → Teen → Adult → Ancient. Neglect only
-   pauses growth; creatures never get sick.
-4. **Fuse** two Adults into a Fused Egg with better rarity odds. Cross-species pairs can hatch one of 6 hidden hybrids
-   (Wyvern, Emberwyrm, Pegasus, Leviathan, Chimera, Solaris).
-5. **Ride and fly** Adults with the Ride or Fly potion; race through the Sky Arena above the hub.
-6. Creatures you take with you **farm treasure** for coins, which open gates to the next region and better eggs.
-   Spare creatures go on **expeditions**. Late game: **rebirth** for a permanent coin bonus.
+Rarity and levels provide substantial combat advantages. Defeated creatures recover immediately; arena points
+fall on a loss. Battles remain optional. There are no races, care tasks or Baby/Teen/Adult/Ancient gameplay stages.
+Habitat upgrades improve coin production/storage only. Assigned creatures cannot simultaneously battle or ride.
 
-## Regions (one connected land)
-| # | Region | Element | Gate | Egg |
-|---|---|---|---|---|
-| 1 | Sunny Meadow (hub) | Nature | open | 100 |
-| 2 | Shadow Grove | Shadow | 5K | 3.6K |
-| 3 | Frost Peaks | Ice | 120K | 72K |
-| 4 | Storm Coast | Storm | 2.7M | 1.5M |
-| 5 | Ember Volcano | Fire | 54M | 30M |
-| 6 | Sky Plateau | all | 1.1B | 540M |
+## World
+One continuous six-region land: Meadow hub, Shadow Grove, Frost Peaks, Storm Coast, Ember Volcano, Sky Plateau.
+Archway gates sit in natural ridges. The hub contains eggs, hatchery, fusion altar, coin shop, habitat plots and PvP arena.
+All creature/world models use Roblox primitives generated from Python data: a blocky voxel-toy style, no uploaded meshes.
 
-Each region's egg rolls that region's element 60% of the time. Creatures earn 25% more coins in the region of
-their element. Regions are joined by gate archways in hedges, cliffs and walls (no islands or bridges).
-The hub has the Hatchery, Fusion Altar, Cosmetic Shop, Mythic and Limited egg stands, the Creature Ring and the
-race pad under the Sky Arena.
+## Supporting systems
+Daily/login rewards, playtime gifts, daily battle/hatch/fusion/expedition/coin quests, the Species|Element Index,
+expeditions, rebirth, boosts, Server Luck and atomic creature-only trading support long-term collecting.
+Ride/Fly/Neon potions apply per creature. Hats, saddles and auras use coins.
 
-## Other systems (kept from Pet Expedition)
-Daily login streak, playtime gifts, 3 daily quests (incl. care, fusion and race goals), the Index (species ×
-element, with hybrids hidden), boosts and Server Luck, trading (creatures only, confirm countdown), the Creature
-Ring (walk-in brawls; growth matters most), rebirth.
+## Monetisation
+Products and passes are defined in Products.luau. Gems buy premium eggs, potions and incubation skips.
+Passes include extra incubators, faster incubation, VIP, Lucky, VIP Trader, extra creatures out, extra expeditions
+and storage. Boosts include Coins, Battle XP, Luck and Server Luck. The obsolete AutoFarm and RingChampion
+items are removed. All ids remain unconfigured; Studio offers test purchases while live buttons stay unavailable.
+Paid random item restrictions disable gem eggs and paid luck. Trading respects account policy restrictions.
+Strength can improve faster through purchases, while matching remains based on team strength.
 
-## Robux (all optional; `src/shared/Products.luau`)
-- **Passes:** +2 Hatch Slots (249), 2x Incubation (299), VIP Trader (199), VIP (199), Lucky (349),
-  +3 Creatures Out (249), +2 Expedition Slots (199), Auto Farm (249), Big Stable (99), Ring Champion (299).
-- **Products:** gem packs (49–2,499 Robux), 2x Coins (49), 2x Growth (49), 2x Luck (79), Server Luck (199).
-- **Gems buy:** the Mythic Egg (400), Limited eggs (750, time-limited, with an Edition tag), Ride (150), Fly (300)
-  and Neon (200) potions, and incubation skips.
-- **Coins buy:** island eggs, Feed, fusion, cosmetics (hats, auras, saddles).
-
-## Fairness and compliance
-Odds listed for every egg (species, rarity and element, with luck). PolicyService: players where paid random items
-are restricted can't buy gem eggs or paid luck; trading turns off where paid item trading isn't allowed. Trades are
-creatures only, both players confirm, and the swap is atomic.
+## Provisional balance
+Gameplay.luau contains tuning: level cap50, 2-second shared move cooldown, 8-second swap cooldown,
+habitat prices/rates/caps, match ratio and rewards. Fused creatures start at level1. These values require playtesting.

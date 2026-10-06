@@ -73,16 +73,16 @@ def make_marketing(sc, G, OUT):
     sc.s.cycles.samples = max(sc.s.cycles.samples, 24)
 
     # Icon: puppy hero with a dragon and unicorn behind, an egg in front.
-    items = [(pets["CosmicUnicorn"], (-2.6, 0, 2.5)), (pets["InfernoDragon"], (2.7, 0, 2.3)), (pets["Puppy"], (0, 0, 0)),
-             (R.G.variant_parts(pets["Fox"], "Golden", False), (-3.2, 0, -0.6)), (eggs["PrismEgg"], (3.0, 0, -0.8))]
+    items = [(pets["Solaris"], (-2.6, 0, 2.5)), (pets["Dragon"], (2.7, 0, 2.3)), (pets["Griffin"], (0, 0, 0)),
+             (R.G.variant_parts(pets["Wyvern"], "Golden", False), (-3.2, 0, -0.6)), (eggs["MythicEgg"], (3.0, 0, -0.8))]
     fg = _render_group(sc, items, tmp, (512, 512), margin=0.9)
     bg = _burst((512, 512), (255, 236, 150), (255, 120, 190), n=14)
     bg.alpha_composite(fg)
     bg.convert("RGB").save(os.path.join(out, "icon_512.png"), optimize=True)
 
     # Thumbnail 1: big lineup of pets across rarities.
-    lineup = ["Bunny", "Penguin", "Fox", "HoneyBear", "Puppy", "CometCat", "Narwhal", "Owl", "Kitten"]
-    back = ["GlowcapDragon", "PolarKing", "CosmicUnicorn", "Phoenix", "CelestialDragon"]
+    lineup = ["Unicorn", "Phoenix", "Wyvern", "Hydra", "Griffin", "Emberwyrm", "Leviathan", "Pegasus", "Chimera"]
+    back = ["Dragon", "Hydra", "Solaris", "Phoenix", "Wyvern"]
     items = []
     for i, pid in enumerate(lineup):
         x = (i - (len(lineup) - 1) / 2) * 3.6
@@ -95,20 +95,20 @@ def make_marketing(sc, G, OUT):
     fg = fg.resize((2400, 1350), Image.LANCZOS)
     canvas = bg.copy()
     canvas.alpha_composite(fg, (-240, -60))
-    _title(canvas, "PET EXPEDITION", 40, 170, R.font)
+    _title(canvas, "MYTHIC HATCHERY", 40, 170, R.font)
     canvas.convert("RGB").save(os.path.join(out, "thumbnail_1.jpg"), quality=88)
 
     # Thumbnail 2: eggs and shiny variants.
-    items = [(eggs[e], ((i - 3) * 3.2, 0, 4.5)) for i, e in enumerate(["MeadowEgg", "GroveEgg", "FrostEgg", "CoralEgg",
-                                                                        "VolcanoEgg", "StarEgg", "PrismEgg"])]
-    items += [(R.G.variant_parts(pets["InfernoDragon"], "Golden", False), (-6.5, 0, 0)),
-              (R.G.variant_parts(pets["RainbowUnicorn"], "Normal", True), (0, 0, -0.5)),
-              (R.G.variant_parts(pets["DiamondDragon"], "Rainbow", False), (6.5, 0, 0))]
+    items = [(eggs[e], ((i - 3) * 3.2, 0, 4.5)) for i, e in enumerate(["MeadowEgg", "ShadowEgg", "FrostEgg", "StormEgg",
+                                                                        "VolcanoEgg", "SkyEgg", "MythicEgg"])]
+    items += [(R.G.variant_parts(pets["Dragon"], "Golden", False), (-6.5, 0, 0)),
+              (R.G.variant_parts(pets["Solaris"], "Normal", True), (0, 0, -0.5)),
+              (R.G.variant_parts(pets["Wyvern"], "Rainbow", False), (6.5, 0, 0))]
     fg = _render_group(sc, items, tmp, (1920, 1080), direction=(0.0, 1.0, 0.28), margin=1.08)
     bg = _burst((1920, 1080), (255, 230, 140), (255, 110, 160), n=22, centre=(960, 760))
     canvas = bg.copy()
     canvas.alpha_composite(fg, (0, 110))
-    _title(canvas, "PET EXPEDITION", 40, 170, R.font)
+    _title(canvas, "MYTHIC HATCHERY", 40, 170, R.font)
     _title(canvas, "HATCH  -  EXPLORE  -  COLLECT", 960, 70, R.font, fill=(255, 255, 255), stroke=(120, 40, 120))
     canvas.convert("RGB").save(os.path.join(out, "thumbnail_2.jpg"), quality=88)
     os.remove(tmp)

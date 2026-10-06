@@ -3,19 +3,23 @@
 -- corrupted) data, and building the client's PlayerState snapshot.
 
 local Config = require("../Config")
-local Pets = require("../Pets")
+local Eggs = require("../Eggs")
+local Species = require("../Species")
+local Cosmetics = require("../Cosmetics")
+local Elements = require("../Elements")
+local Gameplay = require("../Gameplay")
+local Habitat = require("./Habitat")
 local Areas = require("../Areas")
 local Products = require("../Products")
 local Types = require("../Types")
 local Economy = require("./Economy")
 local Inventory = require("./Inventory")
 local Expedition = require("./Expedition")
-local PetMath = require("./PetMath")
 local Rewards = require("./Rewards")
 local Schema = require("./Schema")
 
 type Profile = Schema.Profile
-type PetInstance = Schema.PetInstance
+type Creature = Schema.Creature
 
 export type StateContext = {
 	Now: number,
@@ -29,7 +33,7 @@ export type StateContext = {
 
 local Profile = {}
 
-Profile.MaxPets = 3000 -- hard cap on stored pets (bounds the save size)
+Profile.MaxCreatures = 3000 -- hard cap on stored creatures (bounds the save size)
 Profile.MaxExtraStorage = 10000
 
 function Profile.Default(): Profile
@@ -37,13 +41,14 @@ function Profile.Default(): Profile
 	for k, v in Schema.SettingDefaults do
 		settings[k] = v
 	end
-	return {
+	local p: Profile = {
 		Version = Config.Version,
 		Coins = Schema.StartCoins,
 		Gems = 0,
 		Rebirths = 0,
 		Areas = { [Schema.StartArea] = true },
-		Pets = {},
+		Creatures = {}, EggBag = {}, Incubators = {}, Habitats = {}, HabitatSlots = Gameplay.Habitat.BaseSlots, ArenaPoints = 0, StarterGranted = false,
+ Cosmetics = {}, HatchSlots = Config.BaseHatchSlots, BattleTeam = {}, BattleClaims = {}, BattleOpponents = {},
 		NextUid = 0,
 		Equipped = {},
 		Expeditions = {},
@@ -53,7 +58,7 @@ function Profile.Default(): Profile
 		IndexClaimed = {},
 		Daily = { Streak = 0, LastDay = -1 },
 		Quests = { Day = -1, List = {} },
-		Stats = { Hatched = 0, Broken = 0, Expeditions = 0, CoinsEarned = 0, Crafted = 0 },
+		Stats = { Hatched = 0, Broken = 0, Expeditions = 0, CoinsEarned = 0, Fused = 0, Battles = 0, BattleWins = 0 },
 		Settings = settings,
 		ExtraEquip = 0,
 		ExtraStorage = 0,
@@ -63,58 +68,42 @@ function Profile.Default(): Profile
 		PendingTrade = nil,
 		AppliedTrades = {},
 	}
+ for i=1,p.HabitatSlots do p.Habitats[tostring(i)]={Level=1,Creature=nil,Power=0,Coins=0,UpdatedAt=0} end
+ Profile.GrantStarter(p)
+ return p
 end
 
 local function tbl(v: any): { [any]: any }
 	return if type(v) == "table" then v else {}
 end
 
-local function sanitizePets(p: Profile, raw: any)
-	local list: { PetInstance } = {}
-	local needUid: { PetInstance } = {}
-	local seen: { [string]: boolean } = {}
-	local maxNum = p.NextUid
-	for _, r in tbl(raw) do
-		if #list >= Profile.MaxPets then
-			break
-		end
-		if type(r) ~= "table" or type(r.Id) ~= "string" or not Pets.ById[r.Id] then
-			continue
-		end
-		local variant = if type(r.Variant) == "string" and table.find(Config.Variants, r.Variant) then r.Variant else "Normal"
-		local level = Schema.ClampInt(r.Level, 1, Config.PetMaxLevel)
-		local xp = if level >= Config.PetMaxLevel then 0 else Schema.ClampInt(r.Xp, 0, PetMath.XpToNext(level) - 1)
-		local pet: PetInstance = {
-			Uid = "",
-			Id = r.Id,
-			Variant = variant,
-			Shiny = r.Shiny == true,
-			Level = level,
-			Xp = xp,
-			Locked = r.Locked == true,
-		}
-		local uid = r.Uid
-		if type(uid) == "string" and #uid > 0 and #uid <= Schema.MaxUidLength and not seen[uid] then
-			seen[uid] = true
-			pet.Uid = uid
-			local n = tonumber(uid)
-			if n and Schema.IsFinite(n) and n > maxNum then
-				maxNum = math.min(math.floor(n), 1e15)
-			end
-		else
-			table.insert(needUid, pet)
-		end
-		table.insert(list, pet)
-	end
-	p.Pets = list
-	p.NextUid = maxNum
-	-- Pets with a missing or duplicate uid get a fresh one (never dropped).
-	for _, pet in needUid do
-		pet.Uid = Inventory.NewUid(p)
-	end
-	for _, pet in list do
-		p.Index[pet.Id] = true
-	end
+function Profile.GrantStarter(p: Profile): boolean
+ if p.StarterGranted then return false end
+ local creature = Inventory.Make(p, { Species="Dragon", Rarity="Common", Element="Nature", Level=1, Potions={Ride=true,Fly=true} })
+ assert(creature)
+ table.insert(p.Creatures, creature); p.Index["Dragon|Nature"]=true; p.StarterGranted=true
+ return true
+end
+
+local function sanitizeCreatures(p: Profile, raw: any)
+ p.Creatures = {}
+ local seen: { [string]: boolean } = {}
+ for _, r in tbl(raw) do
+  if #p.Creatures >= Profile.MaxCreatures then break end
+  if type(r) ~= "table" then continue end
+  local c = Inventory.Make(p, r)
+  if not c then continue end
+  if type(r.Uid)=="string" and #r.Uid>0 and #r.Uid<=Schema.MaxUidLength and not seen[r.Uid] then
+   c.Uid=r.Uid
+   local n=tonumber(r.Uid); if n and Schema.IsFinite(n) then p.NextUid=math.max(p.NextUid, math.min(math.floor(n),1e15)) end
+  end
+  seen[c.Uid]=true; c.Locked=r.Locked==true
+  for slot,id in tbl(r.Cosmetics) do
+   if type(slot)=="string" and type(id)=="string" and p.Cosmetics[id] and Cosmetics.ById[id] and Cosmetics.ById[id].Slot==slot then c.Cosmetics[slot]=id end
+  end
+  if type(r.Name)=="string" and #r.Name<=48 then c.Name=r.Name end
+  table.insert(p.Creatures,c); p.Index[c.Species .. "|" .. c.Element]=true
+ end
 end
 
 local function sanitizeExpeditions(p: Profile, raw: any)
@@ -122,7 +111,7 @@ local function sanitizeExpeditions(p: Profile, raw: any)
 	local used: { [string]: boolean } = {}
 	p.Expeditions = {}
 	local src = tbl(raw)
-	-- Slots in order, so a pet listed twice always stays with the lower slot.
+	-- Slots in order, so a creature listed twice always stays with the lower slot.
 	for slot = 1, maxSlots do
 		local e = src[tostring(slot)]
 		if type(e) ~= "table" then
@@ -137,23 +126,23 @@ local function sanitizeExpeditions(p: Profile, raw: any)
 		if not Schema.IsFinite(e.StartAt) or not Schema.IsFinite(e.EndAt) then
 			continue
 		end
-		local pets: { string } = {}
-		for _, uid in tbl(e.Pets) do
-			if #pets >= Config.MaxPetsPerExpedition then
+		local creatures: { string } = {}
+		for _, uid in tbl(e.Creatures) do
+			if #creatures >= Config.MaxPetsPerExpedition then
 				break
 			end
 			if type(uid) == "string" and not used[uid] and Inventory.Find(p, uid) then
 				used[uid] = true
-				table.insert(pets, uid)
+				table.insert(creatures, uid)
 			end
 		end
-		if #pets == 0 then
+		if #creatures == 0 then
 			continue
 		end
 		p.Expeditions[tostring(slot)] = {
 			Area = e.Area,
 			Duration = e.Duration,
-			Pets = pets,
+			Creatures = creatures,
 			StartAt = math.floor(e.StartAt),
 			EndAt = math.floor(e.EndAt),
 			Seed = Schema.ClampInt(e.Seed, 1, 2147483646),
@@ -165,8 +154,10 @@ local function sanitizeQuests(p: Profile, raw: any)
 	local q = tbl(raw)
 	local list: { Schema.Quest } = {}
 	local ok = Schema.IsInt(q.Day)
+ local active: {[string]: boolean} = {}
+ for _,def in Config.QuestPool do active[def.Kind]=true end
 	for _, r in tbl(q.List) do
-		if type(r) ~= "table" or type(r.Kind) ~= "string" or not Schema.IsFinite(r.Goal) or r.Goal < 1 then
+		if type(r) ~= "table" or type(r.Kind) ~= "string" or not active[r.Kind] or not Schema.IsFinite(r.Goal) or r.Goal < 1 then
 			ok = false
 			break
 		end
@@ -211,11 +202,12 @@ function Profile.Sanitize(raw: any): Profile
 			p.Boosts[key] = math.floor(v)
 		end
 	end
-	for id, v in tbl(raw.Index) do
-		if v == true and type(id) == "string" and Pets.ById[id] then
-			p.Index[id] = true
-		end
-	end
+ for id,v in tbl(raw.Index) do
+  if v==true and type(id)=="string" then
+   local species,element=string.match(id,"^([^|]+)|([^|]+)$")
+   if species and element and Species.ById[species] and Elements.ById[element] then p.Index[id]=true end
+  end
+ end
 	for key, v in tbl(raw.IndexClaimed) do
 		local n = tonumber(key)
 		if v == true and n and Schema.IsInt(n, 1, #Config.IndexRewards) then
@@ -225,8 +217,75 @@ function Profile.Sanitize(raw: any): Profile
 	p.ExtraEquip = Schema.ClampInt(raw.ExtraEquip, 0, Config.MaxEquipCap)
 	p.ExtraStorage = Schema.ClampInt(raw.ExtraStorage, 0, Profile.MaxExtraStorage)
 	p.NextUid = Schema.ClampInt(raw.NextUid, 0, 1e15)
-	sanitizePets(p, raw.Pets)
+	for id,owned in tbl(raw.Cosmetics) do if owned==true and type(id)=="string" and Cosmetics.ById[id] then p.Cosmetics[id]=true end end
+ sanitizeCreatures(p, raw.Creatures)
 	sanitizeExpeditions(p, raw.Expeditions)
+ p.StarterGranted = raw.StarterGranted == true
+ Profile.GrantStarter(p)
+ p.HabitatSlots = Schema.ClampInt(raw.HabitatSlots or Gameplay.Habitat.BaseSlots, Gameplay.Habitat.BaseSlots, Gameplay.Habitat.MaxSlots)
+ p.ArenaPoints = Schema.ClampInt(raw.ArenaPoints, 0, Schema.MaxStat)
+ local assigned = Inventory.BusySet(p)
+ for i=1,p.HabitatSlots do
+  local key=tostring(i); local r=tbl(tbl(raw.Habitats)[key]); local slot: Types.HabitatSlot={Level=1,Creature=nil,Power=0,Coins=0,UpdatedAt=0}
+  slot.Level=Schema.ClampInt(r.Level or 1,1,Gameplay.Habitat.MaxUpgrade)
+  slot.UpdatedAt=Schema.ClampInt(r.UpdatedAt,0,1e15)
+  slot.Coins=if Schema.IsFinite(r.Coins) then math.clamp(r.Coins,0,Habitat.Capacity(slot)) else 0
+  if type(r.Creature)=="string" and not assigned[r.Creature] then
+   local c=Inventory.Find(p,r.Creature)
+   if c then
+    slot.Creature=c.Uid; slot.Power=Habitat.Power(c); slot.BasePower=slot.Power
+    slot.RateMult=if Schema.IsFinite(r.RateMult) and r.RateMult>0 then math.clamp(r.RateMult,1,100) else 1
+    slot.BoostMult=if Schema.IsFinite(r.BoostMult) and r.BoostMult>0 then math.clamp(r.BoostMult,1,2) else 1
+    slot.BoostUntil=Schema.ClampInt(r.BoostUntil,0,1e15)
+    slot.Power=slot.BasePower or 1
+    assigned[c.Uid]=true
+   end
+  end
+  p.Habitats[key]=slot
+ end
+ local eggUids: {[string]: boolean} = {}
+ local function egg(r: any): Types.EggItem?
+  if type(r)~="table" or type(r.Egg)~="string" or not Eggs.ById[r.Egg]  then return nil end
+  if type(r.Uid)~="string" or #r.Uid==0 or #r.Uid>Schema.MaxUidLength or eggUids[r.Uid] then return nil end
+  local fused: Types.EggItem = {Uid=r.Uid,Egg=r.Egg,Tier=Schema.ClampInt(r.Tier or 1,1,6)}
+  if r.Egg=="FusedEgg" then
+   if type(r.Fused)~="table" then return nil end
+   local function weights(rawWeights: any, valid: (string)->boolean): {{Id:string,Weight:number}}?
+    if type(rawWeights)~="table" or #rawWeights<1 or #rawWeights>20 then return nil end
+    local out: {{Id:string,Weight:number}}={}; local sum=0
+    for _,w in rawWeights do
+     if type(w)~="table" or type(w.Id)~="string" or not valid(w.Id) or not Schema.IsFinite(w.Weight) or w.Weight<0 or w.Weight>1e6 then return nil end
+     sum+=w.Weight; table.insert(out,{Id=w.Id,Weight=w.Weight})
+    end
+    return if sum>0 then out else nil
+   end
+   local f=r.Fused
+   local rarity=weights(f.Rarity,function(id) return table.find(Config.Rarities,id)~=nil end)
+   local species=weights(f.Species,function(id) return Species.ById[id]~=nil end)
+   local element=weights(f.Element,function(id) return Elements.ById[id]~=nil end)
+   if not rarity or not species or not element then return nil end
+   local hybrid=if type(f.Hybrid)=="string" and Species.ById[f.Hybrid] and Species.ById[f.Hybrid].Hybrid then f.Hybrid else nil
+   fused.Fused={Rarity=rarity,Species=species,Element=element,Hybrid=hybrid,HybridChance=if hybrid and Schema.IsFinite(f.HybridChance) then math.clamp(f.HybridChance,0,1) else 0}
+  end
+  eggUids[r.Uid]=true
+  return fused
+ end
+ for _,r in tbl(raw.EggBag) do if #p.EggBag>=300 then break end; local e=egg(r); if e then table.insert(p.EggBag,e) end end
+ p.HatchSlots=Economy.HatchSlots(p)
+ -- Preserve occupied purchased slots even before a pass refresh completes.
+ for i=1,Config.BaseHatchSlots + Config.PassHatchSlots do
+  local r=tbl(tbl(raw.Incubators)[tostring(i)]); local e=egg(r.Egg)
+  if e and Schema.IsFinite(r.StartAt) and Schema.IsFinite(r.EndAt) and r.EndAt>=r.StartAt then
+   p.Incubators[tostring(i)]={Egg=e,StartAt=math.floor(r.StartAt),EndAt=math.floor(r.EndAt),Seed=Schema.ClampInt(r.Seed,1,2147483646),Luck=if Schema.IsFinite(r.Luck) then math.clamp(r.Luck,1,Config.MaxLuckMult) else 1}
+  end
+ end
+ for _,uid in tbl(raw.BattleTeam) do if #p.BattleTeam>=3 then break end; if type(uid)=="string" and Inventory.Find(p,uid) and not table.find(p.BattleTeam,uid) then table.insert(p.BattleTeam,uid) end end
+ local claims: {{Id:string,At:number}}={}
+ for id,at in tbl(raw.BattleClaims) do if type(id)=="string" and #id<=128 and Schema.IsFinite(at) then table.insert(claims,{Id=id,At=at}) end end
+ table.sort(claims,function(a: {Id:string,At:number},b: {Id:string,At:number}) return a.At>b.At end)
+ for i=1,math.min(100,#claims) do p.BattleClaims[claims[i].Id]=claims[i].At end
+ local count=0
+ for id,r in tbl(raw.BattleOpponents) do if count>=100 then break end; if type(id)=="string" and #id<=24 and type(r)=="table" then p.BattleOpponents[id]={Count=Schema.ClampInt(r.Count,0,1e6),WindowAt=Schema.ClampInt(r.WindowAt,0,1e15)}; count+=1 end end
 
 	local busy = Inventory.BusySet(p)
 	local maxEquip = Economy.MaxEquip(p)
@@ -299,7 +358,7 @@ function Profile.TrimReceipts(p: Profile)
 	if #list <= Schema.MaxReceipts then
 		return
 	end
-	table.sort(list, function(a, b)
+	table.sort(list, function(a: {Id:string,At:number}, b: {Id:string,At:number})
 		if a.At ~= b.At then
 			return a.At > b.At
 		end
@@ -332,18 +391,24 @@ function Profile.SetSetting(p: Profile, key: any, value: any): (boolean, string?
 	return true, nil
 end
 
-function Profile.CopyPet(pet: PetInstance): PetInstance
-	return {
-		Uid = pet.Uid,
-		Id = pet.Id,
-		Variant = pet.Variant,
-		Shiny = pet.Shiny,
-		Level = pet.Level,
-		Xp = pet.Xp,
-		Locked = pet.Locked,
-	}
+function Profile.CopyCreature(c: Creature): Creature
+ local out = table.clone(c)
+ out.Potions=table.clone(c.Potions); out.Neon=c.Potions.Neon==true; out.Cosmetics=table.clone(c.Cosmetics)
+ return out
 end
+Profile.CopyPet = Profile.CopyCreature
 
+local function copyEgg(e: Types.EggItem): Types.EggItem
+ local out=table.clone(e)
+ if e.Fused then
+  local f=e.Fused
+  local function weights(list: {{Id:string,Weight:number}}): {{Id:string,Weight:number}}
+   local out: {{Id:string,Weight:number}}={}; for _,w in list do table.insert(out,table.clone(w)) end; return out
+  end
+  out.Fused={Species=weights(f.Species),Rarity=weights(f.Rarity),Element=weights(f.Element),Hybrid=f.Hybrid,HybridChance=f.HybridChance}
+ end
+ return out
+end
 local function copySet(t: { [string]: boolean }): { [string]: boolean }
 	local out: { [string]: boolean } = {}
 	for k, v in t do
@@ -359,16 +424,16 @@ function Profile.BuildState(p: Profile, c: StateContext): Types.PlayerState
 	local now = c.Now
 	local mult: Economy.MultContext = { Now = now, Premium = c.Premium, InGroup = c.InGroup, ServerLuckUntil = c.ServerLuckUntil, NoPaidLuck = c.NoPaidLuck }
 	local day = Rewards.DayNumber(now)
-	local pets: { PetInstance } = {}
-	for _, pet in p.Pets do
-		table.insert(pets, Profile.CopyPet(pet))
+	local creatures: { Creature } = {}
+	for _, creature in p.Creatures do
+		table.insert(creatures, Profile.CopyPet(creature))
 	end
 	local exps: { [string]: Types.Expedition } = {}
 	for key, e in p.Expeditions do
 		exps[key] = {
 			Area = e.Area,
 			Duration = e.Duration,
-			Pets = table.clone(e.Pets),
+			Creatures = table.clone(e.Creatures),
 			StartAt = e.StartAt,
 			EndAt = e.EndAt,
 			Seed = 0, -- the reward seed stays on the server
@@ -390,14 +455,16 @@ function Profile.BuildState(p: Profile, c: StateContext): Types.PlayerState
 		settings[k] = v
 	end
 	local serverLuck = c.ServerLuckUntil
-	return {
+	local state: Types.PlayerState = {
 		Coins = p.Coins,
 		Gems = p.Gems,
 		Rebirths = p.Rebirths,
 		CoinMult = Economy.CoinMult(p, mult),
 		LuckMult = Economy.LuckMult(p, mult),
 		Areas = copySet(p.Areas),
-		Pets = pets,
+		Creatures = creatures,
+ EggBag = table.clone(p.EggBag), Incubators = {}, HatchSlots=Economy.HatchSlots(p), Cosmetics=copySet(p.Cosmetics),
+ Habitats = {}, HabitatSlots=p.HabitatSlots, ArenaPoints=p.ArenaPoints, BattleTeam=table.clone(p.BattleTeam),
 		Equipped = table.clone(p.Equipped),
 		MaxEquip = Economy.MaxEquip(p),
 		MaxStorage = Economy.MaxStorage(p),
@@ -420,7 +487,8 @@ function Profile.BuildState(p: Profile, c: StateContext): Types.PlayerState
 			Broken = p.Stats.Broken,
 			Expeditions = p.Stats.Expeditions,
 			CoinsEarned = p.Stats.CoinsEarned,
-			Crafted = p.Stats.Crafted,
+			Fused = p.Stats.Fused,
+ Battles = p.Stats.Battles, BattleWins = p.Stats.BattleWins,
 		},
 		Settings = settings,
 		RebirthCost = if p.Rebirths >= Config.MaxRebirths then 0 else Economy.RebirthCost(p.Rebirths),
@@ -428,6 +496,10 @@ function Profile.BuildState(p: Profile, c: StateContext): Types.PlayerState
 		CanTrade = c.CanTrade ~= false,
 		ServerTime = now,
 	}
+ for key,slot in p.Habitats do state.Habitats[key]=table.clone(slot) end
+ for key,inc in p.Incubators do state.Incubators[key]={Egg=copyEgg(inc.Egg),StartAt=inc.StartAt,EndAt=inc.EndAt,Seed=0,Luck=inc.Luck} end
+ for i,e in p.EggBag do state.EggBag[i]=copyEgg(e) end
+ return state
 end
 
 return Profile

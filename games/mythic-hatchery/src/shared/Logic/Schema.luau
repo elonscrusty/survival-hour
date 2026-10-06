@@ -5,12 +5,12 @@
 
 local Types = require("../Types")
 
-export type PetInstance = Types.PetInstance
+export type Creature = Types.Creature
 export type Expedition = Types.Expedition
 export type Quest = Types.Quest
 export type Reward = Types.Reward
 
-export type Stats = { Hatched: number, Broken: number, Expeditions: number, CoinsEarned: number, Crafted: number }
+export type Stats = { Hatched: number, Broken: number, Expeditions: number, CoinsEarned: number, Fused: number, Battles: number, BattleWins: number }
 
 export type Profile = {
 	Version: number,
@@ -18,7 +18,11 @@ export type Profile = {
 	Gems: number,
 	Rebirths: number,
 	Areas: { [string]: boolean },
-	Pets: { PetInstance },
+	Creatures: { Creature },
+ EggBag: { Types.EggItem }, Incubators: { [string]: Types.Incubator },
+ Habitats: { [string]: Types.HabitatSlot }, HabitatSlots: number, ArenaPoints: number, StarterGranted: boolean,
+ Cosmetics: { [string]: boolean }, HatchSlots: number,
+ BattleTeam: { string }, BattleClaims: { [string]: number }, BattleOpponents: { [string]: { Count: number, WindowAt: number } },
 	NextUid: number,
 	Equipped: { string },
 	Expeditions: { [string]: Expedition },
@@ -41,7 +45,7 @@ export type Profile = {
 
 local Schema = {}
 
-Schema.StartCoins = 150 -- enough for the first Meadow Egg
+Schema.StartCoins = 250 -- two Meadow eggs build the first battle team
 Schema.StartArea = "Meadow"
 Schema.MaxCoins = 1e15
 Schema.MaxGems = 1e12
@@ -55,7 +59,7 @@ Schema.MaxCoinMult = 1e6 -- sanity cap for snapshotted multipliers
 Schema.SettingDefaults = {
 	Music = true,
 	Sfx = true,
-	HideOthersPets = false,
+	HideOthersCreatures = false,
 	AutoFarm = false,
 } :: { [string]: boolean }
 
@@ -90,31 +94,31 @@ end
 -- short strings. Returns the list (copied) or nil and a reason.
 function Schema.UidList(v: any, maxCount: number): ({ string }?, string?)
 	if type(v) ~= "table" then
-		return nil, "Bad pet list"
+		return nil, "Bad creature list"
 	end
 	local n = #v
 	if n < 1 then
-		return nil, "No pets chosen"
+		return nil, "No creatures chosen"
 	end
 	if n > maxCount then
-		return nil, "Too many pets"
+		return nil, "Too many creatures"
 	end
 	local count = 0
 	for _ in v do
 		count += 1
 	end
 	if count ~= n then
-		return nil, "Bad pet list"
+		return nil, "Bad creature list"
 	end
 	local seen: { [string]: boolean } = {}
 	local out: { string } = {}
 	for i = 1, n do
 		local u = v[i]
 		if type(u) ~= "string" or #u == 0 or #u > Schema.MaxUidLength then
-			return nil, "Bad pet id"
+			return nil, "Bad creature id"
 		end
 		if seen[u] then
-			return nil, "Same pet chosen twice"
+			return nil, "Same creature chosen twice"
 		end
 		seen[u] = true
 		table.insert(out, u)

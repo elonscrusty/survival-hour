@@ -2,8 +2,9 @@
 -- Server-owned slot snapshots. Settle before assignment, removal or upgrade.
 local Gameplay = require("../Gameplay")
 local Level = require("./Level")
+local Potions = require("../Potions")
 local Tuning = Gameplay.Habitat
-export type Slot = { Level: number, Creature: string?, Power: number, Coins: number, UpdatedAt: number }
+export type Slot = { Level: number, Creature: string?, Power: number, Coins: number, UpdatedAt: number, BasePower: number?, RateMult: number?, BoostUntil: number?, BoostMult: number? }
 local Habitat = {}
 function Habitat.New(now: number): Slot
 	assert(Level.IsFinite(now), "Invalid time")
@@ -12,17 +13,27 @@ end
 function Habitat.Capacity(slot: Slot): number
 	return Tuning.BaseCapacity * Tuning.UpgradeCapacity ^ (slot.Level - 1)
 end
+local function baseRate(slot: Slot): number
+	return if slot.Creature then slot.Power * (slot.RateMult or 1) * Tuning.CoinsPerPowerSecond * Tuning.UpgradeRate ^ (slot.Level - 1) else 0
+end
 function Habitat.Rate(slot: Slot): number
-	return if slot.Creature then slot.Power * Tuning.CoinsPerPowerSecond * Tuning.UpgradeRate ^ (slot.Level - 1) else 0
+	local boost = if (slot.BoostUntil or 0) > slot.UpdatedAt then (slot.BoostMult or 1) else 1
+	return baseRate(slot) * boost
 end
 function Habitat.Accrue(slot: Slot, now: number)
 	if not Level.IsFinite(now) or now <= slot.UpdatedAt then return end
-	slot.Coins = math.min(Habitat.Capacity(slot), slot.Coins + (now - slot.UpdatedAt) * Habitat.Rate(slot))
+	local seconds = now - slot.UpdatedAt
+	local boostedSeconds = math.max(0, math.min(now, slot.BoostUntil or 0) - slot.UpdatedAt)
+	local effectiveSeconds = seconds + boostedSeconds * ((slot.BoostMult or 1) - 1)
+	slot.Coins = math.min(Habitat.Capacity(slot), slot.Coins + effectiveSeconds * baseRate(slot))
 	slot.UpdatedAt = now
+end
+function Habitat.Power(c: Level.Creature): number
+	return Level.Power(c) * (if c.Neon then Potions.NeonCoinMult else 1)
 end
 function Habitat.Assign(slot: Slot, c: Level.Creature, now: number): boolean
 	if slot.Creature ~= nil or not Level.IsFinite(now) or now < slot.UpdatedAt then return false end
-	local power = Level.Power(c)
+	local power = Habitat.Power(c)
 	Habitat.Accrue(slot, now)
 	slot.Creature = c.Uid; slot.Power = power
 	return true

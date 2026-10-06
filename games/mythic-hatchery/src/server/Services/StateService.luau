@@ -1,4 +1,5 @@
---!nonstrict
+--!strict
+local protectedCall: any = pcall
 -- Sends each player their PlayerState snapshot (coalesced to ~5 per second),
 -- keeps the replicated player attributes (Pets / Vip) and leaderstats in sync,
 -- and owns the per-player flags that come from Roblox services: Premium,
@@ -49,9 +50,6 @@ function StateService.Init(c)
 		if not ok then
 			return ctx.Util.Fail(err or "Bad setting")
 		end
-		if key == "AutoFarm" and value == false then
-			ctx.BreakableService.ClearTarget(player)
-		end
 		StateService.Dirty(player)
 		return { ok = true }
 	end)
@@ -65,7 +63,7 @@ function StateService.Start()
 			dirty = {}
 			for p in list do
 				if p.Parent ~= nil then
-					local ok, err = pcall(StateService.Push, p)
+					local ok, err = protectedCall(StateService.Push, p)
 					if not ok then
 						warn("[StateService] push failed:", err)
 					end
@@ -89,7 +87,7 @@ end
 
 local function fetchPolicy(player: Player, s)
 	for attempt = 1, 3 do
-		local ok, info = pcall(function()
+		local ok, info = protectedCall(function()
 			return PolicyService:GetPolicyInfoForPlayerAsync(player)
 		end)
 		if ok and type(info) == "table" then
@@ -133,7 +131,7 @@ function StateService._onLoaded(player: Player, s)
 	task.spawn(function()
 		fetchPolicy(player, s)
 		if Config.GroupId ~= 0 then
-			local ok, inGroup = pcall(function()
+			local ok, inGroup = protectedCall(function()
 				return player:IsInGroup(Config.GroupId)
 			end)
 			s.InGroup = ok and inGroup == true
@@ -185,12 +183,12 @@ end
 local function syncReplicated(player: Player, s)
 	local p = s.Profile
 	local list = {}
-	for _, pet in Inventory.EquippedPets(p) do
-		table.insert(list, { Uid = pet.Uid, Id = pet.Id, Variant = pet.Variant, Shiny = pet.Shiny })
+	for _, pet in Inventory.EquippedCreatures(p) do
+		table.insert(list, { Uid = pet.Uid, Species = pet.Species, Element = pet.Element, Rarity = pet.Rarity, Level = pet.Level, Neon = pet.Neon, Potions = pet.Potions, Cosmetics = pet.Cosmetics })
 	end
 	local json = HttpService:JSONEncode(list)
-	if player:GetAttribute("Pets") ~= json then
-		player:SetAttribute("Pets", json)
+	if player:GetAttribute("Creatures") ~= json then
+		player:SetAttribute("Creatures", json)
 	end
 	local vip = p.Passes.VIP == true
 	if player:GetAttribute("Vip") ~= vip then
@@ -223,6 +221,7 @@ function StateService.Push(player: Player)
 		CanBuyGemEggs = s.CanBuyGemEggs,
 		CanTrade = s.CanTrade,
 	})
+	state.Riding=ctx.RideService and ctx.RideService.Uid(player) or nil
 	Net.Event("State"):FireClient(player, state)
 end
 

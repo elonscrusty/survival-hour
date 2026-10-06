@@ -5,7 +5,7 @@
 --     ^                        |
 --     +---- any offer change --+         (Cancel at any time -> Cancelled)
 --
--- Offers are re-validated at swap time, so a pet that was deleted, locked,
+-- Offers are re-validated at swap time, so a creature that was deleted, locked,
 -- sent on an expedition or gems that were spent in the meantime make the swap
 -- fail instead of duplicating anything. The swap first computes both new
 -- inventories without touching either profile, then commits them together.
@@ -18,9 +18,9 @@ local Profile = require("./Profile")
 local Schema = require("./Schema")
 
 type Profile = Schema.Profile
-type PetInstance = Schema.PetInstance
+type Creature = Schema.Creature
 
-export type Side = { UserId: number, Name: string, Pets: { string }, Gems: number, Ready: boolean }
+export type Side = { UserId: number, Name: string, Creatures: { string }, Gems: number, Ready: boolean }
 export type TradeState = {
 	Id: string,
 	Sides: { Side },
@@ -29,11 +29,11 @@ export type TradeState = {
 }
 
 export type SidePlan = {
-	Pets: { PetInstance },
+	Creatures: { Creature },
 	Equipped: { string },
 	NextUid: number,
 	Gems: number,
-	Received: { PetInstance },
+	Received: { Creature },
 }
 export type Plan = { A: SidePlan, B: SidePlan }
 
@@ -43,8 +43,8 @@ function Trade.New(id: string, aUserId: number, aName: string, bUserId: number, 
 	return {
 		Id = id,
 		Sides = {
-			{ UserId = aUserId, Name = aName, Pets = {}, Gems = 0, Ready = false },
-			{ UserId = bUserId, Name = bName, Pets = {}, Gems = 0, Ready = false },
+			{ UserId = aUserId, Name = aName, Creatures = {}, Gems = 0, Ready = false },
+			{ UserId = bUserId, Name = bName, Creatures = {}, Gems = 0, Ready = false },
 		},
 		Status = "Open",
 		ConfirmAt = nil,
@@ -64,10 +64,10 @@ function Trade.IsActive(t: TradeState): boolean
 	return t.Status == "Open" or t.Status == "Confirming"
 end
 
--- Checks that a profile can give these pets and gems right now.
+-- Checks that a profile can give these creatures and gems right now.
 function Trade.ValidateOffer(p: Profile, uids: any, gems: any): (boolean, string?)
 	if type(uids) ~= "table" then
-		return false, "Bad pet list"
+		return false, "Bad creature list"
 	end
 	local n = #uids
 	local count = 0
@@ -75,10 +75,10 @@ function Trade.ValidateOffer(p: Profile, uids: any, gems: any): (boolean, string
 		count += 1
 	end
 	if count ~= n then
-		return false, "Bad pet list"
+		return false, "Bad creature list"
 	end
-	if n > Config.TradeMaxPets then
-		return false, string.format("At most %d pets per trade", Config.TradeMaxPets)
+	if n > Config.TradeMaxCreatures then
+		return false, string.format("At most %d creatures per trade", Config.TradeMaxCreatures)
 	end
 	if Config.TradeMaxGems <= 0 and gems ~= 0 then
 		return false, "Gems can't be traded"
@@ -94,21 +94,21 @@ function Trade.ValidateOffer(p: Profile, uids: any, gems: any): (boolean, string
 	for i = 1, n do
 		local uid = uids[i]
 		if type(uid) ~= "string" or #uid == 0 or #uid > Schema.MaxUidLength then
-			return false, "Bad pet id"
+			return false, "Bad creature id"
 		end
 		if seen[uid] then
-			return false, "Same pet chosen twice"
+			return false, "Same creature chosen twice"
 		end
 		seen[uid] = true
-		local pet = Inventory.Find(p, uid)
-		if not pet then
-			return false, "You don't have that pet"
+		local creature = Inventory.Find(p, uid)
+		if not creature then
+			return false, "You don't have that creature"
 		end
-		if pet.Locked then
-			return false, "Locked pets can't be traded"
+		if creature.Locked then
+			return false, "Locked creatures can't be traded"
 		end
 		if busy[uid] then
-			return false, "Pets on expeditions can't be traded"
+			return false, "Creatures on expeditions can't be traded"
 		end
 	end
 	return true, nil
@@ -139,7 +139,7 @@ function Trade.SetOffer(t: TradeState, userId: number, p: Profile, uids: any, ge
 	for _, uid in uids do
 		table.insert(list, uid)
 	end
-	side.Pets = list
+	side.Creatures = list
 	side.Gems = gems
 	resetReady(t)
 	return true, nil
@@ -155,7 +155,7 @@ function Trade.SetReady(t: TradeState, userId: number, ready: boolean, now: numb
 	end
 	if ready then
 		local a, b = t.Sides[1], t.Sides[2]
-		if #a.Pets == 0 and a.Gems == 0 and #b.Pets == 0 and b.Gems == 0 then
+		if #a.Creatures == 0 and a.Gems == 0 and #b.Creatures == 0 and b.Gems == 0 then
 			return false, "Add something to the trade first"
 		end
 	end
@@ -185,17 +185,17 @@ function Trade.Cancel(t: TradeState)
 	end
 end
 
-local function planSide(p: Profile, give: { string }, giveGems: number, get: { PetInstance }, getGems: number): SidePlan
+local function planSide(p: Profile, give: { string }, giveGems: number, get: { Creature }, getGems: number): SidePlan
 	local drop: { [string]: boolean } = {}
 	for _, uid in give do
 		drop[uid] = true
 	end
-	local pets: { PetInstance } = {}
+	local creatures: { Creature } = {}
 	local used: { [string]: boolean } = {}
-	for _, pet in p.Pets do
-		if not drop[pet.Uid] then
-			table.insert(pets, pet)
-			used[pet.Uid] = true
+	for _, creature in p.Creatures do
+		if not drop[creature.Uid] then
+			table.insert(creatures, creature)
+			used[creature.Uid] = true
 		end
 	end
 	local equipped: { string } = {}
@@ -204,9 +204,9 @@ local function planSide(p: Profile, give: { string }, giveGems: number, get: { P
 			table.insert(equipped, uid)
 		end
 	end
-	-- Incoming pets get fresh uids from the receiver's counter and arrive unlocked.
+	-- Incoming creatures get fresh uids from the receiver's counter and arrive unlocked.
 	local nextUid = p.NextUid
-	local received: { PetInstance } = {}
+	local received: { Creature } = {}
 	for _, src in get do
 		local uid
 		repeat
@@ -214,22 +214,23 @@ local function planSide(p: Profile, give: { string }, giveGems: number, get: { P
 			uid = tostring(nextUid)
 		until not used[uid]
 		used[uid] = true
-		local pet = Profile.CopyPet(src)
-		pet.Uid = uid
-		pet.Locked = false
-		table.insert(pets, pet)
-		table.insert(received, pet)
+		local creature = Profile.CopyPet(src)
+		creature.Uid = uid
+		creature.Locked = false
+		creature.Cosmetics = {}
+		table.insert(creatures, creature)
+		table.insert(received, creature)
 	end
 	local gems = math.min(Schema.MaxGems, p.Gems - giveGems + getGems)
-	return { Pets = pets, Equipped = equipped, NextUid = nextUid, Gems = gems, Received = received }
+	return { Creatures = creatures, Equipped = equipped, NextUid = nextUid, Gems = gems, Received = received }
 end
 
-local function offeredPets(p: Profile, uids: { string }): { PetInstance }
-	local out: { PetInstance } = {}
+local function offeredCreatures(p: Profile, uids: { string }): { Creature }
+	local out: { Creature } = {}
 	for _, uid in uids do
-		local pet = Inventory.Find(p, uid)
-		if pet then
-			table.insert(out, pet)
+		local creature = Inventory.Find(p, uid)
+		if creature then
+			table.insert(out, creature)
 		end
 	end
 	return out
@@ -245,27 +246,27 @@ function Trade.Plan(t: TradeState, pa: Profile, pb: Profile): (Plan?, string?)
 	if not a.Ready or not b.Ready then
 		return nil, "Both players must be ready"
 	end
-	local okA, errA = Trade.ValidateOffer(pa, a.Pets, a.Gems)
+	local okA, errA = Trade.ValidateOffer(pa, a.Creatures, a.Gems)
 	if not okA then
 		return nil, a.Name .. ": " .. (errA or "offer changed")
 	end
-	local okB, errB = Trade.ValidateOffer(pb, b.Pets, b.Gems)
+	local okB, errB = Trade.ValidateOffer(pb, b.Creatures, b.Gems)
 	if not okB then
 		return nil, b.Name .. ": " .. (errB or "offer changed")
 	end
-	local newCountA = #pa.Pets - #a.Pets + #b.Pets
-	if #b.Pets > #a.Pets and newCountA > Economy.MaxStorage(pa) then
-		return nil, a.Name .. " doesn't have room for those pets"
+	local newCountA = #pa.Creatures - #a.Creatures + #b.Creatures
+	if #b.Creatures > #a.Creatures and newCountA > Economy.MaxStorage(pa) then
+		return nil, a.Name .. " doesn't have room for those creatures"
 	end
-	local newCountB = #pb.Pets - #b.Pets + #a.Pets
-	if #a.Pets > #b.Pets and newCountB > Economy.MaxStorage(pb) then
-		return nil, b.Name .. " doesn't have room for those pets"
+	local newCountB = #pb.Creatures - #b.Creatures + #a.Creatures
+	if #a.Creatures > #b.Creatures and newCountB > Economy.MaxStorage(pb) then
+		return nil, b.Name .. " doesn't have room for those creatures"
 	end
-	local petsA = offeredPets(pa, a.Pets)
-	local petsB = offeredPets(pb, b.Pets)
+	local creaturesA = offeredCreatures(pa, a.Creatures)
+	local creaturesB = offeredCreatures(pb, b.Creatures)
 	return {
-		A = planSide(pa, a.Pets, a.Gems, petsB, b.Gems),
-		B = planSide(pb, b.Pets, b.Gems, petsA, a.Gems),
+		A = planSide(pa, a.Creatures, a.Gems, creaturesB, b.Gems),
+		B = planSide(pb, b.Creatures, b.Gems, creaturesA, a.Gems),
 	}, nil
 end
 
@@ -280,24 +281,24 @@ end
 -- (or just clears the flag if no journal was written). ApplySide is idempotent
 -- through AppliedTrades, so replaying twice changes nothing.
 
-export type JournalSide = { Give: { string }, GiveGems: number, Get: { PetInstance }, GetGems: number }
+export type JournalSide = { Give: { string }, GiveGems: number, Get: { Creature }, GetGems: number }
 export type Journal = { Id: string, Sides: { [string]: JournalSide } }
 
 -- Builds the journal for a planned trade (keys are tostring(UserId)).
 function Trade.Journal(t: TradeState, plan: Plan): Journal
 	local a, b = t.Sides[1], t.Sides[2]
-	local function copyList(list: { PetInstance }): { PetInstance }
-		local out: { PetInstance } = {}
-		for _, pet in list do
-			table.insert(out, Profile.CopyPet(pet))
+	local function copyList(list: { Creature }): { Creature }
+		local out: { Creature } = {}
+		for _, creature in list do
+			table.insert(out, Profile.CopyPet(creature))
 		end
 		return out
 	end
 	return {
 		Id = t.Id,
 		Sides = {
-			[tostring(a.UserId)] = { Give = table.clone(a.Pets), GiveGems = a.Gems, Get = copyList(plan.A.Received), GetGems = b.Gems },
-			[tostring(b.UserId)] = { Give = table.clone(b.Pets), GiveGems = b.Gems, Get = copyList(plan.B.Received), GetGems = a.Gems },
+			[tostring(a.UserId)] = { Give = table.clone(a.Creatures), GiveGems = a.Gems, Get = copyList(plan.A.Received), GetGems = b.Gems },
+			[tostring(b.UserId)] = { Give = table.clone(b.Creatures), GiveGems = b.Gems, Get = copyList(plan.B.Received), GetGems = a.Gems },
 		},
 	}
 end
@@ -313,18 +314,19 @@ function Trade.SanitizeSide(raw: any): JournalSide?
 			table.insert(give, uid)
 		end
 	end
-	-- Reuse the profile sanitiser for the pets (validates ids, variants, levels).
-	local tmp = Profile.Sanitize({ Pets = raw.Get })
+	-- Reuse the profile sanitiser for the creatures (validates ids, variants, levels).
+	local tmp = Profile.Sanitize({ Creatures = raw.Get, StarterGranted = true })
+ for _, creature in tmp.Creatures do creature.Cosmetics = {} end
 	return {
 		Give = give,
 		GiveGems = Schema.ClampInt(raw.GiveGems, 0, Config.TradeMaxGems),
-		Get = tmp.Pets,
+		Get = tmp.Creatures,
 		GetGems = Schema.ClampInt(raw.GetGems, 0, Config.TradeMaxGems),
 	}
 end
 
 -- Applies one side of a trade to a profile. Returns false (and changes
--- nothing) if this trade was already applied. Received pets keep their uid
+-- nothing) if this trade was already applied. Received creatures keep their uid
 -- unless it is taken, arrive unlocked, and may exceed storage (the trade was
 -- agreed when they fit).
 function Trade.ApplySide(p: Profile, side: JournalSide, tradeId: string): boolean
@@ -336,23 +338,24 @@ function Trade.ApplySide(p: Profile, side: JournalSide, tradeId: string): boolea
 	end
 	Inventory.RemoveUnchecked(p, side.Give)
 	local used: { [string]: boolean } = {}
-	for _, pet in p.Pets do
-		used[pet.Uid] = true
+	for _, creature in p.Creatures do
+		used[creature.Uid] = true
 	end
 	for _, src in side.Get do
-		local pet = Profile.CopyPet(src)
-		pet.Locked = false
-		if used[pet.Uid] or #pet.Uid == 0 or #pet.Uid > Schema.MaxUidLength then
-			pet.Uid = Inventory.NewUid(p)
+		local creature = Profile.CopyPet(src)
+		creature.Locked = false
+		creature.Cosmetics = {}
+		if used[creature.Uid] or #creature.Uid == 0 or #creature.Uid > Schema.MaxUidLength then
+			creature.Uid = Inventory.NewUid(p)
 		else
-			local n = tonumber(pet.Uid)
+			local n = tonumber(creature.Uid)
 			if n and Schema.IsFinite(n) and n > p.NextUid then
 				p.NextUid = math.min(math.floor(n), 1e15)
 			end
 		end
-		used[pet.Uid] = true
-		table.insert(p.Pets, pet)
-		p.Index[pet.Id] = true
+		used[creature.Uid] = true
+		table.insert(p.Creatures, creature)
+		p.Index[creature.Species .. "|" .. creature.Element] = true
 	end
 	p.Gems = math.clamp(p.Gems - side.GiveGems + side.GetGems, 0, Schema.MaxGems)
 	table.insert(p.AppliedTrades, tradeId)
@@ -381,16 +384,16 @@ function Trade.Execute(t: TradeState, pa: Profile, pb: Profile): (Plan?, string?
 end
 
 local function sideView(s: Side, p: Profile?): Types.TradeSide
-	local pets: { PetInstance } = {}
+	local creatures: { Creature } = {}
 	if p then
-		for _, uid in s.Pets do
-			local pet = Inventory.Find(p, uid)
-			if pet then
-				table.insert(pets, Profile.CopyPet(pet))
+		for _, uid in s.Creatures do
+			local creature = Inventory.Find(p, uid)
+			if creature then
+				table.insert(creatures, Profile.CopyPet(creature))
 			end
 		end
 	end
-	return { UserId = s.UserId, Name = s.Name, Pets = pets, Gems = s.Gems, Ready = s.Ready }
+	return { UserId = s.UserId, Name = s.Name, Creatures = creatures, Gems = s.Gems, Ready = s.Ready, Vip = false }
 end
 
 -- The window as seen by `userId`. `profileOf` looks up a side's profile.
@@ -403,6 +406,7 @@ function Trade.View(t: TradeState, userId: number, now: number, profileOf: (numb
 	local at = t.ConfirmAt
 	return {
 		Id = t.Id,
+		MaxCreatures = Config.TradeMaxCreatures,
 		Me = sideView(me, profileOf(me.UserId)),
 		Them = sideView(them, profileOf(them.UserId)),
 		Countdown = if t.Status == "Confirming" and at then math.max(0, math.ceil(at - now)) else nil,

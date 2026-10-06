@@ -1,4 +1,4 @@
---!nonstrict
+--!strict
 -- Studio-only test shortcuts for the client's DEV panel (remote "DevAction").
 -- Every call is refused outside Studio, and Studio saves go to a separate
 -- DataStore (DataService.StoreName), so none of this can touch live data.
@@ -51,10 +51,10 @@ local ACTIONS: { [string]: (Player, any) -> (boolean, string?) } = {
 		return true, "All gates open"
 	end,
 	ResetData = function(player, s)
-		if ctx.TradeService.InTrade(player) then
+		if ctx.TradeService.InTrade(player) or ctx.BattleService.IsOccupied(player) then
 			return false, "Cancel your trade first"
 		end
-		ctx.BreakableService.ClearTarget(player)
+		ctx.RideService.Stop(player)
 		s.Profile = Profile.Default()
 		Rewards.EnsureQuests(s.Profile, Rewards.DayNumber(os.time()))
 		return true, "Data reset"

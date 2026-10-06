@@ -8,6 +8,7 @@ local specs = {
 	"./Rng.spec",
 	"./PetMath.spec",
 	"./Hatch.spec",
+	"./Incubation.spec",
 	"./Gameplay.spec",
 	"./Fusion.spec",
 	"./BattleEdges.spec",

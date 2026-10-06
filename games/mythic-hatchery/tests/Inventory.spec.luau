@@ -1,184 +1,23 @@
--- Inventory: adding, capacity, equip, lock, delete, craft and busy rules.
-local Inventory = require("../src/shared/Logic/Inventory")
 local Profile = require("../src/shared/Logic/Profile")
-local PetMath = require("../src/shared/Logic/PetMath")
-local Schema = require("../src/shared/Logic/Schema")
+local Inventory = require("../src/shared/Logic/Inventory")
 local Economy = require("../src/shared/Logic/Economy")
 local Config = require("../src/shared/Config")
-
-local function addMany(p, id, n, variant)
-	local out = {}
-	for _ = 1, n do
-		local pet = Inventory.Add(p, { Id = id, Variant = variant })
-		table.insert(out, pet)
-	end
-	return out
-end
-
-local function busy(p, uids)
-	p.Expeditions["1"] = { Area = "Meadow", Duration = "Short", Pets = uids, StartAt = 0, EndAt = 10, Seed = 1 }
-end
-
+local function fresh() local p=Profile.Default(); p.Creatures={}; p.Index={}; return p end
+local function add(p,rarity) return Inventory.Add(p,{Species="Dragon",Element="Nature",Rarity=rarity or "Common"}) end
 return {
-	["Add gives unique uids and fills the Index"] = function(t)
-		local p = Profile.Default()
-		local pet, discovered = Inventory.Add(p, { Id = "Puppy" })
-		t.ok(pet, "added")
-		t.ok(discovered, "new species")
-		t.ok(p.Index.Puppy, "index")
-		local pet2, discovered2 = Inventory.Add(p, { Id = "Puppy" })
-		t.no(discovered2, "not new")
-		t.ok(pet.Uid ~= pet2.Uid, "unique uids")
-		t.eq(pet.Variant, "Normal", "default variant")
-		t.eq(pet.Level, 1, "level 1")
-		t.no(pet.Locked, "unlocked")
-	end,
-	["Add rejects unknown pets and variants"] = function(t)
-		local p = Profile.Default()
-		t.no(Inventory.Add(p, { Id = "Dragonzilla" }), "unknown pet")
-		t.no(Inventory.Add(p, { Id = "Puppy", Variant = "Diamond" }), "unknown variant")
-		t.no(Inventory.Add(p, nil :: any), "nil spec")
-		t.eq(#p.Pets, 0, "nothing added")
-	end,
-	["NewUid skips uids already in use"] = function(t)
-		local p = Profile.Default()
-		table.insert(p.Pets, { Uid = "1", Id = "Puppy", Variant = "Normal", Shiny = false, Level = 1, Xp = 0, Locked = false })
-		table.insert(p.Pets, { Uid = "2", Id = "Puppy", Variant = "Normal", Shiny = false, Level = 1, Xp = 0, Locked = false })
-		p.NextUid = 0
-		t.eq(Inventory.NewUid(p), "3", "skips taken")
-	end,
-	["storage is enforced"] = function(t)
-		local p = Profile.Default()
-		addMany(p, "Puppy", Economy.MaxStorage(p))
-		t.eq(Inventory.FreeSpace(p), 0, "full")
-		local pet, _, err = Inventory.Add(p, { Id = "Puppy" })
-		t.no(pet, "rejected")
-		t.ok(err, "reason")
-		t.eq(#p.Pets, Economy.MaxStorage(p), "count unchanged")
-	end,
-	["equip respects the slot limit and busy pets"] = function(t)
-		local p = Profile.Default()
-		local pets = addMany(p, "Puppy", 6)
-		for i = 1, Economy.MaxEquip(p) do
-			t.ok(Inventory.Equip(p, pets[i].Uid, true), "equip " .. i)
-		end
-		t.no(Inventory.Equip(p, pets[5].Uid, true), "no free slot")
-		t.ok(Inventory.Equip(p, pets[1].Uid, true), "already equipped is fine")
-		t.eq(#p.Equipped, Economy.MaxEquip(p), "no duplicates")
-		t.ok(Inventory.Equip(p, pets[1].Uid, false), "unequip")
-		busy(p, { pets[6].Uid })
-		t.no(Inventory.Equip(p, pets[6].Uid, true), "busy pet")
-		t.no(Inventory.Equip(p, "nope", true), "unknown")
-		Inventory.UnequipAll(p)
-		t.eq(#p.Equipped, 0, "unequip all")
-	end,
-	["equip best picks the strongest free pets"] = function(t)
-		local p = Profile.Default()
-		addMany(p, "Puppy", 3)
-		local fox = Inventory.Add(p, { Id = "Fox" })
-		local bear = Inventory.Add(p, { Id = "HoneyBear" })
-		local bunny = Inventory.Add(p, { Id = "Bunny" })
-		busy(p, { bear.Uid })
-		Inventory.EquipBest(p)
-		t.eq(#p.Equipped, 3, "fills slots")
-		t.ok(Inventory.IsEquipped(p, fox.Uid), "fox")
-		t.ok(Inventory.IsEquipped(p, bunny.Uid), "bunny")
-		t.no(Inventory.IsEquipped(p, bear.Uid), "busy bear skipped")
-		t.ok(Inventory.EquippedPower(p) > 0, "power")
-	end,
-	["delete refunds and is all-or-nothing"] = function(t)
-		local p = Profile.Default()
-		p.Coins = 0
-		local pets = addMany(p, "Fox", 4)
-		Inventory.Equip(p, pets[1].Uid, true)
-		Inventory.Lock(p, pets[2].Uid, true)
-		busy(p, { pets[3].Uid })
-		t.no(Inventory.Delete(p, { pets[1].Uid, pets[2].Uid }), "locked in batch")
-		t.no(Inventory.Delete(p, { pets[3].Uid }), "busy")
-		t.no(Inventory.Delete(p, { pets[1].Uid, pets[1].Uid }), "duplicate uid")
-		t.no(Inventory.Delete(p, { "ghost" }), "unknown")
-		t.no(Inventory.Delete(p, { pets[4].Uid }, { [pets[4].Uid] = true }), "blocked by trade")
-		t.eq(#p.Pets, 4, "nothing deleted")
-		t.eq(p.Coins, 0, "no refund")
-		local refund = Inventory.Delete(p, { pets[1].Uid, pets[4].Uid })
-		t.eq(refund, 2 * PetMath.DeleteRefund(pets[1]), "refund")
-		t.eq(p.Coins, refund, "coins")
-		t.eq(#p.Pets, 2, "deleted")
-		t.eq(#p.Equipped, 0, "unequipped")
-		t.eq(p.Stats.CoinsEarned, 0, "refunds are not earnings")
-	end,
-	["lock toggles"] = function(t)
-		local p = Profile.Default()
-		local pet = Inventory.Add(p, { Id = "Puppy" })
-		t.ok(Inventory.Lock(p, pet.Uid, true), "lock")
-		t.ok(pet.Locked, "locked")
-		t.ok(Inventory.Lock(p, pet.Uid, false), "unlock")
-		t.no(pet.Locked, "unlocked")
-		t.no(Inventory.Lock(p, "x", true), "unknown")
-	end,
-	["craft makes the next variant from 5 copies"] = function(t)
-		local p = Profile.Default()
-		local pets = addMany(p, "Puppy", 6)
-		Inventory.Add(p, { Id = "Kitten" })
-		Inventory.Equip(p, pets[3].Uid, true)
-		local made, err = Inventory.Craft(p, pets[1].Uid)
-		t.ok(made, err)
-		t.eq(made.Variant, "Golden", "golden")
-		t.eq(made.Id, "Puppy", "same species")
-		t.eq(#p.Pets, 3, "5 used, 1 made: 7 - 5 + 1")
-		t.ok(Inventory.Find(p, pets[1].Uid) == nil, "chosen pet used")
-		t.eq(p.Stats.Crafted, 1, "stat")
-		-- Unequipped copies are used before equipped ones, so pets[3] survives.
-		t.ok(Inventory.Find(p, pets[3].Uid), "equipped copy kept")
-	end,
-	["craft equips the result when an equipped pet was used"] = function(t)
-		local p = Profile.Default()
-		local pets = addMany(p, "Puppy", 5)
-		Inventory.Equip(p, pets[2].Uid, true)
-		local made = Inventory.Craft(p, pets[2].Uid)
-		t.ok(made, "made")
-		t.ok(Inventory.IsEquipped(p, made.Uid), "equipped")
-		t.eq(#p.Equipped, 1, "old one gone")
-	end,
-	["craft refuses locked, busy, blocked, shiny mismatch and too few"] = function(t)
-		local p = Profile.Default()
-		local pets = addMany(p, "Puppy", 5)
-		Inventory.Lock(p, pets[5].Uid, true)
-		t.no(Inventory.Craft(p, pets[1].Uid), "only 4 unlocked")
-		t.no(Inventory.Craft(p, pets[5].Uid), "chosen pet locked")
-		Inventory.Lock(p, pets[5].Uid, false)
-		busy(p, { pets[4].Uid })
-		t.no(Inventory.Craft(p, pets[1].Uid), "one busy")
-		t.no(Inventory.Craft(p, pets[4].Uid), "chosen busy")
-		p.Expeditions = {}
-		t.no(Inventory.Craft(p, pets[1].Uid, { [pets[2].Uid] = true }), "one in trade")
-		pets[3].Shiny = true
-		t.no(Inventory.Craft(p, pets[1].Uid), "shiny doesn't mix")
-		pets[3].Shiny = false
-		t.eq(#p.Pets, 5, "nothing consumed")
-		t.ok(Inventory.Craft(p, pets[1].Uid), "now ok")
-		t.no(Inventory.Craft(p, "ghost"), "unknown")
-	end,
-	["rainbow can't be crafted further"] = function(t)
-		local p = Profile.Default()
-		local pets = addMany(p, "Puppy", 5, "Rainbow")
-		t.no(Inventory.Craft(p, pets[1].Uid), "rainbow is max")
-	end,
-	["craft works with a full inventory"] = function(t)
-		local p = Profile.Default()
-		local pets = addMany(p, "Puppy", Economy.MaxStorage(p))
-		t.ok(Inventory.Craft(p, pets[1].Uid), "craft frees room")
-		t.eq(#p.Pets, Economy.MaxStorage(p) - Config.CraftCost + 1, "count")
-	end,
-	["uid list validation"] = function(t)
-		t.ok(Schema.UidList({ "1", "2" }, 3), "ok")
-		t.no(Schema.UidList({}, 3), "empty")
-		t.no(Schema.UidList({ "1", "1" }, 3), "duplicate")
-		t.no(Schema.UidList({ "1", "2", "3", "4" }, 3), "too many")
-		t.no(Schema.UidList({ 1 }, 3), "number uid")
-		t.no(Schema.UidList({ [1] = "1", [3] = "3" }, 3), "holes")
-		t.no(Schema.UidList({ "1", x = "2" }, 3), "mixed table")
-		t.no(Schema.UidList("1", 3), "not a table")
-		t.no(Schema.UidList({ string.rep("a", 100) }, 3), "too long")
-	end,
+["add validates identity and unique discovery"] = function(t)
+ local p=fresh(); local a,new=add(p); t.ok(new); local b,again=add(p); t.no(again); t.ok(a.Uid~=b.Uid); t.eq(a.Level,1); t.ok(p.Index["Dragon|Nature"]); t.no(Inventory.Add(p,{Species="Bad",Rarity="Common",Element="Nature"}))
+end,
+["capacity and uid collisions"] = function(t)
+ local p=fresh(); local a=add(p); p.NextUid=0; t.ok(Inventory.NewUid(p)~=a.Uid); while Inventory.FreeSpace(p)>0 do add(p) end; t.no(add(p))
+end,
+["habitat and expedition creatures are busy"] = function(t)
+ local p=fresh(); local a=add(p); p.Habitats["1"]={Level=1,Creature=a.Uid,Power=1,Coins=0,UpdatedAt=0}; t.ok(Inventory.IsBusy(p,a.Uid)); t.no(Inventory.Equip(p,a.Uid,true)); t.no(Inventory.Delete(p,{a.Uid})); p.Habitats={}; p.Expeditions["1"]={Creatures={a.Uid},Area="Meadow",Duration="Short",StartAt=0,EndAt=10,Seed=1}; t.ok(Inventory.IsBusy(p,a.Uid))
+end,
+["delete is atomic for locks blocks duplicates"] = function(t)
+ local p=fresh(); local a=add(p); local b=add(p); Inventory.Lock(p,b.Uid,true); t.no(Inventory.Delete(p,{a.Uid,b.Uid})); t.eq(#p.Creatures,2); t.no(Inventory.Delete(p,{a.Uid,a.Uid})); t.no(Inventory.Delete(p,{a.Uid},{[a.Uid]=true})); t.ok(Inventory.Delete(p,{a.Uid})); t.eq(#p.Creatures,1)
+end,
+["equip best uses rarity and level"] = function(t)
+ local p=fresh(); for _=1,6 do add(p) end; local strong=add(p,"Mythic"); Inventory.EquipBest(p); t.eq(p.Equipped[1],strong.Uid); t.eq(#p.Equipped,Economy.MaxEquip(p)); t.ok(Inventory.EquippedPower(p)>16)
+end,
 }

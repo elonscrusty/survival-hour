@@ -1,3 +1,5 @@
+> Historical handoff: implementation has changed. Read CONTRACTS.md, STATUS.md and STUDIO_TESTS.md for the current game.
+
 # Pet Expedition: models and world
 
 Everything visual is built at runtime from Roblox primitives (no uploaded meshes), so it works in Studio straight away.

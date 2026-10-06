@@ -1,4 +1,4 @@
---!nonstrict
+--!strict
 -- Server entry point. Creates the remotes, then loads every service in order:
 -- each gets the shared `ctx` table (ctx.<ServiceName>) in Init, and Start
 -- (if any) runs in its own thread once every service is initialised.
@@ -14,36 +14,38 @@ Net.Init()
 local Services = script.Parent:WaitForChild("Services")
 
 local ORDER = {
-	"Util",
-	"WorldService", -- first: DataService.Init yields on a DataStore probe and the map must exist before characters spawn
-	"DataService",
-	"StateService",
-	"BoostService",
-	"PetService",
-	"HatchService",
-	"BreakableService",
-	"ExpeditionService",
-	"RewardService",
-	"RebirthService",
-	"PurchaseService",
-	"TradeService",
-	"DevService", -- Studio-only test shortcuts; refuses everything on live servers
+ "Util", "WorldService", "DataService", "StateService", "BoostService",
+ "CreatureService", "HatchService", "HabitatService", "BattleService", "RideService",
+ "ExpeditionService", "RewardService", "RebirthService", "PurchaseService", "TradeService", "DevService",
 }
 
 local ctx: any = {
 	IsStudio = RunService:IsStudio(),
 }
 
-for _, name in ORDER do
-	ctx[name] = require(Services:WaitForChild(name))
-end
+ctx.Util = require(Services:WaitForChild("Util"))
+ctx.WorldService = require(Services:WaitForChild("WorldService"))
+ctx.DataService = require(Services:WaitForChild("DataService"))
+ctx.StateService = require(Services:WaitForChild("StateService"))
+ctx.BoostService = require(Services:WaitForChild("BoostService"))
+ctx.CreatureService = require(Services:WaitForChild("CreatureService"))
+ctx.HatchService = require(Services:WaitForChild("HatchService"))
+ctx.HabitatService = require(Services:WaitForChild("HabitatService"))
+ctx.BattleService = require(Services:WaitForChild("BattleService"))
+ctx.RideService = require(Services:WaitForChild("RideService"))
+ctx.ExpeditionService = require(Services:WaitForChild("ExpeditionService"))
+ctx.RewardService = require(Services:WaitForChild("RewardService"))
+ctx.RebirthService = require(Services:WaitForChild("RebirthService"))
+ctx.PurchaseService = require(Services:WaitForChild("PurchaseService"))
+ctx.TradeService = require(Services:WaitForChild("TradeService"))
+ctx.DevService = require(Services:WaitForChild("DevService"))
 
 for _, name in ORDER do
 	local service = ctx[name]
 	if type(service.Init) == "function" then
 		local ok, err = pcall(service.Init, ctx)
 		if not ok then
-			warn(string.format("[Main] %s.Init failed: %s", name, tostring(err)))
+			error(string.format("[Main] %s.Init failed: %s", name, tostring(err)))
 		end
 	end
 end
@@ -60,4 +62,4 @@ for _, name in ORDER do
 	end
 end
 
-print("[PetExpedition] server ready")
+print("[MythicHatchery] server ready")

@@ -1,4 +1,4 @@
---!nonstrict
+--!strict
 -- Rebirth: resets coins and gates for a permanent coin bonus and gems
 -- (Logic/Economy.Rebirth). Players standing on a now-locked island are sent
 -- back to the Meadow.
@@ -22,7 +22,7 @@ function RebirthService.Init(c)
 		if not ok then
 			return ctx.Util.Fail(err or "Can't rebirth yet")
 		end
-		ctx.BreakableService.ClearTarget(player)
+		if ctx.RideService then ctx.RideService.Stop(player) end
 		local area = ctx.WorldService.AreaOf(player)
 		if area and area ~= Schema.StartArea then
 			ctx.WorldService.TeleportTo(player, Schema.StartArea)

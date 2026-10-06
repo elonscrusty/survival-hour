@@ -1,4 +1,4 @@
---!nonstrict
+--!strict
 -- Expedition remotes. Timers use os.time(), so expeditions finish while the
 -- player is offline; the reward seed is fixed at start (Logic/Expedition).
 
@@ -34,6 +34,7 @@ function ExpeditionService.Init(c)
 		if not list then
 			return U.Fail(err or "Bad pet list")
 		end
+		for _, uid in list do if ctx.CreatureService.Busy(player, uid) then return U.Fail("Creature occupied") end end
 		local seed = random:NextInteger(1, 2147483646)
 		local slot, _, err2 = Expedition.Start(s.Profile, areaId, durationKey, list, os.time(), seed, ctx.TradeService.OfferedSet(player), ctx.StateService.CoinMult(s))
 		if not slot then
@@ -59,7 +60,7 @@ function ExpeditionService.Init(c)
 			ctx.RewardService.Discovered(player, id)
 		end
 		local pets = {}
-		for _, pet in claimed.Pets do
+		for _, pet in claimed.Creatures do
 			table.insert(pets, Profile.CopyPet(pet))
 		end
 		ctx.StateService.Dirty(player)
@@ -68,7 +69,7 @@ function ExpeditionService.Init(c)
 			reward = {
 				Coins = if claimed.Coins > 0 then claimed.Coins else nil,
 				Gems = if claimed.Gems > 0 then claimed.Gems else nil,
-				Pets = pets,
+				Creatures = pets,
 			},
 		}
 	end)

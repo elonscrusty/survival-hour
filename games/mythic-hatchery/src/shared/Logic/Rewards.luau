@@ -3,7 +3,7 @@
 -- Days are UTC day numbers: floor(os.time() / 86400).
 
 local Config = require("../Config")
-local Pets = require("../Pets")
+local Creatures = require("../Species")
 local Areas = require("../Areas")
 local Economy = require("./Economy")
 local Rng = require("./Rng")
@@ -228,16 +228,18 @@ end
 
 function Rewards.IndexCount(p: Profile): number
 	local n = 0
-	for _, def in Pets.List do
-		if p.Index[def.Id] then
+	for _, def in Creatures.List do
+		for _, element in require("../Elements").List do
+		if p.Index[def.Id .. "|" .. element.Id] then
 			n += 1
 		end
+	end
 	end
 	return n
 end
 
 function Rewards.IndexFraction(p: Profile): number
-	return Rewards.IndexCount(p) / math.max(1, #Pets.List)
+	return Rewards.IndexCount(p) / math.max(1, #Creatures.List * 5)
 end
 
 function Rewards.ClaimIndex(p: Profile, tier: number, now: number): (Reward?, string?)
@@ -250,9 +252,9 @@ function Rewards.ClaimIndex(p: Profile, tier: number, now: number): (Reward?, st
 	end
 	local spec = Config.IndexRewards[tier]
 	-- Compare counts, not fractions, so 100% isn't lost to rounding.
-	local needed = math.ceil((spec.Fraction or 1) * #Pets.List - 1e-9)
+	local needed = math.ceil((spec.Fraction or 1) * #Creatures.List * 5 - 1e-9)
 	if Rewards.IndexCount(p) < needed then
-		return nil, "Discover more pets first"
+		return nil, "Discover more creatures first"
 	end
 	p.IndexClaimed[key] = true
 	return Rewards.Apply(p, spec, now), nil

@@ -3,7 +3,7 @@ local Rewards = require("../src/shared/Logic/Rewards")
 local Profile = require("../src/shared/Logic/Profile")
 local Economy = require("../src/shared/Logic/Economy")
 local Config = require("../src/shared/Config")
-local Pets = require("../src/shared/Pets")
+local Creatures = require("../src/shared/Species")
 
 local DAY = 86400
 local NOW = 20000 * DAY + 3600 -- 01:00 UTC on day 20000
@@ -190,20 +190,21 @@ return {
 	["index tiers need enough species and claim once"] = function(t)
 		local p = Profile.Default()
 		t.no(Rewards.ClaimIndex(p, 1, NOW), "nothing found")
-		local need = math.ceil(Config.IndexRewards[1].Fraction * #Pets.List)
-		for i = 1, need - 1 do
-			p.Index[Pets.List[i].Id] = true
-		end
-		t.no(Rewards.ClaimIndex(p, 1, NOW), "one short")
-		p.Index[Pets.List[need].Id] = true
+  p.Index={}
+  local combos={}
+  for _,def in Creatures.List do for _,e in require("../src/shared/Elements").List do table.insert(combos,def.Id .. "|" .. e.Id) end end
+  local need=math.ceil(Config.IndexRewards[1].Fraction * #combos)
+  for i=1,need-1 do p.Index[combos[i]]=true end
+  t.no(Rewards.ClaimIndex(p,1,NOW),"one short")
+  p.Index[combos[need]]=true
 		p.Index.NotARealPet = true
 		local r = Rewards.ClaimIndex(p, 1, NOW)
 		t.ok(r, "claimed")
 		t.eq(p.ExtraEquip, Config.IndexRewards[1].Equip, "equip bonus")
 		t.no(Rewards.ClaimIndex(p, 1, NOW), "double claim")
 		t.no(Rewards.ClaimIndex(p, 5, NOW), "bad tier")
-		for _, def in Pets.List do
-			p.Index[def.Id] = true
+		for _, def in Creatures.List do
+			for _, e in require("../src/shared/Elements").List do p.Index[def.Id .. "|" .. e.Id] = true end
 		end
 		t.eq(Rewards.IndexFraction(p), 1, "complete (fake ids ignored)")
 		t.ok(Rewards.ClaimIndex(p, 4, NOW), "100% tier")

@@ -3,10 +3,12 @@
 Everything here is done on a PC in Roblox Studio or on create.roblox.com.
 
 ## 1. Open the game
-1. Download `games/mythic-hatchery/build/MythicHatchery.rbxlx` from GitHub.
+1. Download the supplied `MythicHatchery.rbxlx`, or run `bash tools/check.sh` to generate `build/MythicHatchery.rbxlx`.
 2. Double-click it to open in Roblox Studio and press **Play**. The map, creatures and UI all build when the game
    starts (nothing is stored as uploaded meshes).
 3. In Studio every Robux button works as a free test purchase, labelled as a test.
+
+Run the checks in STUDIO_TESTS.md before making the experience public. Set maximum players to 8 for the current eight-plot map.
 
 ## 2. Publish
 1. File → **Publish to Roblox As…** → new experience, name **Mythic Hatchery**.
@@ -28,9 +30,7 @@ create.roblox.com → your experience → **Monetization**.
 | Lucky | Lucky | 349 |
 | MoreEquip | +3 Creatures Out | 249 |
 | MoreExpeditions | +2 Expedition Slots | 199 |
-| AutoFarm | Auto Farm | 249 |
 | BigBackpack | Big Stable | 99 |
-| RingChampion | Ring Champion | 299 |
 
 **Developer Products** (Monetization → Developer Products → Create):
 | Key | Name | Price |
@@ -42,7 +42,7 @@ create.roblox.com → your experience → **Monetization**.
 | Gems7000 | 7,000 Gems | 999 |
 | Gems19000 | 19,000 Gems | 2499 |
 | BoostCoins | 2x Coins (30 min) | 49 |
-| BoostGrowth | 2x Growth (30 min) | 49 |
+| BoostGrowth | 2x Battle XP (30 min) | 49 |
 | BoostLuck | 2x Luck (30 min) | 79 |
 | ServerLuck | Server Luck (15 min) | 199 |
 

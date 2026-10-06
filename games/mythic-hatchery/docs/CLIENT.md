@@ -1,3 +1,5 @@
+> Historical handoff: implementation has changed. Read CONTRACTS.md, STATUS.md and STUDIO_TESTS.md for the current game.
+
 # Pet Expedition: client
 
 Everything the player sees is built in code under `src/client/` (no Studio GUIs, no uploaded images).
