@@ -11,7 +11,48 @@ local Net = {}
 -- RemoteFunctions (client -> server request, server returns a Result table:
 -- { ok = true, ... } or { ok = false, err = "Human readable reason" }).
 Net.Functions = {
-	"HatchEgg", -- (eggId, count) -> { ok, pets = { PetInstance } }
+	-- eggs and incubators
+	"BuyEgg", -- (eggId, count 1..3) -> { ok, eggs = { EggItem } } into the egg bag
+	"Incubate", -- (eggUid, slot?) -> { ok, slot } place a bag egg into a free incubator
+	"Hatch", -- (slot) -> { ok, creature = Creature, new = boolean } when the timer is done
+	"SkipIncubation", -- (slot) -> { ok, gems } finish early with gems
+	-- creatures
+	"Care", -- (uid, task "Feed"|"Play"|"Sleep") -> { ok, growth, stage, stageUp = boolean }
+	"EquipCreature", -- (uid, equip: boolean)
+	"EquipBest", -- ()
+	"UnequipAll", -- ()
+	"ReleaseCreatures", -- ({ uid }) -> { ok, coins } (delete for a small coin refund)
+	"LockCreature", -- (uid, locked: boolean)
+	"RenameCreature", -- (uid, name) -> { ok, name } (TextService filtered)
+	"UsePotion", -- (uid, potionId) -> { ok } buys with gems and applies
+	"Fuse", -- (uidA, uidB) -> { ok, egg = EggItem }
+	"BuyCosmetic", -- (cosmeticId) -> { ok }
+	"WearCosmetic", -- (uid, slot, cosmeticId | "") -> { ok }
+	"Mount", -- (uid | nil) -> { ok } start/stop riding (Adult+ with Ride or Fly potion)
+	-- world and progression
+	"OpenGate", -- (areaId)
+	"Teleport", -- (areaId)
+	"Rebirth", -- ()
+	"StartExpedition", -- (areaId, durationKey, { uid }) -> { ok, slot }
+	"ClaimExpedition", -- (slot) -> { ok, reward = Reward }
+	"SkipExpedition", -- (slot) -> { ok, gems }
+	"ClaimDaily", -- () -> { ok, reward, streak }
+	"ClaimPlaytime", -- (index) -> { ok, reward }
+	"ClaimQuest", -- (index) -> { ok, reward }
+	"ClaimIndex", -- (tier) -> { ok, reward }
+	"SetSetting", -- (key, value) -> { ok }
+	"RaceJoin", -- () -> { ok } queue for the next sky race (must be flying)
+	"RaceLeave", -- () -> { ok }
+	-- trading
+	"TradeRequest", -- (targetUserId) -> { ok }
+	"TradeRespond", -- (fromUserId, accept: boolean) -> { ok }
+	"TradeSetOffer", -- ({ uid }, gems) -> { ok }
+	"TradeReady", -- (ready: boolean) -> { ok }
+	"TradeCancel", -- () -> { ok }
+	-- Studio only
+	"DevPurchase", -- (key) simulate buying a pass/product whose Id is 0
+	"DevAction", -- (action) test shortcuts (DevService)
+}
 	"EquipPet", -- (uid, equip: boolean)
 	"EquipBest", -- ()
 	"UnequipAll", -- ()
@@ -44,10 +85,12 @@ Net.Events = {
 	"State", -- (PlayerState) full snapshot of the local player's data
 	"Notify", -- (kind: string, data: table) toasts / effects, see CONTRACTS.md
 	"Trade", -- (TradeView | nil) current trade window state
+	"Race", -- (RaceView | nil) the sky race this player is queued in or running
 	-- client -> server
-	"SetTarget", -- (breakableId: string?) send equipped pets at a breakable (nil = recall)
+	"SetTarget", -- (breakableId: string?) send equipped creatures at a breakable (nil = recall)
+	"RaceCheckpoint", -- (index) client reports passing a checkpoint ring; server validates position and timing
 	"ClientReady", -- () UI loaded; server replies with State
-	"RingFocus", -- (targetUserId: number?) in the Pet Ring, focus your pets on that player's pets (nil = nearest)
+	"RingFocus", -- (targetUserId: number?) in the Creature Ring, focus your creatures on that player's (nil = nearest)
 }
 
 local folder: Folder? = nil

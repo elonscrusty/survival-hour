@@ -2,7 +2,7 @@
 -- The six islands, in unlock order. The world builder lays them out along +X;
 -- each one has a gate (except the first), an egg stand, a breakable field and
 -- one expedition destination. CoinMult scales breakable and expedition coins;
--- PowerMult scales the power of pets that hatch here.
+-- PowerMult is the island tier power of creatures that hatch here.
 
 export type Breakable = { Kind: string, Weight: number, Hp: number, Coins: number, Gems: number? }
 export type Area = {
@@ -13,7 +13,7 @@ export type Area = {
 	CoinMult: number,
 	PowerMult: number,
 	Egg: string, -- Eggs id sold on this island
-	ExpeditionPet: string, -- Pets id that can only be found on expeditions here
+	Element: string, -- element its eggs favour ("" = none)
 	MaxBreakables: number,
 	Breakables: { Breakable },
 	Blurb: string,
@@ -32,24 +32,24 @@ local field: { Breakable } = {
 }
 
 Areas.List = {
-	{ Id = "Meadow", Index = 1, Name = "Sunny Meadow", GateCost = 0, CoinMult = 1, PowerMult = 1,
-		Egg = "MeadowEgg", ExpeditionPet = "SunflowerSprite", MaxBreakables = 40, Breakables = field,
+	{ Id = "Meadow", Index = 1, Name = "Sunny Meadow", Element = "Nature", GateCost = 0, CoinMult = 1, PowerMult = 1,
+		Egg = "MeadowEgg", MaxBreakables = 40, Breakables = field,
 		Blurb = "Flowers, hay bales and the friendliest pets around." },
-	{ Id = "Grove", Index = 2, Name = "Mushroom Grove", GateCost = 5000, CoinMult = 8, PowerMult = 6,
-		Egg = "GroveEgg", ExpeditionPet = "FairyMoth", MaxBreakables = 40, Breakables = field,
-		Blurb = "Glowing caps and sleepy forest critters." },
-	{ Id = "Frost", Index = 3, Name = "Frostbite Peaks", GateCost = 120000, CoinMult = 64, PowerMult = 36,
-		Egg = "FrostEgg", ExpeditionPet = "PolarKing", MaxBreakables = 40, Breakables = field,
-		Blurb = "Snowy cliffs where the toughest fluff lives." },
-	{ Id = "Coral", Index = 4, Name = "Coral Cove", GateCost = 2.7e6, CoinMult = 512, PowerMult = 216,
-		Egg = "CoralEgg", ExpeditionPet = "PearlSeahorse", MaxBreakables = 40, Breakables = field,
-		Blurb = "Warm sand, tide pools and sunken treasure." },
-	{ Id = "Volcano", Index = 5, Name = "Ember Volcano", GateCost = 5.4e7, CoinMult = 4096, PowerMult = 1296,
-		Egg = "VolcanoEgg", ExpeditionPet = "Phoenix", MaxBreakables = 40, Breakables = field,
+	{ Id = "Shadow", Index = 2, Name = "Shadow Grove", Element = "Shadow", GateCost = 5000, CoinMult = 8, PowerMult = 6,
+		Egg = "ShadowEgg", MaxBreakables = 40, Breakables = field,
+		Blurb = "A twilight forest of glowing mushrooms." },
+	{ Id = "Frost", Index = 3, Name = "Frost Peaks", Element = "Ice", GateCost = 120000, CoinMult = 64, PowerMult = 36,
+		Egg = "FrostEgg", MaxBreakables = 40, Breakables = field,
+		Blurb = "Icy cliffs and frozen waterfalls." },
+	{ Id = "Storm", Index = 4, Name = "Storm Coast", Element = "Storm", GateCost = 2.7e6, CoinMult = 512, PowerMult = 216,
+		Egg = "StormEgg", MaxBreakables = 40, Breakables = field,
+		Blurb = "Windswept beaches under thunderclouds." },
+	{ Id = "Volcano", Index = 5, Name = "Ember Volcano", Element = "Fire", GateCost = 5.4e7, CoinMult = 4096, PowerMult = 1296,
+		Egg = "VolcanoEgg", MaxBreakables = 40, Breakables = field,
 		Blurb = "Lava rivers, hot rocks and fire-proof friends." },
-	{ Id = "Starfall", Index = 6, Name = "Starfall Isles", GateCost = 1.1e9, CoinMult = 32768, PowerMult = 7776,
-		Egg = "StarEgg", ExpeditionPet = "VoidKraken", MaxBreakables = 40, Breakables = field,
-		Blurb = "Floating islands at the edge of space." },
+	{ Id = "Sky", Index = 6, Name = "Sky Isles", Element = "", GateCost = 1.1e9, CoinMult = 32768, PowerMult = 7776,
+		Egg = "SkyEgg", MaxBreakables = 40, Breakables = field,
+		Blurb = "Floating islands above the clouds." },
 } :: { Area }
 
 Areas.ById = {} :: { [string]: Area }

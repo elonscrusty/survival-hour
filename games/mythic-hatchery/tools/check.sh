@@ -22,6 +22,6 @@ echo "$out" | tail -1 | grep -q " 0 failed" || { echo "$out" | grep FAIL; fail=1
 
 if [ "${1:-}" != "--quick" ]; then
   mkdir -p build
-  if "$T/rojo/rojo" build default.project.json -o build/PetExpedition.rbxlx >/dev/null 2>&1; then echo "build: ok"; else echo "build: FAILED"; fail=1; fi
+  if "$T/rojo/rojo" build default.project.json -o build/MythicHatchery.rbxlx >/dev/null 2>&1; then echo "build: ok"; else echo "build: FAILED"; fail=1; fi
 fi
 exit $fail

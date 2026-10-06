@@ -1,19 +1,21 @@
-# Pet Expedition: system contracts
+# Mythic Hatchery: system contracts
 
 Server, client and models are built separately. This file pins how they connect. Shared data:
-`src/shared/{Config,Areas,Pets,Eggs,Products,Net,Types}.luau`.
+`src/shared/{Config,Areas,Species,Elements,Eggs,Potions,Cosmetics,Products,Net,Types}.luau`.
+(The game was "Pet Expedition"; pets became creatures. Keep systems, rename pet → creature.)
 
-## Game loop (one paragraph)
-Players walk across 6 islands (Meadow → Starfall, laid out along +X). They hatch eggs at egg stands
-(coins, or gems for the Prism Egg) and equip their best pets (3 + bonuses). Tapping a breakable (coin pile,
-crate, chest, gem rock, big chest) sends their equipped pets to attack it; damage comes from pet power, and
-coins/gems are credited when it breaks (split by damage dealt). Coins open gates to the next island.
-**Expeditions** are the idle loop: from the Expedition Board, a player sends up to 3 unequipped pets to an
-opened island for 5 min / 30 min / 2 h / 8 h. They come back with coins, sometimes gems, free eggs, and a
-chance at that island's expedition-only pet. Timers run on `os.time()`, so they finish while offline.
-Other systems: Golden/Rainbow crafting (5 → 1), pet levels, rebirth (resets coins and gates for a
-permanent coin bonus), daily streak, playtime gifts, 3 daily quests, Index (collection) rewards, trading,
-boosts and game passes.
+## Game loop
+Players buy eggs (coins at island stands, gems for the Mythic and Limited eggs) and incubate them in
+hatch slots (real-time timers, `Config.BaseHatchSlots` + pass). Each hatch rolls a **species** (Dragon,
+Griffin, Phoenix, Hydra, Unicorn), **rarity** (Common → Mythic) and **element** (Fire, Ice, Storm,
+Nature, Shadow). Creatures grow **Baby → Teen → Adult → Ancient** through care tasks (Feed, Play, Sleep
+on cooldown timers); neglect only pauses growth. Two **Adult+** creatures can be **fused** (both
+consumed) into a Fused Egg with boosted rarity odds; a cross-species pair may roll a hidden **hybrid**.
+Potions (gems) unlock **Ride**, **Fly** and **Neon** per creature. Adult+ creatures with Ride/Fly can be
+ridden; fliers race in the **Sky Arena** above the hub. Everything from Pet Expedition stays: 6 islands
+(now element-themed), creatures farming treasure for coins, gates, expeditions, rebirth, daily/playtime/
+quests, Index, boosts, the Creature Ring, trading (creatures only) and the Robux shop. A coin shop sells
+cosmetics (hats, auras, saddles).
 
 ## Ownership
 | Area | Owner |
@@ -23,113 +25,105 @@ boosts and game passes.
 | `src/client/**` | client pass |
 | `src/shared/Models/**`, `models/**`, `renders/**`, `tests/Models.spec.luau` | models pass |
 
-Do not edit files you don't own. If a contract change is needed, note it in your final report.
-
 ## Requires
-String requires relative to the module (`require("./X")` = sibling, `require("../Config")` from
-`Logic/`). Code in `src/server`/`src/client` reaches shared modules via
-`game:GetService("ReplicatedStorage"):WaitForChild("Shared")`. Logic modules must not use Roblox types
-or services (they run in the CLI Luau for tests). No Color3/Vector3 in `Config`.
+String requires relative to the module (`require("./X")`, `require("../Config")` from `Logic/`). `src/server` and
+`src/client` reach shared code via `ReplicatedStorage:WaitForChild("Shared")`. Logic modules must not use Roblox
+types or services (they run in the CLI Luau tests). `--!strict` everywhere, no `_G`.
+
+## Core rules (Logic, server-authoritative)
+- **Buying eggs** (`BuyEgg`): egg on sale (`Eggs.OnSale`), player within 45 studs of that egg's `EggStand` (Basic) or
+  of the hub (Premium/Limited stands are in the hub), affordable, bag space (`Config.EggStorage`). Gem eggs need
+  `CanBuyGemEggs`. Bought eggs go straight into free incubators, the rest into the bag.
+- **Incubating**: `EndAt = now + IncubateSeconds × (FastIncubation pass ? 0.5 : 1)`. The hatch result is rolled from a
+  `Seed` fixed when the egg enters the incubator, with the luck multiplier at that moment. `Hatch(slot)` after EndAt.
+  `SkipIncubation` costs `max(IncubateSkipMinGems, ceil(left/30) × IncubateSkipGemsPer30s)` gems.
+- **Rolls** (`Logic/Hatch`): species, rarity, element independently from the egg's weight tables. Element: the egg's
+  `Element` table, else `HomeElementWeight`% for the island's element and the rest split evenly. Luck multiplies the
+  weight of every rarity above the egg's lowest, renormalised, capped by `MaxLuckMult`.
+- **Growth** (`Logic/Growth`): `Care(uid, task)` allowed when `now - Care[task] ≥ Cooldown`; adds `Growth` points
+  (×2 with the Growth2x boost); Feed costs `FeedCost × CoinMult(highest island)` coins. Stage = highest stage whose
+  `StageGrowth` ≤ growth. Ancient is the cap (growth keeps counting for nothing).
+- **Farming power** = `RarityPower × StagePower × Areas[Tier].PowerMult × (Neon ? NeonCoinMult : 1)`, ×`ElementBonus`
+  when farming on the island of the creature's element.
+- **Fusion** (`Logic/Fusion`): both parents owned, Adult+, unlocked, not equipped-in-ring/riding/expedition/trade,
+  different uids; costs `Fusion.CoinCost × CoinMult(highest)`. The Fused Egg's rarity table: the better parent's
+  rarity gets weight `1 - upgradeChance`, the next tier `upgradeChance` (Mythic stays Mythic); species table: each
+  parent 50%; element: each parent `(1-RandomElementChance)/2`, the rest even; `Hybrid` = `Species.Hybrid(a, b)` with
+  `HybridChance`. Tier = max parent tier. Potions and cosmetics on the parents are lost (show a warning).
+- **Potions**: `UsePotion(uid, id)` charges gems and sets the flag; no refunds, no stacking.
+- **Riding** (`Mount(uid)`): Adult+ and Ride or Fly potion, not busy. Server sets player attribute `Riding` and the
+  humanoid WalkSpeed to the ride speed. Flying is client-driven physics on the character (client has network
+  ownership), only while riding a creature with the Fly potion; the server samples the root part ~4×/s and pulls
+  the player back to the last good position when speed exceeds expected × `SpeedTolerance` or altitude
+  > `MaxAltitude`. Dismount on death, trade swap, fusion/release of the mount, or entering the Creature Ring.
+- **Trading**: creatures only (gems disabled by `TradeMaxGems = 0`), up to `TradeMaxCreatures` (16 with VipTrader),
+  journaled atomic swap (already built), locked/busy creatures refused, potions/edition/growth travel with the
+  creature, cosmetics are stripped (they're the owner's).
+- **Release**: `ReleaseCreatures` deletes for `max(1, power × DeleteRefund)` coins; all-or-nothing.
 
 ## Remotes (`Net.luau`)
-- RemoteFunctions return `{ ok = true, ... }` or `{ ok = false, err = "readable reason" }`. Payloads
-  listed next to each name in `Net.luau`. The server validates every argument type and range, rate-limits
-  per player per remote, and never trusts client values for prices, rewards or odds.
-- `State` (server → client): full `Types.PlayerState` snapshot. Sent on `ClientReady` and after any change
-  (coalesced, at most ~5 per second).
-- `Notify(kind, data)` kinds:
-  - `Toast` `{ Text, Tone = "good"|"bad"|"info" }`
-  - `Reward` `{ Coins?, Gems?, Position? (Vector3) }` (pickup popups when a breakable breaks)
-  - `Broken` `{ Id, Kind, Position }` (break effect, sent to everyone nearby)
-  - `LevelUp` `{ Uid, Level }`
-  - `Discovered` `{ PetId }` (first time a species enters the player's Index)
-  - `ServerLuck` `{ By, Until }` (broadcast)
-  - `Purchased` `{ Name }`
-  - `TradeRequest` `{ FromUserId, FromName }`
-- `Trade(view: TradeView?)`: the open trade window; nil closes it.
-- `SetTarget(breakableId?)`: client → server. Server checks the breakable exists, is within
-  `Config.MaxTargetDistance` of the character and is on an island the player has opened.
-- `ClientReady()`: client → server once UI is ready.
-- Purchases: the client prompts `MarketplaceService` for configured ids (passes and products). For
-  Id 0 items in Studio it calls `DevPurchase(key)` instead (the server refuses outside Studio). VIP chat
-  tag is applied client-side from the `Vip` attribute (TextChatService).
+- RemoteFunctions return `{ ok = true, ... }` or `{ ok = false, err = "readable reason" }`. The server validates every
+  argument's type and range, rate-limits per player per remote, and never trusts client prices, odds or rewards.
+- `State`: full `Types.PlayerState` (coalesced, ≤5/s). `Trade(TradeView?)`, `Race(RaceView?)`.
+- `Notify(kind, data)`: `Toast {Text, Tone}`, `Reward {Coins?, Gems?, Position?}`, `Broken {Id, Kind, Position}`,
+  `StageUp {Uid, Stage}`, `Hatched {Uid}`, `Discovered {Species, Element}`, `HybridDiscovered {Species}`,
+  `ServerLuck {By, Until}`, `Purchased {Name}`, `TradeRequest {FromUserId, FromName}`, `RingKO {...}`, `RingOut {}`,
+  `RingKing {Name}`, `RaceResult {Place, Time, Coins, Trophies}`.
+- Client → server events: `SetTarget(breakableId?)`, `ClientReady()`, `RingFocus(userId?)`, `RaceCheckpoint(index)`.
+- Purchases: the client prompts `MarketplaceService` for configured ids; for Id 0 items in Studio it calls
+  `DevPurchase(key)` (refused outside Studio).
 
-## Replicated attributes (for rendering other players' pets)
-- `Player:GetAttribute("Pets")`: JSON string (HttpService) array of `{ Uid, Id, Variant, Shiny }` for the
-  player's equipped pets. Updated by the server whenever equipment changes.
-- `Player:GetAttribute("Target")`: breakable id string the player's pets are attacking, or `""`.
-- `Player:GetAttribute("Vip")`: boolean.
-- Breakables live in `workspace.Breakables` as Models tagged `Breakable` with attributes `Id`, `Kind`,
-  `Area`, `Hp`, `MaxHp`. The server updates `Hp`; it destroys the model on break.
+## Replicated attributes
+- `Player.Creatures`: JSON array of the equipped creatures `{ Uid, Species, Element, Rarity, Stage, Neon, Cosmetics }`.
+- `Player.Riding`: JSON `{ Uid, Species, Element, Rarity, Stage, Neon, Cosmetics, Fly }` or `""`.
+- `Player.Target` (breakable id or ""), `Player.Vip`, `Player.VipTrader`, `InRing`, `RingStreak`, `RingKing`, `Racing`.
+- Breakables: `workspace.Breakables` Models tagged `Breakable` with `Id`, `Kind`, `Area`, `Hp`, `MaxHp`.
 
-## World (`Models/World.luau`, built by the server at boot)
-`World.Build(): WorldInfo` creates `workspace.World` and returns
-`{ Spawns = {[areaId]=CFrame}, Zones = {[areaId]={ {Center:Vector3, Size:Vector3} }}, Bounds = {[areaId]={Min,Max}} }`.
-Zones are flat rectangles on the ground (Center.Y = ground top) where the server spawns breakables.
-Interactables are tagged with CollectionService and carry a `ProximityPrompt` child (client listens via
-`ProximityPromptService.PromptTriggered`, checks the tag on the prompt's ancestor model, opens UI):
+## World (`Models/World.luau`, built by the server)
+`World.Build(): WorldInfo` → `{ Spawns, Zones, Bounds, Arena = {Center, Radius}, Race = { Start: CFrame, Checkpoints: { {Center: Vector3, Radius: number, CFrame: CFrame} } } }`.
+Islands (Areas ids): `Meadow` (Nature, hub), `Shadow` (Shadow Grove), `Frost` (Ice), `Storm` (Storm Coast),
+`Volcano` (Fire), `Sky` (Sky Isles). Interactables are tagged and carry a `ProximityPrompt`:
 | Tag | Attributes | Purpose |
 |---|---|---|
-| `EggStand` | `EggId` | hatch menu for that egg; the stand shows the egg model on a pedestal |
-| `Gate` | `AreaId` | gate into that area; child Part `Barrier` (CanCollide). Client makes it non-collidable locally once the area is opened and hides it. |
-| `ExpeditionBoard` | | expeditions menu (Meadow hub) |
-| `CraftMachine` | | Golden/Rainbow crafting menu (Meadow hub) |
-| `RebirthStatue` | | rebirth menu (Meadow hub) |
-| `IndexBook` | | Index (collection) menu (Meadow hub) |
-| `AreaBounds` | `AreaId` | invisible, non-colliding box covering the island (client area banner) |
-A `SpawnLocation` sits in the Meadow.
+| `EggStand` | `EggId` | buy that egg (hub: Meadow, Mythic and Limited stands; one Basic stand per island). Client hides a Limited stand when not on sale. |
+| `Gate` | `AreaId` | gate with child `Barrier` (client disables locally once opened) |
+| `Hatchery` | | incubator menu (hub building with visible nests; incubators are also reachable from the HUD) |
+| `FusionAltar` | | fusion menu (hub) |
+| `CosmeticShop` | | coin shop (hub) |
+| `ExpeditionBoard`, `RebirthStatue`, `IndexBook` | | as before (hub) |
+| `RacePad` | | join the sky race (hub, under the Sky Arena) |
+| `RaceCheckpoint` | `Index`, `Radius` | ring in the Sky Arena (client detects passing; server validates) |
+| `Arena` | `Radius` | Creature Ring zone |
+| `AreaBounds` | `AreaId` | island volume |
 
 ## Models (`Models/init.luau`)
-- `Models.Pet(petId, variant, shiny): Model`: anchored, CanCollide/CanQuery/CanTouch false,
-  PrimaryPart `Root` (invisible), pivot at the bottom centre, facing -Z, roughly 2.5–4.5 studs tall
-  (bigger for higher rarity). Golden = gold metallic recolour, Rainbow = cycling/rainbow colours
-  (static stripes are fine; the client may animate), Shiny = sparkle ParticleEmitter attached to Root.
-- `Models.Egg(eggId): Model` (≈3 studs tall, same pivot rules).
-- `Models.Breakable(kind, areaId): Model` (anchored, CanCollide true, themed per area; sizes ≈ CoinPile 3,
-  Crate 4, Chest 5, GemRock 4, BigChest 8 studs wide).
-All built from primitives at runtime (no uploaded meshes), so they work in Studio immediately.
+- `Models.Creature(species, element, rarity, stage, opts?: { Neon: boolean?, Cosmetics: {[string]: string}? }): Model`
+  — anchored, non-colliding, PrimaryPart `Root`, pivot bottom-centre facing -Z. Size from `Config.StageScale` (Adult ≈
+  5–7 studs long so a player can ride it). Element sets the palette; higher rarity adds flourishes (trim, glowing
+  markings, gold horns/crests, aura particles for Mythic). Neon = neon markings + element-coloured light. Has
+  Attachments `Saddle` (rider seat), `Hat`, `Aura` on Root; cosmetics in opts are attached there.
+- `Models.Cosmetic(id): Model`, `Models.Egg(eggId): Model`, `Models.Breakable(kind, areaId): Model` as before.
+All primitives at runtime; no uploads.
 
 ## Persistence
-DataStore `Config.DataStoreName`, key `p_<UserId>`, session-locked (`Config.SessionLockSeconds`),
-autosave every `Config.AutosaveSeconds`, saved on leave and `BindToClose`. Receipts are deduped by
-`PurchaseId` stored in the profile. In Studio without API access the server falls back to memory.
+DataStore `Config.DataStoreName` (fresh store, schema `Config.Version`, migrations in `Logic/Profile`), key `p_<UserId>`,
+session-locked with retry/backoff, autosave every `Config.AutosaveSeconds`, save on leave and `BindToClose`, receipts
+deduped, trades journaled, Studio uses `<name>_Studio`.
 
 ## Compliance
-- Odds are shown for every egg before hatching.
-- `PolicyService:GetPolicyInfoForPlayerAsync`: if `ArePaidRandomItemsRestricted`, the player cannot
-  hatch the Prism Egg (`CanBuyGemEggs = false`); if `IsPaidItemTradingAllowed` is false, trading is off
-  (`CanTrade = false`).
-- Trades: both sides must be ready, then a `Config.TradeConfirmSeconds` countdown; any change resets
-  readiness. Items move atomically on the server. Locked pets and pets on expeditions can't be offered.
+Odds shown for every egg before buying (species, rarity and element tables, with luck). PolicyService:
+`ArePaidRandomItemsRestricted` → no gem eggs and no paid luck; `IsPaidItemTradingAllowed == false` → trading off.
 
-## Pet Ring (walk-in PvP)
-A roped sand ring north of the Meadow hub (`WorldInfo.Arena = { Center, Radius }`; an invisible `ArenaZone`
-part tagged `Arena` with attribute `Radius`). Walking inside means fighting; walking out is safe.
-- **Who fights:** while a player's character is inside (horizontal distance ≤ Radius from Center, |dy| < 12), their
-  strongest equipped pets by ring strength fight: `Config.Ring.Fighters` (+`PassFighters` with the `RingChampion`
-  pass), capped by how many are equipped. Breakable targeting is cleared on entry and refused while inside.
-- **Strength:** `Logic/Ring.Strength(pet, passes...)` per the formula in `Config.Ring`. HP = BaseHp × strength,
-  hit = BaseDamage × strength (crits per Config). Paid help (rarer pets, Xp2x boost, the extra fighter) stays
-  around 2x at most; levels matter most.
-- **Simulation (server):** fighters move on the ring floor (X/Z, server-side positions), pick the nearest enemy
-  fighter (or one of the focused player's fighters via `RingFocus`), close to AttackRange and hit every
-  AttackInterval. New arrivals have `EnterGraceSeconds` of immunity. A fighter at 0 HP faints and stays fainted until
-  its owner leaves. When all of a player's fighters have fainted, the player is pushed just outside the entrance
-  and gets Notify `RingOut`. Leaving or dying resets fighters (full HP next time) and the streak.
-- **Rewards:** the owner of the fighter landing the KO gets `KoTrophies` and `KoCoins × CoinMult(highest island)`
-  (counted only `SameVictimLimit` times per victim per `SameVictimWindow`); every hit gives pet XP `XpPerHit`, a KO
-  `XpPerKo` (Xp2x boost doubles all pet XP everywhere). `Stats.Trophies`, `Stats.RingKOs`, `Stats.BestStreak`
-  persist; leaderstats shows Trophies.
-- **King of the Ring:** the player in the ring with the highest current streak (≥ `KingMinStreak` KOs without
-  being bounced out) gets player attribute `RingKing = true` (only one at a time); clients show a crown.
-- **Wild challengers:** when exactly one player is inside for `WildDelay` s, a wild pet (random species from that
-  player's opened islands, strength `WildStrength` × their average fighter, Owner 0) joins; beating it gives XP and
-  `WildCoins` × KoCoins, no trophies. Wild fighters leave when another player enters or the player leaves.
-- **Replication:** `ReplicatedStorage.Arena` (Folder) holds one `Configuration` per fighter, named by fighter id,
-  with attributes `Owner` (UserId, 0 = wild), `Uid`, `PetId`, `Variant`, `Shiny`, `Level`, `X`, `Z`, `Hp`, `MaxHp`,
-  `Target` (fighter id or ""), `Fainted`, `Attack` (increments on every hit, for animation), `Crit` (bool, last hit).
-  Updated every `ReplicateSeconds`. Clients render ring fighters at these positions (lerped) instead of the
-  normal follow formation; wild fighters are rendered from the same data.
-- **Player attributes:** `InRing` (bool), `RingStreak` (number), `RingKing` (bool).
-- **Notify:** `RingKO` `{ Killer, Victim, PetId, Position }` (to players within ~120 studs of the ring),
-  `RingOut` `{}` (to the bounced player), `RingKing` `{ Name }` (broadcast when the crown changes hands).
+## Creature Ring
+As built for Pet Expedition (see `Config.Ring`), with ring strength = `min(RarityFactor × (Neon ? NeonFactor : 1),
+MaxGearFactor) × StageFactor`, and `ElementEdge` damage when the attacker's element beats the defender's. Fighter
+attributes use `Species`, `Element`, `Rarity`, `Stage`, `Neon` instead of pet fields. No XP (growth comes from care).
+
+## Sky race
+`RaceJoin` (must be riding a flier with the Fly potion, in the hub) → queue; the race starts `QueueSeconds` after the
+first join (or when `MaxRacers` join). Racers are placed at `Race.Start`, a 3-2-1 countdown runs, then they fly through
+the checkpoints in order. The client fires `RaceCheckpoint(i)` when its root passes ring i; the server checks order,
+distance to the ring centre ≤ radius + 6, and `MinCheckpointSeconds` since the last. Finishing the last ring finishes
+the race; places pay `Race.Coins[place] × CoinMult(highest)` and `Race.Trophies[place]`, only for the first
+`DailyRewardRaces` races each UTC day. `TimeLimit` ends the race for everyone. Leaving, dismounting or dying drops out.
+Best time → `Stats.BestLap`; leaderstats show Trophies.

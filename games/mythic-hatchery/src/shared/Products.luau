@@ -21,15 +21,16 @@ export type Product = {
 local Products = {}
 
 Products.Passes = {
+	{ Key = "HatchSlots", Id = 0, Price = 249, Name = "+2 Hatch Slots", Blurb = "Incubate 2 more eggs at the same time." },
+	{ Key = "FastIncubation", Id = 0, Price = 299, Name = "2x Incubation", Blurb = "Eggs hatch twice as fast." },
+	{ Key = "VipTrader", Id = 0, Price = 199, Name = "VIP Trader", Blurb = "Bigger trade window (16 creatures), shorter trade cooldown and a gold VIP badge in trades." },
 	{ Key = "VIP", Id = 0, Price = 199, Name = "VIP", Blurb = "+20% coins, VIP chat tag and a golden name." },
-	{ Key = "Lucky", Id = 0, Price = 349, Name = "Lucky", Blurb = "1.5x chance for rarer pets from every egg." },
-	{ Key = "TripleHatch", Id = 0, Price = 299, Name = "Triple Hatch", Blurb = "Open 3 eggs at once." },
-	{ Key = "FastHatch", Id = 0, Price = 99, Name = "Fast Hatch", Blurb = "Much faster egg opening animation." },
-	{ Key = "MoreEquip", Id = 0, Price = 249, Name = "+3 Pets Equipped", Blurb = "Take 3 more pets with you." },
+	{ Key = "Lucky", Id = 0, Price = 349, Name = "Lucky", Blurb = "1.5x chance for rarer creatures from every egg." },
+	{ Key = "MoreEquip", Id = 0, Price = 249, Name = "+3 Creatures Out", Blurb = "Take 3 more creatures with you." },
 	{ Key = "MoreExpeditions", Id = 0, Price = 199, Name = "+2 Expedition Slots", Blurb = "Run 2 more expeditions at the same time." },
-	{ Key = "AutoFarm", Id = 0, Price = 249, Name = "Auto Farm", Blurb = "Your pets attack the nearest coins on their own." },
-	{ Key = "BigBackpack", Id = 0, Price = 99, Name = "Big Backpack", Blurb = "+150 pet storage." },
-	{ Key = "RingChampion", Id = 0, Price = 299, Name = "Ring Champion", Blurb = "+1 pet fights for you in the Pet Ring." },
+	{ Key = "AutoFarm", Id = 0, Price = 249, Name = "Auto Farm", Blurb = "Your creatures attack the nearest treasure on their own." },
+	{ Key = "BigBackpack", Id = 0, Price = 99, Name = "Big Stable", Blurb = "+150 creature storage." },
+	{ Key = "RingChampion", Id = 0, Price = 299, Name = "Ring Champion", Blurb = "+1 creature fights for you in the Creature Ring." },
 } :: { Pass }
 
 Products.Products = {
@@ -40,7 +41,7 @@ Products.Products = {
 	{ Key = "Gems7000", Id = 0, Price = 999, Name = "7,000 Gems", Kind = "Gems", Amount = 7000 },
 	{ Key = "Gems19000", Id = 0, Price = 2499, Name = "19,000 Gems", Kind = "Gems", Amount = 19000 },
 	{ Key = "BoostCoins", Id = 0, Price = 49, Name = "2x Coins (30 min)", Kind = "Boost", Boost = "Coins2x" },
-	{ Key = "BoostXp", Id = 0, Price = 49, Name = "2x Pet XP (30 min)", Kind = "Boost", Boost = "Xp2x" },
+	{ Key = "BoostGrowth", Id = 0, Price = 49, Name = "2x Growth (30 min)", Kind = "Boost", Boost = "Growth2x" },
 	{ Key = "BoostLuck", Id = 0, Price = 79, Name = "2x Luck (30 min)", Kind = "Boost", Boost = "Luck2x" },
 	{ Key = "ServerLuck", Id = 0, Price = 199, Name = "Server Luck (15 min)", Kind = "ServerLuck" },
 } :: { Product }
