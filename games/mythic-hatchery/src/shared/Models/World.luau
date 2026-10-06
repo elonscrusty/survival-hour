@@ -21,7 +21,8 @@ export type WorldInfo = {
 	Spawns: { [string]: CFrame },
 	Zones: { [string]: { Zone } },
 	Bounds: { [string]: { Min: Vector3, Max: Vector3 } },
-	Arena: { Center: Vector3, Radius: number }, -- Pet Ring (floor top at Center.Y)
+	Arena: { Center: Vector3, Radius: number }, -- Creature Ring (floor top at Center.Y)
+	Race: { Start: CFrame, Checkpoints: { { Center: Vector3, Radius: number, CFrame: CFrame } } }, -- Sky Arena course
 }
 
 local World = {}
@@ -192,7 +193,7 @@ function World.Build(): WorldInfo
 	end
 	local root = Instance.new("Folder")
 	root.Name = "World"
-	local info: WorldInfo = { Spawns = {}, Zones = {}, Bounds = {}, Arena = { Center = Vector3.zero, Radius = 0 } }
+	local info: WorldInfo = { Spawns = {}, Zones = {}, Bounds = {}, Arena = { Center = Vector3.zero, Radius = 0 }, Race = { Start = CFrame.new(-88, 260, 0), Checkpoints = {} } }
 
 	-- Static geometry (ground, cliffs, paths, walls, bridges).
 	local groups: { [string]: Folder } = {}

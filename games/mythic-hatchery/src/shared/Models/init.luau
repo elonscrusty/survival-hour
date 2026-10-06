@@ -274,6 +274,30 @@ function Models.Pet(petId: string, variant: string, shiny: boolean): Model
 	end)
 end
 
+-- Creature (contract API; see docs/CONTRACTS.md). PLACEHOLDER until the models pass:
+-- an element-coloured block sized by stage, with Saddle/Hat/Aura attachments.
+export type CreatureOpts = { Neon: boolean?, Cosmetics: { [string]: string }? }
+function Models.Creature(species: string, element: string, rarity: string, stage: string, opts: CreatureOpts?): Model
+	local m = placeholder(species, Models.Profiles.Pet)
+	local root = m.PrimaryPart :: BasePart
+	for _, name in { "Saddle", "Hat", "Aura" } do
+		local a = Instance.new("Attachment")
+		a.Name = name
+		a.Parent = root
+	end
+	m:SetAttribute("Species", species)
+	m:SetAttribute("Element", element)
+	m:SetAttribute("Rarity", rarity)
+	m:SetAttribute("Stage", stage)
+	m:SetAttribute("Neon", opts ~= nil and opts.Neon == true)
+	return m
+end
+
+-- Cosmetic model (contract API). PLACEHOLDER until the models pass.
+function Models.Cosmetic(id: string): Model
+	return placeholder(id, Models.Profiles.Pet)
+end
+
 function Models.Egg(eggId: string, scale: number?): Model
 	local s = scale or 1
 	return cached("Egg|" .. eggId .. "|" .. s, function()
