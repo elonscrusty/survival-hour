@@ -3,8 +3,8 @@
 Everything here is done on a PC in Roblox Studio or on create.roblox.com.
 
 ## 1. Open the game
-1. Download `games/pet-expedition/build/MythicHatchery.rbxlx` from GitHub.
-2. Double-click it to open in Roblox Studio and press **Play**. The map, pets and UI all build when the game
+1. Download `games/mythic-hatchery/build/MythicHatchery.rbxlx` from GitHub.
+2. Double-click it to open in Roblox Studio and press **Play**. The map, creatures and UI all build when the game
    starts (nothing is stored as uploaded meshes).
 3. In Studio every Robux button works as a free test purchase, labelled as a test.
 
