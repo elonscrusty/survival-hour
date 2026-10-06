@@ -12,6 +12,7 @@ Roblox survival game (Rojo + Luau). A second game, Mythic Hatchery (formerly Pet
 - Prefer targeted edits over broad exploration; if a request is vague, do the most likely narrow reading, not a full-project sweep.
 - Branch: `claude/funny-babbage-lp3b6k`. Push with `git push -u origin claude/funny-babbage-lp3b6k`. No PRs unless asked.
 - Commit messages end with the attribution lines the session provides. Never put model names in commits or code.
+- Model: the owner wants Fable only. Run every helper/subagent with model "fable"; the repo default model is Fable (.claude/settings.json).
 
 ## Commands
 - `bash tools/check.sh`: type check (vs `tools/typecheck_baseline.txt`), 168+ unit tests, skins/lobby mocks and the Rojo build. Run it before every commit. `--quick` skips the build.
