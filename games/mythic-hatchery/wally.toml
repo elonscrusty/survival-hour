@@ -1,0 +1,11 @@
+[package]
+name = "kcdrewcarter/mythic-hatchery"
+version = "0.1.0"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+
+# No third-party packages yet: saving, signals and networking are in-house
+# (src/server/Services, src/shared). Add packages here and run `wally install`.
+[dependencies]
+
+[dev-dependencies]

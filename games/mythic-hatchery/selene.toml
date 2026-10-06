@@ -1,0 +1,5 @@
+std = "roblox"
+
+[lints]
+# String requires ("./X") are the house style; Roblox resolves them natively.
+incorrect_standard_library_use = "warn"

@@ -1,6 +1,6 @@
 # Survival Hour: notes for Claude
 
-Roblox survival game (Rojo + Luau). A second game, Pet Expedition, lives in `games/pet-expedition/` with its own CLAUDE.md. The owner (kcdrewcarter) plays on a phone while away from their PC and isn't a programmer.
+Roblox survival game (Rojo + Luau). A second game, Mythic Hatchery (formerly Pet Expedition), lives in `games/mythic-hatchery/` with its own CLAUDE.md. The owner (kcdrewcarter) plays on a phone while away from their PC and isn't a programmer.
 
 ## How to work here
 - **Caveman mode is always on.** From the first reply of every session, write chat replies in the style of `.claude/skills/caveman/SKILL.md` at level **lite**, without waiting for `/caveman`. The owner can switch with `/caveman full|ultra` or turn it off with "normal mode". Code, commits and docs stay in normal prose.
