@@ -1,5 +1,9 @@
 # Mythic Hatchery: game design
 
+> Superseded in part by the owner's October 6 battle/habitat decisions in
+> [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md). No racing or growth stages.
+> Those decisions take precedence wherever this legacy design differs.
+
 **Pitch:** Hatch mythical creatures, raise them from Baby to Ancient, fuse them into rarer eggs and hidden
 hybrids, then ride and fly them through a sky race. Trade with friends.
 

@@ -1,109 +1,120 @@
--- Egg rolls and luck.
+--!strict
 local Hatch = require("../src/shared/Logic/Hatch")
 local Rng = require("../src/shared/Logic/Rng")
 local Config = require("../src/shared/Config")
 local Eggs = require("../src/shared/Eggs")
 
-local function near(a, b, eps)
-	return math.abs(a - b) <= (eps or 1e-6)
+local function near(a: number, b: number): boolean
+	return math.abs(a - b) < 1e-8
+end
+
+local function fused(): Hatch.Fused
+	return {
+		Species = { { Id = "Dragon", Weight = 50 }, { Id = "Griffin", Weight = 50 } },
+		Rarity = { { Id = "Epic", Weight = 0.65 }, { Id = "Legendary", Weight = 0.35 } },
+		Element = { { Id = "Fire", Weight = 50 }, { Id = "Ice", Weight = 50 } },
+		Hybrid = "Wyvern", HybridChance = 0.08,
+	}
 end
 
 return {
-	["odds without luck match the catalogue"] = function(t)
+	["three odds tables sum to 100 and preserve catalogue odds"] = function(t: any)
 		for _, egg in Eggs.List do
+			if egg.Kind == "Fused" then continue end
 			local odds = Hatch.Odds(egg, 1)
-			local sum = 0
-			for _, o in egg.Odds do
-				t.ok(near(odds[o.Pet], o.Weight), egg.Id .. " " .. o.Pet)
-				sum += odds[o.Pet]
+			for _, axis in { odds.Species, odds.Rarity, odds.Element } do
+				local sum = 0
+				for _, value in axis do sum += value end
+				t.ok(near(sum, 100), egg.Id)
 			end
-			t.ok(near(sum, 100), egg.Id .. " sums to 100")
+			for _, weight in egg.Species do t.ok(near(odds.Species[weight.Id], weight.Weight)) end
+			for _, weight in egg.Rarity do t.ok(near(odds.Rarity[weight.Id], weight.Weight)) end
 		end
 	end,
-	["luck boosts Rare and above and renormalises"] = function(t)
-		local egg = Eggs.ById.MeadowEgg
-		local base = Hatch.Odds(egg, 1)
-		local lucky = Hatch.Odds(egg, 2)
-		t.ok(lucky.Bunny > base.Bunny, "rare up")
-		t.ok(lucky.HoneyBear > base.HoneyBear, "legendary up")
-		t.ok(lucky.Puppy < base.Puppy, "common down")
-		local sum = 0
-		for _, v in lucky do
-			sum += v
-		end
-		t.ok(near(sum, 100), "still 100")
-		-- Rare vs Epic keep their ratio (both multiplied).
-		t.ok(near(lucky.Bunny / lucky.Fox, base.Bunny / base.Fox), "ratio kept")
+	["home element is 60 percent and the other four are 10"] = function(t: any)
+		local odds = Hatch.Odds(Eggs.ById.MeadowEgg, 1).Element
+		t.ok(near(odds.Nature, 60))
+		for _, id in { "Fire", "Ice", "Storm", "Shadow" } do t.ok(near(odds[id], 10)) end
 	end,
-	["luck is clamped"] = function(t)
-		local egg = Eggs.ById.StarEgg
-		local capped = Hatch.Odds(egg, Config.MaxLuckMult)
-		local over = Hatch.Odds(egg, 1e9)
-		t.ok(near(capped.CosmicUnicorn, over.CosmicUnicorn), "capped at MaxLuckMult")
-		local base = Hatch.Odds(egg, 1)
-		for _, bad in { 0, -3, 0 / 0, math.huge } do
-			local o = Hatch.Odds(egg, bad)
-			if bad == math.huge then
-				t.ok(near(o.CosmicUnicorn, base.CosmicUnicorn), "inf treated as 1")
-			else
-				t.ok(near(o.CosmicUnicorn, base.CosmicUnicorn), "bad luck " .. tostring(bad))
+	["explicit elements override the home region"] = function(t: any)
+		local odds = Hatch.Odds(Eggs.ById.FrostfireEgg, 6).Element
+		t.eq(odds.Fire, 50); t.eq(odds.Ice, 50); t.eq(odds.Nature, nil)
+	end,
+	["luck boosts every rarity above the lowest without affecting other axes"] = function(t: any)
+		for _, egg in { Eggs.ById.MeadowEgg, Eggs.ById.MythicEgg, Eggs.ById.FrostfireEgg } do
+			local base, lucky = Hatch.Odds(egg, 1), Hatch.Odds(egg, 2)
+			local lowest = egg.Rarity[1].Id
+			t.ok(lucky.Rarity[lowest] < base.Rarity[lowest])
+			for i = 2, #egg.Rarity do
+				local id = egg.Rarity[i].Id
+				t.ok(lucky.Rarity[id] > base.Rarity[id])
+				t.ok(near(lucky.Rarity[id] / lucky.Rarity[lowest], 2 * base.Rarity[id] / base.Rarity[lowest]))
 			end
+			for id, value in base.Species do t.eq(lucky.Species[id], value) end
+			for id, value in base.Element do t.eq(lucky.Element[id], value) end
 		end
 	end,
-	["Pick handles roll edges"] = function(t)
-		local egg = Eggs.ById.MeadowEgg
-		t.eq(Hatch.Pick(egg, 1, 0), "Puppy", "roll 0")
-		t.eq(Hatch.Pick(egg, 1, 0.9999999), "HoneyBear", "roll near 1")
-		t.eq(Hatch.Pick(egg, 1, 1), "HoneyBear", "roll 1")
-		t.eq(Hatch.Pick(egg, 1, 5), "HoneyBear", "roll above 1 clamps")
-		t.eq(Hatch.Pick(egg, 1, -1), "Puppy", "negative roll clamps")
-		t.eq(Hatch.Pick(egg, 1, 0 / 0), "Puppy", "nan roll")
+	["luck clamps invalid and excessive values"] = function(t: any)
+		for _, value in { 0, -2, 0 / 0, math.huge, -math.huge } do t.eq(Hatch.ClampLuck(value), 1) end
+		t.eq(Hatch.ClampLuck(1e9), Config.MaxLuckMult)
 	end,
-	["rolls match the odds statistically"] = function(t)
-		local egg = Eggs.ById.MeadowEgg
-		local rng = Rng.New(99)
-		local counts = {}
-		local n = 40000
-		local shinies = 0
-		for _ = 1, n do
-			local id, shiny = Hatch.Roll(egg, 1, rng)
-			counts[id] = (counts[id] or 0) + 1
-			if shiny then
-				shinies += 1
-			end
+	["weighted pick skips zero weights at both boundaries"] = function(t: any)
+		local weights = { { Id = "zero", Weight = 0 }, { Id = "a", Weight = 25 }, { Id = "b", Weight = 75 }, { Id = "lastzero", Weight = 0 } }
+		t.eq(Hatch.Pick(weights, 0), "a"); t.eq(Hatch.Pick(weights, 0.25), "b")
+		for _, roll in { 1, 5 } do t.eq(Hatch.Pick(weights, roll), "b") end
+		for _, roll in { -1, 0 / 0, math.huge } do t.eq(Hatch.Pick(weights, roll), "a") end
+	end,
+	["each result consumes exactly three independent random values"] = function(t: any)
+		local count = 0
+		local rolls = { 0, 0.99, 0.5 }
+		local rng: any = { Next = function() count += 1; return rolls[count] end }
+		local result = Hatch.Roll(Eggs.ById.MeadowEgg, 1, rng)
+		t.eq(count, 3); t.eq(result.Species, "Dragon"); t.eq(result.Rarity, "Legendary"); t.eq(result.Element, "Nature")
+	end,
+	["same seed produces the same result"] = function(t: any)
+		local a, b = Rng.New(314), Rng.New(314)
+		for _ = 1, 100 do
+			local x, y = Hatch.Roll(Eggs.ById.MythicEgg, 3, a), Hatch.Roll(Eggs.ById.MythicEgg, 3, b)
+			t.eq(x.Species, y.Species); t.eq(x.Rarity, y.Rarity); t.eq(x.Element, y.Element)
 		end
-		t.ok(math.abs(counts.Puppy / n - 0.55) < 0.015, "puppy " .. counts.Puppy)
-		t.ok(math.abs(counts.Kitten / n - 0.30) < 0.015, "kitten " .. counts.Kitten)
-		t.ok(math.abs(shinies / n - Config.ShinyChance) < 0.004, "shiny rate " .. shinies)
 	end,
-	["rolls only produce pets from the egg"] = function(t)
-		local rng = Rng.New(5)
+	["fused eggs use parent odds and fold hybrid chance into the species roll"] = function(t: any)
+		local odds = Hatch.Odds(Eggs.ById.FusedEgg, 1, fused())
+		t.ok(near(odds.Species.Dragon, 46)); t.ok(near(odds.Species.Griffin, 46)); t.ok(near(odds.Species.Wyvern, 8))
+		t.ok(near(odds.Rarity.Epic, 65)); t.ok(near(odds.Rarity.Legendary, 35))
+		t.eq(odds.Element.Fire, 50); t.eq(odds.Element.Ice, 50)
+		local rng: any = { Next = function() return 0.99 end }
+		t.eq(Hatch.Roll(Eggs.ById.FusedEgg, 1, rng, fused()).Species, "Wyvern")
+	end,
+	["ordinary eggs never hatch hidden hybrids"] = function(t: any)
+		local rng = Rng.New(18)
 		for _, egg in Eggs.List do
-			local allowed = {}
-			for _, o in egg.Odds do
-				allowed[o.Pet] = true
-			end
-			for _ = 1, 300 do
-				local id = Hatch.Roll(egg, 6, rng)
-				t.ok(allowed[id], egg.Id .. " gave " .. id)
-			end
+			if egg.Kind == "Fused" then continue end
+			local allowed: { [string]: boolean } = {}
+			for _, weight in egg.Species do allowed[weight.Id] = true end
+			for _ = 1, 300 do t.ok(allowed[Hatch.Roll(egg, 6, rng).Species]) end
 		end
 	end,
-	["luck boosts everything above the egg's lowest rarity"] = function(t)
-		local meadow = Eggs.ById.MeadowEgg
-		local base, lucky = Hatch.Odds(meadow, 1), Hatch.Odds(meadow, 2)
-		t.ok(lucky.Kitten > base.Kitten, "uncommon boosted on a common egg")
-		t.ok(lucky.Puppy < base.Puppy, "lowest rarity not boosted")
-		local prism = Eggs.ById.PrismEgg
-		local pb, pl = Hatch.Odds(prism, 1), Hatch.Odds(prism, 2)
-		t.ok(pl.CrystalPup < pb.CrystalPup, "prism: its lowest (Rare) is not boosted")
-		t.ok(pl.PrismFox > pb.PrismFox, "prism: epic boosted")
-		t.ok(pl.DiamondDragon > pb.DiamondDragon, "prism: mythic boosted")
-		t.ok(math.abs(pl.DiamondDragon / pl.PrismFox - pb.DiamondDragon / pb.PrismFox) < 1e-9, "boosted pets keep their ratio")
-		local sum = 0
-		for _, v in pl do
-			sum += v
+	["fused catalogue placeholder cannot hatch without parent odds"] = function(t: any)
+		t.no(pcall(function() Hatch.Roll(Eggs.ById.FusedEgg, 1, Rng.New(1)) end))
+	end,
+	["invalid weight tables fail instead of awarding a creature"] = function(t: any)
+		for _, weights in { {}, { { Id = "a", Weight = 0 } }, { { Id = "a", Weight = -1 } }, { { Id = "a", Weight = 0 / 0 } } } do
+			t.no(pcall(Hatch.Pick, weights, 0))
 		end
-		t.ok(near(sum, 100), "renormalised")
+	end,
+	["seeded rolls follow species rarity and element distributions"] = function(t: any)
+		local rng = Rng.New(99)
+		local species, rarity, element = 0, 0, 0
+		local n = 40000
+		for _ = 1, n do
+			local result = Hatch.Roll(Eggs.ById.MeadowEgg, 1, rng)
+			if result.Species == "Dragon" then species += 1 end
+			if result.Rarity == "Common" then rarity += 1 end
+			if result.Element == "Nature" then element += 1 end
+		end
+		t.ok(math.abs(species / n - 0.25) < 0.015)
+		t.ok(math.abs(rarity / n - 0.60) < 0.015)
+		t.ok(math.abs(element / n - 0.60) < 0.015)
 	end,
 }

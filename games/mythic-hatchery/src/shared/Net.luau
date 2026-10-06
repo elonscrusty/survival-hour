@@ -53,32 +53,6 @@ Net.Functions = {
 	"DevPurchase", -- (key) simulate buying a pass/product whose Id is 0
 	"DevAction", -- (action) test shortcuts (DevService)
 }
-	"EquipPet", -- (uid, equip: boolean)
-	"EquipBest", -- ()
-	"UnequipAll", -- ()
-	"DeletePets", -- ({ uid }) -> { ok, coins }
-	"LockPet", -- (uid, locked: boolean)
-	"CraftPet", -- (uid) -> { ok, pet = PetInstance } combines Config.CraftCost copies (same species, variant, shiny) into the next variant
-	"OpenGate", -- (areaId)
-	"Teleport", -- (areaId) to an opened area's spawn
-	"Rebirth", -- ()
-	"StartExpedition", -- (areaId, durationKey, { uid }) -> { ok }
-	"ClaimExpedition", -- (slot) -> { ok, reward = ExpeditionReward }
-	"SkipExpedition", -- (slot) -> { ok } (costs gems)
-	"ClaimDaily", -- () -> { ok, reward }
-	"ClaimPlaytime", -- (index) -> { ok, reward }
-	"ClaimQuest", -- (index) -> { ok, reward }
-	"ClaimIndex", -- (tier) -> { ok, reward }
-	"SetSetting", -- (key, value) -> { ok }
-	"TradeRequest", -- (targetUserId) -> { ok }
-	"TradeRespond", -- (fromUserId, accept: boolean) -> { ok }
-	"TradeSetOffer", -- ({ uid }, gems) -> { ok }
-	"TradeReady", -- (ready: boolean) -> { ok }
-	"TradeCancel", -- () -> { ok }
-	"DevPurchase", -- (key) Studio only: simulate buying a pass/product whose Id is 0
-	"DevAction", -- (action) Studio only: test shortcuts (DevService)
-}
-
 -- RemoteEvents.
 Net.Events = {
 	-- server -> client

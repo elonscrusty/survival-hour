@@ -1,5 +1,15 @@
 # Mythic Hatchery: system contracts
 
+> **October 6 owner revision:** The design below predates the current decisions. Read
+> [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) first for the authoritative changes:
+> no racing, no Baby/Teen/Adult/Ancient growth or care progression; levels come only from battles.
+> Optional PvP uses three creatures with one active, all unlocked moves, one shared move cooldown,
+> and a separate longer swap cooldown. Opponents match by team strength. Habitats replace the
+> primary coin loop: assigned creatures earn online/offline to a storage cap, collected manually.
+> Remove a creature from its habitat before battling or riding. Starter mount can ride and fly
+> immediately. Fusion still consumes both parents. Untouched legacy features are not removed by
+> this revision. Existing Types/Config and server/client code need a coordinated conversion.
+
 Server, client and models are built separately. This file pins how they connect. Shared data:
 `src/shared/{Config,Areas,Species,Elements,Eggs,Potions,Cosmetics,Products,Net,Types}.luau`.
 (The game was "Pet Expedition"; pets became creatures. Keep systems, rename pet → creature.)

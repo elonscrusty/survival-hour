@@ -1,0 +1,31 @@
+MYTHIC HATCHERY - OCTOBER 6 FOUNDATION HANDOFF
+
+This package changes shared rules only. It is not a complete or playable game.
+Read docs/IMPLEMENTATION_PLAN.md and docs/STATUS.md before continuing.
+The owner's revised decisions override growth stages and races in the original handoff.
+
+Apply files at the same games/mythic-hatchery paths in the repo.
+Run tests/foundation.luau with the Luau CLI: 44 passing tests.
+Run bash tools/check.sh --quick too. Eight existing pet-era modules still fail to load.
+
+New APIs:
+Hatch.Weights(egg, luck, fused?) -> { Species, Rarity, Element } weighted arrays.
+Hatch.Odds(egg, luck, fused?) -> three percentage maps.
+Hatch.Roll(egg, luck, rng, fused?) -> { Species, Rarity, Element }.
+Hatch.Pick(weights, roll) -> id. Old pet hatch callers MUST be converted.
+Level.AddXp(creature, amount), Level.Power(creature), Level.XpToNext(level).
+Habitat.New(now), Assign(slot, creature, now), Remove(slot, now), Accrue(slot, now),
+Collect(slot, now), Upgrade(slot, wallet, now), UpgradeCost(slot), Capacity(slot), Rate(slot).
+Moves.For(creature) -> all unlocked species/element moves.
+Battle.New(id, userIdA, userIdB, teamA, teamB, now) -> isolated battle state.
+Battle.Move(state, userId, moveId, now), Swap(state, userId, index, now),
+Forfeit(state, userId, now), Timeout(state, now), Reward(state, userId), CanMatch(teamA, teamB).
+Fusion.Prepare(parentA, parentB, newEggUid, busySet, coins, regionCoinMult, freeEggSpace)
+returns a plan with Consume, Cost, Egg; validate ownership then apply ALL changes atomically.
+
+All clocks, wallets, creature stats, busy sets and reward settlement must be server owned.
+Level.Creature is an integration snapshot, not yet the saved Types.Creature schema.
+Do not overwrite the journaled trade/session/receipt protection when adapting Profile/Services.
+Do not grant battle rewards twice. Do not let one creature occupy multiple habitat slots.
+Do not battle/ride/fuse/trade assigned or otherwise busy creatures.
+Keep all new numerical tuning in Gameplay.luau. Defaults remain provisional.
