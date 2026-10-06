@@ -1,15 +1,15 @@
-# Pet Expedition: setup and launch (owner steps)
+# Mythic Hatchery: setup and launch (owner steps)
 
 Everything here is done on a PC in Roblox Studio or on create.roblox.com.
 
 ## 1. Open the game
-1. Download `games/pet-expedition/build/PetExpedition.rbxlx` from GitHub.
+1. Download `games/pet-expedition/build/MythicHatchery.rbxlx` from GitHub.
 2. Double-click it to open in Roblox Studio and press **Play**. The map, pets and UI all build when the game
    starts (nothing is stored as uploaded meshes).
 3. In Studio every Robux button works as a free test purchase, labelled as a test.
 
 ## 2. Publish
-1. File → **Publish to Roblox As…** → new experience, name **Pet Expedition**.
+1. File → **Publish to Roblox As…** → new experience, name **Mythic Hatchery**.
 2. Game Settings → **Security** → turn on **Enable Studio Access to API Services** (this lets saving work in Studio).
 3. Game Settings → Basic Info: upload `renders/marketing/icon_512.png` as the icon, and
    `renders/marketing/thumbnail_1.jpg` / `thumbnail_2.jpg` as thumbnails. Genre: Simulator. Set Maturity questionnaire (all "No").
@@ -21,14 +21,15 @@ create.roblox.com → your experience → **Monetization**.
 **Passes** (Monetization → Passes → Create a Pass, then turn on "Item for Sale" and set the price):
 | Key | Name | Price |
 |---|---|---|
+| HatchSlots | +2 Hatch Slots | 249 |
+| FastIncubation | 2x Incubation | 299 |
+| VipTrader | VIP Trader | 199 |
 | VIP | VIP | 199 |
 | Lucky | Lucky | 349 |
-| TripleHatch | Triple Hatch | 299 |
-| FastHatch | Fast Hatch | 99 |
-| MoreEquip | +3 Pets Equipped | 249 |
+| MoreEquip | +3 Creatures Out | 249 |
 | MoreExpeditions | +2 Expedition Slots | 199 |
 | AutoFarm | Auto Farm | 249 |
-| BigBackpack | Big Backpack | 99 |
+| BigBackpack | Big Stable | 99 |
 | RingChampion | Ring Champion | 299 |
 
 **Developer Products** (Monetization → Developer Products → Create):
@@ -41,7 +42,7 @@ create.roblox.com → your experience → **Monetization**.
 | Gems7000 | 7,000 Gems | 999 |
 | Gems19000 | 19,000 Gems | 2499 |
 | BoostCoins | 2x Coins (30 min) | 49 |
-| BoostXp | 2x Pet XP (30 min) | 49 |
+| BoostGrowth | 2x Growth (30 min) | 49 |
 | BoostLuck | 2x Luck (30 min) | 79 |
 | ServerLuck | Server Luck (15 min) | 199 |
 
@@ -57,5 +58,6 @@ will paste them into `src/shared/Products.luau`. Pass icons can be made from `re
 ## 5. Tips that move earnings
 - Update often (a new island or egg every 1-2 weeks) and announce it in the game title, e.g. "[🌋 NEW EGG]".
 - Weekend events: turn on 2x Luck for everyone (a Config change) and say so in the title.
+- Limited eggs: set a new Limited egg (dates + Edition) in `Eggs.luau` each season; announce it in the title.
 - Watch Analytics → Monetization: conversion rate and ARPPU. If almost nobody buys, lower the cheapest
   gem pack; if many people buy, add more passes and limited-time eggs.

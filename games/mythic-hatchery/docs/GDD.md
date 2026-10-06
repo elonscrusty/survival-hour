@@ -1,62 +1,49 @@
-# Pet Expedition: game design
+# Mythic Hatchery: game design
 
-**Pitch:** Hatch cute pets, send them to break treasure across six islands, and send your spare
-pets on timed expeditions that keep earning while you're away.
-
-## Why it earns
-- **A daily habit:** expedition timers (5 min to 8 h), a daily streak, daily quests and playtime gifts give
-  players a reason to come back several times a day. Players who return are the ones who spend.
-- **Collection:** 40 species × Normal/Golden/Rainbow × Shiny, plus an Index with rewards. The expedition-only
-  pets can't be hatched, which makes expeditions worth running.
-- **Social:** trading, other players' pets visible around the map, and a Server Luck boost that one player
-  buys for the whole server (a public, generous purchase that others see).
-- **Fair monetisation:** everything can be earned in play. Robux speeds things up (passes, gems, boosts), and
-  odds are always shown.
+**Pitch:** Hatch mythical creatures, raise them from Baby to Ancient, fuse them into rarer eggs and hidden
+hybrids, then ride and fly them through a sky race. Trade with friends.
 
 ## Core loop
-1. Break coin piles, crates and chests with your equipped pets → **coins**, sometimes **gems**.
-2. Spend coins on the island's **egg** → new pets; equip the strongest.
-3. Save coins to open the **gate** to the next island (bigger coins, stronger eggs).
-4. Spare pets go on **expeditions**, which bring back coins, gems, free eggs and rare finds.
-5. Combine 5 of the same pet into a **Golden** (and 5 Golden into a **Rainbow**); pets level up as they work.
-6. At the end, **rebirth** for a permanent +100% coin bonus and gems, then run the islands again faster.
-
-## Pet Ring
-A roped ring north of the Meadow hub. Walk in and your strongest equipped pets fight everyone else inside,
-free-for-all; walk out and you're safe. KOs give trophies, coins and pet XP; the longest streak wears the
-King of the Ring crown. Alone in the ring, wild challengers jump in. Ring strength is mostly pet level (time
-spent), with rarity and paid help (Ring Champion's extra fighter, 2x XP, rarer pets) worth up to about 2x:
-paying gets you stronger faster but a dedicated free player can still win.
+1. **Buy an egg** (coins at an island stand, gems for the Mythic Egg and Limited eggs). It goes straight into an
+   incubator (3 slots, +2 with a pass).
+2. **Hatch** when the timer ends: a random species (Dragon, Griffin, Phoenix, Hydra, Unicorn), rarity (Common, Rare,
+   Epic, Legendary, Mythic) and element (Fire, Ice, Storm, Nature, Shadow). Odds are always shown.
+3. **Care**: Feed (every 15 min), Play (25 min), Sleep (60 min) to grow Baby → Teen → Adult → Ancient. Neglect only
+   pauses growth; creatures never get sick.
+4. **Fuse** two Adults into a Fused Egg with better rarity odds. Cross-species pairs can hatch one of 6 hidden hybrids
+   (Wyvern, Emberwyrm, Pegasus, Leviathan, Chimera, Solaris).
+5. **Ride and fly** Adults with the Ride or Fly potion; race through the Sky Arena above the hub.
+6. Creatures you take with you **farm treasure** for coins, which open gates to the next island and better eggs.
+   Spare creatures go on **expeditions**. Late game: **rebirth** for a permanent coin bonus.
 
 ## Islands
-| # | Island | Gate (coins) | Egg cost | Expedition-only pet |
+| # | Island | Element | Gate | Egg |
 |---|---|---|---|---|
-| 1 | Sunny Meadow | open | 100 | Sunflower Sprite (Epic) |
-| 2 | Mushroom Grove | 5K | 3.6K | Fairy Moth (Legendary) |
-| 3 | Frostbite Peaks | 120K | 72K | Polar King (Legendary) |
-| 4 | Coral Cove | 2.7M | 1.5M | Pearl Seahorse (Legendary) |
-| 5 | Ember Volcano | 54M | 30M | Phoenix (Mythic) |
-| 6 | Starfall Isles | 1.1B | 540M | Void Kraken (Mythic) |
+| 1 | Sunny Meadow (hub) | Nature | open | 100 |
+| 2 | Shadow Grove | Shadow | 5K | 3.6K |
+| 3 | Frost Peaks | Ice | 120K | 72K |
+| 4 | Storm Coast | Storm | 2.7M | 1.5M |
+| 5 | Ember Volcano | Fire | 54M | 30M |
+| 6 | Sky Isles | all | 1.1B | 540M |
 
-Each island multiplies coins by 8× and pet power by 6×, so a new island's Common pet beats the last
-island's Rare. The Prism Egg (400 gems) sits in the Meadow hub and holds 4 exclusive pets, including the
-Mythic Diamond Dragon (1%).
+Island eggs roll their own element 60% of the time. Creatures earn 25% more coins on the island of their element.
+The hub has the Hatchery, Fusion Altar, Cosmetic Shop, Mythic and Limited egg stands, the Creature Ring and the
+race pad under the Sky Arena.
 
-## Robux (all optional; see `src/shared/Products.luau`)
-Game passes: VIP (199), Lucky (349), Triple Hatch (299), Fast Hatch (99), +3 Equipped (249),
-+2 Expedition Slots (199), Auto Farm (249), Big Backpack (99), Ring Champion (299).
-Developer products: gem packs (49–2,499 Robux), 2x Coins (49), 2x Pet XP (49), 2x Luck (79), Server Luck (199).
-The best value per Robux is in larger packs, and the first pack is cheap (49) to make a first purchase easy.
+## Other systems (kept from Pet Expedition)
+Daily login streak, playtime gifts, 3 daily quests (incl. care, fusion and race goals), the Index (species ×
+element, with hybrids hidden), boosts and Server Luck, trading (creatures only, confirm countdown), the Creature
+Ring (walk-in brawls; growth matters most), rebirth.
+
+## Robux (all optional; `src/shared/Products.luau`)
+- **Passes:** +2 Hatch Slots (249), 2x Incubation (299), VIP Trader (199), VIP (199), Lucky (349),
+  +3 Creatures Out (249), +2 Expedition Slots (199), Auto Farm (249), Big Stable (99), Ring Champion (299).
+- **Products:** gem packs (49–2,499 Robux), 2x Coins (49), 2x Growth (49), 2x Luck (79), Server Luck (199).
+- **Gems buy:** the Mythic Egg (400), Limited eggs (750, time-limited, with an Edition tag), Ride (150), Fly (300)
+  and Neon (200) potions, and incubation skips.
+- **Coins buy:** island eggs, Feed, fusion, cosmetics (hats, auras, saddles).
 
 ## Fairness and compliance
-- Odds are listed on every egg, including how luck changes them.
-- PolicyService: players in regions where paid random items are restricted can't open the Prism Egg; trading
-  turns off where paid item trading isn't allowed.
-- Trades need both players to press Ready, then a 4-second countdown. Any change cancels Ready.
-  Locked pets can't be traded.
-- No chat-based scams: you can only trade pets (not gems), and the trade window shows both sides.
-
-## Pacing targets (free player, from the balance simulation)
-Grove ~10 min, Frost ~45 min, Coral ~2 h, Volcano ~5 h, Starfall ~10 h, first rebirth ~15 h.
-Gems: ~200-300 a day for an active free player (a Prism Egg every 1.5-2 days). Breakables give at most
-15 gems an hour. Expeditions are a strong supplement but never out-earn active play.
+Odds listed for every egg (species, rarity and element, with luck). PolicyService: players where paid random items
+are restricted can't buy gem eggs or paid luck; trading turns off where paid item trading isn't allowed. Trades are
+creatures only, both players confirm, and the swap is atomic.
