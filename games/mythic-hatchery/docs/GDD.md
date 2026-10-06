@@ -13,20 +13,21 @@ hybrids, then ride and fly them through a sky race. Trade with friends.
 4. **Fuse** two Adults into a Fused Egg with better rarity odds. Cross-species pairs can hatch one of 6 hidden hybrids
    (Wyvern, Emberwyrm, Pegasus, Leviathan, Chimera, Solaris).
 5. **Ride and fly** Adults with the Ride or Fly potion; race through the Sky Arena above the hub.
-6. Creatures you take with you **farm treasure** for coins, which open gates to the next island and better eggs.
+6. Creatures you take with you **farm treasure** for coins, which open gates to the next region and better eggs.
    Spare creatures go on **expeditions**. Late game: **rebirth** for a permanent coin bonus.
 
-## Islands
-| # | Island | Element | Gate | Egg |
+## Regions (one connected land)
+| # | Region | Element | Gate | Egg |
 |---|---|---|---|---|
 | 1 | Sunny Meadow (hub) | Nature | open | 100 |
 | 2 | Shadow Grove | Shadow | 5K | 3.6K |
 | 3 | Frost Peaks | Ice | 120K | 72K |
 | 4 | Storm Coast | Storm | 2.7M | 1.5M |
 | 5 | Ember Volcano | Fire | 54M | 30M |
-| 6 | Sky Isles | all | 1.1B | 540M |
+| 6 | Sky Plateau | all | 1.1B | 540M |
 
-Island eggs roll their own element 60% of the time. Creatures earn 25% more coins on the island of their element.
+Each region's egg rolls that region's element 60% of the time. Creatures earn 25% more coins in the region of
+their element. Regions are joined by gate archways in hedges, cliffs and walls (no islands or bridges).
 The hub has the Hatchery, Fusion Altar, Cosmetic Shop, Mythic and Limited egg stands, the Creature Ring and the
 race pad under the Sky Arena.
 

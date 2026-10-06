@@ -13,7 +13,7 @@ Config.Version = 1 -- profile schema version (Logic/Profile migrates older saves
 -- Rarities, weakest first. Order matters (index used for sorting, colours and fusion upgrades).
 Config.Rarities = { "Common", "Rare", "Epic", "Legendary", "Mythic" }
 
--- Coin-farming power = RarityPower * StagePower * island TierPower (Areas) * bonuses.
+-- Coin-farming power = RarityPower * StagePower * region TierPower (Areas) * bonuses.
 Config.RarityPower = {
 	Common = 1,
 	Rare = 2,
@@ -34,7 +34,7 @@ Config.RideStage = "Adult" -- minimum stage to ride or fly (with the matching po
 Config.FuseStage = "Adult" -- minimum stage for both fusion parents
 
 -- Care tasks: each can be done once per Cooldown seconds per creature and gives Growth points.
--- Feed costs FeedCost coins x CoinMult of the owner's highest opened island.
+-- Feed costs FeedCost coins x CoinMult of the owner's highest opened region.
 Config.Care = {
 	Feed = { Cooldown = 15 * 60, Growth = 1 },
 	Play = { Cooldown = 25 * 60, Growth = 1 },
@@ -66,14 +66,14 @@ Config.LuckBoostMult = 2
 Config.ServerLuckMult = 2
 Config.MaxLuckMult = 6
 
--- Elements: an island's own eggs roll its element with HomeElementWeight%, the rest share
--- the remainder. A creature farming on an island of its element gets ElementBonus.
+-- Elements: an region's own eggs roll its element with HomeElementWeight%, the rest share
+-- the remainder. A creature farming on an region of its element gets ElementBonus.
 Config.HomeElementWeight = 60
 Config.ElementBonus = 1.25
 
 -- Fusion: two Adult+ creatures (both consumed) -> one fused egg.
 Config.Fusion = {
-	CoinCost = 500, -- x CoinMult of the owner's highest opened island
+	CoinCost = 500, -- x CoinMult of the owner's highest opened region
 	UpgradeChance = 0.35, -- chance the egg's rarity is one tier above the better parent
 	SameRarityBonus = 0.1, -- added when both parents share a rarity
 	AncientBonus = 0.075, -- added per Ancient parent
@@ -100,7 +100,7 @@ Config.Race = {
 	MaxRacers = 8,
 	MinCheckpointSeconds = 0.6, -- fastest legal gap between checkpoints
 	TimeLimit = 180,
-	Coins = { 400, 250, 150, 100 }, -- by finishing place (then the last value), x CoinMult of highest island
+	Coins = { 400, 250, 150, 100 }, -- by finishing place (then the last value), x CoinMult of highest region
 	Trophies = { 3, 2, 1 },
 	DailyRewardRaces = 15, -- races per UTC day that pay out (stops AFK farming)
 }
@@ -134,7 +134,7 @@ Config.ExpeditionDurations = {
 	{ Key = "Epic", Seconds = 8 * 3600, Mult = 50, FindChance = 0.65, GemChance = 1 },
 }
 Config.ExpeditionCoinsPerPower = 75 -- coins = sum(min(power / area PowerMult, ExpeditionMaxRelPower)) * this * area coin mult * duration mult
-Config.ExpeditionMaxRelPower = 12 -- caps strong pets sent to cheap islands
+Config.ExpeditionMaxRelPower = 12 -- caps strong pets sent to cheap regions
 Config.ExpeditionEggChance = 0.35 -- chance (scaled by duration mult, capped at 1) to bring back a free egg
 Config.ExpeditionGems = { 3, 15 } -- gem range when GemChance hits (scaled by sqrt(duration mult))
 Config.ExpeditionSkipGemsPerMinute = 2 -- gems to finish early (min 5)

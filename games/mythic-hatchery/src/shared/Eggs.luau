@@ -2,12 +2,12 @@
 -- Eggs and their odds. Every egg rolls three things independently:
 --   species  (Species weights, base species only)
 --   rarity   (Rarity weights, luck applies to every rarity above the lowest listed)
---   element  (Element weights; island eggs favour their island's element)
+--   element  (Element weights; region eggs favour their region's element)
 -- Weights are percentages and each table sums to 100. Odds are always shown to
 -- players before buying (Roblox rule for paid random items).
 --
 -- Kind:
---   Basic    bought with coins at an island's egg stand
+--   Basic    bought with coins at an region's egg stand
 --   Premium  bought with gems (gems can be bought with Robux) at the hub
 --   Limited  bought with gems only between StartAt and EndAt (UTC unix time);
 --            creatures from it carry the egg's Edition tag forever
@@ -18,13 +18,13 @@ export type Egg = {
 	Id: string,
 	Name: string,
 	Kind: string,
-	Area: string, -- island whose stand sells it (Premium/Limited: "Meadow" hub)
+	Area: string, -- region whose stand sells it (Premium/Limited: "Meadow" hub)
 	Currency: string, -- "Coins" | "Gems" | "None"
 	Cost: number,
 	IncubateSeconds: number,
 	Species: { Weight },
 	Rarity: { Weight },
-	Element: { Weight }?, -- nil = Logic/Hatch builds it from the island (HomeElementWeight)
+	Element: { Weight }?, -- nil = Logic/Hatch builds it from the region (HomeElementWeight)
 	Edition: string?,
 	StartAt: number?,
 	EndAt: number?,

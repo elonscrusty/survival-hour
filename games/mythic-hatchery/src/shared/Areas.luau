@@ -1,8 +1,8 @@
 --!strict
--- The six islands, in unlock order. The world builder lays them out along +X;
+-- The six regions of one connected land, in unlock order. The world builder lays them out along +X;
 -- each one has a gate (except the first), an egg stand, a breakable field and
 -- one expedition destination. CoinMult scales breakable and expedition coins;
--- PowerMult is the island tier power of creatures that hatch here.
+-- PowerMult is the region tier power of creatures that hatch here.
 
 export type Breakable = { Kind: string, Weight: number, Hp: number, Coins: number, Gems: number? }
 export type Area = {
@@ -12,7 +12,7 @@ export type Area = {
 	GateCost: number, -- coins to open (0 = always open)
 	CoinMult: number,
 	PowerMult: number,
-	Egg: string, -- Eggs id sold on this island
+	Egg: string, -- Eggs id sold in this region
 	Element: string, -- element its eggs favour ("" = none)
 	MaxBreakables: number,
 	Breakables: { Breakable },
@@ -47,9 +47,9 @@ Areas.List = {
 	{ Id = "Volcano", Index = 5, Name = "Ember Volcano", Element = "Fire", GateCost = 5.4e7, CoinMult = 4096, PowerMult = 1296,
 		Egg = "VolcanoEgg", MaxBreakables = 40, Breakables = field,
 		Blurb = "Lava rivers, hot rocks and fire-proof friends." },
-	{ Id = "Sky", Index = 6, Name = "Sky Isles", Element = "", GateCost = 1.1e9, CoinMult = 32768, PowerMult = 7776,
+	{ Id = "Sky", Index = 6, Name = "Sky Plateau", Element = "", GateCost = 1.1e9, CoinMult = 32768, PowerMult = 7776,
 		Egg = "SkyEgg", MaxBreakables = 40, Breakables = field,
-		Blurb = "Floating islands above the clouds." },
+		Blurb = "A high plateau among the clouds." },
 } :: { Area }
 
 Areas.ById = {} :: { [string]: Area }

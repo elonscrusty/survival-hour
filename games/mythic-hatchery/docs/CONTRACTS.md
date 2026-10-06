@@ -12,8 +12,8 @@ Nature, Shadow). Creatures grow **Baby → Teen → Adult → Ancient** through 
 on cooldown timers); neglect only pauses growth. Two **Adult+** creatures can be **fused** (both
 consumed) into a Fused Egg with boosted rarity odds; a cross-species pair may roll a hidden **hybrid**.
 Potions (gems) unlock **Ride**, **Fly** and **Neon** per creature. Adult+ creatures with Ride/Fly can be
-ridden; fliers race in the **Sky Arena** above the hub. Everything from Pet Expedition stays: 6 islands
-(now element-themed), creatures farming treasure for coins, gates, expeditions, rebirth, daily/playtime/
+ridden; fliers race in the **Sky Arena** above the hub. Everything from Pet Expedition stays: 6 regions of one
+connected land (element-themed; no islands), creatures farming treasure for coins, gates, expeditions, rebirth, daily/playtime/
 quests, Index, boosts, the Creature Ring, trading (creatures only) and the Robux shop. A coin shop sells
 cosmetics (hats, auras, saddles).
 
@@ -81,12 +81,13 @@ types or services (they run in the CLI Luau tests). `--!strict` everywhere, no `
 
 ## World (`Models/World.luau`, built by the server)
 `World.Build(): WorldInfo` → `{ Spawns, Zones, Bounds, Arena = {Center, Radius}, Race = { Start: CFrame, Checkpoints: { {Center: Vector3, Radius: number, CFrame: CFrame} } } }`.
-Islands (Areas ids): `Meadow` (Nature, hub), `Shadow` (Shadow Grove), `Frost` (Ice), `Storm` (Storm Coast),
-`Volcano` (Fire), `Sky` (Sky Isles). Interactables are tagged and carry a `ProximityPrompt`:
+Regions of one continuous landmass (Areas ids, along +X): `Meadow` (Nature, hub), `Shadow` (Shadow Grove), `Frost`
+(Ice), `Storm` (Storm Coast), `Volcano` (Fire), `Sky` (a high cloud-stone plateau). Gates are archways in natural
+barriers between regions; invisible walls close the rest of each border. Interactables are tagged and carry a `ProximityPrompt`:
 | Tag | Attributes | Purpose |
 |---|---|---|
 | `EggStand` | `EggId` | buy that egg (hub: Meadow, Mythic and Limited stands; one Basic stand per island). Client hides a Limited stand when not on sale. |
-| `Gate` | `AreaId` | gate with child `Barrier` (client disables locally once opened) |
+| `Gate` | `AreaId` | archway between regions with child `Barrier` (client disables locally once opened) |
 | `Hatchery` | | incubator menu (hub building with visible nests; incubators are also reachable from the HUD) |
 | `FusionAltar` | | fusion menu (hub) |
 | `CosmeticShop` | | coin shop (hub) |
@@ -94,7 +95,7 @@ Islands (Areas ids): `Meadow` (Nature, hub), `Shadow` (Shadow Grove), `Frost` (I
 | `RacePad` | | join the sky race (hub, under the Sky Arena) |
 | `RaceCheckpoint` | `Index`, `Radius` | ring in the Sky Arena (client detects passing; server validates) |
 | `Arena` | `Radius` | Creature Ring zone |
-| `AreaBounds` | `AreaId` | island volume |
+| `AreaBounds` | `AreaId` | region volume |
 
 ## Models (`Models/init.luau`)
 - `Models.Creature(species, element, rarity, stage, opts?: { Neon: boolean?, Cosmetics: {[string]: string}? }): Model`
